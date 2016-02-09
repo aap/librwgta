@@ -1,0 +1,45 @@
+class CTimeCycle {
+public:
+	static int   m_nAmbientRed[NUMHOURS][NUMWEATHERS];
+	static int   m_nAmbientGreen[NUMHOURS][NUMWEATHERS];
+	static int   m_nAmbientBlue[NUMHOURS][NUMWEATHERS];
+	static int   m_nDirectionalRed[NUMHOURS][NUMWEATHERS];
+	static int   m_nDirectionalGreen[NUMHOURS][NUMWEATHERS];
+	static int   m_nDirectionalBlue[NUMHOURS][NUMWEATHERS];
+	static int   m_nSkyTopRed[NUMHOURS][NUMWEATHERS];
+	static int   m_nSkyTopGreen[NUMHOURS][NUMWEATHERS];
+	static int   m_nSkyTopBlue[NUMHOURS][NUMWEATHERS];
+	static int   m_nSkyBottomRed[NUMHOURS][NUMWEATHERS];
+	static int   m_nSkyBottomGreen[NUMHOURS][NUMWEATHERS];
+	static int   m_nSkyBottomBlue[NUMHOURS][NUMWEATHERS];
+	static int   m_nSunCoreRed[NUMHOURS][NUMWEATHERS];
+	static int   m_nSunCoreGreen[NUMHOURS][NUMWEATHERS];
+	static int   m_nSunCoreBlue[NUMHOURS][NUMWEATHERS];
+	static int   m_nSunCoronaRed[NUMHOURS][NUMWEATHERS];
+	static int   m_nSunCoronaGreen[NUMHOURS][NUMWEATHERS];
+	static int   m_nSunCoronaBlue[NUMHOURS][NUMWEATHERS];
+	static float m_fSunSize[NUMHOURS][NUMWEATHERS];
+	static float m_fSpriteSize[NUMHOURS][NUMWEATHERS];
+	static float m_fSpriteBrightness[NUMHOURS][NUMWEATHERS];
+	static int   m_nShadowStrength[NUMHOURS][NUMWEATHERS];
+	static int   m_nLightShadowStrength[NUMHOURS][NUMWEATHERS];
+	static int   m_nTreeShadowStrength[NUMHOURS][NUMWEATHERS];
+	static float m_fFogStart[NUMHOURS][NUMWEATHERS];
+	static float m_fFarClip[NUMHOURS][NUMWEATHERS];
+	static float m_fLightsOnGroundBrightness[NUMHOURS][NUMWEATHERS];
+	static int   m_nLowCloudsRed[NUMHOURS][NUMWEATHERS];
+	static int   m_nLowCloudsGreen[NUMHOURS][NUMWEATHERS];
+	static int   m_nLowCloudsBlue[NUMHOURS][NUMWEATHERS];
+	static int   m_nFluffyCloudsTopRed[NUMHOURS][NUMWEATHERS];
+	static int   m_nFluffyCloudsTopGreen[NUMHOURS][NUMWEATHERS];
+	static int   m_nFluffyCloudsTopBlue[NUMHOURS][NUMWEATHERS];
+	static int   m_nFluffyCloudsBottomRed[NUMHOURS][NUMWEATHERS];
+	static int   m_nFluffyCloudsBottomGreen[NUMHOURS][NUMWEATHERS];
+	static int   m_nFluffyCloudsBottomBlue[NUMHOURS][NUMWEATHERS];
+	static float m_fBlurRed[NUMHOURS][NUMWEATHERS];
+	static float m_fBlurGreen[NUMHOURS][NUMWEATHERS];
+	static float m_fBlurBlue[NUMHOURS][NUMWEATHERS];
+	static float m_fBlurAlpha[NUMHOURS][NUMWEATHERS];
+
+	static void Initialise(void);
+};
