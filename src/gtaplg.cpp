@@ -78,7 +78,7 @@ attachPlugins(void)
 	gta::register2dEffectPlugin();
 	gta::registerPipelinePlugin();
 
-	rw::Atomic::init();
+	rw::initialize();
 }
 
 //

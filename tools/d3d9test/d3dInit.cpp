@@ -75,8 +75,7 @@ drawAtomic(Atomic *atomic)
 	InstanceDataHeader *header = (InstanceDataHeader*)geo->instData;
 
 	Frame *f = atomic->getFrame();
-	f->updateLTM();
-	Device->SetTransform(D3DTS_WORLD, (D3DMATRIX*)f->ltm);
+	Device->SetTransform(D3DTS_WORLD, (D3DMATRIX*)f->getLTM());
 
 	Device->SetStreamSource(0, (IDirect3DVertexBuffer9*)header->vertexStream[0].vertexBuffer,
 	                        0, header->vertexStream[0].stride);
@@ -115,9 +114,7 @@ drawAtomic(Atomic *atomic)
 	InstanceDataHeader *header = (InstanceDataHeader*)geo->instData;
 
 	Frame *f = atomic->getFrame();
-	f->updateLTM();
-	f->updateLTM();
-	Device->SetTransform(D3DTS_WORLD, (D3DMATRIX*)f->ltm);
+	Device->SetTransform(D3DTS_WORLD, (D3DMATRIX*)f->getLTM());
 
 	InstanceData *inst = header->inst;
 	for(uint32 i = 0; i < header->numMeshes; i++){
@@ -146,7 +143,6 @@ drawAtomic(Atomic *atomic)
 }
 
 rw::Clump *clump;
-void (*renderCB)(rw::Atomic*) = NULL;
 
 void
 initrw(void)
@@ -154,6 +150,11 @@ initrw(void)
 	gta::attachPlugins();
 	rw::d3d::registerNativeRaster();
 	rw::loadTextures = 1;
+
+	for(int i = 0; i < nelem(rw::defaultRenderCBs); i++)
+		rw::defaultRenderCBs[i] = NULL;
+	rw::defaultRenderCBs[rw::PLATFORM_D3D8] = rw::d3d8::drawAtomic;
+	rw::defaultRenderCBs[rw::PLATFORM_D3D9] = rw::d3d9::drawAtomic;
 
 	rw::currentTexDictionary = rw::TexDictionary::create();
 	rw::Image::setSearchPath("D:\\rockstargames\\ps2\\gta3\\MODELS\\gta3_archive\\txd_extracted\\;"
@@ -164,8 +165,8 @@ initrw(void)
 	rw::d3d::device = Device;
 
 	if(1){
-		char *filename = "D:\\rockstargames\\pc\\gtasa\\models\\gta3_archive\\admiral.txd";
-//		char *filename = "D:\\rockstargames\\pc\\gtavc\\models\\gta3_archive\\admiral.txd";
+		//char *filename = "D:\\rockstargames\\pc\\gtasa\\models\\gta3_archive\\admiral.txd";
+		char *filename = "D:\\rockstargames\\pc\\gtavc\\models\\gta3_archive\\admiral.txd";
 		rw::StreamFile in;
 		if(in.open(filename, "rb") == NULL){
 			MessageBox(0, "couldn't open file\n", 0, 0);
@@ -179,11 +180,11 @@ initrw(void)
 		rw::currentTexDictionary = txd;
 	}
 
-//	char *filename = "D:\\rockstargames\\pc\\gtavc\\models\\gta3_archive\\admiral.dff";
+	char *filename = "D:\\rockstargames\\pc\\gtavc\\models\\gta3_archive\\admiral.dff";
 //	char *filename = "D:\\rockstargames\\pc\\gta3\\models\\gta3_archive\\kuruma.dff";
 //	char *filename = "D:\\rockstargames\\pc\\gtavc\\models\\gta3_archive\\player.dff";
 //	char *filename = "D:\\rockstargames\\pc\\gtavc\\models\\gta3_archive\\od_newscafe_dy.dff";
-	char *filename = "D:\\rockstargames\\pc\\gtasa\\models\\gta3_archive\\admiral.dff";
+//	char *filename = "D:\\rockstargames\\pc\\gtasa\\models\\gta3_archive\\admiral.dff";
 //	char *filename = "D:\\rockstargames\\pc\\gtasa\\models\\gta3_archive\\lae2_roads89.dff";
 //	char *filename = "D:\\rockstargames\\pc\\gtasa\\models\\gta3_archive\\casinoblock41_nt.dff";
 //	char *filename = "D:\\rockstargames\\pc\\gtasa\\models\\cutscene_archive\\csremington92.dff";
@@ -207,10 +208,6 @@ initrw(void)
 			a->pipeline = NULL;
 		a->getPipeline()->instance(a);
 	}
-	if(rw::platform == rw::PLATFORM_D3D8)
-		renderCB = rw::d3d8::drawAtomic;
-	else if(rw::platform == rw::PLATFORM_D3D9)
-		renderCB = rw::d3d9::drawAtomic;
 
 	rw::StreamFile out;
 	//out.open("out.dff", "wb");
@@ -289,7 +286,7 @@ Display(float timeDelta)
 		                          gta::nodeNameOffset);
 		if(strstr(name, "_dam") || strstr(name, "_vlo"))
 			continue;
-		renderCB(atomic);
+		atomic->render();
 	}
 
 	Device->EndScene();
