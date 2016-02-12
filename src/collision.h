@@ -59,7 +59,7 @@ struct CColModel
 	short numLines;
 	short numBoxes;
 	short numTriangles;
-	//int level;
+	int level;
 	//rw::uint8 unk1;
 	CColSphere *spheres;
 	CColLine *lines;

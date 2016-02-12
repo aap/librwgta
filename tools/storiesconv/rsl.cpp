@@ -14,7 +14,7 @@ using namespace rw;
 #include "rsl.h"
 
 static void matfxRead(Stream *stream, RslMaterial *mat);
-static void hanimRead(Stream *stream, RslFrame *f);
+static void hanimRead(Stream *stream, RslNode *f);
 
 void
 RslMatrixSetIdentity(RslMatrix *matrix)
@@ -26,22 +26,22 @@ RslMatrixSetIdentity(RslMatrix *matrix)
 }
 
 void
-rslObjectHasFrameSetFrame(RslObjectHasFrame *object, RslFrame *f)
+rslObjectHasNodeSetNode(RslObjectHasNode *object, RslNode *f)
 {
 	if(object->object.parent)
-		rslLinkListRemoveLLLink(&object->lFrame);
+		rslLinkListRemoveLLLink(&object->lNode);
 	rslObjectSetParent(object, f);
 	if(f){
-		rslLinkListAddLLLink(&f->objectList, &object->lFrame);
+		rslLinkListAddLLLink(&f->objectList, &object->lNode);
 		f->root->object.privateFlags |= 1;
 		f->object.privateFlags |= 2;
 	}
 }
 
-RslFrame*
-RslFrameCreate(void)
+RslNode*
+RslNodeCreate(void)
 {
-	RslFrame *f = new RslFrame;
+	RslNode *f = new RslNode;
 	rslObjectInitialize(&f->object, 0, 0);
 	rslLinkListInitialize(&f->objectList);
 	RslMatrixSetIdentity(&f->modelling);
@@ -59,10 +59,10 @@ RslFrameCreate(void)
 	return f;
 }
 
-RslFrame*
-RslFrameAddChild(RslFrame *parent, RslFrame *child)
+RslNode*
+RslNodeAddChild(RslNode *parent, RslNode *child)
 {
-	RslFrame *p = (RslFrame*)child->object.parent;
+	RslNode *p = (RslNode*)child->object.parent;
 	assert(p == NULL);
 	child->next = parent->child;
 	parent->child = child;
@@ -74,18 +74,18 @@ RslFrameAddChild(RslFrame *parent, RslFrame *child)
 }
 
 int32
-RslFrameCount(RslFrame *f)
+RslNodeCount(RslNode *f)
 {
 	int32 n = 1;
-	for(RslFrame *c = f->child; c; c = c->next)
-		n += RslFrameCount(c);
+	for(RslNode *c = f->child; c; c = c->next)
+		n += RslNodeCount(c);
 	return n;
 }
 
-RslFrame*
-RslFrameForAllChildren(RslFrame *frame, RslFrameCallBack callBack, void *data)
+RslNode*
+RslNodeForAllChildren(RslNode *frame, RslNodeCallBack callBack, void *data)
 {
-	for(RslFrame *child = frame->child;
+	for(RslNode *child = frame->child;
 	    child;
 	    child = child->next)
 		if(callBack(child, data) == NULL)
@@ -93,36 +93,36 @@ RslFrameForAllChildren(RslFrame *frame, RslFrameCallBack callBack, void *data)
 	return frame;
 }
 
-struct StreamFrame
+struct StreamNode
 {
-	RslV3d right, up, at, pos;
+	RslV3 right, up, at, pos;
 	int32 parent;
 	int32 flags;
 };
 
 void
-rslFrameListStreamRead(Stream *stream, rslFrameList *framelist)
+rslNodeListStreamRead(Stream *stream, rslNodeList *framelist)
 {
 	uint32 length;
-	StreamFrame strfrm;
-	RslFrame *f;
+	StreamNode strfrm;
+	RslNode *f;
 
 	assert(findChunk(stream, ID_STRUCT, NULL, NULL));
-	stream->read(&framelist->numFrames, 4);
-	framelist->frames = new RslFrame*[framelist->numFrames];
-	for(int32 i = 0; i < framelist->numFrames; i++){
+	stream->read(&framelist->numNodes, 4);
+	framelist->frames = new RslNode*[framelist->numNodes];
+	for(int32 i = 0; i < framelist->numNodes; i++){
 		stream->read(&strfrm, sizeof(strfrm));
-		f = RslFrameCreate();
+		f = RslNodeCreate();
 		f->modelling.right = strfrm.right;
 		f->modelling.up = strfrm.up;
 		f->modelling.at = strfrm.at;
 		f->modelling.pos = strfrm.pos;
 		framelist->frames[i] = f;
 		if(strfrm.parent >= 0)
-			RslFrameAddChild(framelist->frames[strfrm.parent], f);
+			RslNodeAddChild(framelist->frames[strfrm.parent], f);
 	}
 	ChunkHeaderInfo header;
-	for(int32 i = 0; i < framelist->numFrames; i++){
+	for(int32 i = 0; i < framelist->numNodes; i++){
 		f = framelist->frames[i];
 		assert(findChunk(stream, ID_EXTENSION, &length, NULL));
 		while(length){
@@ -142,35 +142,35 @@ rslFrameListStreamRead(Stream *stream, rslFrameList *framelist)
 	}
 }
 
-static RslFrame**
-rslFrameListFill(RslFrame *f, RslFrame **flist)
+static RslNode**
+rslNodeListFill(RslNode *f, RslNode **flist)
 {
 	*flist++ = f;
 	if(f->next)
-		flist = rslFrameListFill(f->next, flist);
+		flist = rslNodeListFill(f->next, flist);
 	if(f->child)
-		flist = rslFrameListFill(f->child, flist);
+		flist = rslNodeListFill(f->child, flist);
 	return flist;
 }
 
 void
-rslFrameListInitialize(rslFrameList *frameList, RslFrame *root)
+rslNodeListInitialize(rslNodeList *frameList, RslNode *root)
 {
-	frameList->numFrames = RslFrameCount(root);
-	frameList->frames = new RslFrame*[frameList->numFrames];
-	rslFrameListFill(root, frameList->frames);
+	frameList->numNodes = RslNodeCount(root);
+	frameList->frames = new RslNode*[frameList->numNodes];
+	rslNodeListFill(root, frameList->frames);
 }
 
-RslHAnimHierarchy*
-RslHAnimHierarchyCreate(int32 numNodes, uint32 *nodeFlags, int32 *nodeIDs, int32 flags, int32 maxKeySize)
+RslTAnimTree*
+RslTAnimTreeCreate(int32 numNodes, uint32 *nodeFlags, int32 *nodeIDs, int32 flags, int32 maxKeySize)
 {
-	RslHAnimHierarchy *hier = new RslHAnimHierarchy;
-	memset(hier, 0, sizeof(RslHAnimHierarchy));
+	RslTAnimTree *hier = new RslTAnimTree;
+	memset(hier, 0, sizeof(RslTAnimTree));
 	if(maxKeySize < 0x24)
 		maxKeySize = 0x24;
 	hier->flags = flags;
 	hier->numNodes = numNodes;
-	hier->parentFrame = 0;
+	hier->parentNode = 0;
 	hier->maxKeyFrameSize = maxKeySize;
 	hier->currentKeyFrameSize = 0x24;
 
@@ -182,19 +182,19 @@ RslHAnimHierarchyCreate(int32 numNodes, uint32 *nodeFlags, int32 *nodeIDs, int32
 	ip &= ~0x3f;
 	hier->pMatrixArray = (float32*)ip;
 
-	hier->pNodeInfo = new RslHAnimNodeInfo[numNodes];
+	hier->pNodeInfo = new RslTAnimNodeInfo[numNodes];
 	for(int32 i = 0; i < numNodes; i++){
 		hier->pNodeInfo[i].id = nodeIDs[i];
 		hier->pNodeInfo[i].index = i;
 		hier->pNodeInfo[i].flags = nodeFlags[i];
 		hier->pNodeInfo[i].frame = NULL;
 	}
-	hier->parentHierarchy = hier;
+	hier->parentTree = hier;
 	return hier;
 }
 
 static void
-hanimRead(Stream *stream, RslFrame *f)
+hanimRead(Stream *stream, RslNode *f)
 {
 	int32 version;
 	int32 id;
@@ -223,54 +223,54 @@ hanimRead(Stream *stream, RslFrame *f)
 		stream->readI32();
 		nodeFlags[i] = stream->readI32();
 	}
-	f->hier = RslHAnimHierarchyCreate(numNodes, nodeFlags,
-	                                  nodeIDs, flags, maxKeySize);
+	f->hier = RslTAnimTreeCreate(numNodes, nodeFlags,
+	                             nodeIDs, flags, maxKeySize);
 	delete[] nodeFlags;
 	delete[] nodeIDs;
 }
 
 
-RslAtomic*
-RslAtomicCreate(void)
+RslElement*
+RslElementCreate(void)
 {
-	RslAtomic *a = new RslAtomic;
-	memset(a, 0, sizeof(RslAtomic));
+	RslElement *a = new RslElement;
+	memset(a, 0, sizeof(RslElement));
 	rslObjectInitialize(&a->object, 1, 0);
 	a->object.object.flags = 5;
 	a->object.object.privateFlags |= 1;
-	rslObjectHasFrameSetFrame(&a->object, NULL);
+	rslObjectHasNodeSetNode(&a->object, NULL);
 	return a;
 }
 
-RslAtomic*
-RslAtomicSetFrame(RslAtomic *atomic, RslFrame *frame)
+RslElement*
+RslElementSetNode(RslElement *atomic, RslNode *frame)
 {
-	rslObjectHasFrameSetFrame(&atomic->object, frame);
+	rslObjectHasNodeSetNode(&atomic->object, frame);
 	return atomic;
 }
 
-RslAtomic*
-RslAtomicStreamRead(Stream *stream, rslFrameList *framelist)
+RslElement*
+RslElementStreamRead(Stream *stream, rslNodeList *framelist)
 {
 	uint32 length;
 	int32 buf[4];
-	RslAtomic *a;
+	RslElement *a;
 	assert(findChunk(stream, ID_STRUCT, NULL, NULL));
 	stream->read(buf, 16);
-	a = RslAtomicCreate();
+	a = RslElementCreate();
 	a->object.object.flags = buf[2];
 	assert(findChunk(stream, ID_GEOMETRY, NULL, NULL));
 
-	RslPS2ResEntryHeader res, *rp;
-	stream->read(&res, sizeof(RslPS2ResEntryHeader));
+	sPs2Geometry res, *rp;
+	stream->read(&res, sizeof(sPs2Geometry));
 	RslGeometry *g = RslGeometryCreatePS2(res.size & 0xFFFFF);
-	rp = (RslPS2ResEntryHeader*)(g+1);
+	rp = (sPs2Geometry*)(g+1);
 	*rp++ = res;
-	stream->read(rp, (res.size&0xFFFFF)-sizeof(RslPS2ResEntryHeader));
+	stream->read(rp, (res.size&0xFFFFF)-sizeof(sPs2Geometry));
 
 	rslMaterialListStreamRead(stream, &g->matList);
 	a->geometry = g;
-	RslAtomicSetFrame(a, framelist->frames[buf[0]]);
+	RslElementSetNode(a, framelist->frames[buf[0]]);
 
 	// This is not how it's done in LCS, they got extensions wrong :(
 	// Geometry
@@ -285,7 +285,7 @@ RslAtomicStreamRead(Stream *stream, rslFrameList *framelist)
 		length -= 12 + header.length;
 	}
 
-	// Atomic
+	// Element
 	assert(findChunk(stream, ID_EXTENSION, &length, NULL));
 	while(length){
 		readChunkHeaderInfo(stream, &header);
@@ -315,40 +315,40 @@ RslSkinStreamRead(Stream *stream, RslGeometry *g)
 
 
 
-RslClump*
-RslClumpCreate(void)
+RslElementGroup*
+RslElementGroupCreate(void)
 {
-	RslClump *clump = new RslClump;
+	RslElementGroup *clump = new RslElementGroup;
 	rslObjectInitialize(&clump->object, 2, 0);
 	rslLinkListInitialize(&clump->atomicList);
 	return clump;
 }
 
-RslClump*
-RslClumpStreamRead(Stream *stream)
+RslElementGroup*
+RslElementGroupStreamRead(Stream *stream)
 {
 	uint32 version, length;
 	int32 buf[3];
-	int32 numAtomics;
-	rslFrameList framelist;
-	RslClump *clump;
+	int32 numElements;
+	rslNodeList framelist;
+	RslElementGroup *clump;
 
 	assert(findChunk(stream, ID_STRUCT, NULL, &version));
 	if(version > 0x33000){
 		stream->read(buf, 12);
-		numAtomics = buf[0];
+		numElements = buf[0];
 	}else
-		stream->read(&numAtomics, 4);
+		stream->read(&numElements, 4);
 
-	clump = RslClumpCreate();
+	clump = RslElementGroupCreate();
 	assert(findChunk(stream, ID_FRAMELIST, NULL, NULL));
-	rslFrameListStreamRead(stream, &framelist);
+	rslNodeListStreamRead(stream, &framelist);
 	clump->object.parent = framelist.frames[0];
 
-	for(int32 i = 0; i < numAtomics; i++){
+	for(int32 i = 0; i < numElements; i++){
 		assert(findChunk(stream, ID_ATOMIC, NULL, &version));
-		RslAtomic *a = RslAtomicStreamRead(stream, &framelist);
-		RslClumpAddAtomic(clump, a);
+		RslElement *a = RslElementStreamRead(stream, &framelist);
+		RslElementGroupAddElement(clump, a);
 	}
 
 	ChunkHeaderInfo header;
@@ -362,23 +362,23 @@ RslClumpStreamRead(Stream *stream)
 	return clump;
 }
 
-RslClump*
-RslClumpAddAtomic(RslClump *clump, RslAtomic *a)
+RslElementGroup*
+RslElementGroupAddElement(RslElementGroup *clump, RslElement *a)
 {
-	rslLinkListAddLLLink(&clump->atomicList, &a->inClumpLink);
+	rslLinkListAddLLLink(&clump->atomicList, &a->inElementGroupLink);
 	a->clump = clump;
 	return clump;
 }
 
-RslClump*
-RslClumpForAllAtomics(RslClump *clump, RslAtomicCallBack callback, void *pData)
+RslElementGroup*
+RslElementGroupForAllElements(RslElementGroup *clump, RslElementCallBack callback, void *pData)
 {
-	RslAtomic *a;
+	RslElement *a;
 	RslLLLink *link;
 	for(link = rslLLLinkGetNext(&clump->atomicList.link);
 	    link != rslLinkListGetTerminator(&clump->atomicList);
 	    link = link->next){
-		a = rslLLLinkGetData(link, RslAtomic, inClumpLink);
+		a = rslLLLinkGetData(link, RslElement, inElementGroupLink);
 		if(callback(a, pData) == NULL)
 			break;
 	}
@@ -386,7 +386,7 @@ RslClumpForAllAtomics(RslClump *clump, RslAtomicCallBack callback, void *pData)
 }
 
 int32
-RslClumpGetNumAtomics(RslClump *clump)
+RslElementGroupGetNumElements(RslElementGroup *clump)
 {
 	int32 n = 0;
 	RslLLLink *link;
@@ -544,18 +544,18 @@ rslMaterialListStreamRead(Stream *stream, RslMaterialList *matlist)
 	delete[] refs;
 }
 
-RslTexDictionary*
-RslTexDictionaryCreate(void)
+RslTexList*
+RslTexListCreate(void)
 {
-	RslTexDictionary *dict = new RslTexDictionary;
-	memset(dict, 0, sizeof(RslTexDictionary));
+	RslTexList *dict = new RslTexList;
+	memset(dict, 0, sizeof(RslTexList));
 	rslObjectInitialize(&dict->object, 6, 0);
 	rslLinkListInitialize(&dict->texturesInDict);
 	return dict;
 }
 
 RslTexture*
-RslTexDictionaryAddTexture(RslTexDictionary *dict, RslTexture *tex)
+RslTexListAddTexture(RslTexList *dict, RslTexture *tex)
 {
 	if(tex->dict)
 		rslLinkListRemoveLLLink(&tex->lInDictionary);
@@ -564,8 +564,8 @@ RslTexDictionaryAddTexture(RslTexDictionary *dict, RslTexture *tex)
 	return tex;
 }
 
-RslTexDictionary*
-RslTexDictionaryForAllTextures(RslTexDictionary *dict, RslTextureCallBack fpCallBack, void *pData)
+RslTexList*
+RslTexListForAllTextures(RslTexList *dict, RslTextureCallBack fpCallBack, void *pData)
 {
 	RslTexture *t;
 	RslLLLink *link;
@@ -686,16 +686,16 @@ RslReadNativeTexturePS2(Stream *stream)
 	return tex;
 }
 
-RslTexDictionary*
-RslTexDictionaryStreamRead(Stream *stream)
+RslTexList*
+RslTexListStreamRead(Stream *stream)
 {
 	assert(findChunk(stream, ID_STRUCT, NULL, NULL));
 	int32 numTex = stream->readI32();
-	RslTexDictionary *txd = RslTexDictionaryCreate();
+	RslTexList *txd = RslTexListCreate();
 	for(int32 i = 0; i < numTex; i++){
 		assert(findChunk(stream, ID_TEXTURENATIVE, NULL, NULL));
 		RslTexture *tex = RslReadNativeTexturePS2(stream);
-		RslTexDictionaryAddTexture(txd, tex);
+		RslTexListAddTexture(txd, tex);
 	}
 	return txd;
 }

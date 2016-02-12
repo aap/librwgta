@@ -160,11 +160,12 @@ initrw(void)
 	                         "D:\\rockstargames\\ps2\\gtavc\\MODELS\\gta3_archive\\txd_extracted\\;"
 	                         "D:\\rockstargames\\ps2\\gtasa\\models\\gta3_archive\\txd_extracted\\");
 
-	rw::platform = rw::PLATFORM_D3D8;
+	rw::platform = rw::PLATFORM_D3D9;
 	rw::d3d::device = Device;
 
-	if(0){
-		char *filename = "D:\\rockstargames\\pc\\gtavc\\models\\gta3_archive\\admiral.txd";
+	if(1){
+		char *filename = "D:\\rockstargames\\pc\\gtasa\\models\\gta3_archive\\admiral.txd";
+//		char *filename = "D:\\rockstargames\\pc\\gtavc\\models\\gta3_archive\\admiral.txd";
 		rw::StreamFile in;
 		if(in.open(filename, "rb") == NULL){
 			MessageBox(0, "couldn't open file\n", 0, 0);
@@ -178,11 +179,11 @@ initrw(void)
 		rw::currentTexDictionary = txd;
 	}
 
-	char *filename = "D:\\rockstargames\\pc\\gtavc\\models\\gta3_archive\\admiral.dff";
+//	char *filename = "D:\\rockstargames\\pc\\gtavc\\models\\gta3_archive\\admiral.dff";
 //	char *filename = "D:\\rockstargames\\pc\\gta3\\models\\gta3_archive\\kuruma.dff";
 //	char *filename = "D:\\rockstargames\\pc\\gtavc\\models\\gta3_archive\\player.dff";
 //	char *filename = "D:\\rockstargames\\pc\\gtavc\\models\\gta3_archive\\od_newscafe_dy.dff";
-//	char *filename = "D:\\rockstargames\\pc\\gtasa\\models\\gta3_archive\\admiral.dff";
+	char *filename = "D:\\rockstargames\\pc\\gtasa\\models\\gta3_archive\\admiral.dff";
 //	char *filename = "D:\\rockstargames\\pc\\gtasa\\models\\gta3_archive\\lae2_roads89.dff";
 //	char *filename = "D:\\rockstargames\\pc\\gtasa\\models\\gta3_archive\\casinoblock41_nt.dff";
 //	char *filename = "D:\\rockstargames\\pc\\gtasa\\models\\cutscene_archive\\csremington92.dff";
@@ -212,9 +213,9 @@ initrw(void)
 		renderCB = rw::d3d9::drawAtomic;
 
 	rw::StreamFile out;
-	out.open("out.dff", "wb");
-	clump->streamWrite(&out);
-	out.close();
+	//out.open("out.dff", "wb");
+	//clump->streamWrite(&out);
+	//out.close();
 
 	out.open("out.txd", "wb");
 	rw::currentTexDictionary->streamWrite(&out);

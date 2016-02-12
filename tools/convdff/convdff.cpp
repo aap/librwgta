@@ -115,6 +115,22 @@ dumpReflData(Material *m)
 	printf("\n");
 }
 
+void
+removeEffects(Atomic *atomic)
+{
+	Geometry *geo = atomic->geometry;
+	for(int i = 0; i < geo->numMaterials; i++){
+		Material *mat = geo->materialList[i];
+		MatFX *matfx = *PLUGINOFFSET(MatFX*, mat, matFXGlobals.materialOffset);
+		if(matfx){
+			matfx->type = 0;
+			matfx->fx[0].type = 0;
+			matfx->fx[1].type = 0;
+		}
+		*PLUGINOFFSET(int32*, atomic, matFXGlobals.atomicOffset) = 0;
+	}
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -234,10 +250,10 @@ main(int argc, char *argv[])
 	//	printf("%d %f %f %f\n", l->getType(), l->color.red, l->color.green, l->color.blue);
 	//}
 
-	HAnimHierarchy *hier = HAnimHierarchy::find(c->getFrame());
-	if(hier)
-		hier->attach();
-	dumpFrameHier(c->getFrame());
+	//HAnimHierarchy *hier = HAnimHierarchy::find(c->getFrame());
+	//if(hier)
+	//	hier->attach();
+	//dumpFrameHier(c->getFrame());
 
 	//if(currentUVAnimDictionary){
 	//	FORLIST(lnk, currentUVAnimDictionary->animations){
@@ -245,6 +261,13 @@ main(int argc, char *argv[])
 	//		Animation *anim = de->anim;
 	//		dumpUVAnim(anim);
 	//	}
+	//}
+
+	//FORLIST(lnk, c->atomics){
+	//	Atomic *atomic = Atomic::fromClump(lnk);
+	//	Frame *f = atomic->getFrame();
+	//	if(strstr(gta::getNodeName(f), "wheel"))
+	//		removeEffects(atomic);
 	//}
 
 	//FORLIST(lnk, c->atomics){

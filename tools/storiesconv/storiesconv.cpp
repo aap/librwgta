@@ -32,10 +32,10 @@ RslStream::relocate(void)
 
 
 
-RslFrame *dumpFrameCB(RslFrame *frame, void *data)
+RslNode *dumpNodeCB(RslNode *frame, void *data)
 {
 	printf(" frm: %x %s %x\n", frame->nodeId, frame->name, frame->hierId);
-	RslFrameForAllChildren(frame, dumpFrameCB, data);
+	RslNodeForAllChildren(frame, dumpNodeCB, data);
 	return frame;
 }
 
@@ -53,7 +53,7 @@ RslMaterial *dumpMaterialCB(RslMaterial *material, void*)
 	return material;
 }
 
-RslAtomic *dumpAtomicCB(RslAtomic *atomic, void*)
+RslElement *dumpElementCB(RslElement *atomic, void*)
 {
 	printf(" atm: %x %x %x %p\n", atomic->unk1, atomic->unk2, atomic->unk3, atomic->hier);
 	RslGeometry *g = atomic->geometry;
@@ -69,21 +69,21 @@ mapID(int32 id)
 	return id;
 }
 
-static RslFrame*
-findFrame(RslFrame *f, int32 id)
+static RslNode*
+findNode(RslNode *f, int32 id)
 {
 	if(f == NULL) return NULL;
 	if((f->nodeId & 0xFF) == (id & 0xFF))
 		return f;
-	RslFrame *ff = findFrame(f->next, id);
+	RslNode *ff = findNode(f->next, id);
 	if(ff) return ff;
-	return findFrame(f->child, id);
+	return findNode(f->child, id);
 }
 
-static RslFrame*
-findChild(RslFrame *f)
+static RslNode*
+findChild(RslNode *f)
 {
-	for(RslFrame *c = f->child; c; c = c->next)
+	for(RslNode *c = f->child; c; c = c->next)
 		if(c->nodeId < 0)
 			return c;
 	return NULL;
@@ -97,7 +97,7 @@ struct Node {
 };
 
 Frame*
-convertFrame(RslFrame *f)
+convertFrame(RslNode *f)
 {
 	Frame *rwf = Frame::create();
 	rwf->matrix[0] =  f->modelling.right.x;
@@ -132,16 +132,16 @@ convertFrame(RslFrame *f)
 		// NOTE: assignment can only work reliably when not more
 		//       than one child node needs an ID
 		for(int32 i = 0; i < numNodes; i++){
-			RslHAnimNodeInfo *ni = &f->hier->pNodeInfo[i];
+			RslTAnimNodeInfo *ni = &f->hier->pNodeInfo[i];
 			Node *n = &nodehier[i];
 			n->parent = stack[sp];
 			if(ni->flags & HAnimHierarchy::PUSH)
 				sp++;
 			stack[sp] = i;
-			RslFrame *ff = findFrame(f, (uint8)ni->id);
+			RslNode *ff = findNode(f, (uint8)ni->id);
 			n->id = ff->nodeId;
 			if(n->id < 0){
-				ff = findFrame(f, nodehier[n->parent].id);
+				ff = findNode(f, nodehier[n->parent].id);
 				ff = findChild(ff);
 				n->id = ff->nodeId = nextId++;
 			}
@@ -213,8 +213,8 @@ skipUnpack(uint32 *p)
 void
 convertMesh(Geometry *rwg, RslGeometry *g, int32 ii)
 {
-	RslPS2ResEntryHeader *resHeader = (RslPS2ResEntryHeader*)(g+1);
-	RslPS2InstanceData *inst = (RslPS2InstanceData*)(resHeader+1);
+	sPs2Geometry *resHeader = (sPs2Geometry*)(g+1);
+	sPs2GeometryMesh *inst = (sPs2GeometryMesh*)(resHeader+1);
 	int32 numInst = resHeader->size >> 20;
 	uint8 *p = (uint8*)(inst+numInst);
 	inst += ii;
@@ -271,17 +271,17 @@ convertMesh(Geometry *rwg, RslGeometry *g, int32 ii)
 		if(!first) vuTex += 2*2;
 		w = skipUnpack(w);
 
-		if(rwg->geoflags & Geometry::NORMALS){
-			assert((w[0] & 0xFF004000) == 0x6A000000);
-			vuNorms = (int8*)(w+1);
-			if(!first) vuNorms += 2*3;
-			w = skipUnpack(w);
-		}
-
 		if(rwg->geoflags & Geometry::PRELIT){
 			assert((w[0] & 0xFF004000) == 0x6F000000);
 			vuCols = (uint16*)(w+1);
 			if(!first) vuCols += 2;
+			w = skipUnpack(w);
+		}
+
+		if(rwg->geoflags & Geometry::NORMALS){
+			assert((w[0] & 0xFF004000) == 0x6A000000);
+			vuNorms = (int8*)(w+1);
+			if(!first) vuNorms += 2*3;
 			w = skipUnpack(w);
 		}
 
@@ -349,14 +349,14 @@ convertMesh(Geometry *rwg, RslGeometry *g, int32 ii)
 }
 
 Atomic*
-convertAtomic(RslAtomic *atomic)
+convertAtomic(RslElement *atomic)
 {
 	Atomic *rwa = Atomic::create();
 	RslGeometry *g = atomic->geometry;
 	Geometry *rwg = Geometry::create(0, 0, 0);
 	rwa->geometry = rwg;
 
-	*PLUGINOFFSET(RslAtomic*, rwa, atmOffset) = atomic;
+	*PLUGINOFFSET(RslElement*, rwa, atmOffset) = atomic;
 
 	rwg->numMaterials = g->matList.numMaterials;
 	rwg->materialList = new Material*[rwg->numMaterials];
@@ -372,8 +372,8 @@ convertAtomic(RslAtomic *atomic)
 	for(uint32 i = 0; i < rwg->meshHeader->numMeshes; i++)
 		meshes[i].numIndices = 0;
 
-	RslPS2ResEntryHeader *resHeader = (RslPS2ResEntryHeader*)(g+1);
-	RslPS2InstanceData *inst = (RslPS2InstanceData*)(resHeader+1);
+	sPs2Geometry *resHeader = (sPs2Geometry*)(g+1);
+	sPs2GeometryMesh *inst = (sPs2GeometryMesh*)(resHeader+1);
 	int32 numInst = resHeader->size >> 20;
 
 	int32 lastId = -1;
@@ -393,13 +393,15 @@ convertAtomic(RslAtomic *atomic)
 		rwg->meshHeader->totalIndices += meshes[i].numIndices;
 	}
 	rwg->geoflags = Geometry::TRISTRIP |
-	                Geometry::POSITIONS |	 /* 0x01 ? */
-	                Geometry::TEXTURED |	 /* 0x04 ? */
 	                Geometry::LIGHT;
 	if(rwg->hasColoredMaterial())
 		rwg->geoflags |= Geometry::MODULATE;
+	if(resHeader->flags & 0x1)
+		rwg->geoflags |= Geometry::POSITIONS;
 	if(resHeader->flags & 0x2)
 		rwg->geoflags |= Geometry::NORMALS;
+	if(resHeader->flags & 0x4)
+		rwg->geoflags |= Geometry::TEXTURED;
 	if(resHeader->flags & 0x8)
 		rwg->geoflags |= Geometry::PRELIT;
 	rwg->numTexCoordSets = 1;
@@ -433,42 +435,42 @@ convertAtomic(RslAtomic *atomic)
 	return rwa;
 }
 
-RslAtomic*
-collectAtomics(RslAtomic *atomic, void *data)
+RslElement*
+collectElements(RslElement *atomic, void *data)
 {
-	RslAtomic ***alist = (RslAtomic***)data;
+	RslElement ***alist = (RslElement***)data;
 	*(*alist)++ = atomic;
 	return atomic;
 }
 
 Clump*
-convertClump(RslClump *c)
+convertClump(RslElementGroup *c)
 {
 	Clump *rwc;
 	Frame *rwf;
 	Atomic *rwa;
-	rslFrameList frameList;
+	rslNodeList frameList;
 
 	rwc = Clump::create();
-	rslFrameListInitialize(&frameList, (RslFrame*)c->object.parent);
-	Frame **rwframes = new Frame*[frameList.numFrames];
-	for(int32 i = 0; i < frameList.numFrames; i++){
+	rslNodeListInitialize(&frameList, (RslNode*)c->object.parent);
+	Frame **rwframes = new Frame*[frameList.numNodes];
+	for(int32 i = 0; i < frameList.numNodes; i++){
 		rwf = convertFrame(frameList.frames[i]);
 		rwframes[i] = rwf;
 		void *par = frameList.frames[i]->object.parent;
-		int32 parent = findPointer(par, (void**)frameList.frames, frameList.numFrames);
+		int32 parent = findPointer(par, (void**)frameList.frames, frameList.numNodes);
 		if(parent >= 0)
 			rwframes[parent]->addChild(rwf);
 	}
 	rwc->object.parent = rwframes[0];
 
-	int32 numAtomics = RslClumpGetNumAtomics(c);
-	RslAtomic **alist = new RslAtomic*[numAtomics];
-	RslAtomic **ap = &alist[0];
-	RslClumpForAllAtomics(c, collectAtomics, &ap);
-	for(int32 i = 0; i < numAtomics; i++){
+	int32 numElements = RslElementGroupGetNumElements(c);
+	RslElement **alist = new RslElement*[numElements];
+	RslElement **ap = &alist[0];
+	RslElementGroupForAllElements(c, collectElements, &ap);
+	for(int32 i = 0; i < numElements; i++){
 		rwa = convertAtomic(alist[i]);
-		int32 fi = findPointer(alist[i]->object.object.parent, (void**)frameList.frames, frameList.numFrames);
+		int32 fi = findPointer(alist[i]->object.object.parent, (void**)frameList.frames, frameList.numNodes);
 		rwa->setFrame(rwframes[fi]);
 		rwc->addAtomic(rwa);
 	}
@@ -479,8 +481,8 @@ convertClump(RslClump *c)
 	return rwc;
 }
 
-RslAtomic*
-makeTextures(RslAtomic *atomic, void*)
+RslElement*
+makeTextures(RslElement *atomic, void*)
 {
 	RslGeometry *g = atomic->geometry;
 	RslMaterial *m;
@@ -522,7 +524,7 @@ moveAtomics(Frame *f)
 		}
 		for(i = 0; i < n; i++){
 			Frame *ff = Frame::create();
-			RslAtomic *rsla = *PLUGINOFFSET(RslAtomic*, objs[i], atmOffset);
+			RslElement *rsla = *PLUGINOFFSET(RslElement*, objs[i], atmOffset);
 			char *name = gta::getNodeName(ff);
 			strncpy(name, oldname, 24);
 			char *end = strrchr(name, '_');
@@ -547,7 +549,7 @@ getPalettePS2(RslRaster *raster)
 	uint32 f = raster->ps2.flags;
 	uint32 w = 1 << (f & 0x3F);
 	uint32 h = 1 << (f>>6 & 0x3F);
-	uint32 d = f>>12 & 0xFF;
+	uint32 d = f>>12 & 0x3F;
 	uint32 mip = f>>20 & 0xF;
 	uint8 *data = raster->ps2.data;
 	if(d > 8)
@@ -566,7 +568,7 @@ getTexelPS2(RslRaster *raster, int32 n)
 	uint32 f = raster->ps2.flags;
 	uint32 w = 1 << (f & 0x3F);
 	uint32 h = 1 << (f>>6 & 0x3F);
-	uint32 d = f>>12 & 0xFF;
+	uint32 d = f>>12 & 0x3F;
 	uint8 *data = raster->ps2.data;
 	for(int32 i = 0; i < n; i++){
 		data += w*h*d/8;
@@ -694,7 +696,7 @@ RslTexture *dumpTextureCB(RslTexture *texture, void*)
 	uint32 f = texture->raster->ps2.flags;
 	uint32 w = 1 << (f & 0x3F);
 	uint32 h = 1 << (f>>6 & 0x3F);
-	uint32 d = f>>12 & 0xFF;
+	uint32 d = f>>12 & 0x3F;
 	uint32 mip = f>>20 & 0xF;
 	uint32 swizmask = f>>24;
 	uint8 *palette = getPalettePS2(texture->raster);
@@ -726,7 +728,7 @@ convertTexturePS2(RslTexture *texture, void *pData)
 	uint32 f = ras->flags;
 	uint32 w = 1 << (f & 0x3F);
 	uint32 h = 1 << (f>>6 & 0x3F);
-	uint32 d = f>>12 & 0xFF;
+	uint32 d = f>>12 & 0x3F;
 	//uint32 mip = f>>20 & 0xF;
 	uint32 swizmask = f>>24;
 	uint8 *palette = getPalettePS2(texture->raster);
@@ -828,10 +830,10 @@ convertTexturePS2(RslTexture *texture, void *pData)
 }
 
 TexDictionary*
-convertTXD(RslTexDictionary *txd)
+convertTXD(RslTexList *txd)
 {
 	TexDictionary *rwtxd = TexDictionary::create();
-	RslTexDictionaryForAllTextures(txd, convertTexturePS2, rwtxd);
+	RslTexListForAllTextures(txd, convertTexturePS2, rwtxd);
 	return rwtxd;
 }
 
@@ -880,9 +882,9 @@ main(int argc, char *argv[])
 
 	World *world = NULL;
 	Sector *sector = NULL;
-	RslClump *clump = NULL;
-	RslAtomic *atomic = NULL;
-	RslTexDictionary *txd = NULL;
+	RslElementGroup *clump = NULL;
+	RslElement *atomic = NULL;
+	RslTexList *txd = NULL;
 
 
 	StreamFile stream;
@@ -893,14 +895,14 @@ main(int argc, char *argv[])
 
 	if(ident == ID_TEXDICTIONARY){
 		findChunk(&stream, ID_TEXDICTIONARY, NULL, NULL);
-		txd = RslTexDictionaryStreamRead(&stream);
+		txd = RslTexListStreamRead(&stream);
 		stream.close();
 		assert(txd);
 		goto writeTxd;
 	}
 	if(ident == ID_CLUMP){
 		findChunk(&stream, ID_CLUMP, NULL, NULL);
-		clump = RslClumpStreamRead(&stream);
+		clump = RslElementGroupStreamRead(&stream);
 		stream.close();
 		assert(clump);
 		goto writeDff;
@@ -985,21 +987,21 @@ main(int argc, char *argv[])
 		uint8 *p;
 		p = *rslstr->hashTab;
 		p -= 0x24;
-		atomic = (RslAtomic*)p;
+		atomic = (RslElement*)p;
 		clump = atomic->clump;
 		Clump *rwc;
 		if(clump){
-			RslClumpForAllAtomics(clump, makeTextures, NULL);
-			//RslClumpForAllAtomics(clump, dumpAtomicCB, NULL);
-			//RslFrameForAllChildren(RslClumpGetFrame(clump), dumpFrameCB, NULL);
+			RslElementGroupForAllElements(clump, makeTextures, NULL);
+			//RslElementGroupForAllElements(clump, dumpElementCB, NULL);
+			//RslNodeForAllChildren(RslElementGroupGetNode(clump), dumpNodeCB, NULL);
 		}else{
 			makeTextures(atomic, NULL);
-			clump = RslClumpCreate();
-			RslAtomicSetFrame(atomic, RslFrameCreate());
-			RslClumpSetFrame(clump, RslAtomicGetFrame(atomic));
-			RslClumpAddAtomic(clump, atomic);
-			//dumpAtomicCB(a, NULL);
-			//RslFrameForAllChildren(RslAtomicGetFrame(atomic), dumpFrameCB, NULL);
+			clump = RslElementGroupCreate();
+			RslElementSetNode(atomic, RslNodeCreate());
+			RslElementGroupSetNode(clump, RslElementGetNode(atomic));
+			RslElementGroupAddElement(clump, atomic);
+			//dumpElementCB(a, NULL);
+			//RslNodeForAllChildren(RslElementGetNode(atomic), dumpNodeCB, NULL);
 		}
 	writeDff:
 		rwc = convertClump(clump);
@@ -1012,10 +1014,10 @@ main(int argc, char *argv[])
 		rwc->streamWrite(&stream);
 		stream.close();
 	}else if(rslstr->ident == TEX_IDENT){
-		txd = (RslTexDictionary*)rslstr->data;
+		txd = (RslTexList*)rslstr->data;
 	writeTxd:
 		if(extract)
-			RslTexDictionaryForAllTextures(txd, dumpTextureCB, NULL);
+			RslTexListForAllTextures(txd, dumpTextureCB, NULL);
 		TexDictionary *rwtxd = convertTXD(txd);
 		if(argc > 1)
 			assert(stream.open(argv[1], "wb"));

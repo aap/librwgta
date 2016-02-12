@@ -13,49 +13,49 @@ struct RslStream {
 	uint32   relocSize;
 	uint8  **hashTab;   // ??
 	uint16   hashTabSize;
-	uint16   numAtomics;
+	uint16   numElements;
 
 	uint8 *data;
 	void relocate(void);
 };
 
 struct RslObject;
-struct RslObjectHasFrame;
-struct RslClump;
-struct RslAtomic;
-struct RslFrame;
-struct RslNativeGeometry;
-struct RslNativeMesh;
+struct RslObjectHasNode;
+struct RslElementGroup;        // Clump
+struct RslElement;             // Atomic
+struct RslNode;                // Frame
+struct RslNativeGeometry;      // unofficial name
+struct RslNativeMesh;	       // unofficial name
 struct RslGeometry;
 struct RslSkin;
 struct RslMaterial;
-struct RslHAnimHierarchy;
-struct RslHAnimNode;
-struct RslPS2ResEntryHeader;
-struct RslPS2InstanceData;
-struct RslTexDictionary;
+struct RslTAnimTree;           // HAnimHierarchy
+struct RslTAnimNode;           // HAnimNode
+struct RslPS2ResEntryHeader;   // unofficial name
+struct RslPS2InstanceData;     // unofficial name
+struct RslTexList;             // TexDictionary
 struct RslTexture;
 
-typedef RslFrame *(*RslFrameCallBack)(RslFrame *frame, void *data);
-typedef RslClump *(*RslClumpCallBack)(RslClump *clump, void *data);
-typedef RslAtomic *(*RslAtomicCallBack)(RslAtomic *atomic, void *data);
+typedef RslNode *(*RslNodeCallBack)(RslNode *frame, void *data);
+typedef RslElementGroup *(*RslElementGroupCallBack)(RslElementGroup *clump, void *data);
+typedef RslElement *(*RslElementCallBack)(RslElement *atomic, void *data);
 typedef RslMaterial *(*RslMaterialCallBack)(RslMaterial *material, void *data);
 typedef RslTexture *(*RslTextureCallBack)(RslTexture *texture, void *pData);
 
-struct RslV3d
+struct RslV3
 {
 	float32 x, y, z;
 };
 
 struct RslMatrix
 {
-	RslV3d right;
+	RslV3 right;
 	uint32 flags;
-	RslV3d up;
+	RslV3 up;
 	uint32 pad1;
-	RslV3d at;
+	RslV3 at;
 	uint32 pad2;
-	RslV3d pos;
+	RslV3 pos;
 	uint32 pad3;
 };
 
@@ -125,13 +125,13 @@ struct RslObject {
 #define rslObjectGetParent(object) (((RslObject*)(object))->parent)
 #define rslObjectSetParent(c,p)    (((RslObject*)(c))->parent) = (void*)(p)
 
-struct RslObjectHasFrame {
+struct RslObjectHasNode {
 	RslObject   object;
-	RslLLLink   lFrame;
+	RslLLLink   lNode;
 	void      (*sync)();
 };
 
-void rslObjectHasFrameSetFrame(RslObjectHasFrame *object, RslFrame *f);
+void rslObjectHasNodeSetNode(RslObjectHasNode *object, RslNode *f);
 
 struct RslRasterPS2 {
 	uint8 *data;
@@ -162,20 +162,20 @@ union RslRaster {
 
 RslRaster *RslCreateRasterPS2(uint32 w, uint32 h, uint32 d, uint32 mipmaps);
 
-struct RslTexDictionary {
+struct RslTexList {
 	RslObject   object;
 	RslLinkList texturesInDict;
 	RslLLLink   lInInstance;
 };
 
-RslTexDictionary *RslTexDictionaryStreamRead(Stream *stream);
-RslTexDictionary *RslTexDictionaryCreate(void);
-RslTexture *RslTexDictionaryAddTexture(RslTexDictionary *dict, RslTexture *tex);
-RslTexDictionary *RslTexDictionaryForAllTextures(RslTexDictionary *dict, RslTextureCallBack fpCallBack, void *pData);
+RslTexList *RslTexListStreamRead(Stream *stream);
+RslTexList *RslTexListCreate(void);
+RslTexture *RslTexListAddTexture(RslTexList *dict, RslTexture *tex);
+RslTexList *RslTexListForAllTextures(RslTexList *dict, RslTextureCallBack fpCallBack, void *pData);
 
 struct RslTexture {
 	RslRaster        *raster;
-	RslTexDictionary *dict;
+	RslTexList       *dict;
 	RslLLLink         lInDictionary;
 	char              name[32];
 	char              mask[32];
@@ -186,79 +186,79 @@ void RslTextureDestroy(RslTexture *texture);
 RslTexture *RslTextureStreamRead(Stream *stream);
 RslTexture *RslReadNativeTexturePS2(Stream *stream);
 
-struct RslFrame {
+struct RslNode {
 	RslObject         object;
 	RslLinkList       objectList;
 		         
 	RslMatrix         modelling;
 	RslMatrix         ltm;
-	RslFrame          *child;
-	RslFrame          *next;
-	RslFrame          *root;
+	RslNode          *child;
+	RslNode          *next;
+	RslNode          *root;
 
-	// RwHAnimFrameExtension
+	// RwHAnimNodeExtension
 	int32              nodeId;
-	RslHAnimHierarchy *hier;
+	RslTAnimTree      *hier;
 	// R* Node name
 	char              *name;
 	// R* Visibility
 	int32              hierId;
 };
 
-RslFrame *RslFrameCreate(void);
-RslFrame *RslFrameAddChild(RslFrame *parent, RslFrame *child);
-int32 RslFrameCount(RslFrame *f);
-RslFrame *RslFrameForAllChildren(RslFrame *frame, RslFrameCallBack callBack, void *data);
+RslNode *RslNodeCreate(void);
+RslNode *RslNodeAddChild(RslNode *parent, RslNode *child);
+int32 RslNodeCount(RslNode *f);
+RslNode *RslNodeForAllChildren(RslNode *frame, RslNodeCallBack callBack, void *data);
 
-struct rslFrameList
+struct rslNodeList
 {
-	RslFrame **frames;
-	int32 numFrames;
+	RslNode **frames;
+	int32 numNodes;
 };
 
-void rslFrameListStreamRead(Stream *stream, rslFrameList *framelist);
-void rslFrameListInitialize(rslFrameList *frameList, RslFrame *root);
+void rslNodeListStreamRead(Stream *stream, rslNodeList *framelist);
+void rslNodeListInitialize(rslNodeList *frameList, RslNode *root);
 
-struct RslClump {
+struct RslElementGroup {
 	RslObject   object;
 	RslLinkList atomicList;
 };
 
-#define RslClumpGetFrame(_clump)                                    \
-    ((RslFrame*)rslObjectGetParent(_clump))
+#define RslElementGroupGetNode(_clump)                                    \
+    ((RslNode*)rslObjectGetParent(_clump))
 
-#define RslClumpSetFrame(_clump, _frame)                            \
+#define RslElementGroupSetNode(_clump, _frame)                            \
     (rslObjectSetParent(_clump, _frame),                            \
      (_clump))
 
-RslClump *RslClumpCreate(void);
-RslClump *RslClumpStreamRead(Stream *stream);
-RslClump *RslClumpAddAtomic(RslClump *clump, RslAtomic *a);
-int32 RslClumpGetNumAtomics(RslClump *clump);
-RslClump *RslClumpForAllAtomics(RslClump *clump, RslAtomicCallBack callback, void *pData);
+RslElementGroup *RslElementGroupCreate(void);
+RslElementGroup *RslElementGroupStreamRead(Stream *stream);
+RslElementGroup *RslElementGroupAddElement(RslElementGroup *clump, RslElement *a);
+int32 RslElementGroupGetNumElements(RslElementGroup *clump);
+RslElementGroup *RslElementGroupForAllElements(RslElementGroup *clump, RslElementCallBack callback, void *pData);
 
-struct RslAtomic {
-	RslObjectHasFrame  object;
+struct RslElement {
+	RslObjectHasNode  object;
 	RslGeometry       *geometry;
-	RslClump          *clump;
-	RslLLLink          inClumpLink;
+	RslElementGroup          *clump;
+	RslLLLink          inElementGroupLink;
 
 	// what's this? rpWorldObj?
 	uint32             unk1;
 	uint16             unk2;
 	uint16             unk3;
 	// RpSkin
-	RslHAnimHierarchy *hier;
+	RslTAnimTree      *hier;
 	// what about visibility? matfx?
 	int32              pad;	// 0xAAAAAAAA
 };
 
-#define RslAtomicGetFrame(_atomic)                                  \
-    ((RslFrame*)rslObjectGetParent(_atomic))
+#define RslElementGetNode(_atomic)                                  \
+    ((RslNode*)rslObjectGetParent(_atomic))
 
-RslAtomic *RslAtomicCreate(void);
-RslAtomic *RslAtomicSetFrame(RslAtomic *atomic, RslFrame *frame);
-RslAtomic *RslAtomicStreamRead(Stream *stream, rslFrameList *framelist);
+RslElement *RslElementCreate(void);
+RslElement *RslElementSetNode(RslElement *atomic, RslNode *frame);
+RslElement *RslElementStreamRead(Stream *stream, rslNodeList *framelist);
 
 struct RslMaterialList {
 	RslMaterial **materials;
@@ -283,7 +283,7 @@ RslGeometry *RslGeometryCreatePS2(uint32 sz);
 RslGeometry *RslGeometryForAllMaterials(RslGeometry *geometry, RslMaterialCallBack fpCallBack, void *pData);
 
 struct RslMatFXEnv {
-	RslFrame *frame;
+	RslNode *frame;
 	union {
 		char       *texname;
 		RslTexture *texture;
@@ -311,14 +311,14 @@ struct RslMaterial {
 RslMaterial *RslMaterialCreate(void);
 RslMaterial *RslMaterialStreamRead(Stream *stream);
 
-struct RslHAnimNodeInfo {
+struct RslTAnimNodeInfo {
 	int8      id;
 	int8      index;
 	int8      flags;
-	RslFrame *frame;
+	RslNode  *frame;
 };
 
-struct RslHAnimHierarchy {
+struct RslTAnimTree {
 	int32              flags;
 	int32              numNodes;
 	void              *pCurrentAnim;
@@ -331,15 +331,15 @@ struct RslHAnimHierarchy {
 	void              *pAnimLoopCallBackData;
 	float32           *pMatrixArray;
 	void              *pMatrixArrayUnaligned;
-	RslHAnimNodeInfo  *pNodeInfo;
-	RslFrame          *parentFrame;
+	RslTAnimNodeInfo  *pNodeInfo;
+	RslNode           *parentNode;
 	int32              maxKeyFrameSize;
 	int32              currentKeyFrameSize;
 	void             (*keyFrameToMatrixCB)();
 	void             (*keyFrameBlendCB)();
 	void             (*keyFrameInterpolateCB)();
 	void             (*keyFrameAddCB)();
-	RslHAnimHierarchy *parentHierarchy;
+	RslTAnimTree      *parentTree;
 	int32              offsetInParent;
 	int32              rootParentOffset;
 };
@@ -362,7 +362,8 @@ struct RslSkin {
 
 RslSkin *RslSkinStreamRead(Stream *stream, RslGeometry *g);
 
-struct RslPS2ResEntryHeader {
+ // sPspGeometry but should be sPs2Geometry obviously...
+struct sPs2Geometry {
 	float32 bound[4];
 	uint32  size;		// and numMeshes
 	int32   flags;
@@ -374,7 +375,7 @@ struct RslPS2ResEntryHeader {
 	float32 pos[3];
 };
 
-struct RslPS2InstanceData {
+struct sPs2GeometryMesh {
 	float32  bound[4];
 	float32  uvScale[2];
 	int32    unknown;
@@ -394,7 +395,7 @@ struct RslStreamHeader {
 	uint32   relocSize;
 	uint32   root;        // absolute
 	uint16   zero;
-	uint16   numAtomics;
+	uint16   numElements;
 };
 
 struct RslWorldGeometry {
