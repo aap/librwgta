@@ -5,7 +5,6 @@ using namespace DirectX;
 #define RW_D3D9
 #include <rw.h>
 #include "rwgta.h"
-#include "math/math.h"
 #include "camera.h"
 
 IDirect3DDevice9 *Device = 0;
@@ -69,19 +68,23 @@ initrw(void)
 
 	FORLIST(lnk, clump->atomics){
 		rw::Atomic *a = rw::Atomic::fromClump(lnk);
-		if(a->pipeline && a->pipeline->platform == rw::PLATFORM_PS2)
+		if(a->pipeline && a->pipeline->platform != rw::platform)
 			a->pipeline = NULL;
-		a->getPipeline()->instance(a);
+		//a->getPipeline()->instance(a);
+
+		char *name = gta::getNodeName(a->getFrame());
+		if(strstr(name, "_dam") || strstr(name, "_vlo"))
+			a->object.flags &= ~rw::Atomic::RENDER;
 	}
 
-	rw::StreamFile out;
+	//rw::StreamFile out;
 	//out.open("out.dff", "wb");
 	//clump->streamWrite(&out);
 	//out.close();
 
-	out.open("out.txd", "wb");
-	rw::currentTexDictionary->streamWrite(&out);
-	out.close();
+	//out.open("out.txd", "wb");
+	//rw::currentTexDictionary->streamWrite(&out);
+	//out.close();
 }
 
 bool
@@ -114,21 +117,38 @@ Setup()
 	Device->SetRenderState(D3DRS_ALPHABLENDENABLE, 1);
 	Device->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
 
+
 	camera = new Camera;
-	camera->setAspectRatio(640.0f/480.0f);
-	camera->setNearFar(0.1f, 450.0f);
-	camera->setTarget(Vec3(0.0f, 0.0f, 0.0f));
+	camera->m_rwcam = rw::Camera::create();
+	camera->m_rwcam->setFrame(rw::Frame::create());
+	camera->m_aspectRatio = 640.0f/480.0f;
+	camera->m_near = 0.1f;
+	camera->m_far = 450.0f;
+	camera->m_target.set(0.0f, 0.0f, 0.0f);
+	camera->m_position.set(0.0f, -10.0f, 0.0f);
 //	camera->setPosition(Vec3(0.0f, 5.0f, 0.0f));
 //	camera->setPosition(Vec3(0.0f, -70.0f, 0.0f));
-	camera->setPosition(Vec3(0.0f, -10.0f, 0.0f));
 //	camera->setPosition(Vec3(0.0f, -1.0f, 3.0f));
+	camera->update();
 
 	return true;
 }
 
 void
-Cleanup()
+setcamera(rw::Camera *cam)
 {
+	rw::Matrix viewmat;
+	rw::Matrix::invert(&viewmat, cam->getFrame()->getLTM());
+	viewmat.right.x = -viewmat.right.x;
+	viewmat.rightw = 0.0;
+	viewmat.up.x = -viewmat.up.x;
+	viewmat.upw = 0.0;
+	viewmat.at.x = -viewmat.at.x;
+	viewmat.atw = 0.0;
+	viewmat.pos.x = -viewmat.pos.x;
+	viewmat.posw = 1.0;
+	Device->SetTransform(D3DTS_VIEW, (D3DMATRIX*)&viewmat);
+	Device->SetTransform(D3DTS_PROJECTION, (D3DMATRIX*)cam->projMat);
 }
 
 bool
@@ -141,18 +161,10 @@ Display(float timeDelta)
 	              0xff808080, 1.0f, 0);
 	Device->BeginScene();
 
-	camera->look();
-	Device->SetTransform(D3DTS_VIEW, (D3DMATRIX*)camera->viewMat.cr);
-	Device->SetTransform(D3DTS_PROJECTION, (D3DMATRIX*)camera->projMat.cr);
+	camera->update();
+	setcamera(camera->m_rwcam);
 
-	FORLIST(lnk, clump->atomics){
-		rw::Atomic *atomic = rw::Atomic::fromClump(lnk);
-		char *name = PLUGINOFFSET(char, atomic->getFrame(),
-		                          gta::nodeNameOffset);
-		if(strstr(name, "_dam") || strstr(name, "_vlo"))
-			continue;
-		atomic->render();
-	}
+	clump->render();
 
 	Device->EndScene();
 
@@ -182,6 +194,18 @@ d3d::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		case 'D':
 			camera->orbit(0.1f, 0.0f);
 			break;
+		case VK_UP:
+			camera->turn(0.0f, 0.1f);
+			break;
+		case VK_DOWN:
+			camera->turn(0.0f, -0.1f);
+			break;
+		case VK_LEFT:
+			camera->turn(0.1f, 0.0f);
+			break;
+		case VK_RIGHT:
+			camera->turn(-0.1f, 0.0f);
+			break;
 		case 'R':
 			camera->zoom(0.1f);
 			break;
@@ -191,6 +215,8 @@ d3d::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		case VK_ESCAPE:
 			DestroyWindow(hwnd);
 			break;
+		default:
+			printf("%d\n", wParam);
 		}
 		break;
 	case WM_CLOSE:
@@ -198,6 +224,11 @@ d3d::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		break;
 	}
 	return DefWindowProc(hwnd, msg, wParam, lParam);
+}
+
+void
+Cleanup()
+{
 }
 
 int WINAPI

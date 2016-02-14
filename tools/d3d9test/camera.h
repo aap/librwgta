@@ -1,22 +1,17 @@
 class Camera
 {
-private:
-	Vec3 position;
-	Vec3 target;
-	Vec3 up;
-	Vec3 local_up;
-
-	float fov, aspectRatio;
-	float n, f;
-
 public:
-	Mat4 projMat;
-	Mat4 viewMat;
+	rw::Camera *m_rwcam;
+	rw::V3d m_position;
+	rw::V3d m_target;
+	rw::V3d m_up;
+	rw::V3d m_local_up;
 
-	void setPosition(Vec3 q);
-	Vec3 getPosition(void);
-	void setTarget(Vec3 q);
-	Vec3 getTarget(void);
+	float m_fov, m_aspectRatio;
+	float m_near, m_far;
+
+
+	void setTarget(rw::V3d target);
 	float getHeading(void);
 
 	void turn(float yaw, float pitch);
@@ -25,13 +20,7 @@ public:
 	void zoom(float dist);
 	void pan(float x, float y);
 
-	void setFov(float f);
-	float getFov(void);
-	void setAspectRatio(float r);
-	void setNearFar(float n, float f);
-
-	void look(void);
-	float distanceTo(Vec3 q);
-	float sqDistanceTo(Vec3 q);
+	void update(void);
+	float distanceTo(rw::V3d v);
 	Camera(void);
 };
