@@ -126,6 +126,17 @@ void registerEnvSpecPlugin(void);
 // 0x53F20090	world (unused)
 //  0x53F20091	world (unused)
 
+// pds dffs:
+//    n   atomic   material
+//  1892  53f20080 53f20081	// ?			   no night colors
+//     1  53f20080 53f2008d	// triad_buddha01.dff	   no night colors
+// 56430  53f20082 53f20083	// world		   night colors
+//    39  53f20082 53f2008f	// reflective world	   night colors
+//  6941  53f20084 53f20085	// vehicles
+//  3423  53f20084 53f20087	// vehicles
+//  4640  53f20084 53f2008b	// vehicles
+//   418  53f20088 53f20089	// peds
+
 extern int32 pipelineOffset;
 
 void registerPipelinePlugin(void);

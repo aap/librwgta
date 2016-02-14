@@ -12,136 +12,6 @@ IDirect3DDevice9 *Device = 0;
 
 Camera *camera;
 
-namespace rw {
-
-namespace d3d {
-
-void
-setTexture(Texture *tex)
-{
-	static DWORD filternomip[] = {
-		0, D3DTEXF_POINT, D3DTEXF_LINEAR,
-		   D3DTEXF_POINT, D3DTEXF_LINEAR,
-		   D3DTEXF_POINT, D3DTEXF_LINEAR
-	};
-	static DWORD wrap[] = {
-		0, D3DTADDRESS_WRAP, D3DTADDRESS_MIRROR,
-		D3DTADDRESS_CLAMP, D3DTADDRESS_BORDER
-	};
-
-	D3dRaster *raster = PLUGINOFFSET(D3dRaster, tex->raster, nativeRasterOffset);
-	if(tex->raster && raster->texture){
-		Device->SetTexture(0, (IDirect3DTexture9*)raster->texture);
-		Device->SetSamplerState(0, D3DSAMP_MAGFILTER, filternomip[tex->filterAddressing & 0xFF]);
-		Device->SetSamplerState(0, D3DSAMP_MINFILTER, filternomip[tex->filterAddressing & 0xFF]);
-		Device->SetSamplerState(0, D3DSAMP_ADDRESSU, wrap[(tex->filterAddressing >> 8) & 0xF]);
-		Device->SetSamplerState(0, D3DSAMP_ADDRESSV, wrap[(tex->filterAddressing >> 12) & 0xF]);
-	}else
-		Device->SetTexture(0, NULL);
-}
-
-void
-setMaterial(Material *mat)
-{
-	D3DMATERIAL9 mat9;
-	D3DCOLORVALUE black = { 0, 0, 0, 0 };
-	float ambmult = mat->surfaceProps.ambient/255.0f;
-	float diffmult = mat->surfaceProps.diffuse/255.0f;
-	mat9.Ambient.r = mat->color.red*ambmult;
-	mat9.Ambient.g = mat->color.green*ambmult;
-	mat9.Ambient.b = mat->color.blue*ambmult;
-	mat9.Ambient.a = mat->color.alpha*ambmult;
-	mat9.Diffuse.r = mat->color.red*diffmult;
-	mat9.Diffuse.g = mat->color.green*diffmult;
-	mat9.Diffuse.b = mat->color.blue*diffmult;
-	mat9.Diffuse.a = mat->color.alpha*diffmult;
-	mat9.Power = 0.0f;
-	mat9.Emissive = black;
-	mat9.Specular = black;
-	Device->SetMaterial(&mat9);
-}
-
-}
-
-namespace d3d9 {
-using namespace d3d;
-
-void
-drawAtomic(Atomic *atomic)
-{
-	Geometry *geo = atomic->geometry;
-	if((geo->geoflags & Geometry::NATIVE) == 0)
-		return;
-	InstanceDataHeader *header = (InstanceDataHeader*)geo->instData;
-
-	Frame *f = atomic->getFrame();
-	Device->SetTransform(D3DTS_WORLD, (D3DMATRIX*)f->getLTM());
-
-	Device->SetStreamSource(0, (IDirect3DVertexBuffer9*)header->vertexStream[0].vertexBuffer,
-	                        0, header->vertexStream[0].stride);
-	Device->SetIndices((IDirect3DIndexBuffer9*)header->indexBuffer);
-	Device->SetVertexDeclaration((IDirect3DVertexDeclaration9*)header->vertexDeclaration);
-
-	InstanceData *inst = header->inst;
-	for(uint32 i = 0; i < header->numMeshes; i++){
-		if(inst->material->texture)
-			setTexture(inst->material->texture);
-		else
-			Device->SetTexture(0, NULL);
-		setMaterial(inst->material);
-		Device->SetRenderState(D3DRS_AMBIENT, D3DCOLOR_ARGB(0xFF, 0x40, 0x40, 0x40));
-		Device->SetRenderState(D3DRS_AMBIENTMATERIALSOURCE, D3DMCS_MATERIAL);
-		Device->SetRenderState(D3DRS_DIFFUSEMATERIALSOURCE, D3DMCS_MATERIAL);
-		if(geo->geoflags & Geometry::PRELIT)
-			Device->SetRenderState(D3DRS_EMISSIVEMATERIALSOURCE, D3DMCS_COLOR1);
-		Device->DrawIndexedPrimitive((D3DPRIMITIVETYPE)header->primType, inst->baseIndex,
-		                             0, inst->numVertices,
-		                             inst->startIndex, inst->numPrimitives);
-		inst++;
-	}
-}
-}
-
-namespace d3d8 {
-using namespace d3d;
-
-void
-drawAtomic(Atomic *atomic)
-{
-	Geometry *geo = atomic->geometry;
-	if((geo->geoflags & Geometry::NATIVE) == 0)
-		return;
-	InstanceDataHeader *header = (InstanceDataHeader*)geo->instData;
-
-	Frame *f = atomic->getFrame();
-	Device->SetTransform(D3DTS_WORLD, (D3DMATRIX*)f->getLTM());
-
-	InstanceData *inst = header->inst;
-	for(uint32 i = 0; i < header->numMeshes; i++){
-		if(inst->material->texture)
-			setTexture(inst->material->texture);
-		else
-			Device->SetTexture(0, NULL);
-		setMaterial(inst->material);
-		Device->SetRenderState(D3DRS_AMBIENT, D3DCOLOR_ARGB(0xFF, 0x40, 0x40, 0x40));
-		Device->SetRenderState(D3DRS_AMBIENTMATERIALSOURCE, D3DMCS_MATERIAL);
-		Device->SetRenderState(D3DRS_DIFFUSEMATERIALSOURCE, D3DMCS_MATERIAL);
-		if(geo->geoflags & Geometry::PRELIT)
-			Device->SetRenderState(D3DRS_EMISSIVEMATERIALSOURCE, D3DMCS_COLOR1);
-
-		Device->SetFVF(inst->vertexShader);
-		Device->SetStreamSource(0, (IDirect3DVertexBuffer9*)inst->vertexBuffer, 0, inst->stride);
-		Device->SetIndices((IDirect3DIndexBuffer9*)inst->indexBuffer);
-		uint32 numPrim = inst->primType == D3DPT_TRIANGLESTRIP ? inst->numIndices-2 : inst->numIndices/3;
-		Device->DrawIndexedPrimitive((D3DPRIMITIVETYPE)inst->primType, inst->baseIndex,
-		                             0, inst->numVertices, 0, numPrim);
-		inst++;
-	}
-}
-}
-
-}
-
 rw::Clump *clump;
 
 void
@@ -150,11 +20,6 @@ initrw(void)
 	gta::attachPlugins();
 	rw::d3d::registerNativeRaster();
 	rw::loadTextures = 1;
-
-	for(int i = 0; i < nelem(rw::defaultRenderCBs); i++)
-		rw::defaultRenderCBs[i] = NULL;
-	rw::defaultRenderCBs[rw::PLATFORM_D3D8] = rw::d3d8::drawAtomic;
-	rw::defaultRenderCBs[rw::PLATFORM_D3D9] = rw::d3d9::drawAtomic;
 
 	rw::currentTexDictionary = rw::TexDictionary::create();
 	rw::Image::setSearchPath("D:\\rockstargames\\ps2\\gta3\\MODELS\\gta3_archive\\txd_extracted\\;"
@@ -339,10 +204,10 @@ int WINAPI
 WinMain(HINSTANCE hinstance, HINSTANCE prevInstance,
         PSTR cmdLine, int showCmd)
 {
-/*	AllocConsole();
+	AllocConsole();
 	freopen("CONIN$", "r", stdin);
 	freopen("CONOUT$", "w", stdout);
-	freopen("CONOUT$", "w", stderr);*/
+	freopen("CONOUT$", "w", stderr);
 
 	if(!d3d::InitD3D(hinstance, 640, 480, true, D3DDEVTYPE_HAL, &Device)){
 		MessageBox(0, "InitD3D() - FAILED", 0, 0);

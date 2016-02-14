@@ -817,37 +817,37 @@ registerCollisionPlugin(void)
 
 using namespace ps2;
 
-rw::PipeAttribute saXYZADC = {
+PipeAttribute saXYZADC = {
 	"saXYZADC",
 	AT_V4_16 | AT_RW
 };
 
-rw::PipeAttribute saUV = {
+PipeAttribute saUV = {
 	"saUV",
 	AT_V2_16 | AT_RW
 };
 
-rw::PipeAttribute saUV2 = {
+PipeAttribute saUV2 = {
 	"saUV2",
 	AT_V4_16 | AT_RW
 };
 
-rw::PipeAttribute saRGBA = {
+PipeAttribute saRGBA = {
 	"saRGBA",
 	AT_V4_8 | AT_UNSGN | AT_RW
 };
 
-rw::PipeAttribute saRGBA2 = {
+PipeAttribute saRGBA2 = {
 	"saRGBA2",
 	AT_V4_16 | AT_UNSGN | AT_RW
 };
 
-rw::PipeAttribute saNormal = {
+PipeAttribute saNormal = {
 	"saNormal",
 	AT_V4_8 | AT_RW
 };
 
-rw::PipeAttribute saWeights = {
+PipeAttribute saWeights = {
 	"saWeights",
 	AT_V4_32 | AT_RW
 };
@@ -1197,7 +1197,7 @@ saInstanceCB(MatPipeline *pipe, Geometry *g, Mesh *m, uint8 **data)
 	ADCData *adc = PLUGINOFFSET(ADCData, g, adcOffset);
 
 	for(uint32 i = 0; i < nelem(pipe->attribs); i++){
-		rw::PipeAttribute *a = pipe->attribs[i];
+		PipeAttribute *a = pipe->attribs[i];
 		if(a == &saXYZADC)
 			instanceSAPositions(g, m, adc->adcFormatted ? adc->adcBits : NULL,
 			                    (int16*)data[i], vertScale);
