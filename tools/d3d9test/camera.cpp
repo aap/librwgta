@@ -1,6 +1,5 @@
 #include <cstdio>
 #include <cassert>
-#include <cmath>
 
 #define RW_D3D9
 #include <rw.h>
@@ -20,108 +19,105 @@ Camera::update(void)
 		m_rwcam->setFOV(m_fov, m_aspectRatio);
 		m_rwcam->updateProjectionMatrix();
 
-		V3d forward = m_target.sub(m_position).normalize();
-		V3d left = m_up.cross(forward).normalize();
-		V3d nup = forward.cross(left);
-
 		rw::Frame *f = m_rwcam->getFrame();
-		f->matrix.right = left; // lol
-		f->matrix.up = nup;
-		f->matrix.at = forward;
-		f->matrix.pos = m_position;
-		f->updateObjects();
+		if(f){
+			V3d forward = normalize(sub(m_target, m_position));
+			V3d left = normalize(cross(m_up, forward));
+			V3d nup = cross(forward, left);
+			f->matrix.right = left; // lol
+			f->matrix.up = nup;
+			f->matrix.at = forward;
+			f->matrix.pos = m_position;
+			f->updateObjects();
+		}
 	}
 }
 
 void
 Camera::setTarget(V3d target)
 {
-	m_position = m_position.sub(m_target.sub(target));
+	m_position = sub(m_position, sub(m_target, target));
 	m_target = target;
 }
 
 float
 Camera::getHeading(void)
 {
-	V3d dir = m_target.sub(m_position);
+	V3d dir = sub(m_target, m_position);
 	float a = atan2(dir.y, dir.x)-PI/2.0f;
-	return m_local_up.z < 0.0f ? a-PI : a;
+	return m_localup.z < 0.0f ? a-PI : a;
 }
 
 void
 Camera::turn(float yaw, float pitch)
 {
-	yaw /= 2.0f;
-	pitch /= 2.0f;
-	V3d dir = m_target.sub(m_position);
-	Quat r(cos(yaw), 0.0f, 0.0f, sin(yaw));
-	dir = r.mult(Quat(dir).mult(r.conj())).vec();
-	m_local_up = r.mult(Quat(m_local_up).mult(r.conj())).vec();
+	V3d dir = sub(m_target, m_position);
+	Quat r = Quat::rotation(yaw, V3d(0.0f, 0.0f, 1.0f));
+	dir = rotate(dir, r);
+	m_localup = rotate(m_localup, r);
 
-	V3d right = dir.cross(m_local_up).normalize();
-	r = Quat(cos(pitch), right.scale(sin(pitch)));
-	dir = r.mult(Quat(dir).mult(r.conj())).vec();
-	m_local_up = right.cross(dir).normalize();
-	if(m_local_up.z >= 0.0) m_up.z = 1.0;
+	V3d right = normalize(cross(dir, m_localup));
+	r = Quat::rotation(pitch, right);
+	dir = rotate(dir, r);
+	m_localup = normalize(cross(right, dir));
+	if(m_localup.z >= 0.0) m_up.z = 1.0;
 	else m_up.z = -1.0f;
 
-	m_target = m_position.add(dir);
+	m_target = add(m_position, dir);
 }
 
 void
 Camera::orbit(float yaw, float pitch)
 {
-	yaw /= 2.0f;
-	pitch /= 2.0f;
-	V3d dir = m_target.sub(m_position);
-	Quat r(cos(yaw), 0.0f, 0.0f, sin(yaw));
-	dir = r.mult(Quat(dir).mult(r.conj())).vec();
-	m_local_up = r.mult(Quat(m_local_up).mult(r.conj())).vec();
+	V3d dir = sub(m_target, m_position);
+	Quat r = Quat::rotation(yaw, V3d(0.0f, 0.0f, 1.0f));
+	dir = rotate(dir, r);
+	m_localup = rotate(m_localup, r);
 
-	V3d right = dir.cross(m_local_up).normalize();
-	r = Quat(cos(-pitch), right.scale(sin(-pitch)));
-	dir = r.mult(Quat(dir).mult(r.conj())).vec();
-	m_local_up = right.cross(dir).normalize();
-	if(m_local_up.z >= 0.0) m_up.z = 1.0;
+	V3d right = normalize(cross(dir, m_localup));
+	r = Quat::rotation(-pitch, right);
+	dir = rotate(dir, r);
+	m_localup = normalize(cross(right, dir));
+	if(m_localup.z >= 0.0) m_up.z = 1.0;
 	else m_up.z = -1.0f;
 
-	m_position = m_target.sub(dir);
+	m_position = sub(m_target, dir);
 }
 
 void
 Camera::dolly(float dist)
 {
-	V3d dir = m_target.sub(m_position).normalize().scale(dist);
-	m_position = m_position.add(dir);
-	m_target = m_target.add(dir);
+	V3d dir = setlength(sub(m_target, m_position), dist);
+	m_position = add(m_position, dir);
+	m_target = add(m_target, dir);
 }
 
 void
 Camera::zoom(float dist)
 {
-	V3d dir = m_target.sub(m_position);
-	float curdist = dir.length();
+	V3d dir = sub(m_target, m_position);
+	float curdist = length(dir);
 	if(dist >= curdist)
 		dist = curdist-0.01f;
-	dir = dir.normalize().scale(dist);
-	m_position = m_position.add(dir);
+	dir = setlength(dir, dist);
+	m_position = add(m_position, dir);
 }
 
 void
 Camera::pan(float x, float y)
 {
-	V3d dir = m_target.sub(m_position).normalize();
-	V3d right = dir.cross(m_up).normalize();
-	V3d local_up = right.cross(dir).normalize();
-	dir = right.scale(x).add(local_up.scale(y));
-	m_position = m_position.add(dir);
-	m_target = m_target.add(dir);
+	V3d dir = normalize(sub(m_target, m_position));
+	V3d right = normalize(cross(dir, m_up));
+	V3d localup = normalize(cross(right, dir));
+	dir = add(scale(right, x), scale(localup, y));
+	m_position = add(m_position, dir);
+	m_target = add(m_target, dir);
 }
 
 float
 Camera::distanceTo(V3d v)
 {
-	return m_position.sub(v).length();
+	return length(sub(m_position, v));
 }
 
 Camera::Camera()
@@ -129,7 +125,7 @@ Camera::Camera()
 	m_position.set(0.0f, 6.0f, 0.0f);
 	m_target.set(0.0f, 0.0f, 0.0f);
 	m_up.set(0.0f, 0.0f, 1.0f);
-	m_local_up = m_up;
+	m_localup = m_up;
 	m_fov = 70.0f;
 	m_aspectRatio = 1.0f;
 	m_near = 0.1f;

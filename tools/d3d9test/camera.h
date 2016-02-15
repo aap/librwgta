@@ -5,7 +5,7 @@ public:
 	rw::V3d m_position;
 	rw::V3d m_target;
 	rw::V3d m_up;
-	rw::V3d m_local_up;
+	rw::V3d m_localup;
 
 	float m_fov, m_aspectRatio;
 	float m_near, m_far;
