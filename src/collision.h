@@ -2,20 +2,20 @@ struct CColSphere
 {
 	rw::V3d center;
 	float radius;
-	rw::uint8 mat;
-	rw::uint8 flag;
+	rw::uint8 surface;
+	rw::uint8 piece;
 
-	void Set(float radius, rw::V3d *center, rw::uint8 mat, rw::uint8 flag);
+	void Set(float radius, rw::V3d *center, rw::uint8 surf, rw::uint8 piece);
 };
 
 struct CColBox
 {
 	rw::V3d min;
 	rw::V3d max;
-	rw::uint8 mat;
-	rw::uint8 flag;
+	rw::uint8 surface;
+	rw::uint8 piece;
 
-	void Set(rw::V3d *min, rw::V3d *max, rw::uint8 mat, rw::uint8 flag);
+	void Set(rw::V3d *min, rw::V3d *max, rw::uint8 surf, rw::uint8 piece);
 };
 
 struct CColLine
@@ -33,9 +33,9 @@ struct CColTriangle
 	short a;
 	short b;
 	short c;
-	rw::uint8 mat;
+	rw::uint8 surface;
 
-	void Set(int a, int b, int c, rw::uint8 mat);
+	void Set(int a, int b, int c, rw::uint8 surf);
 };
 
 //struct CColPoint
@@ -73,3 +73,4 @@ struct CColModel
 };
 
 void readColModel(CColModel *colmodel, rw::uint8 *buf);
+rw::uint32 writeColModel(CColModel *colmodel, rw::uint8 **buf);
