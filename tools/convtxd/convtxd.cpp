@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <cassert>
+#include <ctype.h>
 
 #include <rw.h>
 #include <args.h>
@@ -78,12 +79,130 @@ xboxToD3d8(Raster *raster)
 	return newras;
 }
 
+struct StrAssoc {
+	char *key;
+	int val;
+
+	static int StrAssoc::get(StrAssoc *desc, char *key);
+};
+
+int
+StrAssoc::get(StrAssoc *desc, char *key)
+{
+	for(; desc->key[0] != '\0'; desc++)
+		if(strcmp(desc->key, key) == 0)
+			return desc->val;
+	return desc->val;
+}
+
+enum {
+	NEW = 1,
+	SEARCHPATH,
+	ADD,
+	LINEAR,
+	WRITE
+};
+
+StrAssoc cmds[] = {
+	{ "new", NEW },
+	{ "searchpath", SEARCHPATH },
+	{ "add", ADD },
+	{ "linear", LINEAR },
+	{ "write", WRITE },
+	{ "", 0 }
+};
+
+char*
+skipwhite(char *s)
+{
+	while(isspace(*s))
+		s++;
+	return s;
+}
+
+char*
+getline(void)
+{
+	static char line[1024];
+again:
+	if(fgets(line, 1024, stdin) == NULL)
+		return NULL;
+	// remove leading whitespace
+	char *s = skipwhite(line);
+	// remove trailing whitespace
+	int end = strlen(s);
+	char c;
+	while(c = s[--end], isspace(c))
+		s[end] = '\0';
+	// convert ',' -> ' '
+	for(char *t = s; *t; t++)
+		if(*t == ',') *t = ' ';
+	// don't return empty lines
+	if(*s == '\0')
+		goto again;
+	return s;
+}
+
+int
+runscript(void)
+{
+	char *s, *arg;
+	int cmd;
+	currentTexDictionary = TexDictionary::create();
+	rw::loadTextures = 1;
+	Texture *tex = NULL;
+	StreamFile out;
+	while(s = getline()){
+		if(s[0] == '#')
+			continue;
+		s = strtok(s, " \t");
+		cmd = StrAssoc::get(cmds, s);
+		arg = strtok(NULL, " \t");
+#define NEEDARG(arg) \
+			if(arg == NULL){\
+				fprintf(stderr, "missing argument to '%s'\n", s);\
+				break;\
+			}
+		switch(cmd){
+		case NEW:
+			currentTexDictionary->destroy();
+			currentTexDictionary = TexDictionary::create();
+			break;
+		case SEARCHPATH:
+			NEEDARG(arg);
+			Image::setSearchPath(arg);
+			break;
+		case ADD:
+			NEEDARG(arg);
+			tex = Texture::read(arg, strtok(NULL, " \t"));
+			break;
+		case LINEAR:
+			if(tex)
+				tex->filterAddressing = tex->filterAddressing&~0xFF | Texture::LINEAR;
+			break;
+		case WRITE:
+			NEEDARG(arg);
+			if(out.open(arg, "wb")){
+				currentTexDictionary->streamWrite(&out);
+				out.close();
+			}else
+				fprintf(stderr, "couldn't write txd %s\n", arg);
+			break;
+		default:
+			fprintf(stderr, "unknown command '%s'\n", s);
+		}
+#undef NEEDARG
+	}
+	return 0;
+}
+
 void
 usage(void)
 {
 	fprintf(stderr, "usage: %s [-v version] [-o platform] in.txd [out.txd]\n", argv0);
 	fprintf(stderr, "\t-v RW version, e.g. 33004 for 3.3.0.4\n");
 	fprintf(stderr, "\t-o output platform. ps2, xbox, mobile, d3d8, d3d9\n");
+	fprintf(stderr, "\t-s run script from stdin, see source code\n");
 	exit(1);
 }
 
@@ -92,13 +211,15 @@ main(int argc, char *argv[])
 {
 	gta::attachPlugins();
 
-	rw::version = 0;
-	rw::platform = rw::PLATFORM_PS2;
+	rw::version = 0x34003;
+//	rw::platform = rw::PLATFORM_PS2;
 //	rw::platform = rw::PLATFORM_OGL;
 //	rw::platform = rw::PLATFORM_XBOX;
-//	rw::platform = rw::PLATFORM_D3D8;
+	rw::platform = rw::PLATFORM_D3D8;
 //	rw::platform = rw::PLATFORM_D3D9;
-	int outplatform = rw::PLATFORM_XBOX;
+//	int outplatform = rw::PLATFORM_XBOX;
+	int outplatform = rw::PLATFORM_D3D8;
+	int script = 0;
 
 	char *s;
 	ARGBEGIN{
@@ -117,9 +238,15 @@ main(int argc, char *argv[])
 		outplatform = PLATFORM_D3D8;
 	found:
 		break;
+	case 's':
+		script++;
+		break;
 	default:
 		usage();
 	}ARGEND;
+
+	if(script)
+		return runscript();
 
 	if(argc < 1)
 		usage();

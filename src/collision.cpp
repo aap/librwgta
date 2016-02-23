@@ -83,7 +83,6 @@ readColModel(CColModel *colmodel, uint8 *buf)
 	colmodel->boundingBox.max.z = *fp++;
 	buf = (uint8*)fp;
 	colmodel->numSpheres = *(int32*)buf;
-printf("spheres: %d\n", colmodel->numSpheres);
 	buf += 4;
 	if(colmodel->numSpheres){
 		colmodel->spheres = new CColSphere[colmodel->numSpheres];
@@ -94,7 +93,6 @@ printf("spheres: %d\n", colmodel->numSpheres);
 	}
 
 	colmodel->numLines = *(int32*)buf;
-printf("lines: %d\n", colmodel->numLines);
 	buf += 4;
 	if(colmodel->numLines){
 		colmodel->lines = new CColLine[colmodel->numLines];
@@ -105,7 +103,6 @@ printf("lines: %d\n", colmodel->numLines);
 	}
 
 	colmodel->numBoxes = *(int32*)buf;
-printf("boxes: %d\n", colmodel->numBoxes);
 	buf += 4;
 	if(colmodel->numBoxes){
 		colmodel->boxes = new CColBox[colmodel->numBoxes];
@@ -116,7 +113,6 @@ printf("boxes: %d\n", colmodel->numBoxes);
 	}
 
 	int32 numVertices = *(int32*)buf;
-printf("vertices: %d\n", numVertices);
 	buf += 4;
 	if(numVertices){
 		colmodel->vertices = new V3d[numVertices];
@@ -127,7 +123,6 @@ printf("vertices: %d\n", numVertices);
 	}
 
 	colmodel->numTriangles = *(int32*)buf;
-printf("triangles: %d\n", colmodel->numTriangles);
 	buf += 4;
 	if(colmodel->numTriangles){
 		colmodel->triangles = new CColTriangle[colmodel->numTriangles];
@@ -158,7 +153,7 @@ writeColModel(CColModel *colmodel, rw::uint8 **bufp)
 		colmodel->numBoxes*28 + numVertices*12 + colmodel->numTriangles*16;
 	*bufp = buf = new uint8[size];
 	memset(buf, 0, size);
-printf("size: %x\n", size+24);
+	uint8 *end = buf + size;
 
 	float *fp = (float*)buf;
 	*fp++ = colmodel->boundingSphere.radius;
@@ -174,7 +169,6 @@ printf("size: %x\n", size+24);
 	buf = (uint8*)fp;
 
 	*(int32*)buf = colmodel->numSpheres;
-printf("spheres: %d\n", colmodel->numSpheres);
 	buf += 4;
 	for(int i = 0; i < colmodel->numSpheres; i++){
 		*(float*)(buf+0) = colmodel->spheres[i].radius;
@@ -186,7 +180,6 @@ printf("spheres: %d\n", colmodel->numSpheres);
 	}
 
 	*(int32*)buf = colmodel->numLines;
-printf("lines: %d\n", colmodel->numLines);
 	buf += 4;
 	for(int i = 0; i < colmodel->numLines; i++){
 		*(V3d*)(buf+0) = colmodel->lines[i].p0;
@@ -195,7 +188,6 @@ printf("lines: %d\n", colmodel->numLines);
 	}
 
 	*(int32*)buf = colmodel->numBoxes;
-printf("boxes: %d\n", colmodel->numBoxes);
 	buf += 4;
 	for(int i = 0; i < colmodel->numBoxes; i++){
 		*(V3d*)(buf+0) = colmodel->boxes[i].min;
@@ -207,7 +199,6 @@ printf("boxes: %d\n", colmodel->numBoxes);
 	}
 
 	*(int32*)buf = numVertices;
-printf("vertices: %d\n", numVertices);
 	buf += 4;
 	for(int i = 0; i < numVertices; i++){
 		*(V3d*)buf = colmodel->vertices[i];
@@ -215,7 +206,6 @@ printf("vertices: %d\n", numVertices);
 	}
 
 	*(int32*)buf = colmodel->numTriangles;
-printf("triangles: %d\n", colmodel->numTriangles);
 	buf += 4;
 	for(int i = 0; i < colmodel->numTriangles; i++){
 		*(int32*)(buf+0) = colmodel->triangles[i].a;
@@ -225,6 +215,6 @@ printf("triangles: %d\n", colmodel->numTriangles);
 		buf[15] = 0; // light
 		buf += 16;
 	}
-
+	assert(buf == end);
 	return size;
 }

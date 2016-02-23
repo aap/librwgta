@@ -100,18 +100,18 @@ Frame*
 convertFrame(RslNode *f)
 {
 	Frame *rwf = Frame::create();
-	rwf->matrix[0] =  f->modelling.right.x;
-	rwf->matrix[1] =  f->modelling.right.y;
-	rwf->matrix[2] =  f->modelling.right.z;
-	rwf->matrix[4] =  f->modelling.up.x;
-	rwf->matrix[5] =  f->modelling.up.y;
-	rwf->matrix[6] =  f->modelling.up.z;
-	rwf->matrix[8] =  f->modelling.at.x;
-	rwf->matrix[9] =  f->modelling.at.y;
-	rwf->matrix[10] = f->modelling.at.z;
-	rwf->matrix[12] = f->modelling.pos.x;
-	rwf->matrix[13] = f->modelling.pos.y;
-	rwf->matrix[14] = f->modelling.pos.z;
+	rwf->matrix.right.x =  f->modelling.right.x;
+	rwf->matrix.right.y =  f->modelling.right.y;
+	rwf->matrix.right.z =  f->modelling.right.z;
+	rwf->matrix.up.x =  f->modelling.up.x;
+	rwf->matrix.up.y =  f->modelling.up.y;
+	rwf->matrix.up.z =  f->modelling.up.z;
+	rwf->matrix.at.x =  f->modelling.at.x;
+	rwf->matrix.at.y =  f->modelling.at.y;
+	rwf->matrix.at.z = f->modelling.at.z;
+	rwf->matrix.pos.x = f->modelling.pos.x;
+	rwf->matrix.pos.y = f->modelling.pos.y;
+	rwf->matrix.pos.z = f->modelling.pos.z;
 
 	if(f->name)
 		strncpy(gta::getNodeName(rwf), f->name, 24);
