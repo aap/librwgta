@@ -143,6 +143,21 @@ again:
 	return s;
 }
 
+char*
+removequotes(char *s)
+{
+	char *t;
+	if(*s == '"'){
+		s++;
+		for(t = s; *t != '\0'; t++)
+			if(*t == '"'){
+				*t = '\0';
+				break;
+			}
+	}
+	return s;
+}
+
 int
 runscript(void)
 {
@@ -155,9 +170,9 @@ runscript(void)
 	while(s = getline()){
 		if(s[0] == '#')
 			continue;
-		s = strtok(s, " \t");
+		s = strtok(s, "\t");
 		cmd = StrAssoc::get(cmds, s);
-		arg = strtok(NULL, " \t");
+		arg = strtok(NULL, "\t");
 #define NEEDARG(arg) \
 			if(arg == NULL){\
 				fprintf(stderr, "missing argument to '%s'\n", s);\
@@ -174,7 +189,8 @@ runscript(void)
 			break;
 		case ADD:
 			NEEDARG(arg);
-			tex = Texture::read(arg, strtok(NULL, " \t"));
+			arg = removequotes(arg);
+			tex = Texture::read(arg, strtok(NULL, "\t"));
 			break;
 		case LINEAR:
 			if(tex)

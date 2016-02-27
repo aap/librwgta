@@ -221,7 +221,7 @@ convertMesh(Geometry *rwg, RslGeometry *g, int32 ii)
 	p += inst->dmaPacket;
 	Mesh *m = &rwg->meshHeader->mesh[inst->matID];
 
-	ps2::SkinVertex v;
+	ps2::Vertex v;
 	uint32 mask = 0x1001;	// tex coords, vertices
 	if(rwg->geoflags & Geometry::NORMALS)
 		mask |= 0x10;

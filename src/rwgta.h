@@ -158,8 +158,6 @@ void registerCollisionPlugin(void);
 // PDS pipes
 
 struct SaVert : ps2::Vertex {
-	float32 w[4];
-	uint8   i[4];
 	uint8   c1[4];
 };
 void insertSAVertex(Geometry *geo, int32 i, uint32 mask, SaVert *v);

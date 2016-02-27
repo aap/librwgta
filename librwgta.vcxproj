@@ -127,6 +127,7 @@
   <ItemGroup>
     <ClCompile Include="src\collision.cpp" />
     <ClCompile Include="src\gtaplg.cpp" />
+    <ClCompile Include="src\rsps2.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\collision.h" />
