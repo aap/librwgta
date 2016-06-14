@@ -23,7 +23,9 @@ public:
 	virtual unknown CreateInstance(RwMatrixTag *) = 0;
 	virtual unknown GetRwObject(void) = 0;
 
+	void AddRef(void);
 	void SetTexDictionary(char *name);
+	void AddTexDictionaryRef(void);
 	void Add2dEffect(C2dEffect *fx);
 };
 
@@ -39,7 +41,7 @@ public:
 	unknown CreateInstance(RwMatrixTag *) {}
 	unknown GetRwObject(void) {}
 
-	virtual unknown SetClump(rw::Clump *) {}
+	virtual void SetClump(rw::Clump *);
 };
 
 
@@ -72,7 +74,9 @@ public:
 
 	~CPedModelInfo() {}
 	unknown DeleteRwObject(void) {}
-	unknown SetClump(rw::Clump *) {}
+	void SetClump(rw::Clump *clump){
+		CClumpModelInfo::SetClump(clump);
+	}
 };
 
 class CVehicleModelInfo : public CClumpModelInfo
@@ -110,7 +114,9 @@ public:
 	~CVehicleModelInfo() {}
 	unknown DeleteRwObject(void) {}
 	unknown CreateInstance(void) {}
-	unknown SetClump(rw::Clump *) {}
+	void SetClump(rw::Clump *){
+		CClumpModelInfo::SetClump(clump);
+	}
 };
 
 // Unused
@@ -123,7 +129,9 @@ public:
 	~CXtraCompsModelInfo() {}
 	unknown Shutdown(void) {}
 	unknown CreateInstance(void) {}
-	unknown SetClump(rw::Clump *) {}
+	void SetClump(rw::Clump *){
+		CClumpModelInfo::SetClump(clump);
+	}
 };
 
 class CSimpleModelInfo : public CBaseModelInfo
@@ -141,6 +149,8 @@ public:
 	unknown CreateInstance(void) {}
 	unknown CreateInstance(RwMatrixTag *) {}
 	unknown GetRwObject(void) {}
+
+	void SetAtomic(int n, rw::Atomic *atomic);
 };
 
 class CTimeModelInfo : public CSimpleModelInfo

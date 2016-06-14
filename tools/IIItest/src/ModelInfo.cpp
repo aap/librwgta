@@ -15,12 +15,25 @@ CBaseModelInfo::ctor(int type)
 }
 
 void
+CBaseModelInfo::AddRef(void)
+{
+	this->refCount++;
+	AddTexDictionaryRef();
+}
+
+void
 CBaseModelInfo::SetTexDictionary(char *name)
 {
 	int slot = CTxdStore::FindTxdSlot(name);
 	if(slot < 0)
 		slot = CTxdStore::AddTxdSlot(name);
 	this->txdSlot = slot;
+}
+
+void
+CBaseModelInfo::AddTexDictionaryRef(void)
+{
+	CTxdStore::AddRef(this->txdSlot);
 }
 
 void
@@ -32,6 +45,22 @@ CBaseModelInfo::Add2dEffect(C2dEffect *fx)
 		this->num2dEffects = 1;
 		this->twodEffects = fx;
 	}
+}
+
+void
+CSimpleModelInfo::SetAtomic(int n, rw::Atomic *atomic)
+{
+	AddTexDictionaryRef();
+	this->atomics[n] = atomic;
+	// TODO: lighting flag
+}
+
+void
+CClumpModelInfo::SetClump(rw::Clump *clump)
+{
+	this->clump = clump;
+	AddTexDictionaryRef();
+	// TODO: more
 }
 
 CBaseModelInfo *CModelInfo::ms_modelInfoPtrs[MODELINFOSIZE];

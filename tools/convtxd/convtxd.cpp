@@ -227,14 +227,14 @@ main(int argc, char *argv[])
 {
 	gta::attachPlugins();
 
-	rw::version = 0x34003;
+	rw::version = 0x36003;
 //	rw::platform = rw::PLATFORM_PS2;
 //	rw::platform = rw::PLATFORM_OGL;
 //	rw::platform = rw::PLATFORM_XBOX;
 	rw::platform = rw::PLATFORM_D3D8;
 //	rw::platform = rw::PLATFORM_D3D9;
 //	int outplatform = rw::PLATFORM_XBOX;
-	int outplatform = rw::PLATFORM_D3D8;
+	int outplatform = rw::PLATFORM_D3D9;
 	int script = 0;
 
 	char *s;
@@ -290,6 +290,12 @@ main(int argc, char *argv[])
 		FORLIST(lnk, txd->textures){
 			Texture *tex = Texture::fromDict(lnk);
 			tex->raster = xboxToD3d8(tex->raster);
+		}
+	if(outplatform == PLATFORM_D3D9)
+		FORLIST(lnk, txd->textures){
+			Texture *tex = Texture::fromDict(lnk);
+			if(tex->raster->platform == PLATFORM_D3D8)
+				tex->raster->platform = PLATFORM_D3D9;
 		}
 //	for(Texture *tex = txd->first; tex; tex = tex->next)
 //		tex->filterAddressing = (tex->filterAddressing&~0xF) | 0x2;

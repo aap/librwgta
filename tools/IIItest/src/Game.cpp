@@ -7,6 +7,7 @@ CGame::InitialiseRW(void)
 {
 	gta::attachPlugins();
 	rw::d3d::registerNativeRaster();
+	rw::d3d::isP8supported = 0;
 	rw::loadTextures = 0;
 
 	rw::currentTexDictionary = rw::TexDictionary::create();
@@ -32,6 +33,8 @@ CGame::Initialise(void)
 {
 	CGame::currLevel = 1;
 	CPathFind::AllocatePathFindInfoMem(PATHNODESIZE);
+	CdStream::addImage("models/gta3.img");
 	CFileLoader::LoadLevel("data/default.dat");
 	CFileLoader::LoadLevel("data/gta3.dat");
+	CStreaming::Init();
 }

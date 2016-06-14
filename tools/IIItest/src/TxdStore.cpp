@@ -72,5 +72,44 @@ CTxdStore::SetCurrentTxd(int slot)
 	if(CTxdStore::flags[slot] & 0x80)
 		return;
 	rw::currentTexDictionary = CTxdStore::entries[slot].texDict;
+}
 
+void
+CTxdStore::AddRef(int slot)
+{
+	getDef(slot)->refCount++;
+}
+
+void
+CTxdStore::RemoveRefWithoutDelete(int slot)
+{
+	getDef(slot)->refCount--;
+}
+
+bool
+CTxdStore::LoadTxd(int slot, rw::Stream *stream)
+{
+	TxdDef *def = getDef(slot);
+	if(!rw::findChunk(stream, rw::ID_TEXDICTIONARY, NULL, NULL)){
+		printf("Failed to load TXD\n");
+		return false;
+	}else{
+		def->texDict = rw::TexDictionary::streamRead(stream);
+		return def->texDict != NULL;
+	}
+}
+
+CTxdStore::TxdDef*
+CTxdStore::getDef(int slot)
+{
+	if((CTxdStore::flags[slot] & 0x80) == 0)
+		return &CTxdStore::entries[slot];
+	return NULL;
+}
+
+bool
+CTxdStore::isTxdLoaded(int slot)
+{
+	TxdDef *def = getDef(slot);
+	return def->texDict != NULL;
 }

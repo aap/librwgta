@@ -28,7 +28,7 @@ CFileLoader::LoadLevel(char *filename)
 {
 	FILE *file;
 	char *line;
-	if(file = fopen(filename, "rb"), file == NULL)
+	if(file = fopen_ci(filename, "rb"), file == NULL)
 		return;
 	rw::TexDictionary *savedTxd = rw::currentTexDictionary;
 	if(rw::currentTexDictionary == NULL)
@@ -70,10 +70,8 @@ CFileLoader::LoadLevel(char *filename)
 			printf("splash ");
 			puts(line+7);
 		}
-		if(strncmp(line, "CDIMAGE", 7) == 0){
-			printf("cdimage ");
-			puts(line+8);
-		}
+		if(strncmp(line, "CDIMAGE", 7) == 0)
+			CdStream::addImage(line+8);
 	}
 	fclose(file);
 	rw::currentTexDictionary = savedTxd;
@@ -114,7 +112,7 @@ CFileLoader::LoadDataFile(char *filename, DatDesc *desc)
 	char *line;
 	void (*handler)(char*) = NULL;
 
-	if(file = fopen(filename, "rb"), file == NULL)
+	if(file = fopen_ci(filename, "rb"), file == NULL)
 		return;
 	while(line = CFileLoader::LoadLine(file)){
 		if(line[0] == '#')
@@ -424,15 +422,15 @@ CFileLoader::Load2dEffect(char *line)
 		             " %d %f %f %f %f",
 		       &id, &x, &y, &z, &r, &g, &b, &a, &type,
 		       &fx->particle.particleType,
-		       &fx->particle.dir.x, &fx->particle.dir.y,
-		       &fx->particle.dir.z, &fx->particle.scale);
+		       &fx->particle.dir[0], &fx->particle.dir[1],
+		       &fx->particle.dir[2], &fx->particle.scale);
 		break;
 	case 2: // ped attractor?
 		sscanf(line, "%d %f %f %f %d %d %d %d %d"
 		             " %d %f %f %f %d",
 		       &id, &x, &y, &z, &r, &g, &b, &a, &type,
-		       &flag, &fx->attractor.dir.x, &fx->attractor.dir.y,
-		       &fx->attractor.dir.z, &probability);
+		       &flag, &fx->attractor.dir[0], &fx->attractor.dir[1],
+		       &fx->attractor.dir[2], &probability);
 		fx->attractor.flag = flag;
 		fx->attractor.probability = probability;
 		break;
@@ -518,7 +516,7 @@ CFileLoader::LoadCollisionFile(char *filename)
 	static uchar buf[55000];
 	char name[24];
 	CBaseModelInfo *modelinfo;
-	if(file = fopen(filename, "rb"), file == NULL)
+	if(file = fopen_ci(filename, "rb"), file == NULL)
 		return;
 	while(1){
 		if(fread(&header, 8, 1, file) == 0 ||
@@ -536,4 +534,65 @@ CFileLoader::LoadCollisionFile(char *filename)
 		}
 	}
 	fclose(file);
+}
+
+static void
+GetNameAndLOD(char *nodename, char *name, int *n)
+{
+	char *underscore = NULL;
+	for(char *s = nodename; *s != '\0'; s++){
+		if(s[0] == '_' && (s[1] == 'l' || s[1] == 'L'))
+			underscore = s;
+	}
+	if(underscore){
+		strncpy(name, nodename, underscore - nodename);
+		name[underscore - nodename] = '\0';
+		*n = atoi(underscore + 2);
+	}else{
+		strncpy(name, nodename, 24);
+		*n = 0;
+	}
+}
+
+bool
+CFileLoader::LoadAtomicFile(rw::Stream *stream, int id)
+{
+	CSimpleModelInfo *modelinfo;
+	rw::Clump *clump;
+	rw::Atomic *atomic;
+	char *nodename, name[24];
+	int n;
+	if(rw::findChunk(stream, rw::ID_CLUMP, NULL, NULL)){
+		clump = rw::Clump::streamRead(stream);
+		if(clump == NULL)
+			return false;
+		modelinfo = (CSimpleModelInfo*)CModelInfo::ms_modelInfoPtrs[id];
+		FORLIST(lnk, clump->atomics){
+			atomic = rw::Atomic::fromClump(lnk);
+			nodename = gta::getNodeName(atomic->getFrame());
+			GetNameAndLOD(nodename, name, &n);
+			modelinfo->SetAtomic(n, atomic);
+			atomic->removeFromClump();
+			atomic->setFrame(rw::Frame::create());
+		}
+		clump->destroy();
+	}
+	return true;
+}
+
+bool
+CFileLoader::LoadClumpFile(rw::Stream *stream, int id)
+{
+	CClumpModelInfo *modelinfo;
+	rw::Clump *clump;
+	if(rw::findChunk(stream, rw::ID_CLUMP, NULL, NULL)){
+		clump = rw::Clump::streamRead(stream);
+		if(clump == NULL)
+			return false;
+		modelinfo = (CClumpModelInfo*)CModelInfo::ms_modelInfoPtrs[id];
+		modelinfo->SetClump(clump);
+		// TODO: ped low detail clump
+	}
+	return true;
+
 }

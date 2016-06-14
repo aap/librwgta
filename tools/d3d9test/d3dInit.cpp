@@ -1,6 +1,7 @@
+#include <assert.h>
 #include "d3dUtility.h"
-#include <DirectXMath.h>
-using namespace DirectX;
+//#include <DirectXMath.h>
+//using namespace DirectX;
 
 #define RW_D3D9
 #include <rw.h>
@@ -21,16 +22,16 @@ initrw(void)
 	rw::loadTextures = 1;
 
 	rw::currentTexDictionary = rw::TexDictionary::create();
-	rw::Image::setSearchPath("D:\\rockstargames\\ps2\\gta3\\MODELS\\gta3_archive\\txd_extracted\\;"
-	                         "D:\\rockstargames\\ps2\\gtavc\\MODELS\\gta3_archive\\txd_extracted\\;"
-	                         "D:\\rockstargames\\ps2\\gtasa\\models\\gta3_archive\\txd_extracted\\");
+	rw::Image::setSearchPath("Y:\\ps2\\gta3\\MODELS\\gta3_archive\\txd_extracted\\;"
+	                         "Y:\\ps2\\gtavc\\MODELS\\gta3_archive\\txd_extracted\\;"
+	                         "Y:\\ps2\\gtasa\\models\\gta3_archive\\txd_extracted\\");
 
 	rw::platform = rw::PLATFORM_D3D9;
 	rw::d3d::device = Device;
 
 	if(1){
-		//char *filename = "D:\\rockstargames\\pc\\gtasa\\models\\gta3_archive\\admiral.txd";
-		char *filename = "D:\\rockstargames\\pc\\gtavc\\models\\gta3_archive\\admiral.txd";
+		//char *filename = "Y:\\pc\\gtasa\\models\\gta3_archive\\admiral.txd";
+		char *filename = "Y:\\pc\\gtavc\\models\\gta3_archive\\admiral.txd";
 		rw::StreamFile in;
 		if(in.open(filename, "rb") == NULL){
 			MessageBox(0, "couldn't open file\n", 0, 0);
@@ -44,14 +45,14 @@ initrw(void)
 		rw::currentTexDictionary = txd;
 	}
 
-	char *filename = "D:\\rockstargames\\pc\\gtavc\\models\\gta3_archive\\admiral.dff";
-//	char *filename = "D:\\rockstargames\\pc\\gta3\\models\\gta3_archive\\kuruma.dff";
-//	char *filename = "D:\\rockstargames\\pc\\gtavc\\models\\gta3_archive\\player.dff";
-//	char *filename = "D:\\rockstargames\\pc\\gtavc\\models\\gta3_archive\\od_newscafe_dy.dff";
-//	char *filename = "D:\\rockstargames\\pc\\gtasa\\models\\gta3_archive\\admiral.dff";
-//	char *filename = "D:\\rockstargames\\pc\\gtasa\\models\\gta3_archive\\lae2_roads89.dff";
-//	char *filename = "D:\\rockstargames\\pc\\gtasa\\models\\gta3_archive\\casinoblock41_nt.dff";
-//	char *filename = "D:\\rockstargames\\pc\\gtasa\\models\\cutscene_archive\\csremington92.dff";
+	char *filename = "Y:\\pc\\gtavc\\models\\gta3_archive\\admiral.dff";
+//	char *filename = "Y:\\pc\\gta3\\models\\gta3_archive\\kuruma.dff";
+//	char *filename = "Y:\\pc\\gtavc\\models\\gta3_archive\\player.dff";
+//	char *filename = "Y:\\pc\\gtavc\\models\\gta3_archive\\od_newscafe_dy.dff";
+//	char *filename = "Y:\\pc\\gtasa\\models\\gta3_archive\\admiral.dff";
+//	char *filename = "Y:\\pc\\gtasa\\models\\gta3_archive\\lae2_roads89.dff";
+//	char *filename = "Y:\\pc\\gtasa\\models\\gta3_archive\\casinoblock41_nt.dff";
+//	char *filename = "Y:\\pc\\gtasa\\models\\cutscene_archive\\csremington92.dff";
 //	char *filename = "C:\\gtasa\\test\\hanger.dff";
 //	char *filename = "C:\\Users\\aap\\Desktop\\tmp\\out.dff";
 //	char *filename = "out2.dff";
