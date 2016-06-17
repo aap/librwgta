@@ -48,6 +48,9 @@ namespace gta {
 void
 attachPlugins(void)
 {
+	// Call before native rasters are registered
+	rw::initialize();
+
 	rw::ps2::registerPDSPlugin(40);
 	rw::ps2::registerPluginPDSPipes();
 	gta::registerPDSPipes();
@@ -55,9 +58,6 @@ attachPlugins(void)
 	rw::ps2::registerNativeRaster();
 	rw::xbox::registerNativeRaster();
 	rw::d3d::registerNativeRaster();
-	int32 nativeRasterOffset = Raster::registerPlugin(sizeof(NativeRaster),
-		0x12340000 | PLATFORM_NULL, NULL, NULL, NULL);
-	Raster::nativeOffsets[PLATFORM_NULL] = nativeRasterOffset;
 
 	rw::registerMeshPlugin();
 	rw::registerNativeDataPlugin();
@@ -77,8 +77,6 @@ attachPlugins(void)
 	gta::registerCollisionPlugin();
 	gta::register2dEffectPlugin();
 	gta::registerPipelinePlugin();
-
-	rw::initialize();
 }
 
 //
@@ -112,20 +110,22 @@ destroyNodeName(void *object, int32, int32)
 	return object;
 }
 
-static void
+static Stream*
 readNodeName(Stream *stream, int32 len, void *object, int32 offset, int32)
 {
 	char *name = PLUGINOFFSET(char, object, offset);
 	stream->read(name, len);
 	name[len] = '\0';
 	//printf("%s\n", name);
+	return stream;
 }
 
-static void
+static Stream*
 writeNodeName(Stream *stream, int32 len, void *object, int32 offset, int32)
 {
 	char *name = PLUGINOFFSET(char, object, offset);
 	stream->write(name, len);
+	return stream;
 }
 
 static int32
@@ -179,13 +179,13 @@ destroyBreakableModel(void *object, int32 offset, int32)
 	return object;
 }
 
-static void
+static Stream*
 readBreakableModel(Stream *stream, int32, void *object, int32 o, int32)
 {
 	uint32 header[13];
 	uint32 hasBreakable = stream->readU32();
 	if(hasBreakable == 0)
-		return;
+		return stream;
 	stream->read(header, 13*4);
 	uint32 size = header[1]*(12+8+4) + header[5]*(6+2) +
 	              header[8]*(32+32+12);
@@ -213,9 +213,10 @@ readBreakableModel(Stream *stream, int32, void *object, int32 o, int32)
 	breakable->maskNames = (char(*)[32])p;
 	p += breakable->numMaterials*32;
 	breakable->surfaceProps = (float32(*)[3])p;
+	return stream;
 }
 
-static void
+static Stream*
 writeBreakableModel(Stream *stream, int32, void *object, int32 o, int32)
 {
 	uint32 header[13];
@@ -223,7 +224,7 @@ writeBreakableModel(Stream *stream, int32, void *object, int32 o, int32)
 	uint8 *p = (uint8*)breakable;
 	if(breakable == NULL){
 		stream->writeU32(0);
-		return;
+		return stream;
 	}
 	stream->writeU32(1);
 	memset((char*)header, 0, 13*4);
@@ -236,6 +237,7 @@ writeBreakableModel(Stream *stream, int32, void *object, int32 o, int32)
 	stream->write(p, breakable->numVertices*(12+8+4) +
 	                       breakable->numFaces*(6+2) +
 	                       breakable->numMaterials*(32+32+12));
+	return stream;
 }
 
 static int32
@@ -282,7 +284,7 @@ destroyExtraNormals(void *object, int32 offset, int32)
 	return object;
 }
 
-static void
+static Stream*
 readExtraNormals(Stream *stream, int32, void *object, int32 offset, int32)
 {
 	Geometry *geo = (Geometry*)object;
@@ -300,15 +302,17 @@ readExtraNormals(Stream *stream, int32, void *object, int32 offset, int32)
 //		printf("%f %f %f %f\n", n[0], n[1], n[2], len);
 //		printf("%f %f %f\n", nx[0], nx[1], nx[2]);
 //	}
+	return stream;
 }
 
-static void
+static Stream*
 writeExtraNormals(Stream *stream, int32, void *object, int32 offset, int32)
 {
 	Geometry *geo = (Geometry*)object;
 	float *extranormals = *PLUGINOFFSET(float*, object, offset);
 	assert(extranormals != NULL);
 	stream->write(extranormals, geo->numVertices*3*4);
+	return stream;
 }
 
 static int32
@@ -370,7 +374,7 @@ destroyExtraVertColors(void *object, int32 offset, int32)
 	return object;
 }
 
-static void
+static Stream*
 readExtraVertColors(Stream *stream, int32, void *object, int32 offset, int32)
 {
 	uint32 hasData;
@@ -378,7 +382,7 @@ readExtraVertColors(Stream *stream, int32, void *object, int32 offset, int32)
 		PLUGINOFFSET(ExtraVertColors, object, offset);
 	hasData = stream->readU32();
 	if(!hasData)
-		return;
+		return stream;
 	Geometry *geometry = (Geometry*)object;
 	colordata->nightColors = new uint8[geometry->numVertices*4];
 	colordata->dayColors = new uint8[geometry->numVertices*4];
@@ -387,9 +391,10 @@ readExtraVertColors(Stream *stream, int32, void *object, int32 offset, int32)
 	if(geometry->colors)
 		memcpy(colordata->dayColors, geometry->colors,
 		       geometry->numVertices*4);
+	return stream;
 }
 
-static void
+static Stream*
 writeExtraVertColors(Stream *stream, int32, void *object, int32 offset, int32)
 {
 	ExtraVertColors *colordata =
@@ -399,6 +404,7 @@ writeExtraVertColors(Stream *stream, int32, void *object, int32 offset, int32)
 		Geometry *geometry = (Geometry*)object;
 		stream->write(colordata->nightColors, geometry->numVertices*4);
 	}
+	return stream;
 }
 
 static int32
@@ -470,7 +476,7 @@ struct EnvStream {
 	int32 zero;
 };
 
-static void
+static Stream*
 readEnvMat(Stream *stream, int32, void *object, int32 offset, int32)
 {
 	EnvStream buf;
@@ -483,9 +489,10 @@ readEnvMat(Stream *stream, int32, void *object, int32 offset, int32)
 	env->transScaleY = (int8)(buf.transScaleY*8.0f);
 	env->shininess = (uint8)(buf.shininess*255.0f);
 	env->texture = NULL;
+	return stream;
 }
 
-static void
+static Stream*
 writeEnvMat(Stream *stream, int32, void *object, int32 offset, int32)
 {
 	EnvStream buf;
@@ -497,6 +504,7 @@ writeEnvMat(Stream *stream, int32, void *object, int32 offset, int32)
 	buf.shininess = env->shininess/255.0f;
 	buf.zero = 0;
 	stream->write(&buf, sizeof(buf));
+	return stream;
 }
 
 static int32
@@ -549,7 +557,7 @@ struct SpecStream {
 	char texname[24];
 };
 
-static void
+static Stream*
 readSpecMat(Stream *stream, int32, void *object, int32 offset, int32)
 {
 	SpecStream buf;
@@ -559,9 +567,10 @@ readSpecMat(Stream *stream, int32, void *object, int32 offset, int32)
 	spec->specularity = buf.specularity;
 	spec->texture = Texture::create(NULL);
 	strncpy(spec->texture->name, buf.texname, 24);
+	return stream;
 }
 
-static void
+static Stream*
 writeSpecMat(Stream *stream, int32, void *object, int32 offset, int32)
 {
 	SpecStream buf;
@@ -569,6 +578,7 @@ writeSpecMat(Stream *stream, int32, void *object, int32 offset, int32)
 	buf.specularity = spec->specularity;
 	strncpy(buf.texname, spec->texture->name, 24);
 	stream->write(&buf, sizeof(buf));
+	return stream;
 }
 
 static int32
@@ -615,17 +625,19 @@ copyPipeline(void *dst, void *src, int32 offset, int32)
 	return dst;
 }
 
-static void
+static Stream*
 readPipeline(Stream *stream, int32, void *object, int32 offset, int32)
 {
 	*PLUGINOFFSET(uint32, object, offset) = stream->readU32();
 //	printf("%x\n", *PLUGINOFFSET(uint32, object, offset));
+	return stream;
 }
 
-static void
+static Stream*
 writePipeline(Stream *stream, int32, void *object, int32 offset, int32)
 {
 	stream->writeU32(*PLUGINOFFSET(uint32, object, offset));
+	return stream;
 }
 
 static int32
@@ -704,20 +716,22 @@ copy2dEffect(void *dst, void *src, int32 offset, int32)
 	return dst;
 }
 
-static void
+static Stream*
 read2dEffect(Stream *stream, int32 size, void *object, int32 offset, int32)
 {
 	SizedData *data = PLUGINOFFSET(SizedData, object, offset);
 	data->size = size;
 	data->data = new uint8[data->size];
 	stream->read(data->data, data->size);
+	return stream;
 }
 
-static void
+static Stream*
 write2dEffect(Stream *stream, int32, void *object, int32 offset, int32)
 {
 	SizedData *data = PLUGINOFFSET(SizedData, object, offset);
 	stream->write(data->data, data->size);
+	return stream;
 }
 
 static int32
@@ -777,20 +791,22 @@ copyCollision(void *dst, void *src, int32 offset, int32)
 	return dst;
 }
 
-static void
+static Stream*
 readCollision(Stream *stream, int32 size, void *object, int32 offset, int32)
 {
 	SizedData *data = PLUGINOFFSET(SizedData, object, offset);
 	data->size = size;
 	data->data = new uint8[data->size];
 	stream->read(data->data, data->size);
+	return stream;
 }
 
-static void
+static Stream*
 writeCollision(Stream *stream, int32, void *object, int32 offset, int32)
 {
 	SizedData *data = PLUGINOFFSET(SizedData, object, offset);
 	stream->write(data->data, data->size);
+	return stream;
 }
 
 static int32
