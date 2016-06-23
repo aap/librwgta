@@ -29,21 +29,6 @@ enum
 	ATTRIB_TEXCOORDS7,
 };
 
-struct UniformScene
-{
-	rw::Matrix proj;
-	rw::Matrix view;
-};
-
-struct UniformObject
-{
-	rw::Matrix world;
-	rw::RGBAf  ambLight;
-};
-extern GLuint ubo_scene, ubo_object;
-extern UniformScene uniformScene;
-extern UniformObject uniformObject;
-
 /* less screaming */
 #define nil NULL
 

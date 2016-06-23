@@ -1,6 +1,7 @@
 #include "gldemo.h"
 
 Camera *camera;
+rw::World *world;
 rw::Clump *clump;
 rw::gl3::Shader *simpleshader;
 
@@ -95,6 +96,18 @@ keypress(GLFWwindow *window, int key, int scancode, int action, int mods)
 	}
 }
 
+void
+hideSomeAtomics(rw::Clump *clump)
+{
+	using namespace rw;
+	FORLIST(lnk, clump->atomics){
+		Atomic *a = Atomic::fromClump(lnk);
+		char *name = gta::getNodeName(a->getFrame());
+		if(strstr(name, "_dam") || strstr(name, "_vlo"))
+			a->object.object.flags &= ~Atomic::RENDER;
+	}
+}
+
 int
 initrw(void)
 {
@@ -107,11 +120,14 @@ initrw(void)
 	gta::attachPlugins();
 	gl3::registerNativeRaster();
 	gl3::initializePlatform();
+	rw::loadTextures = 1;
 
+	rw::currentTexDictionary = TexDictionary::create();
+	Image::setSearchPath("/home/aap/vc_textures/");
 
 //	char *f = "/home/aap/gamedata/pc/gtavc/models/gta3_archive/player.dff";
 //	char *f = "/home/aap/gamedata/pc/gtavc/models/gta3_archive/od_newscafe_dy.dff";
-	char *f = "/home/aap/gamedata/pc/gtavc/models/gta3_archive/admiral.dff";
+	const char *f = "models/admiral.dff";
 //	char *f = "/home/aap/gamedata/pc/gta3/models/gta3_archive/player.DFF";
 	if(in.open(f, "rb") == nil)
 		return 0;
@@ -119,6 +135,8 @@ initrw(void)
 	clump = Clump::streamRead(&in);
 	assert(clump);
 	in.close();
+
+	hideSomeAtomics(clump);
 
 	return 1;
 }
@@ -133,12 +151,6 @@ init(void)
 	if(simpleshader == nil)
 		return 0;
 
-	glClearColor(0.08, 0.21, 0.26, 1.0);
-//	glClearColor(0xA1/255.0f, 0xA1/255.0f, 0xA1/255.0f, 1.0f);
-
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LESS);
-
 	camera = new Camera;
 	camera->m_rwcam = rw::Camera::create();
 	camera->m_rwcam->setFrame(rw::Frame::create());
@@ -147,7 +159,24 @@ init(void)
 	camera->m_far = 450.0f;
 	camera->m_target.set(0.0f, 0.0f, 0.0f);
 	//camera->m_position.set(0.0f, -30.0f, 4.0f);
-	camera->m_position.set(0.0f, -10.0f, 4.0f);
+	camera->m_position.set(3.0f, 5.0f, 1.0f);
+
+	world = rw::World::create();
+	world->addCamera(camera->m_rwcam);
+
+	// Ambient light
+	rw::Light *light = rw::Light::create(rw::Light::AMBIENT);
+	light->setColor(0.3f, 0.3f, 0.3f);
+	world->addLight(light);
+
+	// Diffuse light
+	light = rw::Light::create(rw::Light::DIRECTIONAL);
+	rw::Frame *f = rw::Frame::create();
+	light->setFrame(f);
+	f->matrix.pointInDirection((rw::V3d){1.0, 1.0, -1.0},
+	                           (rw::V3d){0.0, 0.0, 1.0});
+	f->updateObjects();
+	world->addLight(light);
 
 	return 1;
 }

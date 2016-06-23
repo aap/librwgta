@@ -45,13 +45,19 @@ struct InstanceDataHeader : rw::InstanceDataHeader
 
 void setAttribPointers(InstanceDataHeader *header);
 
-// per Object
-void setWorldMatrix(Matrix*);
-void setAmbColor(RGBAf*);
-
 // per Scene
 void setProjectionMatrix(float32*);
-void setViewMatrix(Matrix*);
+void setViewMatrix(float32*);
+
+// per Object
+void setWorldMatrix(Matrix*);
+void setAmbientLight(RGBAf*);
+void setNumLights(int32 n);
+void setLight(int32 n, Light*);
+
+// per Mesh
+void setTexture(int32 n, Texture *tex);
+void setVertexAlpha(bool32 enable);
 
 class ObjPipeline : public rw::ObjPipeline
 {       
@@ -78,6 +84,7 @@ extern int32 nativeRasterOffset;
 struct Gl3Raster
 {
 	uint32 texid;
+	bool32 hasAlpha;
 };
 
 void registerNativeRaster(void);

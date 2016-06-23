@@ -12,16 +12,11 @@ Camera::update(void)
 		m_rwcam->nearPlane = m_near;
 		m_rwcam->farPlane = m_far;
 		m_rwcam->setFOV(m_fov, m_aspectRatio);
-		m_rwcam->updateProjectionMatrix();
 
 		rw::Frame *f = m_rwcam->getFrame();
 		if(f){
-			V3d forward = normalize(sub(m_target, m_position));
-			V3d left = normalize(cross(m_up, forward));
-			V3d nup = cross(forward, left);
-			f->matrix.right = left; // lol
-			f->matrix.up = nup;
-			f->matrix.at = forward;
+			f->matrix.pointInDirection(sub(m_target, m_position),
+			                           m_up);
 			f->matrix.pos = m_position;
 			f->updateObjects();
 		}
