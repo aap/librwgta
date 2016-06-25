@@ -7,7 +7,7 @@ RWGTADIR=$(HOME)/src/librwgta
 
 INC := -I/usr/local/include -I$(RWDIR) -I$(RWGTADIR)/src
 LDLIBS=-lGL -lGLEW -lglfw
-STATICLIBS= $(RWGTADIR)/librwgta-null.a $(RWDIR)/librw-gl3.a
+STATICLIBS= $(RWGTADIR)/librwgta-gl3.a $(RWDIR)/librw-gl3.a
 
 CFLAGS=-g -DRW_GL3 -I$(RWDIR) \
 	-Wall -Wextra -Wno-invalid-offsetof -Wno-parentheses \

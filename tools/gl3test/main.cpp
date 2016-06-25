@@ -117,10 +117,11 @@ initrw(void)
 
 	rw::version = 0x34000;
 	rw::platform = PLATFORM_GL3;
-	gta::attachPlugins();
-	gl3::registerNativeRaster();
-	gl3::initializePlatform();
 	rw::loadTextures = 1;
+
+	rw::Engine::init();
+	gta::attachPlugins();
+	rw::Engine::open();
 
 	rw::currentTexDictionary = TexDictionary::create();
 	Image::setSearchPath("/home/aap/vc_textures/");

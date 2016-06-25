@@ -48,16 +48,9 @@ namespace gta {
 void
 attachPlugins(void)
 {
-	// Call before native rasters are registered
-	rw::initialize();
-
 	rw::ps2::registerPDSPlugin(40);
 	rw::ps2::registerPluginPDSPipes();
 	gta::registerPDSPipes();
-
-	rw::ps2::registerNativeRaster();
-	rw::xbox::registerNativeRaster();
-	rw::d3d::registerNativeRaster();
 
 	rw::registerMeshPlugin();
 	rw::registerNativeDataPlugin();
