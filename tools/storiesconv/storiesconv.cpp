@@ -851,7 +851,10 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
+	rw::Engine::init();
 	gta::attachPlugins();
+	rw::Driver::open();
+
 	atmOffset = Atomic::registerPlugin(sizeof(void*), 0x1000000, NULL, NULL, NULL);
 	rw::version = 0x34003;
 	rw::platform = PLATFORM_D3D8;

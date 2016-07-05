@@ -74,7 +74,9 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
+	rw::Engine::init();
 	gta::attachPlugins();
+	rw::Driver::open();
 	ARGBEGIN{
 	}ARGEND;
 	if(argc < 1)

@@ -17,17 +17,21 @@ rw::Clump *clump;
 void
 initrw(void)
 {
-	gta::attachPlugins();
-	rw::d3d::registerNativeRaster();
+        rw::version = 0x34000;
+        rw::platform = PLATFORM_D3D9;
 	rw::loadTextures = 1;
+	rw::d3d::device = Device;
+
+        rw::Engine::init();
+        gta::attachPlugins();
+        rw::Driver::open();
+        rw::d3d::initializeRender();
 
 	rw::currentTexDictionary = rw::TexDictionary::create();
 	rw::Image::setSearchPath("Y:\\ps2\\gta3\\MODELS\\gta3_archive\\txd_extracted\\;"
 	                         "Y:\\ps2\\gtavc\\MODELS\\gta3_archive\\txd_extracted\\;"
 	                         "Y:\\ps2\\gtasa\\models\\gta3_archive\\txd_extracted\\");
 
-	rw::platform = rw::PLATFORM_D3D9;
-	rw::d3d::device = Device;
 
 	if(1){
 		//char *filename = "Y:\\pc\\gtasa\\models\\gta3_archive\\admiral.txd";
@@ -135,23 +139,6 @@ Setup()
 	return true;
 }
 
-void
-setcamera(rw::Camera *cam)
-{
-	rw::Matrix viewmat;
-	rw::Matrix::invert(&viewmat, cam->getFrame()->getLTM());
-	viewmat.right.x = -viewmat.right.x;
-	viewmat.rightw = 0.0;
-	viewmat.up.x = -viewmat.up.x;
-	viewmat.upw = 0.0;
-	viewmat.at.x = -viewmat.at.x;
-	viewmat.atw = 0.0;
-	viewmat.pos.x = -viewmat.pos.x;
-	viewmat.posw = 1.0;
-	Device->SetTransform(D3DTS_VIEW, (D3DMATRIX*)&viewmat);
-	Device->SetTransform(D3DTS_PROJECTION, (D3DMATRIX*)cam->projMat);
-}
-
 bool
 Display(float timeDelta)
 {
@@ -163,9 +150,11 @@ Display(float timeDelta)
 	Device->BeginScene();
 
 	camera->update();
-	setcamera(camera->m_rwcam);
+	camera->m_rwcam->beginUpdate();
 
 	clump->render();
+
+	camera->m_rwcam->endUpdate();
 
 	Device->EndScene();
 

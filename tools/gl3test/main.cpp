@@ -3,7 +3,6 @@
 Camera *camera;
 rw::World *world;
 rw::Clump *clump;
-rw::gl3::Shader *simpleshader;
 
 void
 display(void)
@@ -13,7 +12,6 @@ display(void)
 	camera->update();
 	camera->m_rwcam->beginUpdate();
 
-	simpleshader->use();
 	clump->render();
 
 	camera->m_rwcam->endUpdate();
@@ -108,6 +106,26 @@ hideSomeAtomics(rw::Clump *clump)
 	}
 }
 
+void
+setEnvFrame(rw::Clump *clump)
+{
+	using namespace rw;
+	Frame *f = Frame::create();
+	V3d axis = { 1.0, 0.0, 0.0 };
+	f->matrix = Matrix::makeRotation(Quat::rotation(1.04f, axis));
+	f->updateObjects();
+	f->getLTM();
+
+	FORLIST(lnk1, clump->atomics){
+		Geometry *g = Atomic::fromClump(lnk1)->geometry;
+		for(int32 i = 0; i < g->numMaterials; i++){
+			MatFX *mfx = MatFX::get(g->materialList[i]);
+			if(mfx)
+				mfx->setEnvFrame(f);
+		}
+	}
+}
+
 int
 initrw(void)
 {
@@ -121,14 +139,16 @@ initrw(void)
 
 	rw::Engine::init();
 	gta::attachPlugins();
-	rw::Engine::open();
+	rw::Driver::open();
+	gl3::initializeRender();
 
 	rw::currentTexDictionary = TexDictionary::create();
 	Image::setSearchPath("/home/aap/vc_textures/");
 
-//	char *f = "/home/aap/gamedata/pc/gtavc/models/gta3_archive/player.dff";
-//	char *f = "/home/aap/gamedata/pc/gtavc/models/gta3_archive/od_newscafe_dy.dff";
-	const char *f = "models/admiral.dff";
+	const char *f = "models/od_newscafe_dy.dff";
+//	const char *f = "models/admiral.dff";
+//	const char *f = "models/player.dff";
+//	const char *f = "models/vegetationb03.dff";
 //	char *f = "/home/aap/gamedata/pc/gta3/models/gta3_archive/player.DFF";
 	if(in.open(f, "rb") == nil)
 		return 0;
@@ -137,6 +157,7 @@ initrw(void)
 	assert(clump);
 	in.close();
 
+	setEnvFrame(clump);
 	hideSomeAtomics(clump);
 
 	return 1;
@@ -146,10 +167,6 @@ int
 init(void)
 {
 	if(!initrw())
-		return 0;
-
-	simpleshader = rw::gl3::Shader::fromFiles("1.vert", "1.frag");
-	if(simpleshader == nil)
 		return 0;
 
 	camera = new Camera;

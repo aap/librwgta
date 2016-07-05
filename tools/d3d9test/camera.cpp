@@ -17,7 +17,6 @@ Camera::update(void)
 		m_rwcam->nearPlane = m_near;
 		m_rwcam->farPlane = m_far;
 		m_rwcam->setFOV(m_fov, m_aspectRatio);
-		m_rwcam->updateProjectionMatrix();
 
 		rw::Frame *f = m_rwcam->getFrame();
 		if(f){

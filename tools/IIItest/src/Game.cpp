@@ -5,8 +5,10 @@ int CGame::currLevel;
 void
 CGame::InitialiseRW(void)
 {
+	rw::Engine::init();
 	gta::attachPlugins();
-	rw::d3d::registerNativeRaster();
+	rw::Driver::open();
+
 	rw::d3d::isP8supported = 0;
 	rw::loadTextures = 0;
 

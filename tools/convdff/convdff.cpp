@@ -15,7 +15,7 @@ static struct {
 	char *str;
 	uint32 val;
 } platforms[] = {
-	{ "mobile", PLATFORM_OGL },
+	{ "mobile", PLATFORM_WDGL },
 	{ "ps2",    PLATFORM_PS2 },
 	{ "xbox",   PLATFORM_XBOX },
 	{ "d3d8",   PLATFORM_D3D8 },
@@ -57,7 +57,7 @@ dumpFrameHier(Frame *frame, int ind = 0)
 {
 	for(int i = 0; i < ind; i++)
 		printf("  ");
-	char *name = gta::getNodeName(frame);
+	const char *name = gta::getNodeName(frame);
 	HAnimData *hanim = HAnimData::get(frame);
 	printf("*%s %d %d %s\n", name[0] ? name : "---", frame->objectList.count(), hanim->id, hanim->hierarchy ? "HIERARCHY" : "");
 	if(hanim->hierarchy){
@@ -134,8 +134,6 @@ removeEffects(Atomic *atomic)
 int
 main(int argc, char *argv[])
 {
-	gta::attachPlugins();
-
 	rw::version = 0;
 //	rw::version = 0x34003;
 //	rw::version = 0x33002;
@@ -144,6 +142,10 @@ main(int argc, char *argv[])
 //	rw::platform = rw::PLATFORM_XBOX;
 	rw::platform = rw::PLATFORM_D3D8;
 //	rw::platform = rw::PLATFORM_D3D9;
+
+	rw::Engine::init();
+	gta::attachPlugins();
+	rw::Driver::open();
 
 	int uninstance = 0;
 	int instance = 0;

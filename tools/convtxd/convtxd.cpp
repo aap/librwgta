@@ -83,7 +83,7 @@ struct StrAssoc {
 	char *key;
 	int val;
 
-	static int StrAssoc::get(StrAssoc *desc, char *key);
+	static int get(StrAssoc *desc, char *key);
 };
 
 int
@@ -225,8 +225,6 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	gta::attachPlugins();
-
 	rw::version = 0x36003;
 //	rw::platform = rw::PLATFORM_PS2;
 //	rw::platform = rw::PLATFORM_OGL;
@@ -236,6 +234,10 @@ main(int argc, char *argv[])
 //	int outplatform = rw::PLATFORM_XBOX;
 	int outplatform = rw::PLATFORM_D3D9;
 	int script = 0;
+
+	rw::Engine::init();
+	gta::attachPlugins();
+	rw::Driver::open();
 
 	char *s;
 	ARGBEGIN{
