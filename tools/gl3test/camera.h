@@ -8,7 +8,6 @@ public:
 	rw::V3d m_localup;
 
 	float m_fov, m_aspectRatio;
-	float m_near, m_far;
 
 
 	void setTarget(rw::V3d target);

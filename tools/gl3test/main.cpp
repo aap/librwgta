@@ -4,12 +4,15 @@ Camera *camera;
 rw::World *world;
 rw::Clump *clump;
 
+rw::RGBA clearcol = { 0x40, 0x40, 0x40, 0xFF };
+
 void
 display(void)
 {
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 	camera->update();
+
+	camera->m_rwcam->clear(&clearcol,
+		               rw::Camera::CLEARIMAGE | rw::Camera::CLEARZ);
 	camera->m_rwcam->beginUpdate();
 
 	clump->render();
@@ -160,24 +163,19 @@ initrw(void)
 	setEnvFrame(clump);
 	hideSomeAtomics(clump);
 
-	return 1;
-}
-
-int
-init(void)
-{
-	if(!initrw())
-		return 0;
-
-	camera = new Camera;
+	camera = new ::Camera;
 	camera->m_rwcam = rw::Camera::create();
 	camera->m_rwcam->setFrame(rw::Frame::create());
+	camera->m_rwcam->setNearPlane(0.1f);
+	camera->m_rwcam->setFarPlane(450.0f);
+	camera->m_rwcam->fogPlane = 10.0f;
 	camera->m_aspectRatio = 640.0f/480.0f;
-	camera->m_near = 0.1f;
-	camera->m_far = 450.0f;
 	camera->m_target.set(0.0f, 0.0f, 0.0f);
 	//camera->m_position.set(0.0f, -30.0f, 4.0f);
 	camera->m_position.set(3.0f, 5.0f, 1.0f);
+
+	rw::setRenderState(rw::FOGENABLE, 1);
+	rw::setRenderState(rw::FOGCOLOR, *(rw::uint32*)&clearcol);
 
 	world = rw::World::create();
 	world->addCamera(camera->m_rwcam);
@@ -189,12 +187,21 @@ init(void)
 
 	// Diffuse light
 	light = rw::Light::create(rw::Light::DIRECTIONAL);
-	rw::Frame *f = rw::Frame::create();
-	light->setFrame(f);
-	f->matrix.pointInDirection((rw::V3d){1.0, 1.0, -1.0},
-	                           (rw::V3d){0.0, 0.0, 1.0});
-	f->updateObjects();
+	rw::Frame *frm = rw::Frame::create();
+	light->setFrame(frm);
+	frm->matrix.pointInDirection((rw::V3d){1.0, 1.0, -1.0},
+	                             (rw::V3d){0.0, 0.0, 1.0});
+	frm->updateObjects();
 	world->addLight(light);
+
+	return 1;
+}
+
+int
+init(void)
+{
+	if(!initrw())
+		return 0;
 
 	return 1;
 }
