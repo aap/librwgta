@@ -15,7 +15,7 @@ using namespace std;
 using namespace rw;
 
 struct {
-	char *str;
+	const char *str;
 	uint32 val;
 } platforms[] = {
 	{ "ps2",    PLATFORM_PS2 },
@@ -75,12 +75,12 @@ xboxToD3d8(Raster *raster)
 		raster->unlock(i);
 	}
 
-	delete raster;
+	raster->destroy();
 	return newras;
 }
 
 struct StrAssoc {
-	char *key;
+	const char *key;
 	int val;
 
 	static int get(StrAssoc *desc, char *key);

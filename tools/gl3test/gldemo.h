@@ -17,6 +17,7 @@
 
 int init(void);
 void shutdown(void);
+void update(double t);
 void display(void);
 void pullinput(GLFWwindow*);
 void keypress(GLFWwindow*, int key, int scancode, int action, int mods);

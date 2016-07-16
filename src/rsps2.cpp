@@ -83,7 +83,7 @@ saPostCB(MatPipeline *p, Geometry *geo)
 int32
 findSAVertex(Geometry *g, uint32 flags[], uint32 mask, SaVert *v)
 {
-	Skin *skin = *PLUGINOFFSET(Skin*, g, skinGlobals.offset);
+	Skin *skin = Skin::get(g);
 	float32 *wghts = NULL;
 	uint8 *inds    = NULL;
 	if(skin){
@@ -153,8 +153,8 @@ insertSAVertex(Geometry *geo, int32 i, uint32 mask, SaVert *v)
 		cols1[2] = v->c1[2];
 		cols1[3] = v->c1[3];
 	}
-	if(mask & 0x10000 && skinGlobals.offset){
-		Skin *skin = *PLUGINOFFSET(Skin*, geo, skinGlobals.offset);
+	if(mask & 0x10000 && skinGlobals.geoOffset){
+		Skin *skin = Skin::get(geo);
 		memcpy(&skin->weights[i*4], v->w, 16);
 		memcpy(&skin->indices[i*4], v->i, 4);
 	}
@@ -406,7 +406,7 @@ saInstanceCB(MatPipeline *pipe, Geometry *g, Mesh *m, uint8 **data)
 		if(a == &saNormal)
 			instanceSANormals(g, m, (int8*)data[i]);
 		if(a == &saWeights){
-			Skin *skin = *PLUGINOFFSET(Skin*, g, skinGlobals.offset);
+			Skin *skin = Skin::get(g);
 			instanceSkinData(g, m, skin, (uint32*)data[i]);
 		}
 	}

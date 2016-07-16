@@ -87,10 +87,15 @@ main(int argc, char *argv[])
 	if(!init())
 		return 1;
 
+	double lastTime = glfwGetTime();
+	double time;
 	while(!glfwWindowShouldClose(win)){
 		if(pad >= 0)
 			pollDS3(pad, &ds3);
 		pullinput(win);
+		time = glfwGetTime();
+		update(time-lastTime);
+		lastTime = time;
 		display();
 		glfwSwapBuffers(win);
 		glfwPollEvents();

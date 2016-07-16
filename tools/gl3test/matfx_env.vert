@@ -40,8 +40,6 @@ out vec2 v_tex0;
 void
 main(void)
 {
-	vec3 lightdir = vec3(1.0, 1.0, -1.0);
-
 	vec4 V = u_world * vec4(in_pos, 1.0);
 	gl_Position = u_proj * u_view * V;
 	vec3 N = mat3(u_world) * in_normal;

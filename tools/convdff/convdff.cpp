@@ -12,7 +12,7 @@ using namespace std;
 using namespace rw;
 
 static struct {
-	char *str;
+	const char *str;
 	uint32 val;
 } platforms[] = {
 	{ "mobile", PLATFORM_WDGL },
@@ -116,6 +116,22 @@ dumpReflData(Material *m)
 }
 
 void
+removeBodyTextures(Clump *clump)
+{
+	FORLIST(lnk, clump->atomics){
+		Geometry *g = Atomic::fromClump(lnk)->geometry;
+		for(int32 i = 0; i < g->numMaterials; i++){
+			Material *m = g->materialList[i];
+			if(m->texture == nil) continue;
+			if(strstr(m->texture->name, "body")){
+				m->texture->destroy();
+				m->texture = nil;
+			}
+		}
+	}
+}
+
+void
 removeEffects(Atomic *atomic)
 {
 	Geometry *geo = atomic->geometry;
@@ -215,6 +231,8 @@ main(int argc, char *argv[])
 	c = Clump::streamRead(&in);
 	assert(c != NULL);
 	in.close();
+
+	removeBodyTextures(c);
 
 	//Clump *colclump = NULL;
 	//if(seconddff){
