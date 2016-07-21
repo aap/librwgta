@@ -27,7 +27,7 @@ initrw(void)
         rw::Driver::open();
         rw::d3d::initializeRender();
 
-	rw::currentTexDictionary = rw::TexDictionary::create();
+	rw::TexDictionary::setCurrent(rw::TexDictionary::create());
 	rw::Image::setSearchPath("Y:\\ps2\\gta3\\MODELS\\gta3_archive\\txd_extracted\\;"
 	                         "Y:\\ps2\\gtavc\\MODELS\\gta3_archive\\txd_extracted\\;"
 	                         "Y:\\ps2\\gtasa\\models\\gta3_archive\\txd_extracted\\");
@@ -46,7 +46,7 @@ initrw(void)
 		txd = rw::TexDictionary::streamRead(&in);
 		assert(txd);
 		in.close();
-		rw::currentTexDictionary = txd;
+		rw::TexDictionary::setCurrent(txd);
 	}
 
 	char *filename = "Y:\\pc\\gtavc\\models\\gta3_archive\\admiral.dff";
@@ -88,7 +88,7 @@ initrw(void)
 	//out.close();
 
 	//out.open("out.txd", "wb");
-	//rw::currentTexDictionary->streamWrite(&out);
+	//rw::TexDictionary::getCurrent()->streamWrite(&out);
 	//out.close();
 }
 

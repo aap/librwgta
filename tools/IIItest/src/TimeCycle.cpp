@@ -46,7 +46,7 @@ CTimeCycle::Initialise(void)
 {
 	FILE *file;
 	char *line;
-	if(file = fopen("data/timecyc.dat", "rb"), file == NULL)
+	if(file = fopen_ci("data/timecyc.dat", "rb"), file == nil)
 		return;
 	int h = 0, w = 0;
 	while(line = CFileLoader::LoadLine(file)){

@@ -19,7 +19,7 @@ CTxdStore::Initialize(void)
 }
 
 int
-CTxdStore::AddTxdSlot(char *name)
+CTxdStore::AddTxdSlot(const char *name)
 {
 	TxdDef *def;
 	int idx;
@@ -27,13 +27,13 @@ CTxdStore::AddTxdSlot(char *name)
 	def = &CTxdStore::entries[idx = CTxdStore::allocPtr++];
 	CTxdStore::flags[idx] = 0;
 	def->refCount = 0;
-	def->texDict = NULL;
+	def->texDict = nil;
 	strncpy(def->name, name, 20);
 	return idx;
 }
 
 int
-CTxdStore::FindTxdSlot(char *name)
+CTxdStore::FindTxdSlot(const char *name)
 {
 	TxdDef *def = CTxdStore::entries;
 	for(int i = 0; i < CTxdStore::capacity; i++, def++){
@@ -49,21 +49,21 @@ char*
 CTxdStore::GetTxdName(int slot)
 {
 	if(CTxdStore::flags[slot] & 0x80)
-		return NULL;
+		return nil;
 	return CTxdStore::entries[slot].name;
 }
 
 void
 CTxdStore::PushCurrentTxd(void)
 {
-	CTxdStore::ms_pStoredTxd = rw::currentTexDictionary;
+	CTxdStore::ms_pStoredTxd = rw::TexDictionary::getCurrent();
 }
 
 void
 CTxdStore::PopCurrentTxd(void)
 {
-	rw::currentTexDictionary = CTxdStore::ms_pStoredTxd;
-	CTxdStore::ms_pStoredTxd = NULL;
+	rw::TexDictionary::setCurrent(CTxdStore::ms_pStoredTxd);
+	CTxdStore::ms_pStoredTxd = nil;
 }
 
 void
@@ -71,7 +71,13 @@ CTxdStore::SetCurrentTxd(int slot)
 {
 	if(CTxdStore::flags[slot] & 0x80)
 		return;
-	rw::currentTexDictionary = CTxdStore::entries[slot].texDict;
+	rw::TexDictionary::setCurrent(CTxdStore::entries[slot].texDict);
+}
+
+void
+CTxdStore::Create(int slot)
+{
+	getDef(slot)->texDict = rw::TexDictionary::create();
 }
 
 void
@@ -90,13 +96,26 @@ bool
 CTxdStore::LoadTxd(int slot, rw::Stream *stream)
 {
 	TxdDef *def = getDef(slot);
-	if(!rw::findChunk(stream, rw::ID_TEXDICTIONARY, NULL, NULL)){
+	if(!rw::findChunk(stream, rw::ID_TEXDICTIONARY, nil, nil)){
 		printf("Failed to load TXD\n");
 		return false;
 	}else{
 		def->texDict = rw::TexDictionary::streamRead(stream);
-		return def->texDict != NULL;
+		return def->texDict != nil;
 	}
+}
+
+bool
+CTxdStore::LoadTxd(int slot, const char *filename)
+{
+	rw::StreamFile stream;
+	if(stream.open(getPath(filename), "rb")){
+		LoadTxd(slot, &stream);
+		stream.close();
+		return true;
+	}
+	printf("Failed to open TXD\n");
+	return false;
 }
 
 CTxdStore::TxdDef*
@@ -104,12 +123,12 @@ CTxdStore::getDef(int slot)
 {
 	if((CTxdStore::flags[slot] & 0x80) == 0)
 		return &CTxdStore::entries[slot];
-	return NULL;
+	return nil;
 }
 
 bool
 CTxdStore::isTxdLoaded(int slot)
 {
 	TxdDef *def = getDef(slot);
-	return def->texDict != NULL;
+	return def->texDict != nil;
 }

@@ -1,13 +1,22 @@
 #include "III.h"
-#include "d3dUtility.h"
 
-IDirect3DDevice9 *Device = 0;
+char*
+getPath(const char *path)
+{
+	static char cipath[1024];
+	strncpy(cipath, path, 1024);
+	rw::makePath(cipath);
+	return cipath;
+}
 
-// TODO: fix path for case sensitive systems
 FILE*
 fopen_ci(const char *path, const char *mode)
 {
-	return fopen(path, mode);
+	char cipath[1024];
+	strncpy(cipath, path, 1024);
+	rw::makePath(cipath);
+//	printf(" [opening %s]\n", cipath);
+	return fopen(cipath, mode);
 }
 
 char*
@@ -19,7 +28,7 @@ skipWhite(char *s)
 }
 
 int
-StrAssoc::get(StrAssoc *desc, char *key)
+StrAssoc::get(StrAssoc *desc, const char *key)
 {
 	for(; desc->key[0] != '\0'; desc++)
 		if(strcmp(desc->key, key) == 0)
@@ -28,12 +37,12 @@ StrAssoc::get(StrAssoc *desc, char *key)
 }
 
 void*
-DatDesc::get(DatDesc *desc, char *name)
+DatDesc::get(DatDesc *desc, const char *name)
 {
 	for(; desc->name[0] != '\0'; desc++)
 		if(strcmp(desc->name, name) == 0)
-			return desc->handler;
-	return desc->handler;
+			return (void*)desc->handler;
+	return (void*)desc->handler;
 }
 
 //int
@@ -47,7 +56,7 @@ dump(void)
 	CBaseModelInfo *m;
 	for(int i = 0; i < MODELINFOSIZE; i++){
 		m = CModelInfo::ms_modelInfoPtrs[i];
-		if(m == NULL)
+		if(m == nil)
 			continue;
 		//if(m->type == CSimpleModelInfo::ID)
 		//	printf("%d %s\n", i, m->name);
@@ -69,23 +78,24 @@ dump(void)
 	//}
 }
 
-bool
-display(float timeDelta)
+void
+update(double t)
 {
-	Device->Clear(0, 0, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER,
-	              0xff808080, 1.0f, 0);
-	Device->BeginScene();
+}
 
+void
+display(void)
+{
+}
 
-	Device->EndScene();
-	Device->Present(0, 0, 0, 0);
-	return true;
+void
+shutdown(void)
+{
 }
 
 int
 init(void)
 {
-	rw::d3d::device = Device;
 	CGame::InitialiseRW();
 	CGame::InitialiseAfterRW();
 	CGame::Initialise();
@@ -94,50 +104,4 @@ init(void)
 	CStreaming::RequestModel(731, 1);
 	CStreaming::LoadAllRequestedModels();
 	return 1;
-}
-
-LRESULT CALLBACK
-d3d::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
-{
-	switch(msg){
-	case WM_DESTROY:
-		PostQuitMessage(0);
-		break;
-
-	case WM_KEYDOWN:
-		switch(wParam){
-			break;
-		}
-		break;
-	case WM_CLOSE:
-			DestroyWindow(hwnd);
-		break;
-	}
-	return DefWindowProc(hwnd, msg, wParam, lParam);
-}
-
-int WINAPI
-WinMain(HINSTANCE hinstance, HINSTANCE prevInstance,
-        PSTR cmdLine, int showCmd)
-{
-	AllocConsole();
-	freopen("CONIN$", "r", stdin);
-	freopen("CONOUT$", "w", stdout);
-	freopen("CONOUT$", "w", stderr);
-
-	if(!d3d::InitD3D(hinstance, 640, 480, true, D3DDEVTYPE_HAL, &Device)){
-		MessageBox(0, "InitD3D() - FAILED", 0, 0);
-		return 0;
-	}
-		
-	if(!init()){
-		MessageBox(0, "init() - FAILED", 0, 0);
-		return 0;
-	}
-
-	d3d::EnterMsgLoop(display);
-
-	Device->Release();
-
-	return 0;
 }

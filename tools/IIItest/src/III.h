@@ -1,12 +1,23 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <cctype>
 #include <cassert>
 
+#ifdef _WIN32
 #define RW_D3D9
+#else
+// RW_GL3 defined by makefile
+
+#include <GL/glew.h>
+#include <GLFW/glfw3.h>
+#endif
+
 #include <rw.h>
 #include "rwgta.h"
 #include "collision.h"
+
+#include "input.h"
 
 using rw::uint8;
 using rw::int8;
@@ -17,39 +28,52 @@ using rw::int32;
 typedef unsigned int uint;
 typedef unsigned char uchar;
 
+int init(void);
+void shutdown(void);
+void update(double t);
+void display(void);
+#ifdef RW_GL3
+void pollinput(GLFWwindow*);
+void keypress(GLFWwindow*, int key, int scancode, int action, int mods);
+#endif
+
 #include "templates.h"
 #include "config.h"
 
 class C2dEffect
 {
 public:
+	struct Light {
+		float dist;
+		float outerRange;
+		float size;
+		float innerRange;
+		uchar flash;
+		uchar wet;
+		uchar flare;
+		uchar shadowIntens;
+		uchar flag;
+		rw::Texture *corona;
+		rw::Texture *shadow;
+	};
+	struct Particle {
+		int particleType;
+		float dir[3];
+		float scale;
+	};
+	struct Attractor {
+		float dir[3];
+		uchar flag;
+		uchar probability;
+	};
+
 	rw::V3d pos;
 	rw::RGBA col;
 	uchar type;
 	union {
-		struct Light {
-			float dist;
-			float outerRange;
-			float size;
-			float innerRange;
-			uchar flash;
-			uchar wet;
-			uchar flare;
-			uchar shadowIntens;
-			uchar flag;
-			rw::Texture *corona;
-			rw::Texture *shadow;
-		} light;
-		struct Particle {
-			int particleType;
-			float dir[3];
-			float scale;
-		} particle;
-		struct Attractor {
-			float dir[3];
-			uchar flag;
-			uchar probability;
-		} attractor;
+		Light light;
+		Particle particle;
+		Attractor attractor;
 	};
 };
 
@@ -57,21 +81,22 @@ public:
 #include "ModelInfo.h"
 #include "TimeCycle.h"
 
+char *getPath(const char *path);
 FILE *fopen_ci(const char *path, const char *mode);
 char *skipWhite(char *s);
 
 struct StrAssoc {
-	char *key;
+	const char *key;
 	int val;
 
-	static int StrAssoc::get(StrAssoc *desc, char *key);
+	static int get(StrAssoc *desc, const char *key);
 };
 
 struct DatDesc {
 	char name[5];
 	void (*handler)(char *line);
 
-	static void *DatDesc::get(DatDesc *desc, char *name);
+	static void *get(DatDesc *desc, const char *name);
 };
 
 class CGame
@@ -89,13 +114,16 @@ class CFileLoader
 	static DatDesc iplDesc[];
 	static DatDesc zoneDesc[];
 public:
-	static char *CFileLoader::LoadLine(FILE *f);
-	static void LoadLevel(char *filename);
-	static void LoadObjectTypes(char *filename) { CFileLoader::LoadDataFile(filename, ideDesc); }
-	static void LoadScene(char *filename) { CFileLoader::LoadDataFile(filename, iplDesc); }
-	static void LoadMapZones(char *filename) { CFileLoader::LoadDataFile(filename, zoneDesc); }
-	static void LoadDataFile(char *filename, DatDesc *desc);
-	static void LoadCollisionFile(char *filename);
+	static char *LoadLine(FILE *f);
+	static void LoadLevel(const char *filename);
+	static void LoadObjectTypes(const char *filename){
+		CFileLoader::LoadDataFile(filename, ideDesc); }
+	static void LoadScene(const char *filename){
+		CFileLoader::LoadDataFile(filename, iplDesc); }
+	static void LoadMapZones(const char *filename){
+		CFileLoader::LoadDataFile(filename, zoneDesc); }
+	static void LoadDataFile(const char *filename, DatDesc *desc);
+	static void LoadCollisionFile(const char *filename);
 
 	static void LoadNothing(char *line) {}
 
@@ -123,6 +151,11 @@ public:
 	// models
 	static bool LoadAtomicFile(rw::Stream *stream, int id);
 	static bool LoadClumpFile(rw::Stream *stream, int id);
+
+	// textures
+	static rw::TexDictionary *LoadTexDictionary(const char *filename);
+	static void AddTexDictionaries(rw::TexDictionary *dst,
+	                               rw::TexDictionary *src);
 };
 
 class CPathFind
@@ -152,15 +185,17 @@ class CTxdStore
 	static rw::TexDictionary *ms_pStoredTxd;
 public:
 	static void Initialize(void);
-	static int AddTxdSlot(char *name);
-	static int FindTxdSlot(char *name);
+	static int AddTxdSlot(const char *name);
+	static int FindTxdSlot(const char *name);
 	static char *GetTxdName(int slot);
 	static void PushCurrentTxd(void);
 	static void PopCurrentTxd(void);
 	static void SetCurrentTxd(int slot);
+	static void Create(int slot);
 	static void AddRef(int slot);
 	static void RemoveRefWithoutDelete(int slot);
 	static bool LoadTxd(int slot, rw::Stream *stream);
+	static bool LoadTxd(int slot, const char *filename);
 
 	static TxdDef *getDef(int slot);
 	static bool isTxdLoaded(int slot);
@@ -183,7 +218,7 @@ public:
 		Prostitute,
 		Invalid
 	};
-	static int FindPedType(char *name);
+	static int FindPedType(const char *name);
 };
 
 class CPedStats
@@ -207,7 +242,7 @@ class CPedStats
 public:
 	static void Initialise(void);
 	static void LoadPedStats(void);
-	static int  GetPedStatType(char *name);
+	static int  GetPedStatType(const char *name);
 };
 
 class CHandlingData
@@ -253,7 +288,7 @@ class CHandlingData
 public:
 	static void Initialise(void);
 	static void LoadHandlingData(void);
-	static int  GetHandlingData(char *ident);
+	static int  GetHandlingData(const char *ident);
 };
 
 class CdStream

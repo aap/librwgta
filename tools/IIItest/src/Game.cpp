@@ -8,15 +8,18 @@ CGame::InitialiseRW(void)
 	rw::Engine::init();
 	gta::attachPlugins();
 	rw::Driver::open();
+#ifdef RW_GL3
+	rw::platform = rw::PLATFORM_GL3;
+	rw::gl3::initializeRender();
+#elif RW_D3D9
+	rw::platform = rw::PLATFORM_D3D9;
+#endif
 
 	rw::d3d::isP8supported = 0;
 	rw::loadTextures = 0;
 
-	rw::currentTexDictionary = rw::TexDictionary::create();
+	rw::TexDictionary::setCurrent(rw::TexDictionary::create());
 	rw::Image::setSearchPath("D:\\rockstargames\\ps2\\gta3\\MODELS\\gta3_archive\\txd_extracted\\;");
-
-	rw::platform = rw::PLATFORM_D3D9;
-	//rw::d3d::device = Device;
 
 	CTxdStore::Initialize();
 }
@@ -30,13 +33,30 @@ CGame::InitialiseAfterRW(void)
 	CTimeCycle::Initialise();
 }
 
+int gameTxdSlot;
+
 void
 CGame::Initialise(void)
 {
 	CGame::currLevel = 1;
+
+	printf("--Loading generic textures\n");
+	gameTxdSlot = CTxdStore::AddTxdSlot("generic");
+	CTxdStore::Create(gameTxdSlot);
+	CTxdStore::AddRef(gameTxdSlot);
+
+	printf("--Loading particles\n");
+	int part = CTxdStore::AddTxdSlot("particle");
+	CTxdStore::LoadTxd(part, "MODELS/PARTICLE.TXD");
+	CTxdStore::AddRef(part);
+	CTxdStore::SetCurrentTxd(gameTxdSlot);
+
+	printf("--Setup game variables\n");
 	CPathFind::AllocatePathFindInfoMem(PATHNODESIZE);
-	CdStream::addImage("models/gta3.img");
-	CFileLoader::LoadLevel("data/default.dat");
-	CFileLoader::LoadLevel("data/gta3.dat");
+	CdStream::addImage("MODELS\\GTA3.IMG");
+	CFileLoader::LoadLevel("DATA\\DEFAULT.DAT");
+	CFileLoader::LoadLevel("DATA\\GTA3.DAT");
+
+	printf("--Setup Streaming\n");
 	CStreaming::Init();
 }

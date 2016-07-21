@@ -81,8 +81,8 @@ CStreamingInfo::RemoveFromList(void)
 {
 	m_next->m_prev = m_prev;
 	m_prev->m_next = m_next;
-	m_next = NULL;
-	m_prev = NULL;
+	m_next = nil;
+	m_prev = nil;
 }
 
 CStreamingInfo CStreaming::ms_aInfoForModel[CStreaming::NUMSTREAMINFO];
@@ -97,20 +97,20 @@ CStreaming::Init(void)
 {
 	for(int i = 0; i < NUMSTREAMINFO; i++){
 		ms_aInfoForModel[i].m_loadState = 0;
-		ms_aInfoForModel[i].m_next = NULL;
-		ms_aInfoForModel[i].m_prev = NULL;
+		ms_aInfoForModel[i].m_next = nil;
+		ms_aInfoForModel[i].m_prev = nil;
 		ms_aInfoForModel[i].m_nextID = -1;
 		ms_aInfoForModel[i].m_size = 0;
 		ms_aInfoForModel[i].m_position = 0;
 	}
 	ms_startLoadedList.m_next = &ms_endLoadedList;
-	ms_startLoadedList.m_prev = NULL;
-	ms_endLoadedList.m_next = NULL;
+	ms_startLoadedList.m_prev = nil;
+	ms_endLoadedList.m_next = nil;
 	ms_endLoadedList.m_prev = &ms_startLoadedList;
 
 	ms_startRequestedList.m_next = &ms_endRequestedList;
-	ms_startRequestedList.m_prev = NULL;
-	ms_endRequestedList.m_next = NULL;
+	ms_startRequestedList.m_prev = nil;
+	ms_endRequestedList.m_next = nil;
 	ms_endRequestedList.m_prev = &ms_startRequestedList;
 
 	ms_streamingBufferSize = 0;
@@ -142,7 +142,7 @@ CStreaming::LoadCdDirectory(const char *dirname, int n)
 	short lastID;
 	CDirectory::DirectoryInfo dirinfo;
 	FILE *f = fopen_ci(dirname, "rb");
-	if(f == NULL)
+	if(f == nil)
 		return;
 	n <<= 24;	// img selector
 	lastID = -1;
@@ -241,7 +241,7 @@ CStreaming::RequestModel(int id, int flags)
 	else
 		strinfo->m_flags &= ~8;
 	strinfo->m_flags |= flags;
-	if(strinfo->m_next == NULL)
+	if(strinfo->m_next == nil)
 		strinfo->AddToList(&ms_startRequestedList);
 }
 

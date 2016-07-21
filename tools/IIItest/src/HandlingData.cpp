@@ -16,7 +16,7 @@ CHandlingData::LoadHandlingData(void)
 	FILE *file;
 	char *line;
 	int abs, flags, front, rear;
-	if(file = fopen("data/handling.cfg", "rb"), file == NULL)
+	if(file = fopen("data/handling.cfg", "rb"), file == nil)
 		return;
 	int i = 0;
 	CHandlingData::Data *d;
@@ -24,7 +24,7 @@ CHandlingData::LoadHandlingData(void)
 		if(line[0] == ';')
 			continue;
 		sscanf(line, "%s", name);
-		int i = CHandlingData::GetHandlingData(name);
+		i = CHandlingData::GetHandlingData(name);
 		assert(i >= 0);
 		assert(i < NUMHANDLINGS);
 		d = &CHandlingData::data[i];
@@ -52,9 +52,9 @@ CHandlingData::LoadHandlingData(void)
 }
 
 int
-CHandlingData::GetHandlingData(char *ident)
+CHandlingData::GetHandlingData(const char *ident)
 {
-	static char *idents[] = {
+	static const char *idents[] = {
 		"LANDSTAL",
 		"IDAHO",
 		"STINGER",
@@ -112,10 +112,10 @@ CHandlingData::GetHandlingData(char *ident)
 		"FLATBED",
 		"YANKEE",
 		"BORGNINE",
-		NULL
+		nil
 	};
 	int i = 0;
-	for(char **id = idents; id; id++, i++)
+	for(const char **id = idents; id; id++, i++)
 		if(strcmp(*id, ident) == 0)
 			return i;
 	return -1;

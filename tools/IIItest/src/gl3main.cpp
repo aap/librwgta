@@ -1,6 +1,16 @@
-#include "gldemo.h"
+#include "III.h"
 
 Dualshock ds3;
+
+void
+keypress(GLFWwindow *window, int key, int scancode, int action, int mods)
+{
+}
+
+void
+pollinput(GLFWwindow *window)
+{
+}
 
 void
 pollDS3(int n, Dualshock *ds)

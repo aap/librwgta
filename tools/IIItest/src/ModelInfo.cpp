@@ -4,8 +4,8 @@ void
 CBaseModelInfo::ctor(int type)
 {
 	this->name[0] = '\0';
-	this->colModel = NULL;
-	this->twodEffects = NULL;
+	this->colModel = nil;
+	this->twodEffects = nil;
 	this->id = -1;
 	this->refCount = 0;
 	this->txdSlot = -1;
@@ -78,9 +78,9 @@ CModelInfo::AddSimpleModel(int id)
 	modelinfo = &CModelInfo::ms_simpleModelStore.store[CModelInfo::ms_simpleModelStore.allocPtr++];
 	CModelInfo::ms_modelInfoPtrs[id] = modelinfo;
 	modelinfo->ctor(CSimpleModelInfo::ID);
-	modelinfo->atomics[0] = NULL;
-	modelinfo->atomics[1] = NULL;
-	modelinfo->atomics[2] = NULL;
+	modelinfo->atomics[0] = nil;
+	modelinfo->atomics[1] = nil;
+	modelinfo->atomics[2] = nil;
 	modelinfo->numAtomics = 0;
 	modelinfo->flags = 0;
 	return modelinfo;
@@ -93,9 +93,9 @@ CModelInfo::AddTimeModel(int id)
 	modelinfo = &CModelInfo::ms_timeModelStore.store[CModelInfo::ms_timeModelStore.allocPtr++];
 	CModelInfo::ms_modelInfoPtrs[id] = modelinfo;
 	modelinfo->ctor(CTimeModelInfo::ID);
-	modelinfo->atomics[0] = NULL;
-	modelinfo->atomics[1] = NULL;
-	modelinfo->atomics[2] = NULL;
+	modelinfo->atomics[0] = nil;
+	modelinfo->atomics[1] = nil;
+	modelinfo->atomics[2] = nil;
 	modelinfo->numAtomics = 0;
 	modelinfo->flags = 0;
 	return modelinfo;
@@ -108,7 +108,7 @@ CModelInfo::AddClumpModel(int id)
 	modelinfo = &CModelInfo::ms_clumpModelStore.store[CModelInfo::ms_clumpModelStore.allocPtr++];
 	CModelInfo::ms_modelInfoPtrs[id] = modelinfo;
 	modelinfo->ctor(CClumpModelInfo::ID);
-	modelinfo->clump = NULL;
+	modelinfo->clump = nil;
 	return modelinfo;
 }
 
@@ -119,7 +119,7 @@ CModelInfo::AddPedModel(int id)
 	modelinfo = &CModelInfo::ms_pedModelStore.store[CModelInfo::ms_pedModelStore.allocPtr++];
 	CModelInfo::ms_modelInfoPtrs[id] = modelinfo;
 	modelinfo->ctor(CPedModelInfo::ID);
-	modelinfo->clump = NULL;
+	modelinfo->clump = nil;
 	return modelinfo;
 }
 
@@ -130,11 +130,11 @@ CModelInfo::AddVehicleModel(int id)
 	modelinfo = &CModelInfo::ms_vehicleModelStore.store[CModelInfo::ms_vehicleModelStore.allocPtr++];
 	CModelInfo::ms_modelInfoPtrs[id] = modelinfo;
 	modelinfo->ctor(CVehicleModelInfo::ID);
-	modelinfo->clump = NULL;
+	modelinfo->clump = nil;
 	modelinfo->vehicleType = -1;
 	modelinfo->extraModelIndex = -1;
-	modelinfo->primaryMaterials[0] = NULL;
-	modelinfo->secondaryMaterials[0] = NULL;
+	modelinfo->primaryMaterials[0] = nil;
+	modelinfo->secondaryMaterials[0] = nil;
 	return modelinfo;
 }
 
@@ -150,5 +150,5 @@ CModelInfo::GetModelInfo(char *name, int *id)
 			return modelinfo;
 		}
 	}
-	return NULL;
+	return nil;
 }

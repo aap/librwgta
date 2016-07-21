@@ -1,7 +1,7 @@
 #include "III.h"
 
 int
-CPedType::FindPedType(char *name)
+CPedType::FindPedType(const char *name)
 {
 	static StrAssoc types[] = {
 		{ "PLAYER1",   CPedType::Player1 },

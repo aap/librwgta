@@ -215,7 +215,7 @@ main(int argc, char *argv[])
 	StreamFile in;
 	in.open(argv[0], "rb");
 	currentUVAnimDictionary = NULL;
-	currentTexDictionary = TexDictionary::create();
+	TexDictionary::setCurrent(TexDictionary::create());
 	ChunkHeaderInfo header;
 	readChunkHeaderInfo(&in, &header);
 	if(header.type == ID_UVANIMDICT){
@@ -361,7 +361,7 @@ main(int argc, char *argv[])
 	c->destroy();
 	if(currentUVAnimDictionary)
 		currentUVAnimDictionary->destroy();
-	currentTexDictionary->destroy();
+	TexDictionary::getCurrent()->destroy();
 
 	return 0;
 }

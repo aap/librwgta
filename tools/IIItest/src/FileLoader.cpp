@@ -5,8 +5,8 @@ CFileLoader::LoadLine(FILE *f)
 {
 	static char linebuf[1024];
 again:
-	if(fgets(linebuf, 1024, f) == NULL)
-		return NULL;
+	if(fgets(linebuf, 1024, f) == nil)
+		return nil;
 	// remove leading whitespace
 	char *s = skipWhite(linebuf);
 	// remove trailing whitespace
@@ -24,15 +24,17 @@ again:
 }
 
 void
-CFileLoader::LoadLevel(char *filename)
+CFileLoader::LoadLevel(const char *filename)
 {
 	FILE *file;
 	char *line;
-	if(file = fopen_ci(filename, "rb"), file == NULL)
+	if(file = fopen_ci(filename, "rb"), file == nil)
 		return;
-	rw::TexDictionary *savedTxd = rw::currentTexDictionary;
-	if(rw::currentTexDictionary == NULL)
-		rw::currentTexDictionary = rw::TexDictionary::create();
+	rw::TexDictionary *curTxd = rw::TexDictionary::getCurrent();
+	if(curTxd == nil){
+		curTxd = rw::TexDictionary::create();
+		rw::TexDictionary::setCurrent(curTxd);
+	}
 	while(line = CFileLoader::LoadLine(file)){
 		if(line[0] == '#')
 			continue;
@@ -43,8 +45,10 @@ CFileLoader::LoadLevel(char *filename)
 			puts(line+19);
 		}
 		if(strncmp(line, "TEXDICTION", 10) == 0){
-			printf("txd ");
-			puts(line+11);
+			rw::TexDictionary *txd;
+			txd = CFileLoader::LoadTexDictionary(line+11);
+			CFileLoader::AddTexDictionaries(curTxd, txd);
+			txd->destroy();
 		}
 		if(strncmp(line, "COLFILE", 7) == 0){
 			int currlevel = CGame::currLevel;
@@ -74,13 +78,13 @@ CFileLoader::LoadLevel(char *filename)
 			CdStream::addImage(line+8);
 	}
 	fclose(file);
-	rw::currentTexDictionary = savedTxd;
+	rw::TexDictionary::setCurrent(curTxd);
 }
 
 DatDesc CFileLoader::zoneDesc[] = {
 	{ "end", CFileLoader::LoadNothing },
 	{ "zone", CFileLoader::LoadMapZone },
-	{ "", NULL }
+	{ "", nil }
 };
 
 DatDesc CFileLoader::ideDesc[] = {
@@ -92,7 +96,7 @@ DatDesc CFileLoader::ideDesc[] = {
 	{ "peds", CFileLoader::LoadPedObject },
 	{ "path", CFileLoader::LoadPathLine },
 	{ "2dfx", CFileLoader::Load2dEffect },
-	{ "", NULL }
+	{ "", nil }
 };
 
 DatDesc CFileLoader::iplDesc[] = {
@@ -102,17 +106,17 @@ DatDesc CFileLoader::iplDesc[] = {
 	{ "cull", CFileLoader::LoadCullZone },
 	{ "pick", CFileLoader::LoadNothing },
 	{ "path", CFileLoader::LoadNothing },
-	{ "", NULL }
+	{ "", nil }
 };
 
 void
-CFileLoader::LoadDataFile(char *filename, DatDesc *desc)
+CFileLoader::LoadDataFile(const char *filename, DatDesc *desc)
 {
 	FILE *file;
 	char *line;
-	void (*handler)(char*) = NULL;
+	void (*handler)(char*) = nil;
 
-	if(file = fopen_ci(filename, "rb"), file == NULL)
+	if(file = fopen_ci(filename, "rb"), file == nil)
 		return;
 	while(line = CFileLoader::LoadLine(file)){
 		if(line[0] == '#')
@@ -224,7 +228,7 @@ CFileLoader::LoadClumpObject(char *line)
 	CClumpModelInfo *modelinfo = CModelInfo::AddClumpModel(id);
 	strncpy(modelinfo->name, model, 24);
 	modelinfo->SetTexDictionary(txd);
-	modelinfo->colModel = NULL;	// TODO
+	modelinfo->colModel = nil;	// TODO
 	modelinfo->freeCol = false;
 }
 
@@ -290,7 +294,7 @@ CFileLoader::LoadPedObject(char *line)
 	CPedModelInfo *modelinfo = CModelInfo::AddPedModel(id);
 	strncpy(modelinfo->name, model, 24);
 	modelinfo->SetTexDictionary(txd);
-	modelinfo->colModel = NULL;	// TODO
+	modelinfo->colModel = nil;	// TODO
 	modelinfo->freeCol = false;
 	modelinfo->pedType = CPedType::FindPedType(pedType);
 	modelinfo->pedStats = CPedStats::GetPedStatType(pedStats);
@@ -378,7 +382,9 @@ CFileLoader::Load2dEffect(char *line)
 	       &id, &x, &y, &z, &r, &g, &b, &a, &type);
 
 	CTxdStore::PushCurrentTxd();
-	CTxdStore::SetCurrentTxd(CTxdStore::FindTxdSlot("particle"));
+	int slot = CTxdStore::FindTxdSlot("particle");
+	assert(slot >= 0);
+	CTxdStore::SetCurrentTxd(slot);
 	CBaseModelInfo *modelinfo;
 	C2dEffect *fx;
 	modelinfo = CModelInfo::ms_modelInfoPtrs[id];
@@ -407,8 +413,8 @@ CFileLoader::Load2dEffect(char *line)
 		       &fx->light.dist, &fx->light.outerRange,
 		       &fx->light.size, &fx->light.innerRange,
 		       &shadowIntens, &flash, &wet, &flare, &flag);
-		fx->light.corona = rw::Texture::read(corona, NULL);
-		fx->light.shadow = rw::Texture::read(shadow, NULL);
+		fx->light.corona = rw::Texture::read(corona, nil);
+		fx->light.shadow = rw::Texture::read(shadow, nil);
 		fx->light.shadowIntens = shadowIntens;
 		fx->light.flash = flash;
 		fx->light.wet = wet;
@@ -506,7 +512,7 @@ CFileLoader::LoadMapZone(char *line)
 #define COLL 0x4C4C4F43
 
 void
-CFileLoader::LoadCollisionFile(char *filename)
+CFileLoader::LoadCollisionFile(const char *filename)
 {
 	struct {
 		uint32 ident;
@@ -516,7 +522,7 @@ CFileLoader::LoadCollisionFile(char *filename)
 	static uchar buf[55000];
 	char name[24];
 	CBaseModelInfo *modelinfo;
-	if(file = fopen_ci(filename, "rb"), file == NULL)
+	if(file = fopen_ci(filename, "rb"), file == nil)
 		return;
 	while(1){
 		if(fread(&header, 8, 1, file) == 0 ||
@@ -524,9 +530,9 @@ CFileLoader::LoadCollisionFile(char *filename)
 			return;
 		fread(buf, header.size, 1, file);
 		memcpy(name, buf, 24);
-		modelinfo = CModelInfo::GetModelInfo(name, NULL);
+		modelinfo = CModelInfo::GetModelInfo(name, nil);
 		if(modelinfo){
-			if(modelinfo->colModel == NULL)
+			if(modelinfo->colModel == nil)
 				modelinfo->colModel = new CColModel;
 			readColModel(modelinfo->colModel, buf+24);
 			modelinfo->colModel->level = CGame::currLevel;
@@ -539,7 +545,7 @@ CFileLoader::LoadCollisionFile(char *filename)
 static void
 GetNameAndLOD(char *nodename, char *name, int *n)
 {
-	char *underscore = NULL;
+	char *underscore = nil;
 	for(char *s = nodename; *s != '\0'; s++){
 		if(s[0] == '_' && (s[1] == 'l' || s[1] == 'L'))
 			underscore = s;
@@ -562,9 +568,9 @@ CFileLoader::LoadAtomicFile(rw::Stream *stream, int id)
 	rw::Atomic *atomic;
 	char *nodename, name[24];
 	int n;
-	if(rw::findChunk(stream, rw::ID_CLUMP, NULL, NULL)){
+	if(rw::findChunk(stream, rw::ID_CLUMP, nil, nil)){
 		clump = rw::Clump::streamRead(stream);
-		if(clump == NULL)
+		if(clump == nil)
 			return false;
 		modelinfo = (CSimpleModelInfo*)CModelInfo::ms_modelInfoPtrs[id];
 		FORLIST(lnk, clump->atomics){
@@ -585,9 +591,9 @@ CFileLoader::LoadClumpFile(rw::Stream *stream, int id)
 {
 	CClumpModelInfo *modelinfo;
 	rw::Clump *clump;
-	if(rw::findChunk(stream, rw::ID_CLUMP, NULL, NULL)){
+	if(rw::findChunk(stream, rw::ID_CLUMP, nil, nil)){
 		clump = rw::Clump::streamRead(stream);
-		if(clump == NULL)
+		if(clump == nil)
 			return false;
 		modelinfo = (CClumpModelInfo*)CModelInfo::ms_modelInfoPtrs[id];
 		modelinfo->SetClump(clump);
@@ -595,4 +601,28 @@ CFileLoader::LoadClumpFile(rw::Stream *stream, int id)
 	}
 	return true;
 
+}
+
+rw::TexDictionary*
+CFileLoader::LoadTexDictionary(const char *filename)
+{
+	using namespace rw;
+
+	StreamFile stream;
+	TexDictionary *txd = nil;
+	if(stream.open(getPath(filename), "rb")){
+		if(findChunk(&stream, rw::ID_TEXDICTIONARY, nil, nil))
+			txd = TexDictionary::streamRead(&stream);
+		stream.close();
+	}
+	if(txd == nil)
+		txd = TexDictionary::create();
+	return txd;
+}
+
+void
+CFileLoader:: AddTexDictionaries(rw::TexDictionary *dst, rw::TexDictionary *src)
+{
+	FORLIST(lnk, src->textures)
+		dst->add(rw::Texture::fromDict(lnk));
 }

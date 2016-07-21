@@ -52,7 +52,7 @@ update(double t)
 }
 
 void
-pullinput(GLFWwindow *window)
+pollinput(GLFWwindow *window)
 {
 	Dualshock *ds = &ds3;
 	if(ds->start && ds->select)
@@ -223,6 +223,11 @@ initrw(void)
 	gl3::initializeRender();
 	d3d::isP8supported = 0;
 
+//	char path[] = "MODELS\\taxi.dff";
+	char path[] = "/home/aap/src/librwgta/tools/gl3test/MODELS\\taxi.dff";
+	makePath(path);
+	printf("%s\n", path);
+
 	f = "models/TAXI.TXD";
 	if(in.open(f, "rb") == nil)
 		return 0;
@@ -238,8 +243,8 @@ initrw(void)
 	}
 
 
-//	rw::currentTexDictionary = TexDictionary::create();
-	rw::currentTexDictionary = testtxd;
+//	rw::TexDictionary::setCurrent(TexDictionary::create());
+	rw::TexDictionary::setCurrent(testtxd);
 //	Image::setSearchPath("/home/aap/vc_textures/");
 
 	// load clump

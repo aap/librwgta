@@ -36,7 +36,7 @@ CPedStats::LoadPedStats(void)
 	float attackStrength, defendWeakness;
 	int flags;
 	
-	if(file = fopen("data/pedstats.dat", "rb"), file == NULL)
+	if(file = fopen_ci("data/pedstats.dat", "rb"), file == nil)
 		return;
 	int i = 0;
 	while(line = CFileLoader::LoadLine(file)){
@@ -64,10 +64,10 @@ CPedStats::LoadPedStats(void)
 }
 
 int
-CPedStats::GetPedStatType(char *name)
+CPedStats::GetPedStatType(const char *name)
 {
-	int i = 0;
-	for(int i = 0; i < NUMPEDSTATS; i++){
+	int i;
+	for(i = 0; i < NUMPEDSTATS; i++){
 		CPedStats::Stats *s = CPedStats::ms_apPedStats[i];
 		if(strcmp(s->name, name) == 0)
 			return i;

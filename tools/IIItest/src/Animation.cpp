@@ -21,9 +21,9 @@ CAnimManager::LoadAnimGroups(void)
 	int state = 0;
 	int i = 0, j = 0;
 	char *names, *blockNames, *animNames;
-	if(file = fopen("animgrp.dat", "rb"), file == NULL)
+	if(file = fopen_ci("animgrp.dat", "rb"), file == nil)
 		return;
-	AnimAssocDefinition *assoc = NULL;
+	AnimAssocDefinition *assoc = nil;
 	while(line = CFileLoader::LoadLine(file)){
 		if(line[0] == ';' || line[0] == '#')
 			continue;

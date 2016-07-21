@@ -163,7 +163,7 @@ runscript(void)
 {
 	char *s, *arg;
 	int cmd;
-	currentTexDictionary = TexDictionary::create();
+	TexDictionary::setCurrent(TexDictionary::create());
 	rw::loadTextures = 1;
 	Texture *tex = NULL;
 	StreamFile out;
@@ -180,8 +180,8 @@ runscript(void)
 			}
 		switch(cmd){
 		case NEW:
-			currentTexDictionary->destroy();
-			currentTexDictionary = TexDictionary::create();
+			TexDictionary::getCurrent()->destroy();
+			TexDictionary::setCurrent(TexDictionary::create());
 			break;
 		case SEARCHPATH:
 			NEEDARG(arg);
@@ -199,7 +199,7 @@ runscript(void)
 		case WRITE:
 			NEEDARG(arg);
 			if(out.open(arg, "wb")){
-				currentTexDictionary->streamWrite(&out);
+				TexDictionary::getCurrent()->streamWrite(&out);
 				out.close();
 			}else
 				fprintf(stderr, "couldn't write txd %s\n", arg);
@@ -234,10 +234,13 @@ main(int argc, char *argv[])
 //	int outplatform = rw::PLATFORM_XBOX;
 	int outplatform = rw::PLATFORM_D3D9;
 	int script = 0;
+	int extract = 0;
+	int separatemask = 0;
 
 	rw::Engine::init();
 	gta::attachPlugins();
 	rw::Driver::open();
+//	rw::d3d::isP8supported = 0;
 
 	char *s;
 	ARGBEGIN{
@@ -258,6 +261,12 @@ main(int argc, char *argv[])
 		break;
 	case 's':
 		script++;
+		break;
+	case 'x':
+		extract++;
+		break;
+	case 'm':
+		separatemask++;
 		break;
 	default:
 		usage();
@@ -281,7 +290,7 @@ main(int argc, char *argv[])
 	txd = rw::TexDictionary::streamRead(&in);
 	assert(txd);
 	in.close();
-	rw::currentTexDictionary = txd;
+	rw::TexDictionary::setCurrent(txd);
 
 	if(rw::version == 0){
 		rw::version = header.version;
@@ -303,13 +312,40 @@ main(int argc, char *argv[])
 //		tex->filterAddressing = (tex->filterAddressing&~0xF) | 0x2;
 	rw::platform = outplatform;
 
-	rw::StreamFile out;
-	if(argc > 1)
-		out.open(argv[1], "wb");
-	else
-		out.open("out.txd", "wb");
-	txd->streamWrite(&out);
-	out.close();
+	char filename[1024];
+	if(extract){
+		FORLIST(lnk, txd->textures){
+			Texture *tex = Texture::fromDict(lnk);
+			Image *img = tex->raster->toImage();
+			img->unindex();
+
+			if(separatemask && tex->mask[0]){
+				Image *mask = img->extractMask();
+				// write colors without alpha if we have a
+				// separate file.
+				img->removeMask();
+
+				strncpy(filename, tex->mask, 1024);
+				strncat(filename, ".tga", 1024);
+				writeTGA(mask, filename);
+				mask->destroy();
+			}
+
+			strncpy(filename, tex->name, 1024);
+			strncat(filename, ".tga", 1024);
+			writeTGA(img, filename);
+
+			img->destroy();
+		}
+	}else{
+		rw::StreamFile out;
+		if(argc > 1)
+			out.open(argv[1], "wb");
+		else
+			out.open("out.txd", "wb");
+		txd->streamWrite(&out);
+		out.close();
+	}
 
 	return 0;
 }
