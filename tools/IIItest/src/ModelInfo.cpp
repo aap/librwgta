@@ -75,7 +75,7 @@ CSimpleModelInfo*
 CModelInfo::AddSimpleModel(int id)
 {
 	CSimpleModelInfo *modelinfo;
-	modelinfo = &CModelInfo::ms_simpleModelStore.store[CModelInfo::ms_simpleModelStore.allocPtr++];
+	modelinfo = CModelInfo::ms_simpleModelStore.alloc();
 	CModelInfo::ms_modelInfoPtrs[id] = modelinfo;
 	modelinfo->ctor(CSimpleModelInfo::ID);
 	modelinfo->atomics[0] = nil;
@@ -90,7 +90,7 @@ CTimeModelInfo*
 CModelInfo::AddTimeModel(int id)
 {
 	CTimeModelInfo *modelinfo;
-	modelinfo = &CModelInfo::ms_timeModelStore.store[CModelInfo::ms_timeModelStore.allocPtr++];
+	modelinfo = CModelInfo::ms_timeModelStore.alloc();
 	CModelInfo::ms_modelInfoPtrs[id] = modelinfo;
 	modelinfo->ctor(CTimeModelInfo::ID);
 	modelinfo->atomics[0] = nil;
@@ -105,7 +105,7 @@ CClumpModelInfo*
 CModelInfo::AddClumpModel(int id)
 {
 	CClumpModelInfo *modelinfo;
-	modelinfo = &CModelInfo::ms_clumpModelStore.store[CModelInfo::ms_clumpModelStore.allocPtr++];
+	modelinfo = CModelInfo::ms_clumpModelStore.alloc();
 	CModelInfo::ms_modelInfoPtrs[id] = modelinfo;
 	modelinfo->ctor(CClumpModelInfo::ID);
 	modelinfo->clump = nil;
@@ -116,7 +116,7 @@ CPedModelInfo*
 CModelInfo::AddPedModel(int id)
 {
 	CPedModelInfo *modelinfo;
-	modelinfo = &CModelInfo::ms_pedModelStore.store[CModelInfo::ms_pedModelStore.allocPtr++];
+	modelinfo = CModelInfo::ms_pedModelStore.alloc();
 	CModelInfo::ms_modelInfoPtrs[id] = modelinfo;
 	modelinfo->ctor(CPedModelInfo::ID);
 	modelinfo->clump = nil;
@@ -127,7 +127,7 @@ CVehicleModelInfo*
 CModelInfo::AddVehicleModel(int id)
 {
 	CVehicleModelInfo *modelinfo;
-	modelinfo = &CModelInfo::ms_vehicleModelStore.store[CModelInfo::ms_vehicleModelStore.allocPtr++];
+	modelinfo = CModelInfo::ms_vehicleModelStore.alloc();
 	CModelInfo::ms_modelInfoPtrs[id] = modelinfo;
 	modelinfo->ctor(CVehicleModelInfo::ID);
 	modelinfo->clump = nil;

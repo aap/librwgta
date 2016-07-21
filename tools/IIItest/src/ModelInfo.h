@@ -50,9 +50,9 @@ class CMloModelInfo : public CClumpModelInfo
 {
 public:
 	enum { ID = 2 };
-	float unknown;           // ??
-	int32 instStoreSize1;    // ??
-	int32 instStoreSize2;    // ??
+	float drawDist;
+	int32 firstInstance;
+	int32 lastInstance;
 
 	~CMloModelInfo() {}
 };

@@ -24,6 +24,7 @@ CTxdStore::AddTxdSlot(const char *name)
 	TxdDef *def;
 	int idx;
 	// TODO, only temporary
+	assert(CTxdStore::allocPtr < TXDSTORESIZE);
 	def = &CTxdStore::entries[idx = CTxdStore::allocPtr++];
 	CTxdStore::flags[idx] = 0;
 	def->refCount = 0;
@@ -39,7 +40,7 @@ CTxdStore::FindTxdSlot(const char *name)
 	for(int i = 0; i < CTxdStore::capacity; i++, def++){
 		if(CTxdStore::flags[i] & 0x80)
 			continue;
-		if(strcmp(def->name, name) == 0)
+		if(rw::strncmp_ci(def->name, name, 24) == 0)
 			return i;
 	}
 	return -1;

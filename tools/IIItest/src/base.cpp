@@ -1,4 +1,5 @@
 #include "III.h"
+#include <cstdarg>
 
 char*
 getPath(const char *path)
@@ -15,7 +16,6 @@ fopen_ci(const char *path, const char *mode)
 	char cipath[1024];
 	strncpy(cipath, path, 1024);
 	rw::makePath(cipath);
-//	printf(" [opening %s]\n", cipath);
 	return fopen(cipath, mode);
 }
 
@@ -45,10 +45,15 @@ DatDesc::get(DatDesc *desc, const char *name)
 	return (void*)desc->handler;
 }
 
-//int
-//debug(const char *fmt, ...)
-//{
-//}
+void
+debug(const char *fmt, ...)
+{
+	va_list args;
+
+	va_start(args, fmt);
+	vprintf(fmt, args);
+	va_end(args);
+}
 
 void
 dump(void)

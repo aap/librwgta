@@ -128,7 +128,7 @@ CStreaming::LoadCdDirectory(void)
 	for(int i = CdStream::numImages-1; i >= 0; i--){
 		strncpy(dirname, CdStream::imageNames[i], sizeof(dirname));
 		s = strrchr(dirname, '.');
-		strncpy(s+1, "dir\0", 4);
+		strncpy(s+1, "DIR", 4);
 		CStreaming::LoadCdDirectory(dirname, i);
 	}
 }
@@ -153,10 +153,11 @@ CStreaming::LoadCdDirectory(const char *dirname, int n)
 		assert(ext);
 		*ext++ = '\0';
 		if(rw::strncmp_ci(ext, "dff", 4) == 0){
-			CBaseModelInfo *modelinfo = CModelInfo::GetModelInfo(dirinfo.name, &modelid);
+			CBaseModelInfo *modelinfo =
+			  CModelInfo::GetModelInfo(dirinfo.name, &modelid);
 			if(modelinfo){
 				if(CStreaming::Model(modelid)->GetCdPosnAndSize(&pos, &size))
-					printf("duplicate DFF: %s\n", dirinfo.name);
+					debug("%s appears more than once in %s\n", dirinfo.name, dirname);
 				else{
 					dirinfo.position |= n;
 					CStreaming::Model(modelid)->SetCdPosnAndSize(dirinfo.position, dirinfo.size);
@@ -171,8 +172,9 @@ CStreaming::LoadCdDirectory(const char *dirname, int n)
 			txdslot = CTxdStore::FindTxdSlot(dirinfo.name);
 			if(txdslot < 0)
 				txdslot = CTxdStore::AddTxdSlot(dirinfo.name);
+			else
 			if(CStreaming::Txd(txdslot)->GetCdPosnAndSize(&pos, &size))
-				printf("duplicate TXD: %s\n", dirinfo.name);
+				debug("Txd %s appears more than once in %s\n", dirinfo.name, dirname);
 			else{
 				dirinfo.position |= n;
 				CStreaming::Txd(txdslot)->SetCdPosnAndSize(dirinfo.position, dirinfo.size);
@@ -198,7 +200,9 @@ CStreaming::ConvertBufferToObject(char *buffer, int id)
 		modelid = id-MODELOFFSET;
 		CBaseModelInfo *modelinfo = CModelInfo::ms_modelInfoPtrs[modelid];
 		if(!CTxdStore::isTxdLoaded(modelinfo->txdSlot)){
-			printf("TXD %s not in memory\n", CTxdStore::GetTxdName(modelinfo->txdSlot));
+			debug("failed to load %s because TXD %s not in memory\n",
+			      modelinfo->name,
+			      CTxdStore::GetTxdName(modelinfo->txdSlot));
 			// TODO: remove and request again
 			stream.close();
 			return;
@@ -213,7 +217,7 @@ CStreaming::ConvertBufferToObject(char *buffer, int id)
 			success = CFileLoader::LoadClumpFile(&stream, modelid);
 		CTxdStore::RemoveRefWithoutDelete(modelinfo->txdSlot);
 		if(!success){
-			printf("Failed to load %s\n", modelinfo->name);
+			debug("Failed to load %s\n", modelinfo->name);
 			// TODO: remove and request again
 			stream.close();
 			return;
@@ -221,7 +225,7 @@ CStreaming::ConvertBufferToObject(char *buffer, int id)
 	}else if(id >= TXDOFFSET && id < TXDOFFSET+TXDSTORESIZE){
 		slotid = id-TXDOFFSET;
 		if(!CTxdStore::LoadTxd(slotid, &stream)){
-			printf("Failed to load %s.txd\n", CTxdStore::GetTxdName(slotid));
+			debug("Failed to load %s.txd\n", CTxdStore::GetTxdName(slotid));
 			// TODO: remove and request again
 			stream.close();
 			return;
@@ -258,7 +262,7 @@ again:
 		if(id >= MODELOFFSET && id < MODELOFFSET+MODELINFOSIZE){
 			CBaseModelInfo *mi = CModelInfo::ms_modelInfoPtrs[id];
 			if(CStreaming::Txd(mi->txdSlot)->m_loadState != 1){
-				printf("requesting txd for model %d\n", id);
+				debug("requesting txd for model %d\n", id);
 				RequestModel(mi->txdSlot+TXDOFFSET, CStreaming::Model(id)->m_flags);
 				continue;
 			}
@@ -296,6 +300,6 @@ CStreaming::dumpRequestList(void)
 	for(strinfo = ms_startRequestedList.m_next;
 	    strinfo != &ms_endRequestedList;
 	    strinfo = strinfo->m_next){
-		printf(" %d %d\n", strinfo-ms_aInfoForModel, strinfo->m_flags);
+		printf(" %ld %d\n", strinfo-ms_aInfoForModel, strinfo->m_flags);
 	}
 }

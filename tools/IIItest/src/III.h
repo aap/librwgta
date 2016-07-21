@@ -28,6 +28,8 @@ using rw::int32;
 typedef unsigned int uint;
 typedef unsigned char uchar;
 
+void debug(const char *fmt, ...);
+
 int init(void);
 void shutdown(void);
 void update(double t);
@@ -80,6 +82,7 @@ public:
 #include "Animation.h"
 #include "ModelInfo.h"
 #include "TimeCycle.h"
+#include "VisibilityPlugins.h"
 
 char *getPath(const char *path);
 FILE *fopen_ci(const char *path, const char *mode);
@@ -116,12 +119,9 @@ class CFileLoader
 public:
 	static char *LoadLine(FILE *f);
 	static void LoadLevel(const char *filename);
-	static void LoadObjectTypes(const char *filename){
-		CFileLoader::LoadDataFile(filename, ideDesc); }
-	static void LoadScene(const char *filename){
-		CFileLoader::LoadDataFile(filename, iplDesc); }
-	static void LoadMapZones(const char *filename){
-		CFileLoader::LoadDataFile(filename, zoneDesc); }
+	static void LoadObjectTypes(const char *filename);
+	static void LoadScene(const char *filename);
+	static void LoadMapZones(const char *filename);
 	static void LoadDataFile(const char *filename, DatDesc *desc);
 	static void LoadCollisionFile(const char *filename);
 
@@ -151,6 +151,8 @@ public:
 	// models
 	static bool LoadAtomicFile(rw::Stream *stream, int id);
 	static bool LoadClumpFile(rw::Stream *stream, int id);
+	static void LoadClumpFile(const char *filename);
+	static void LoadModelFile(const char *filename);
 
 	// textures
 	static rw::TexDictionary *LoadTexDictionary(const char *filename);

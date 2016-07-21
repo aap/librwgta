@@ -7,6 +7,7 @@ CGame::InitialiseRW(void)
 {
 	rw::Engine::init();
 	gta::attachPlugins();
+	CVisibilityPlugins::PluginAttach();
 	rw::Driver::open();
 #ifdef RW_GL3
 	rw::platform = rw::PLATFORM_GL3;

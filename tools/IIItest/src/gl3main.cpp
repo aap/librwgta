@@ -5,6 +5,14 @@ Dualshock ds3;
 void
 keypress(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
+        if(action == GLFW_RELEASE)
+                return;
+        switch(key){
+        case GLFW_KEY_ESCAPE:
+        case GLFW_KEY_Q:
+                glfwSetWindowShouldClose(window, GLFW_TRUE);
+                break;
+	}
 }
 
 void

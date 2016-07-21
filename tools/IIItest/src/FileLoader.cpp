@@ -40,39 +40,31 @@ CFileLoader::LoadLevel(const char *filename)
 			continue;
 		if(strncmp(line, "EXIT", 4) == 0)
 			break;
-		if(strncmp(line, "IMAGEPATH", 9) == 0){
+		else if(strncmp(line, "IMAGEPATH", 9) == 0){
 			printf("imagepath ");
 			puts(line+19);
-		}
-		if(strncmp(line, "TEXDICTION", 10) == 0){
+		}else if(strncmp(line, "TEXDICTION", 10) == 0){
 			rw::TexDictionary *txd;
 			txd = CFileLoader::LoadTexDictionary(line+11);
 			CFileLoader::AddTexDictionaries(curTxd, txd);
 			txd->destroy();
-		}
-		if(strncmp(line, "COLFILE", 7) == 0){
+		}else if(strncmp(line, "COLFILE", 7) == 0){
 			int currlevel = CGame::currLevel;
 			sscanf(line+8, "%d", &CGame::currLevel);
 			CFileLoader::LoadCollisionFile(line+10);
 			CGame::currLevel = currlevel;
-		}
-		if(strncmp(line, "MODELFILE", 9) == 0){
-			printf("model ");
-			puts(line+10);
-		}
-		if(strncmp(line, "HIERFILE", 8) == 0){
-			printf("hier ");
-			puts(line+9);
-		}
-		if(strncmp(line, "IDE", 3) == 0)
+		}else if(strncmp(line, "MODELFILE", 9) == 0)
+			CFileLoader::LoadModelFile(line+10);
+		else if(strncmp(line, "HIERFILE", 8) == 0)
+			CFileLoader::LoadClumpFile(line+9);
+		else if(strncmp(line, "IDE", 3) == 0)
 			CFileLoader::LoadObjectTypes(line+4);
-		if(strncmp(line, "IPL", 3) == 0)
+		else if(strncmp(line, "IPL", 3) == 0)
 			CFileLoader::LoadScene(line+4);
-		if(strncmp(line, "MAPZONE", 7) == 0)
+		else if(strncmp(line, "MAPZONE", 7) == 0)
 			CFileLoader::LoadMapZone(line+8);
-		if(strncmp(line, "SPLASH", 6) == 0){
-			printf("splash ");
-			puts(line+7);
+		else if(strncmp(line, "SPLASH", 6) == 0){
+			printf("[SPLASH %s]\n", line+7);
 		}
 		if(strncmp(line, "CDIMAGE", 7) == 0)
 			CdStream::addImage(line+8);
@@ -130,6 +122,29 @@ CFileLoader::LoadDataFile(const char *filename, DatDesc *desc)
 			handler(line);
 	}
 	fclose(file);
+}
+
+void
+CFileLoader::LoadObjectTypes(const char *filename)
+{
+	debug("Loading object types from %s...\n", filename);
+	CFileLoader::LoadDataFile(filename, ideDesc);
+}
+
+void
+CFileLoader::LoadScene(const char *filename)
+{
+	debug("Creating objects from %s...\n", filename);
+	CFileLoader::LoadDataFile(filename, iplDesc);
+	debug("Finished loading IPL\n");
+}
+
+void
+CFileLoader::LoadMapZones(const char *filename)
+{
+	debug("Creating zones from %s...\n", filename);
+	CFileLoader::LoadDataFile(filename, zoneDesc);
+	debug("Finished loading IPL\n");
 }
 
 //
@@ -522,6 +537,9 @@ CFileLoader::LoadCollisionFile(const char *filename)
 	static uchar buf[55000];
 	char name[24];
 	CBaseModelInfo *modelinfo;
+
+	debug("Loading collision file %s\n", filename);
+	// TODO: use CFileMgr
 	if(file = fopen_ci(filename, "rb"), file == nil)
 		return;
 	while(1){
@@ -580,6 +598,8 @@ CFileLoader::LoadAtomicFile(rw::Stream *stream, int id)
 			modelinfo->SetAtomic(n, atomic);
 			atomic->removeFromClump();
 			atomic->setFrame(rw::Frame::create());
+			CVisibilityPlugins::SetAtomicModelInfo(atomic, modelinfo);
+			atomic->setRenderCB(nil);
 		}
 		clump->destroy();
 	}
@@ -603,12 +623,77 @@ CFileLoader::LoadClumpFile(rw::Stream *stream, int id)
 
 }
 
+void
+CFileLoader::LoadClumpFile(const char *filename)
+{
+	using namespace rw;
+
+	StreamFile stream;
+	char *nodename, name[24];
+	int n;
+	Clump *clump;
+
+	debug("Loading model file %s\n", filename);
+	stream.open(getPath(filename), "rb");
+	while(findChunk(&stream, rw::ID_CLUMP, nil, nil)){
+		clump = Clump::streamRead(&stream);
+		if(clump){
+			nodename = gta::getNodeName(clump->getFrame());
+			GetNameAndLOD(nodename, name, &n);
+			CClumpModelInfo *mi =
+			  (CClumpModelInfo*)CModelInfo::GetModelInfo(name, 0);
+			if(mi)
+				mi->SetClump(clump);
+			else
+				clump->destroy();
+		}
+	}
+	stream.close();
+}
+
+void
+CFileLoader::LoadModelFile(const char *filename)
+{
+	using namespace rw;
+
+	StreamFile stream;
+	char *nodename, name[24];
+	int n;
+	Atomic *atomic;
+	Clump *clump;
+
+	debug("Loading model file %s\n", filename);
+	stream.open(getPath(filename), "rb");
+	if(findChunk(&stream, rw::ID_CLUMP, nil, nil)){
+		clump = Clump::streamRead(&stream);
+		FORLIST(lnk, clump->atomics){
+			atomic = rw::Atomic::fromClump(lnk);
+			nodename = gta::getNodeName(atomic->getFrame());
+			GetNameAndLOD(nodename, name, &n);
+			CSimpleModelInfo *mi =
+			  (CSimpleModelInfo*)CModelInfo::GetModelInfo(name, 0);
+			if(mi){
+				mi->SetAtomic(n, atomic);
+				atomic->removeFromClump();
+				atomic->setFrame(Frame::create());
+				CVisibilityPlugins::SetAtomicModelInfo(atomic, mi);
+				atomic->setRenderCB(nil);
+			}else
+				debug("Can't find Atomic %s\n", name);
+		}
+		clump->destroy();
+	}
+	stream.close();
+}
+
 rw::TexDictionary*
 CFileLoader::LoadTexDictionary(const char *filename)
 {
 	using namespace rw;
 
 	StreamFile stream;
+
+	debug("Loading texture dictionary file %s\n", filename);
 	TexDictionary *txd = nil;
 	if(stream.open(getPath(filename), "rb")){
 		if(findChunk(&stream, rw::ID_TEXDICTIONARY, nil, nil))
