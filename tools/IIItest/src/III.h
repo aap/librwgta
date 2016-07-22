@@ -17,6 +17,8 @@
 #include "rwgta.h"
 #include "collision.h"
 
+using namespace gta;
+
 #include "input.h"
 
 using rw::uint8;
@@ -81,8 +83,10 @@ public:
 
 #include "Animation.h"
 #include "ModelInfo.h"
+#include "ModelIndices.h"
 #include "TimeCycle.h"
 #include "VisibilityPlugins.h"
+#include "TempColModels.h"
 
 char *getPath(const char *path);
 FILE *fopen_ci(const char *path, const char *mode);

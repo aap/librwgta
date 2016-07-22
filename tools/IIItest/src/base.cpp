@@ -60,7 +60,7 @@ dump(void)
 {
 	CBaseModelInfo *m;
 	for(int i = 0; i < MODELINFOSIZE; i++){
-		m = CModelInfo::ms_modelInfoPtrs[i];
+		m = CModelInfo::GetModelInfo(i);
 		if(m == nil)
 			continue;
 		//if(m->type == CSimpleModelInfo::ID)

@@ -10,4 +10,7 @@ public:
 			printf("Size of this thing:%d needs increasing\n", n);
 		return &this->store[this->allocPtr++];
 	}
+	void clear(void){
+		this->allocPtr = 0;
+	}
 };

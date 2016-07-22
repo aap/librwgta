@@ -129,6 +129,16 @@ CFileLoader::LoadObjectTypes(const char *filename)
 {
 	debug("Loading object types from %s...\n", filename);
 	CFileLoader::LoadDataFile(filename, ideDesc);
+
+	int i;
+	CBaseModelInfo *mi;
+	for(i = 0; i < MODELINFOSIZE; i++){
+		mi = CModelInfo::GetModelInfo(i);
+		if(mi &&
+		   (mi->type == CSimpleModelInfo::ID ||
+		    mi->type == CTimeModelInfo::ID))
+			((CSimpleModelInfo*)mi)->SetupBigBuilding();
+	}
 }
 
 void
@@ -159,28 +169,42 @@ CFileLoader::LoadObject(char *line)
 	int numObjs;
 	float dist[3];
 	int flags;
+	int furthest;
 	sscanf(line, "%d %s %s %d", &id, model, txd, &numObjs);
 	switch(numObjs){
 	case 1:
 		sscanf(line, "%d %s %s %d %f %d",
 		       &id, model, txd, &numObjs, dist, &flags);
+		furthest = 0;
 		break;
 	case 2:
 		sscanf(line, "%d %s %s %d %f %f %d",
 		       &id, model, txd, &numObjs, dist, dist+1, &flags);
+		furthest = dist[0] >= dist[1] ? 1 : 0;
 		break;
 	case 3:
 		sscanf(line, "%d %s %s %d %f %f %f %d",
 		       &id, model, txd, &numObjs, dist, dist+1, dist+2, &flags);
+		// When 1 < 0 < 2, then this is  1 instead of 0...
+		furthest = dist[0] >= dist[1] ? 1 :
+		           dist[1] >= dist[2] ? 2 : 0;
 		break;
 	}
 	CSimpleModelInfo *modelinfo = CModelInfo::AddSimpleModel(id);
 	strncpy(modelinfo->name, model, 24);
-	modelinfo->SetTexDictionary(txd);
 	modelinfo->numAtomics = numObjs;
-	for(int i = 0; i < numObjs; i++)
-		modelinfo->lodDistances[i] = dist[i];
-	modelinfo->flags = flags;
+	modelinfo->SetLodDistances(dist);
+	modelinfo->normalCull   = !!(flags & 0x1);
+	modelinfo->noFade       = !!(flags & 0x2);
+	modelinfo->drawLast     = !!(flags & 0x4);
+	modelinfo->additive     = !!(flags & 0x8);
+	modelinfo->isSubway     = !!(flags & 0x10);
+	modelinfo->ignoreLight  = !!(flags & 0x20);
+	modelinfo->noZwrite     = !!(flags & 0x40);
+	modelinfo->furthest = furthest;
+	modelinfo->SetTexDictionary(txd);
+
+	MatchModelString(model, id);
 
 	//printf("objs | %d %s %s %d ", id, model, txd, numObjs);
 	//for(int i = 0; i < numObjs; i++)
@@ -196,6 +220,7 @@ CFileLoader::LoadTimeObject(char *line)
 	int numObjs;
 	float dist[3];
 	int flags;
+	int furthest;
 	int timeon, timeoff;
 	sscanf(line, "%d %s %s %d", &id, model, txd, &numObjs);
 	switch(numObjs){
@@ -203,28 +228,44 @@ CFileLoader::LoadTimeObject(char *line)
 		sscanf(line, "%d %s %s %d %f %d %d %d",
 		       &id, model, txd, &numObjs, dist, &flags,
 		       &timeon, &timeoff);
+		furthest = 0;
 		break;
 	case 2:
 		sscanf(line, "%d %s %s %d %f %f %d %d %d",
 		       &id, model, txd, &numObjs, dist, dist+1, &flags,
 		       &timeon, &timeoff);
+		furthest = dist[0] >= dist[1] ? 1 : 0;
 		break;
 	case 3:
 		sscanf(line, "%d %s %s %d %f %f %f %d %d %d",
 		       &id, model, txd, &numObjs, dist, dist+1, dist+2, &flags,
 		       &timeon, &timeoff);
+		// When 1 < 0 < 2, then this is  1 instead of 0...
+		furthest = dist[0] >= dist[1] ? 1 :
+		           dist[1] >= dist[2] ? 2 : 0;
 		break;
 	}
 	CTimeModelInfo *modelinfo = CModelInfo::AddTimeModel(id);
 	strncpy(modelinfo->name, model, 24);
-	modelinfo->SetTexDictionary(txd);
 	modelinfo->numAtomics = numObjs;
-	for(int i = 0; i < numObjs; i++)
-		modelinfo->lodDistances[i] = dist[i];
-	modelinfo->flags = flags;
+	modelinfo->SetLodDistances(dist);
+	modelinfo->normalCull   = !!(flags & 0x1);
+	modelinfo->noFade       = !!(flags & 0x2);
+	modelinfo->drawLast     = !!(flags & 0x4);
+	modelinfo->additive     = !!(flags & 0x8);
+	modelinfo->isSubway     = !!(flags & 0x10);
+	modelinfo->ignoreLight  = !!(flags & 0x20);
+	modelinfo->noZwrite     = !!(flags & 0x40);
+	modelinfo->furthest = furthest;
 	modelinfo->timeOn = timeon;
 	modelinfo->timeOff = timeoff;
-	modelinfo->otherTimeModelID = -1;	// TODO
+	modelinfo->SetTexDictionary(txd);
+
+	CTimeModelInfo *other = modelinfo->FindOtherTimeModel();
+	if(other)
+		other->otherTimeModelID = id;
+
+	MatchModelString(model, id);
 
 	//printf("tobj | %d %s %s %d ", id, model, txd, numObjs);
 	//for(int i = 0; i < numObjs; i++)
@@ -243,7 +284,7 @@ CFileLoader::LoadClumpObject(char *line)
 	CClumpModelInfo *modelinfo = CModelInfo::AddClumpModel(id);
 	strncpy(modelinfo->name, model, 24);
 	modelinfo->SetTexDictionary(txd);
-	modelinfo->colModel = nil;	// TODO
+	modelinfo->colModel = &CTempColModels::ms_colModelBBox;
 	modelinfo->freeCol = false;
 }
 
@@ -309,7 +350,7 @@ CFileLoader::LoadPedObject(char *line)
 	CPedModelInfo *modelinfo = CModelInfo::AddPedModel(id);
 	strncpy(modelinfo->name, model, 24);
 	modelinfo->SetTexDictionary(txd);
-	modelinfo->colModel = nil;	// TODO
+	modelinfo->colModel = &CTempColModels::ms_colModelPed1;
 	modelinfo->freeCol = false;
 	modelinfo->pedType = CPedType::FindPedType(pedType);
 	modelinfo->pedStats = CPedStats::GetPedStatType(pedStats);
@@ -402,8 +443,8 @@ CFileLoader::Load2dEffect(char *line)
 	CTxdStore::SetCurrentTxd(slot);
 	CBaseModelInfo *modelinfo;
 	C2dEffect *fx;
-	modelinfo = CModelInfo::ms_modelInfoPtrs[id];
-	fx = &CModelInfo::ms_2dEffectStore.store[CModelInfo::ms_2dEffectStore.allocPtr++];
+	modelinfo = CModelInfo::GetModelInfo(id);
+	fx = CModelInfo::ms_2dEffectStore.alloc();
 	modelinfo->Add2dEffect(fx);
 	fx->pos.x = x;
 	fx->pos.y = y;
@@ -578,6 +619,10 @@ GetNameAndLOD(char *nodename, char *name, int *n)
 	}
 }
 
+//
+// Misc
+//
+
 bool
 CFileLoader::LoadAtomicFile(rw::Stream *stream, int id)
 {
@@ -590,7 +635,7 @@ CFileLoader::LoadAtomicFile(rw::Stream *stream, int id)
 		clump = rw::Clump::streamRead(stream);
 		if(clump == nil)
 			return false;
-		modelinfo = (CSimpleModelInfo*)CModelInfo::ms_modelInfoPtrs[id];
+		modelinfo = (CSimpleModelInfo*)CModelInfo::GetModelInfo(id);
 		FORLIST(lnk, clump->atomics){
 			atomic = rw::Atomic::fromClump(lnk);
 			nodename = gta::getNodeName(atomic->getFrame());
@@ -615,7 +660,7 @@ CFileLoader::LoadClumpFile(rw::Stream *stream, int id)
 		clump = rw::Clump::streamRead(stream);
 		if(clump == nil)
 			return false;
-		modelinfo = (CClumpModelInfo*)CModelInfo::ms_modelInfoPtrs[id];
+		modelinfo = (CClumpModelInfo*)CModelInfo::GetModelInfo(id);
 		modelinfo->SetClump(clump);
 		// TODO: ped low detail clump
 	}
@@ -641,7 +686,7 @@ CFileLoader::LoadClumpFile(const char *filename)
 			nodename = gta::getNodeName(clump->getFrame());
 			GetNameAndLOD(nodename, name, &n);
 			CClumpModelInfo *mi =
-			  (CClumpModelInfo*)CModelInfo::GetModelInfo(name, 0);
+			  (CClumpModelInfo*)CModelInfo::GetModelInfo(name, nil);
 			if(mi)
 				mi->SetClump(clump);
 			else
@@ -671,7 +716,7 @@ CFileLoader::LoadModelFile(const char *filename)
 			nodename = gta::getNodeName(atomic->getFrame());
 			GetNameAndLOD(nodename, name, &n);
 			CSimpleModelInfo *mi =
-			  (CSimpleModelInfo*)CModelInfo::GetModelInfo(name, 0);
+			  (CSimpleModelInfo*)CModelInfo::GetModelInfo(name, nil);
 			if(mi){
 				mi->SetAtomic(n, atomic);
 				atomic->removeFromClump();
@@ -706,7 +751,7 @@ CFileLoader::LoadTexDictionary(const char *filename)
 }
 
 void
-CFileLoader:: AddTexDictionaries(rw::TexDictionary *dst, rw::TexDictionary *src)
+CFileLoader::AddTexDictionaries(rw::TexDictionary *dst, rw::TexDictionary *src)
 {
 	FORLIST(lnk, src->textures)
 		dst->add(rw::Texture::fromDict(lnk));

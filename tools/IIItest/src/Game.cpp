@@ -54,6 +54,8 @@ CGame::Initialise(void)
 
 	printf("--Setup game variables\n");
 	CPathFind::AllocatePathFindInfoMem(PATHNODESIZE);
+	InitModelIndices();
+	CModelInfo::Initialise();
 	CdStream::addImage("MODELS\\GTA3.IMG");
 	CFileLoader::LoadLevel("DATA\\DEFAULT.DAT");
 	CFileLoader::LoadLevel("DATA\\GTA3.DAT");

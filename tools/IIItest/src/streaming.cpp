@@ -198,7 +198,7 @@ CStreaming::ConvertBufferToObject(char *buffer, int id)
 	stream.open((uint8*)buffer, ms_streamingBufferSize*2048);
 	if(id >= MODELOFFSET && id < MODELOFFSET+MODELINFOSIZE){
 		modelid = id-MODELOFFSET;
-		CBaseModelInfo *modelinfo = CModelInfo::ms_modelInfoPtrs[modelid];
+		CBaseModelInfo *modelinfo = CModelInfo::GetModelInfo(modelid);
 		if(!CTxdStore::isTxdLoaded(modelinfo->txdSlot)){
 			debug("failed to load %s because TXD %s not in memory\n",
 			      modelinfo->name,
@@ -260,7 +260,7 @@ again:
 	    strinfo = strinfo->m_next){
 		id = strinfo-ms_aInfoForModel;
 		if(id >= MODELOFFSET && id < MODELOFFSET+MODELINFOSIZE){
-			CBaseModelInfo *mi = CModelInfo::ms_modelInfoPtrs[id];
+			CBaseModelInfo *mi = CModelInfo::GetModelInfo(id);
 			if(CStreaming::Txd(mi->txdSlot)->m_loadState != 1){
 				debug("requesting txd for model %d\n", id);
 				RequestModel(mi->txdSlot+TXDOFFSET, CStreaming::Model(id)->m_flags);
