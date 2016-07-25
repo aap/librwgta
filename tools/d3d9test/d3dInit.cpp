@@ -18,7 +18,7 @@ void
 initrw(void)
 {
         rw::version = 0x34000;
-        rw::platform = PLATFORM_D3D9;
+        rw::platform = rw::PLATFORM_D3D9;
 	rw::loadTextures = 1;
 	rw::d3d::device = Device;
 
@@ -27,7 +27,7 @@ initrw(void)
         rw::Driver::open();
         rw::d3d::initializeRender();
 
-	rw::TexDictionary::setCurrent(rw::TexDictionary::create());
+	rw::currentTexDictionary = rw::TexDictionary::create();
 	rw::Image::setSearchPath("Y:\\ps2\\gta3\\MODELS\\gta3_archive\\txd_extracted\\;"
 	                         "Y:\\ps2\\gtavc\\MODELS\\gta3_archive\\txd_extracted\\;"
 	                         "Y:\\ps2\\gtasa\\models\\gta3_archive\\txd_extracted\\");
@@ -46,7 +46,7 @@ initrw(void)
 		txd = rw::TexDictionary::streamRead(&in);
 		assert(txd);
 		in.close();
-		rw::TexDictionary::setCurrent(txd);
+		rw::currentTexDictionary = txd;
 	}
 
 	char *filename = "Y:\\pc\\gtavc\\models\\gta3_archive\\admiral.dff";
@@ -79,7 +79,7 @@ initrw(void)
 
 		char *name = gta::getNodeName(a->getFrame());
 		if(strstr(name, "_dam") || strstr(name, "_vlo"))
-			a->object.flags &= ~rw::Atomic::RENDER;
+			a->object.object.flags &= ~rw::Atomic::RENDER;
 	}
 
 	//rw::StreamFile out;
@@ -88,7 +88,7 @@ initrw(void)
 	//out.close();
 
 	//out.open("out.txd", "wb");
-	//rw::TexDictionary::getCurrent()->streamWrite(&out);
+	//rw::currentTexDictionary->streamWrite(&out);
 	//out.close();
 }
 

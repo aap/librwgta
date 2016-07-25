@@ -28,9 +28,11 @@ char *argv0;
 void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-u] [-i] [-s] [-v version] [-o platform] in.dff [out.dff]\n", argv0);
+	fprintf(stderr, "usage: %s [-u] [-i] [-f] [-d] [-v version] [-o platform] in.dff [out.dff]\n", argv0);
 	fprintf(stderr, "\t-u uninstance\n");
 	fprintf(stderr, "\t-i instance\n");
+	fprintf(stderr, "\t-f don't flip frame hierarchy\n");
+	fprintf(stderr, "\t-d dump frame and hanim hierarchy\n");
 	fprintf(stderr, "\t-v RW version, e.g. 33004 for 3.3.0.4\n");
 	fprintf(stderr, "\t-o output platform. ps2, xbox, mobile, d3d8, d3d9\n");
 	exit(1);
@@ -66,18 +68,18 @@ dumpFrameHier(Frame *frame, int ind = 0)
 			name = h->nodeInfo[i].frame ? gta::getNodeName(h->nodeInfo[i].frame) : "";
 			printf("\t\t%d %d\t%p %s\n", h->nodeInfo[i].id, h->nodeInfo[i].flags, h->nodeInfo[i].frame, name);
 
-			//{
-			//h->nodeInfo[i].frame->updateLTM();
-			//float *mat = h->nodeInfo[i].frame->ltm;
-			//printf("[ [ %8.4f, %8.4f, %8.4f, %8.4f ]\n"
-			//       "  [ %8.4f, %8.4f, %8.4f, %8.4f ]\n"
-			//       "  [ %8.4f, %8.4f, %8.4f, %8.4f ]\n"
-			//       "  [ %8.4f, %8.4f, %8.4f, %8.4f ] ]\n",
-			//	mat[0], mat[4], mat[8], mat[12],
-			//	mat[1], 6mat[5], mat[9], mat[13],
-			//	mat[2], mat[6], mat[10], mat[14],
-			//	mat[3], mat[7], mat[11], mat[15]);
-			//}
+			/*{
+			h->nodeInfo[i].frame->getLTM();
+			float *mat = (float*)&h->nodeInfo[i].frame->ltm;
+			printf("[ [ %8.4f, %8.4f, %8.4f, %8.4f ]\n"
+			       "  [ %8.4f, %8.4f, %8.4f, %8.4f ]\n"
+			       "  [ %8.4f, %8.4f, %8.4f, %8.4f ]\n"
+			       "  [ %8.4f, %8.4f, %8.4f, %8.4f ] ]\n",
+				mat[0], mat[4], mat[8], mat[12],
+				mat[1], mat[5], mat[9], mat[13],
+				mat[2], mat[6], mat[10], mat[14],
+				mat[3], mat[7], mat[11], mat[15]);
+			}*/
 		}
 	}
 	for(Frame *child = frame->child;
@@ -115,6 +117,18 @@ dumpReflData(Material *m)
 	printf("\n");
 }
 
+bool
+isPrimaryColor(RGBA *c)
+{
+	return c->red == 0x3C && c->green == 0xFF && c->blue == 0x00;
+}
+
+bool
+isSecondaryColor(RGBA *c)
+{
+	return c->red == 0xFF && c->green == 0x00 && c->blue == 0xAF;
+}
+
 void
 removeBodyTextures(Clump *clump)
 {
@@ -123,12 +137,38 @@ removeBodyTextures(Clump *clump)
 		for(int32 i = 0; i < g->numMaterials; i++){
 			Material *m = g->materialList[i];
 			if(m->texture == nil) continue;
-			if(strstr(m->texture->name, "body")){
+			if(strstr(m->texture->name, "body") &&
+			   (isPrimaryColor(&m->color) || isSecondaryColor(&m->color))){
 				m->texture->destroy();
 				m->texture = nil;
 			}
 		}
 	}
+}
+
+void
+resetSurfProps(Clump *clump)
+{
+	FORLIST(lnk, clump->atomics){
+		Geometry *g = Atomic::fromClump(lnk)->geometry;
+		for(int32 i = 0; i < g->numMaterials; i++){
+			Material *m = g->materialList[i];
+			//if(m->texture)
+			//	printf("%24s ", m->texture->name);
+			//printf("%f %f %f\n", m->surfaceProps.ambient, m->surfaceProps.diffuse, m->surfaceProps.specular);
+			//m->surfaceProps.diffuse = 0.0f;
+			m->surfaceProps.ambient = 1.0f;
+			m->surfaceProps.diffuse = 1.0f;
+			m->surfaceProps.specular = 0.0f;
+		}
+	}
+}
+
+void
+removeUnusedMaterials(Clump *clump)
+{
+	FORLIST(lnk, clump->atomics)
+		Atomic::fromClump(lnk)->geometry->removeUnusedMaterials();
 }
 
 void
@@ -165,6 +205,9 @@ main(int argc, char *argv[])
 
 	int uninstance = 0;
 	int instance = 0;
+	int dump = 0;
+	int surfprops = 0;
+	int removebody = 0;
 	int outplatform = rw::PLATFORM_D3D8;
 
 	char *s;
@@ -181,6 +224,18 @@ main(int argc, char *argv[])
 	//	break;
 	case 'v':
 		sscanf(EARGF(usage()), "%x", &rw::version);
+		break;
+	case 'f':
+		rw::streamAppendFrames = 1;
+		break;
+	case 'd':
+		dump++;
+		break;
+	case 'r':
+		surfprops++;
+		break;
+	case 'b':
+		removebody++;
 		break;
 	case 'o':
 		s = EARGF(usage());
@@ -232,7 +287,12 @@ main(int argc, char *argv[])
 	assert(c != NULL);
 	in.close();
 
-	removeBodyTextures(c);
+	removeUnusedMaterials(c);
+
+	if(surfprops)
+		resetSurfProps(c);
+	if(removebody)
+		removeBodyTextures(c);
 
 	//Clump *colclump = NULL;
 	//if(seconddff){
@@ -270,10 +330,12 @@ main(int argc, char *argv[])
 	//	printf("%d %f %f %f\n", l->getType(), l->color.red, l->color.green, l->color.blue);
 	//}
 
-	//HAnimHierarchy *hier = HAnimHierarchy::find(c->getFrame());
-	//if(hier)
-	//	hier->attach();
-	//dumpFrameHier(c->getFrame());
+	if(dump){
+		HAnimHierarchy *hier = HAnimHierarchy::find(c->getFrame());
+		if(hier)
+			hier->attach();
+		dumpFrameHier(c->getFrame());
+	}
 
 	//if(currentUVAnimDictionary){
 	//	FORLIST(lnk, currentUVAnimDictionary->animations){
