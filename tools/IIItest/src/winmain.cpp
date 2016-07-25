@@ -1,4 +1,5 @@
 #include "III.h"
+#ifdef RW_D3D9
 #include "d3dUtility.h"
 
 IDirect3DDevice9 *Device = 0;
@@ -73,3 +74,5 @@ WinMain(HINSTANCE hinstance, HINSTANCE prevInstance,
 
 	return 0;
 }
+
+#endif

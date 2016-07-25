@@ -199,25 +199,25 @@ CStreaming::ConvertBufferToObject(char *buffer, int id)
 	if(id >= MODELOFFSET && id < MODELOFFSET+MODELINFOSIZE){
 		modelid = id-MODELOFFSET;
 		CBaseModelInfo *modelinfo = CModelInfo::GetModelInfo(modelid);
-		if(!CTxdStore::isTxdLoaded(modelinfo->txdSlot)){
+		if(!CTxdStore::isTxdLoaded(modelinfo->m_txdSlot)){
 			debug("failed to load %s because TXD %s not in memory\n",
-			      modelinfo->name,
-			      CTxdStore::GetTxdName(modelinfo->txdSlot));
+			      modelinfo->GetName(),
+			      CTxdStore::GetTxdName(modelinfo->m_txdSlot));
 			// TODO: remove and request again
 			stream.close();
 			return;
 		}
-		CTxdStore::AddRef(modelinfo->txdSlot);
-		CTxdStore::SetCurrentTxd(modelinfo->txdSlot);
+		CTxdStore::AddRef(modelinfo->m_txdSlot);
+		CTxdStore::SetCurrentTxd(modelinfo->m_txdSlot);
 		bool success = true;
-		if(modelinfo->type == CSimpleModelInfo::ID ||
-		   modelinfo->type == CTimeModelInfo::ID){
+		if(modelinfo->m_type == CSimpleModelInfo::ID ||
+		   modelinfo->m_type == CTimeModelInfo::ID){
 			success = CFileLoader::LoadAtomicFile(&stream, modelid);
 		}else
 			success = CFileLoader::LoadClumpFile(&stream, modelid);
-		CTxdStore::RemoveRefWithoutDelete(modelinfo->txdSlot);
+		CTxdStore::RemoveRefWithoutDelete(modelinfo->m_txdSlot);
 		if(!success){
-			debug("Failed to load %s\n", modelinfo->name);
+			debug("Failed to load %s\n", modelinfo->GetName());
 			// TODO: remove and request again
 			stream.close();
 			return;
@@ -261,9 +261,9 @@ again:
 		id = strinfo-ms_aInfoForModel;
 		if(id >= MODELOFFSET && id < MODELOFFSET+MODELINFOSIZE){
 			CBaseModelInfo *mi = CModelInfo::GetModelInfo(id);
-			if(CStreaming::Txd(mi->txdSlot)->m_loadState != 1){
+			if(CStreaming::Txd(mi->m_txdSlot)->m_loadState != 1){
 				debug("requesting txd for model %d\n", id);
-				RequestModel(mi->txdSlot+TXDOFFSET, CStreaming::Model(id)->m_flags);
+				RequestModel(mi->m_txdSlot+TXDOFFSET, CStreaming::Model(id)->m_flags);
 				continue;
 			}
 		}

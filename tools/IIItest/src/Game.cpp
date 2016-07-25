@@ -1,6 +1,6 @@
 #include "III.h"
 
-int CGame::currLevel;
+eLevelName CGame::currLevel;
 
 void
 CGame::InitialiseRW(void)
@@ -39,8 +39,10 @@ int gameTxdSlot;
 void
 CGame::Initialise(void)
 {
-	CGame::currLevel = 1;
+	CPools::Initialise();
 
+	CGame::currLevel = LEVEL_INDUSTRIAL;
+	
 	printf("--Loading generic textures\n");
 	gameTxdSlot = CTxdStore::AddTxdSlot("generic");
 	CTxdStore::Create(gameTxdSlot);
@@ -54,11 +56,14 @@ CGame::Initialise(void)
 
 	printf("--Setup game variables\n");
 	CPathFind::AllocatePathFindInfoMem(PATHNODESIZE);
+	CCullZones::Init();
+	CTheZones::Init();
 	InitModelIndices();
 	CModelInfo::Initialise();
 	CdStream::addImage("MODELS\\GTA3.IMG");
 	CFileLoader::LoadLevel("DATA\\DEFAULT.DAT");
 	CFileLoader::LoadLevel("DATA\\GTA3.DAT");
+	CTheZones::PostZoneCreation();
 
 	printf("--Setup Streaming\n");
 	CStreaming::Init();

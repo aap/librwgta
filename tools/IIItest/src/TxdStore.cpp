@@ -1,46 +1,33 @@
 #include "III.h"
 
-CTxdStore::TxdDef *CTxdStore::entries;
-uchar *CTxdStore::flags;
-int CTxdStore::capacity;
-int CTxdStore::allocPtr;
-
+CPool<TxdDef,TxdDef> *CTxdStore::ms_pTxdPool;
 rw::TexDictionary *CTxdStore::ms_pStoredTxd;
 
 void
 CTxdStore::Initialize(void)
 {
-	CTxdStore::entries = new TxdDef[TXDSTORESIZE];
-	CTxdStore::flags = new uchar[TXDSTORESIZE];
-	CTxdStore::capacity = TXDSTORESIZE;
-	CTxdStore::allocPtr = 0;
-	for(int i = 0; i < TXDSTORESIZE; i++)
-		CTxdStore::flags[i] = 0x80;
+	ms_pTxdPool = new CPool<TxdDef,TxdDef>(TXDSTORESIZE);
 }
 
 int
 CTxdStore::AddTxdSlot(const char *name)
 {
-	TxdDef *def;
-	int idx;
-	// TODO, only temporary
-	assert(CTxdStore::allocPtr < TXDSTORESIZE);
-	def = &CTxdStore::entries[idx = CTxdStore::allocPtr++];
-	CTxdStore::flags[idx] = 0;
-	def->refCount = 0;
+	TxdDef *def = ms_pTxdPool->New();
+	assert(def);
 	def->texDict = nil;
+	def->refCount = 0;
 	strncpy(def->name, name, 20);
-	return idx;
+	return ms_pTxdPool->GetJustIndex(def);
 }
 
 int
 CTxdStore::FindTxdSlot(const char *name)
 {
-	TxdDef *def = CTxdStore::entries;
-	for(int i = 0; i < CTxdStore::capacity; i++, def++){
-		if(CTxdStore::flags[i] & 0x80)
-			continue;
-		if(rw::strncmp_ci(def->name, name, 24) == 0)
+	char *defname;
+	int size = ms_pTxdPool->GetSize();
+	for(int i = 0; i < size; i++){
+		defname = GetTxdName(i);
+		if(defname && rw::strncmp_ci(defname, name, 24) == 0)
 			return i;
 	}
 	return -1;
@@ -49,9 +36,8 @@ CTxdStore::FindTxdSlot(const char *name)
 char*
 CTxdStore::GetTxdName(int slot)
 {
-	if(CTxdStore::flags[slot] & 0x80)
-		return nil;
-	return CTxdStore::entries[slot].name;
+	TxdDef *def = getDef(slot);
+	return def ? def->name : nil;
 }
 
 void
@@ -70,9 +56,9 @@ CTxdStore::PopCurrentTxd(void)
 void
 CTxdStore::SetCurrentTxd(int slot)
 {
-	if(CTxdStore::flags[slot] & 0x80)
-		return;
-	rw::TexDictionary::setCurrent(CTxdStore::entries[slot].texDict);
+	TxdDef *def = getDef(slot);
+	if(def)
+		rw::TexDictionary::setCurrent(def->texDict);
 }
 
 void
@@ -119,17 +105,14 @@ CTxdStore::LoadTxd(int slot, const char *filename)
 	return false;
 }
 
-CTxdStore::TxdDef*
+TxdDef*
 CTxdStore::getDef(int slot)
 {
-	if((CTxdStore::flags[slot] & 0x80) == 0)
-		return &CTxdStore::entries[slot];
-	return nil;
+	return ms_pTxdPool->GetSlot(slot);
 }
 
 bool
 CTxdStore::isTxdLoaded(int slot)
 {
-	TxdDef *def = getDef(slot);
-	return def->texDict != nil;
+	return getDef(slot)->texDict != nil;
 }

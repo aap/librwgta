@@ -16,6 +16,13 @@ PathNode *InfoForTilePeds;
 PathNode *InfoForTileCars;
 int gMaxEntries;
 
+bool
+CPathFind::DoesObjectHavePath(uint id)
+{
+	return InfoForTilePeds[12*id].type != 0 ||
+	       InfoForTileCars[12*id].type != 0;
+}
+
 void
 CPathFind::StoreNodeInfoCar(short id, short i, signed char type, signed char next,
 	                    short x, short y, short z,

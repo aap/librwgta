@@ -6,21 +6,21 @@
 
 CBaseModelInfo::CBaseModelInfo(int type)
 {
-	this->name[0] = '\0';
-	this->colModel = nil;
-	this->twodEffects = nil;
-	this->id = -1;
-	this->refCount = 0;
-	this->txdSlot = -1;
-	this->type = type;
-	this->num2dEffects = 0;
-	this->freeCol = false;
+	m_name[0] = '\0';
+	m_colModel = nil;
+	m_twodEffects = nil;
+	m_objectId = -1;
+	m_refCount = 0;
+	m_txdSlot = -1;
+	m_type = type;
+	m_num2dEffects = 0;
+	m_freeCol = false;
 }
 
 void
 CBaseModelInfo::AddRef(void)
 {
-	this->refCount++;
+	m_refCount++;
 	AddTexDictionaryRef();
 }
 
@@ -30,23 +30,23 @@ CBaseModelInfo::SetTexDictionary(const char *name)
 	int slot = CTxdStore::FindTxdSlot(name);
 	if(slot < 0)
 		slot = CTxdStore::AddTxdSlot(name);
-	this->txdSlot = slot;
+	m_txdSlot = slot;
 }
 
 void
 CBaseModelInfo::AddTexDictionaryRef(void)
 {
-	CTxdStore::AddRef(this->txdSlot);
+	CTxdStore::AddRef(m_txdSlot);
 }
 
 void
 CBaseModelInfo::Add2dEffect(C2dEffect *fx)
 {
-	if(this->twodEffects)
-		this->num2dEffects++;
+	if(m_twodEffects)
+		m_num2dEffects++;
 	else{
-		this->num2dEffects = 1;
-		this->twodEffects = fx;
+		m_num2dEffects = 1;
+		m_twodEffects = fx;
 	}
 }
 
@@ -57,47 +57,47 @@ CBaseModelInfo::Add2dEffect(C2dEffect *fx)
 void
 CSimpleModelInfo::Init(void)
 {
-	this->atomics[0] = nil;
-	this->atomics[1] = nil;
-	this->atomics[2] = nil;
-	this->numAtomics = 0;
-	this->furthest      = 0;
-	this->normalCull    = 0;
-	this->unknownFlag   = 0;
-	this->isBigBuilding = 0;
-	this->noFade        = 0;
-	this->drawLast      = 0;
-	this->additive      = 0;
-	this->isSubway      = 0;
-	this->ignoreLight   = 0;
-	this->noZwrite      = 0;
+	m_atomics[0] = nil;
+	m_atomics[1] = nil;
+	m_atomics[2] = nil;
+	m_numAtomics = 0;
+	m_furthest      = 0;
+	m_normalCull    = 0;
+	m_unknownFlag   = 0;
+	m_isBigBuilding = 0;
+	m_noFade        = 0;
+	m_drawLast      = 0;
+	m_additive      = 0;
+	m_isSubway      = 0;
+	m_ignoreLight   = 0;
+	m_noZwrite      = 0;
 }
 
 void
 CSimpleModelInfo::SetAtomic(int n, rw::Atomic *atomic)
 {
 	AddTexDictionaryRef();
-	this->atomics[n] = atomic;
-	if(this->ignoreLight)
+	m_atomics[n] = atomic;
+	if(m_ignoreLight)
 		atomic->geometry->geoflags &= ~rw::Geometry::LIGHT;
 }
 
 void
 CSimpleModelInfo::SetLodDistances(float *dist)
 {
-	this->lodDistances[0] = dist[0];
-	this->lodDistances[1] = dist[1];
-	this->lodDistances[2] = dist[2];
+	m_lodDistances[0] = dist[0];
+	m_lodDistances[1] = dist[1];
+	m_lodDistances[2] = dist[2];
 }
 
 float
 CSimpleModelInfo::GetLargestLodDistance(void)
 {
 	float d;
-	if(this->furthest != 0 && !this->unknownFlag)
-		d = this->lodDistances[this->furthest-1];
+	if(m_furthest != 0 && !m_unknownFlag)
+		d = m_lodDistances[m_furthest-1];
 	else
-		d = this->lodDistances[this->numAtomics-1];
+		d = m_lodDistances[m_numAtomics-1];
 	return d;	// TODO camera multiplier
 }
 
@@ -109,9 +109,9 @@ CSimpleModelInfo::FindRelatedModel(void)
 	for(i = 0; i < MODELINFOSIZE; i++){
 		mi = CModelInfo::GetModelInfo(i);
 		if(mi && mi != this &&
-		   strcmp(this->name+3, mi->name+3) == 0){
-			assert(mi->type == CSimpleModelInfo::ID ||
-			       mi->type == CTimeModelInfo::ID);
+		   strcmp(GetName()+3, mi->GetName()+3) == 0){
+			assert(mi->m_type == CSimpleModelInfo::ID ||
+			       mi->m_type == CTimeModelInfo::ID);
 			this->SetRelatedModel((CSimpleModelInfo*)mi);
 			return;
 		}
@@ -122,15 +122,15 @@ void
 CSimpleModelInfo::SetupBigBuilding(void)
 {
 	CSimpleModelInfo *related;
-	if(this->lodDistances[0] > 300.0f && this->atomics[2] == nil){
-		this->isBigBuilding = 1;
+	if(m_lodDistances[0] > 300.0f && m_atomics[2] == nil){
+		m_isBigBuilding = 1;
 		this->FindRelatedModel();
 		related = this->GetRelatedModel();
 		if(related)
 			// TODO camera multiplier
-			this->lodDistances[2] = related->GetLargestLodDistance();
+			m_lodDistances[2] = related->GetLargestLodDistance();
 		else
-			this->lodDistances[2] = 100.0f;
+			m_lodDistances[2] = 100.0f;
 	}
 }
 
@@ -145,7 +145,7 @@ CTimeModelInfo::FindOtherTimeModel(void)
 	char *p;
 	int i;
 
-	strcpy(name, this->name);
+	strcpy(name, GetName());
 	// change _nt to _dy
 	if(p = strstr(name, "_nt"))
 		strncpy(p, "_dy", 4);
@@ -157,9 +157,9 @@ CTimeModelInfo::FindOtherTimeModel(void)
 
 	for(i = 0; i < MODELINFOSIZE; i++){
 		CBaseModelInfo *mi = CModelInfo::GetModelInfo(i);
-		if(mi && mi->type == CTimeModelInfo::ID &&
-		   strncmp(name, mi->name, 24) == 0){
-			this->otherTimeModelID = i;
+		if(mi && mi->m_type == CTimeModelInfo::ID &&
+		   strncmp(name, mi->GetName(), 24) == 0){
+			m_otherTimeModelID = i;
 			return (CTimeModelInfo*)mi;
 		}
 	}
@@ -173,7 +173,7 @@ CTimeModelInfo::FindOtherTimeModel(void)
 void
 CClumpModelInfo::SetClump(rw::Clump *clump)
 {
-	this->clump = clump;
+	m_clump = clump;
 	AddTexDictionaryRef();
 	// TODO: more
 }
@@ -206,11 +206,10 @@ CModelInfo::Initialise(void)
 
 #define NEWMODEL(id, col) \
 	mi = CModelInfo::AddSimpleModel(id);\
-	mi->colModel = &col;\
-	mi->freeCol = false;\
+	mi->SetColModel(&col, false);\
 	mi->SetTexDictionary("generic");\
-	mi->numAtomics = 1;\
-	mi->lodDistances[0] = 80.0f;
+	mi->m_numAtomics = 1;\
+	mi->m_lodDistances[0] = 80.0f;
 
 	// car components
 	NEWMODEL(190, CTempColModels::ms_colModelDoor1);
@@ -253,7 +252,7 @@ CModelInfo::AddClumpModel(int id)
 	CClumpModelInfo *modelinfo;
 	modelinfo = CModelInfo::ms_clumpModelStore.alloc();
 	CModelInfo::ms_modelInfoPtrs[id] = modelinfo;
-	modelinfo->clump = nil;
+	modelinfo->m_clump = nil;
 	return modelinfo;
 }
 
@@ -263,7 +262,7 @@ CModelInfo::AddPedModel(int id)
 	CPedModelInfo *modelinfo;
 	modelinfo = CModelInfo::ms_pedModelStore.alloc();
 	CModelInfo::ms_modelInfoPtrs[id] = modelinfo;
-	modelinfo->clump = nil;
+	modelinfo->m_clump = nil;
 	return modelinfo;
 }
 
@@ -273,11 +272,11 @@ CModelInfo::AddVehicleModel(int id)
 	CVehicleModelInfo *modelinfo;
 	modelinfo = CModelInfo::ms_vehicleModelStore.alloc();
 	CModelInfo::ms_modelInfoPtrs[id] = modelinfo;
-	modelinfo->clump = nil;
-	modelinfo->vehicleType = -1;
-	modelinfo->extraModelIndex = -1;
-	modelinfo->primaryMaterials[0] = nil;
-	modelinfo->secondaryMaterials[0] = nil;
+	modelinfo->m_clump = nil;
+	modelinfo->m_vehicleType = -1;
+	modelinfo->m_extraModelIndex = -1;
+	modelinfo->m_primaryMaterials[0] = nil;
+	modelinfo->m_secondaryMaterials[0] = nil;
 	return modelinfo;
 }
 
@@ -287,7 +286,7 @@ CModelInfo::GetModelInfo(char *name, int *id)
 	CBaseModelInfo *modelinfo;
 	for(int i = 0; i < MODELINFOSIZE; i++){
 		modelinfo = CModelInfo::ms_modelInfoPtrs[i];
-		if(modelinfo && strcmp(modelinfo->name, name) == 0){
+	 	if(modelinfo && strcmp(modelinfo->GetName(), name) == 0){
 			if(id)
 				*id = i;
 			return modelinfo;

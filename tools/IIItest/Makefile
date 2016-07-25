@@ -1,7 +1,9 @@
 BUILDDIR = build
-SRC = Animation.cpp HandlingData.cpp PedStats.cpp TxdStore.cpp streaming.cpp FileLoader.cpp ModelInfo.cpp PedType.cpp Game.cpp PathFind.cpp TimeCycle.cpp base.cpp gl3main.cpp VisibilityPlugins.cpp TempColModels.cpp ModelIndices.cpp
-OBJ = $(patsubst %.cpp, $(BUILDDIR)/%.o, $(SRC))
-DEP = $(patsubst %.cpp, $(BUILDDIR)/%.d, $(SRC))
+SRC = Animation.cpp HandlingData.cpp PedStats.cpp TxdStore.cpp streaming.cpp FileLoader.cpp ModelInfo.cpp PedType.cpp Game.cpp PathFind.cpp TimeCycle.cpp base.cpp gl3main.cpp VisibilityPlugins.cpp TempColModels.cpp ModelIndices.cpp zones.cpp
+SRCDIR=src
+SRC := $(wildcard $(SRCDIR)/*.cpp $(SRCDIR)/*/*.cpp)
+OBJ := $(patsubst %.cpp, $(BUILDDIR)/%.o, $(SRC))
+DEP := $(patsubst %.cpp, $(BUILDDIR)/%.d, $(SRC))
 RWDIR=$(HOME)/src/librw
 RWGTADIR=$(HOME)/src/librwgta
 

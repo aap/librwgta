@@ -49,8 +49,8 @@ CFileLoader::LoadLevel(const char *filename)
 			CFileLoader::AddTexDictionaries(curTxd, txd);
 			txd->destroy();
 		}else if(strncmp(line, "COLFILE", 7) == 0){
-			int currlevel = CGame::currLevel;
-			sscanf(line+8, "%d", &CGame::currLevel);
+			eLevelName currlevel = CGame::currLevel;
+			sscanf(line+8, "%d", (int*)&CGame::currLevel);
 			CFileLoader::LoadCollisionFile(line+10);
 			CGame::currLevel = currlevel;
 		}else if(strncmp(line, "MODELFILE", 9) == 0)
@@ -59,9 +59,14 @@ CFileLoader::LoadLevel(const char *filename)
 			CFileLoader::LoadClumpFile(line+9);
 		else if(strncmp(line, "IDE", 3) == 0)
 			CFileLoader::LoadObjectTypes(line+4);
-		else if(strncmp(line, "IPL", 3) == 0)
+		else if(strncmp(line, "IPL", 3) == 0){
+			static bool objdata = false;
+			if(!objdata){
+				CObjectData::Initialise("DATA\\OBJECT.DAT");
+				objdata = true;
+			}
 			CFileLoader::LoadScene(line+4);
-		else if(strncmp(line, "MAPZONE", 7) == 0)
+		}else if(strncmp(line, "MAPZONE", 7) == 0)
 			CFileLoader::LoadMapZone(line+8);
 		else if(strncmp(line, "SPLASH", 6) == 0){
 			printf("[SPLASH %s]\n", line+7);
@@ -135,8 +140,8 @@ CFileLoader::LoadObjectTypes(const char *filename)
 	for(i = 0; i < MODELINFOSIZE; i++){
 		mi = CModelInfo::GetModelInfo(i);
 		if(mi &&
-		   (mi->type == CSimpleModelInfo::ID ||
-		    mi->type == CTimeModelInfo::ID))
+		   (mi->m_type == CSimpleModelInfo::ID ||
+		    mi->m_type == CTimeModelInfo::ID))
 			((CSimpleModelInfo*)mi)->SetupBigBuilding();
 	}
 }
@@ -170,6 +175,7 @@ CFileLoader::LoadObject(char *line)
 	float dist[3];
 	int flags;
 	int furthest;
+
 	sscanf(line, "%d %s %s %d", &id, model, txd, &numObjs);
 	switch(numObjs){
 	case 1:
@@ -190,26 +196,22 @@ CFileLoader::LoadObject(char *line)
 		           dist[1] >= dist[2] ? 2 : 0;
 		break;
 	}
+
 	CSimpleModelInfo *modelinfo = CModelInfo::AddSimpleModel(id);
-	strncpy(modelinfo->name, model, 24);
-	modelinfo->numAtomics = numObjs;
+	modelinfo->SetName(model);
+	modelinfo->SetNumAtomics(numObjs);
 	modelinfo->SetLodDistances(dist);
-	modelinfo->normalCull   = !!(flags & 0x1);
-	modelinfo->noFade       = !!(flags & 0x2);
-	modelinfo->drawLast     = !!(flags & 0x4);
-	modelinfo->additive     = !!(flags & 0x8);
-	modelinfo->isSubway     = !!(flags & 0x10);
-	modelinfo->ignoreLight  = !!(flags & 0x20);
-	modelinfo->noZwrite     = !!(flags & 0x40);
-	modelinfo->furthest = furthest;
+	modelinfo->m_normalCull   = !!(flags & 0x1);
+	modelinfo->m_noFade       = !!(flags & 0x2);
+	modelinfo->m_drawLast     = !!(flags & 0x4);
+	modelinfo->m_additive     = !!(flags & 0x8);
+	modelinfo->m_isSubway     = !!(flags & 0x10);
+	modelinfo->m_ignoreLight  = !!(flags & 0x20);
+	modelinfo->m_noZwrite     = !!(flags & 0x40);
+	modelinfo->m_furthest = furthest;
 	modelinfo->SetTexDictionary(txd);
 
 	MatchModelString(model, id);
-
-	//printf("objs | %d %s %s %d ", id, model, txd, numObjs);
-	//for(int i = 0; i < numObjs; i++)
-	//	printf("%f ", dist[i]);
-	//printf("%d\n", flags);
 }
 
 void
@@ -222,6 +224,7 @@ CFileLoader::LoadTimeObject(char *line)
 	int flags;
 	int furthest;
 	int timeon, timeoff;
+
 	sscanf(line, "%d %s %s %d", &id, model, txd, &numObjs);
 	switch(numObjs){
 	case 1:
@@ -245,32 +248,28 @@ CFileLoader::LoadTimeObject(char *line)
 		           dist[1] >= dist[2] ? 2 : 0;
 		break;
 	}
+
 	CTimeModelInfo *modelinfo = CModelInfo::AddTimeModel(id);
-	strncpy(modelinfo->name, model, 24);
-	modelinfo->numAtomics = numObjs;
+	modelinfo->SetName(model);
+	modelinfo->SetNumAtomics(numObjs);
 	modelinfo->SetLodDistances(dist);
-	modelinfo->normalCull   = !!(flags & 0x1);
-	modelinfo->noFade       = !!(flags & 0x2);
-	modelinfo->drawLast     = !!(flags & 0x4);
-	modelinfo->additive     = !!(flags & 0x8);
-	modelinfo->isSubway     = !!(flags & 0x10);
-	modelinfo->ignoreLight  = !!(flags & 0x20);
-	modelinfo->noZwrite     = !!(flags & 0x40);
-	modelinfo->furthest = furthest;
-	modelinfo->timeOn = timeon;
-	modelinfo->timeOff = timeoff;
+	modelinfo->m_normalCull   = !!(flags & 0x1);
+	modelinfo->m_noFade       = !!(flags & 0x2);
+	modelinfo->m_drawLast     = !!(flags & 0x4);
+	modelinfo->m_additive     = !!(flags & 0x8);
+	modelinfo->m_isSubway     = !!(flags & 0x10);
+	modelinfo->m_ignoreLight  = !!(flags & 0x20);
+	modelinfo->m_noZwrite     = !!(flags & 0x40);
+	modelinfo->m_furthest = furthest;
+	modelinfo->m_timeOn  = timeon;
+	modelinfo->m_timeOff = timeoff;
 	modelinfo->SetTexDictionary(txd);
 
 	CTimeModelInfo *other = modelinfo->FindOtherTimeModel();
 	if(other)
-		other->otherTimeModelID = id;
+		other->m_otherTimeModelID = id;
 
 	MatchModelString(model, id);
-
-	//printf("tobj | %d %s %s %d ", id, model, txd, numObjs);
-	//for(int i = 0; i < numObjs; i++)
-	//	printf("%f ", dist[i]);
-	//printf("%d %d %d\n", flags, timeon, timeoff);
 }
 
 void
@@ -279,13 +278,11 @@ CFileLoader::LoadClumpObject(char *line)
 	int id;
 	char model[24], txd[24];
 	sscanf(line, "%d %s %s", &id, model, txd);
-	//printf("hier | %d %s %s\n", id, model, txd);
 
 	CClumpModelInfo *modelinfo = CModelInfo::AddClumpModel(id);
-	strncpy(modelinfo->name, model, 24);
+	modelinfo->SetName(model);
 	modelinfo->SetTexDictionary(txd);
-	modelinfo->colModel = &CTempColModels::ms_colModelBBox;
-	modelinfo->freeCol = false;
+	modelinfo->SetColModel(&CTempColModels::ms_colModelBBox, false);
 }
 
 void
@@ -319,21 +316,21 @@ CFileLoader::LoadVehicleObject(char *line)
 	       &frq, &lvl, &compRules, &secondId, &wheelScale);
 
 	CVehicleModelInfo *modelinfo = CModelInfo::AddVehicleModel(id);
-	strncpy(modelinfo->name, model, 24);
+	modelinfo->SetName(model);
 	modelinfo->SetTexDictionary(txd);
 	// TODO frq
-	modelinfo->handlingId = CHandlingData::GetHandlingData(handling);
-	modelinfo->vehicleType = StrAssoc::get(types, vehType);
-	modelinfo->vehicleClass = StrAssoc::get(classes, vehClass);
+	modelinfo->m_handlingId = CHandlingData::GetHandlingData(handling);
+	modelinfo->m_vehicleType = StrAssoc::get(types, vehType);
+	modelinfo->m_vehicleClass = StrAssoc::get(classes, vehClass);
 	for(char *s = gameName; *s; s++)
 		if(*s == '_') *s = ' ';
-	strncpy(modelinfo->gameName, gameName, 32);
-	modelinfo->lvl = lvl;
-	modelinfo->compRules = compRules;
-	if(modelinfo->vehicleType == CVehicleModelInfo::Car ||
-	   modelinfo->vehicleType == CVehicleModelInfo::Plane){
-		modelinfo->extraModelIndex = secondId;
-		modelinfo->wheelScale = wheelScale;
+	strncpy(modelinfo->m_gameName, gameName, 32);
+	modelinfo->m_lvl = lvl;
+	modelinfo->m_compRules = compRules;
+	if(modelinfo->m_vehicleType == CVehicleModelInfo::Car ||
+	   modelinfo->m_vehicleType == CVehicleModelInfo::Plane){
+		modelinfo->m_extraModelIndex = secondId;
+		modelinfo->m_wheelScale = wheelScale;
 	}
 }
 
@@ -345,25 +342,23 @@ CFileLoader::LoadPedObject(char *line)
 	int carsCanDrive;
 	sscanf(line, "%d %s %s %s %s %s %x",
 	       &id, model, txd, pedType, pedStats, animGroup, &carsCanDrive);
-	//printf("peds | %d %s %s %s %s %s %x\n", id, model, txd, pedType, pedStats, animGroup, carsCanDrive);
 
 	CPedModelInfo *modelinfo = CModelInfo::AddPedModel(id);
-	strncpy(modelinfo->name, model, 24);
+	modelinfo->SetName(model);
 	modelinfo->SetTexDictionary(txd);
-	modelinfo->colModel = &CTempColModels::ms_colModelPed1;
-	modelinfo->freeCol = false;
-	modelinfo->pedType = CPedType::FindPedType(pedType);
-	modelinfo->pedStats = CPedStats::GetPedStatType(pedStats);
+	modelinfo->SetColModel(&CTempColModels::ms_colModelPed1, false);
+	modelinfo->m_pedType = CPedType::FindPedType(pedType);
+	modelinfo->m_pedStats = CPedStats::GetPedStatType(pedStats);
 	for(int i = 0; i < CAnimManager::ms_numAnimAssocDefinitions; i++){
 		char *grpname = CAnimManager::GetAnimGroupName(i);
 		if(strcmp(grpname, animGroup) == 0){
-			modelinfo->animGroup = i;
+			modelinfo->m_animGroup = i;
 			goto animfound;
 		}
 	}
-	modelinfo->animGroup = CAnimManager::ms_numAnimAssocDefinitions;	// invalid
+	modelinfo->m_animGroup = CAnimManager::ms_numAnimAssocDefinitions;	// invalid
 animfound:
-	modelinfo->carsCanDrive = carsCanDrive;
+	modelinfo->m_carsCanDrive = carsCanDrive;
 }
 
 // used by the path functions below
@@ -507,14 +502,45 @@ CFileLoader::Load2dEffect(char *line)
 void
 CFileLoader::LoadObjectInstance(char *line)
 {
+	using namespace rw;
+
 	int id;
 	char model[24];
-	float tx, ty, tz;
 	float sx, sy, sz;
-	float rx, ry, rz, rw;
+	V3d t;
+	Quat q;
 	sscanf(line, "%d %s %f %f %f %f %f %f %f %f %f %f",
-	       &id, model, &tx, &ty, &tz, &sx, &sy, &sz,
-	       &rx, &ry, &rz, &rw);
+	       &id, model, &t.x, &t.y, &t.z, &sx, &sy, &sz,
+	       &q.x, &q.y, &q.z, &q.w);
+	CBaseModelInfo *mi = CModelInfo::GetModelInfo(id);
+	if(mi == nil)
+		return;
+	Matrix *mat = Matrix::create();
+	*mat = Matrix::makeRotation(q);
+	mat->pos = t;
+	if(mi->GetObjectID() == -1){
+		CBuilding *build;
+		if(id < PATHNODESIZE && CPathFind::DoesObjectHavePath(id)){
+			CTreadable *tread = new CTreadable;
+			// RegisterMapObject
+			build = tread;
+		}else
+			build = new CBuilding;
+		build->SetModelIndexNoCreate(id);
+		build->m_matrix = CMatrix(mat, false);
+		build->m_level = CTheZones::GetLevelFromPosition(build->GetPosition());
+		if(mi->m_type == CSimpleModelInfo::ID ||
+		   mi->m_type == CTimeModelInfo::ID){
+		}
+	}else{
+		CDummyObject *dummy;
+		dummy = new CDummyObject;
+		dummy->SetModelIndexNoCreate(id);
+		dummy->m_matrix = CMatrix(mat, false);
+		mat->destroy();
+		// TODO: swtich over model index to find glass
+		dummy->m_level = CTheZones::GetLevelFromPosition(dummy->GetPosition());
+	}
 }
 
 void
@@ -529,18 +555,21 @@ CFileLoader::LoadZone(char *line)
 	       name, &type,
                &minx, &miny, &minz,
                &maxx, &maxy, &maxz, &level);
+	CTheZones::CreateZone(name, (eZoneType)type, minx, miny, minz,
+		              maxx, maxy, maxz, (eLevelName)level);
 }
 
 void
 CFileLoader::LoadCullZone(char *line)
 {
-	float cx, cy, cz;
+	CVector center;
 	float x1, y1, z1;
 	float x2, y2, z2;
 	int flag, wanted;
 	sscanf(line, "%f %f %f %f %f %f %f %f %f %d %d",
-	       &cx, &cy, &cz, &x1, &y1, &z1, &x2, &y2, &z2,
+	       &center.x, &center.y, &center.z, &x1, &y1, &z1, &x2, &y2, &z2,
 	       &flag, &wanted);
+	CCullZones::AddCullZone(center, x1, x2, y1, y2, z1, z2, flag, wanted);
 }
 
 //
@@ -559,6 +588,8 @@ CFileLoader::LoadMapZone(char *line)
 	       name, &type,
                &minx, &miny, &minz,
                &maxx, &maxy, &maxz, &level);
+	CTheZones::CreateMapZone(name, (eZoneType)type, minx, miny, minz,
+		                 maxx, maxy, maxz, (eLevelName)level);
 }
 
 //
@@ -575,7 +606,6 @@ CFileLoader::LoadCollisionFile(const char *filename)
 		uint32 size;
 	} header;
 	FILE *file;
-	static uchar buf[55000];
 	char name[24];
 	CBaseModelInfo *modelinfo;
 
@@ -587,15 +617,19 @@ CFileLoader::LoadCollisionFile(const char *filename)
 		if(fread(&header, 8, 1, file) == 0 ||
 		   header.ident != COLL)
 			return;
-		fread(buf, header.size, 1, file);
-		memcpy(name, buf, 24);
+		fread(work_buff, header.size, 1, file);
+		memcpy(name, work_buff, 24);
 		modelinfo = CModelInfo::GetModelInfo(name, nil);
 		if(modelinfo){
-			if(modelinfo->colModel == nil)
-				modelinfo->colModel = new CColModel;
-			readColModel(modelinfo->colModel, buf+24);
-			modelinfo->colModel->level = CGame::currLevel;
-			modelinfo->freeCol = true;
+			CColModel *col = modelinfo->GetColModel();
+			if(col)
+				readColModel(col, work_buff+24);
+			else{
+				col = new CColModel;
+				readColModel(col, work_buff+24);
+				col->level = CGame::currLevel;
+				modelinfo->SetColModel(col, true);
+			}
 		}
 	}
 	fclose(file);

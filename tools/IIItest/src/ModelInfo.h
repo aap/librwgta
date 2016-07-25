@@ -4,16 +4,18 @@ typedef float *RwMatrixTag;
 
 class CBaseModelInfo
 {
+protected:
+	// TODO?: make more things protected
+	char       m_name[24];
+	CColModel *m_colModel;
+	C2dEffect *m_twodEffects;
+	short      m_objectId;
 public:
-	char name[24];
-	CColModel *colModel;
-	C2dEffect *twodEffects;
-	short id;	// ??
-	ushort refCount;
-	short txdSlot;
-	uchar type;	// ModelInfo type
-	uchar num2dEffects;
-	bool freeCol;
+	ushort     m_refCount;
+	short      m_txdSlot;
+	uchar      m_type;	// ModelInfo type
+	uchar      m_num2dEffects;
+	bool       m_freeCol;
 
 	CBaseModelInfo(int type);
 	virtual ~CBaseModelInfo() {}
@@ -23,6 +25,13 @@ public:
 	virtual unknown CreateInstance(RwMatrixTag *) = 0;
 	virtual unknown GetRwObject(void) = 0;
 
+	char *GetName(void) { return m_name; }
+	void SetName(const char *name) { strncpy(m_name, name, 24); }
+	void SetColModel(CColModel *col, bool free = false){
+		m_colModel = col; m_freeCol = free; }
+	CColModel *GetColModel(void) { return m_colModel; }
+	short GetObjectID(void) { return m_objectId; }
+	void SetObjectID(short id) { m_objectId = id; }
 	void AddRef(void);
 	void SetTexDictionary(const char *name);
 	void AddTexDictionaryRef(void);
@@ -33,7 +42,7 @@ class CClumpModelInfo : public CBaseModelInfo
 {
 public:
 	enum { ID = 4 };
-	rw::Clump *clump;
+	rw::Clump *m_clump;
 
 	CClumpModelInfo(void) : CBaseModelInfo(ID) {}
 	CClumpModelInfo(int id) : CBaseModelInfo(id) {}
@@ -52,9 +61,9 @@ class CMloModelInfo : public CClumpModelInfo
 {
 public:
 	enum { ID = 2 };
-	float drawDist;
-	int firstInstance;
-	int lastInstance;
+	float m_drawDist;
+	int   m_firstInstance;
+	int   m_lastInstance;
 
 	~CMloModelInfo() {}
 };
@@ -63,15 +72,15 @@ class CPedModelInfo : public CClumpModelInfo
 {
 public:
 	enum { ID = 6 };
-	int animGroup;
-	int pedType;
-	int pedStats;
-	int carsCanDrive;
-	CColModel *hitColModel;
+	int         m_animGroup;
+	int         m_pedType;
+	int         m_pedStats;
+	int         m_carsCanDrive;
+	CColModel  *m_hitColModel;
 #ifdef SKINNED
-	RpAtomic *head;
-	RpAtomic *lhand;
-	RpAtomic *rhand;
+	rw::Atomic *m_head;
+	rw::Atomic *m_lhand;
+	rw::Atomic *m_rhand;
 #endif
 
 	CPedModelInfo(void) : CClumpModelInfo(ID) {}
@@ -89,36 +98,36 @@ public:
 	enum Type { Car, Boat, Train, Heli, Plane, Bike };
 	enum Class { Poorfamily, Richfamily, Executive, Worker, Special, Big, Taxi };
 
-	uchar lastPrimaryColor;
-	uchar lastSecondaryColor;
-	char gameName[32];
-	int vehicleType;
-	int extraModelIndex;
-	float wheelScale;
-	int numDoors;
-	int handlingId;
-	int vehicleClass;
-	int lvl;
-	rw::V3d dummyPos[10];
-	int compRules;
-	float bikeValue;
-	rw::Material **primaryMaterials[26];
-	rw::Material **secondaryMaterials[26];
-	uchar primaryColorIds[8];
-	uchar secondaryColorIds[8];
-	uchar numColors;
-	uchar unk; // unused?
-	uchar currentPrimaryColor;
-	uchar currentSecondaryColor;
-	rw::Texture *envMap;
-	rw::Atomic *comps[6];
-	int numComps;
+	uchar   m_lastPrimaryColor;
+	uchar   m_lastSecondaryColor;
+	char    m_gameName[32];
+	int     m_vehicleType;
+	int     m_extraModelIndex;
+	float   m_wheelScale;
+	int     m_numDoors;
+	int     m_handlingId;
+	int     m_vehicleClass;
+	int     m_lvl;
+	rw::V3d m_dummyPos[10];
+	int     m_compRules;
+	float   m_bikeValue;
+	rw::Material **m_primaryMaterials[26];
+	rw::Material **m_secondaryMaterials[26];
+	uchar   m_primaryColorIds[8];
+	uchar   m_secondaryColorIds[8];
+	uchar   m_numColors;
+	uchar   m_unk; // unused?
+	uchar   m_currentPrimaryColor;
+	uchar   m_currentSecondaryColor;
+	rw::Texture *m_envMap;
+	rw::Atomic *m_comps[6];
+	int     m_numComps;
 
 	CVehicleModelInfo(void) : CClumpModelInfo(ID) {}
 	~CVehicleModelInfo() {}
 	unknown DeleteRwObject(void) {}
 	unknown CreateInstance(void) {}
-	void SetClump(rw::Clump *){
+	void SetClump(rw::Clump *clump){
 		CClumpModelInfo::SetClump(clump);
 	}
 };
@@ -128,12 +137,12 @@ class CXtraCompsModelInfo : public CClumpModelInfo
 {
 public:
 	enum { ID = 7 };
-	int unk;
+	int m_unk;
 
 	~CXtraCompsModelInfo() {}
 	unknown Shutdown(void) {}
 	unknown CreateInstance(void) {}
-	void SetClump(rw::Clump *){
+	void SetClump(rw::Clump *clump){
 		CClumpModelInfo::SetClump(clump);
 	}
 };
@@ -143,22 +152,22 @@ class CSimpleModelInfo : public CBaseModelInfo
 public:
 	enum { ID = 1 };
 	// atomics[2] is often a pointer to the non-LOD modelinfo
-	rw::Atomic *atomics[3];
-	float lodDistances[3];
-	uchar numAtomics;
-	uchar alpha;
-	uint  furthest      : 3; // 0: numAtomics-1 is furthest visible
+	rw::Atomic *m_atomics[3];
+	float m_lodDistances[3];
+	uchar m_numAtomics;
+	uchar m_alpha;
+	uint  m_furthest      : 3; // 0: numAtomics-1 is furthest visible
 	                         // 1: atomic 0 is furthest
 	                         // 2: atomic 1 is furthest
-	uint  normalCull    : 1;
-	uint  unknownFlag   : 1;
-	uint  isBigBuilding : 1;
-	uint  noFade        : 1;
-	uint  drawLast      : 1;
-	uint  additive      : 1;
-	uint  isSubway      : 1;
-	uint  ignoreLight   : 1;
-	uint  noZwrite      : 1;
+	uint  m_normalCull    : 1;
+	uint  m_unknownFlag   : 1;
+	uint  m_isBigBuilding : 1;
+	uint  m_noFade        : 1;
+	uint  m_drawLast      : 1;
+	uint  m_additive      : 1;
+	uint  m_isSubway      : 1;
+	uint  m_ignoreLight   : 1;
+	uint  m_noZwrite      : 1;
 
 	CSimpleModelInfo(void) : CBaseModelInfo(ID) {}
 	CSimpleModelInfo(int id) : CBaseModelInfo(id) {}
@@ -175,19 +184,20 @@ public:
 	void FindRelatedModel(void);
 	void SetupBigBuilding(void);
 
+	void SetNumAtomics(int n) { m_numAtomics = n; }
 	CSimpleModelInfo *GetRelatedModel(void){
-		return (CSimpleModelInfo*)this->atomics[2]; }
+		return (CSimpleModelInfo*)m_atomics[2]; }
 	void SetRelatedModel(CSimpleModelInfo *m){
-		this->atomics[2] = (rw::Atomic*)m; }
+		m_atomics[2] = (rw::Atomic*)m; }
 };
 
 class CTimeModelInfo : public CSimpleModelInfo
 {
 public:
 	enum { ID = 3 };
-	int timeOn;
-	int timeOff;
-	int otherTimeModelID;
+	int m_timeOn;
+	int m_timeOff;
+	int m_otherTimeModelID;
 
 	CTimeModelInfo(void) : CSimpleModelInfo(ID) {}
 	~CTimeModelInfo() {}

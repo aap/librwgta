@@ -1,3 +1,5 @@
+#ifdef RW_D3D9
+
 #include "d3dUtility.h"
 
 bool
@@ -110,3 +112,5 @@ d3d::EnterMsgLoop(bool (*display)(float timeDelta))
 	}
 	return msg.wParam;
 }
+
+#endif

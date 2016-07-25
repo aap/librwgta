@@ -1,6 +1,8 @@
 #include "III.h"
 #include <cstdarg>
 
+uchar work_buff[55000];
+
 char*
 getPath(const char *path)
 {

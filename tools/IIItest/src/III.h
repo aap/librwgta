@@ -30,6 +30,7 @@ using rw::int32;
 typedef unsigned int uint;
 typedef unsigned char uchar;
 
+extern  uchar work_buff[55000];
 void debug(const char *fmt, ...);
 
 int init(void);
@@ -43,6 +44,8 @@ void keypress(GLFWwindow*, int key, int scancode, int action, int mods);
 
 #include "templates.h"
 #include "config.h"
+#include "math/Vector.h"
+#include "math/Matrix.h"
 
 class C2dEffect
 {
@@ -81,38 +84,48 @@ public:
 	};
 };
 
+#include "zones.h"
 #include "Animation.h"
 #include "ModelInfo.h"
 #include "ModelIndices.h"
+#include "Placeable.h"
+#include "Entity.h"
+#include "Building.h"
+#include "Treadable.h"
+#include "Dummy.h"
+#include "DummyObject.h"
+#include "DummyPed.h"
+#include "Pools.h"
+#include "PathFind.h"
+#include "ObjectData.h"
+
+#include "TxdStore.h"
 #include "TimeCycle.h"
 #include "VisibilityPlugins.h"
 #include "TempColModels.h"
+#include "Game.h"
+
+inline float
+clamp(float v, float min, float max){ return v<min ? min : v>max ? max : v; }
 
 char *getPath(const char *path);
 FILE *fopen_ci(const char *path, const char *mode);
 char *skipWhite(char *s);
 
-struct StrAssoc {
+struct StrAssoc
+{
 	const char *key;
 	int val;
 
 	static int get(StrAssoc *desc, const char *key);
 };
 
-struct DatDesc {
+struct DatDesc
+{
 	char name[5];
 	void (*handler)(char *line);
 
 	static void *get(DatDesc *desc, const char *name);
-};
-
-class CGame
-{
-public:
-	static int currLevel;
-	static void Initialise(void);
-	static void InitialiseRW(void);
-	static void InitialiseAfterRW(void);
 };
 
 class CFileLoader
@@ -162,49 +175,6 @@ public:
 	static rw::TexDictionary *LoadTexDictionary(const char *filename);
 	static void AddTexDictionaries(rw::TexDictionary *dst,
 	                               rw::TexDictionary *src);
-};
-
-class CPathFind
-{
-public:
-	static void AllocatePathFindInfoMem(int n);
-	static void StoreNodeInfoCar(short id, short i, signed char type, signed char next,
-	                             short x, short y, short z,
-	                             short width, signed char left, signed char right);
-	static void StoreNodeInfoPed(short id, short i, signed char type, signed char next,
-	                             short x, short y, short z,
-	                             short width, bool crossing);
-};
-
-class CTxdStore
-{
-	struct TxdDef {
-		rw::TexDictionary *texDict;
-		int refCount;
-		char name[20];
-	};
-	static TxdDef *entries;
-	static uchar *flags;
-	static int capacity;
-	static int allocPtr;
-
-	static rw::TexDictionary *ms_pStoredTxd;
-public:
-	static void Initialize(void);
-	static int AddTxdSlot(const char *name);
-	static int FindTxdSlot(const char *name);
-	static char *GetTxdName(int slot);
-	static void PushCurrentTxd(void);
-	static void PopCurrentTxd(void);
-	static void SetCurrentTxd(int slot);
-	static void Create(int slot);
-	static void AddRef(int slot);
-	static void RemoveRefWithoutDelete(int slot);
-	static bool LoadTxd(int slot, rw::Stream *stream);
-	static bool LoadTxd(int slot, const char *filename);
-
-	static TxdDef *getDef(int slot);
-	static bool isTxdLoaded(int slot);
 };
 
 class CPedType
