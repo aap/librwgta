@@ -1,6 +1,29 @@
 class CVisibilityPlugins
 {
 public:
+	struct AlphaObjectInfo
+	{
+		union {
+			CEntity *entity;
+			rw::Atomic *atomic;
+		};
+		float sort;
+	};
+
+	static CLinkList<AlphaObjectInfo> m_alphaList;
+	static CLinkList<AlphaObjectInfo> m_alphaEntityList;
+
+	static void Initialise(void);
+	static void InitAlphaEntityList(void);
+	static bool InsertEntityIntoSortedList(CEntity *e, float dist);
+	static void InitAlphaAtomicList(void);
+
+	static void RenderFadingEntities(void);
+
+	//
+	// RW Plugins
+	//
+
 	union AtomicExt
 	{
 		CSimpleModelInfo *modelInfo;

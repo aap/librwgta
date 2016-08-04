@@ -37,6 +37,7 @@ int init(void);
 void shutdown(void);
 void update(double t);
 void display(void);
+int getTimeInMS(void);
 #ifdef RW_GL3
 void pollinput(GLFWwindow*);
 void keypress(GLFWwindow*, int key, int scancode, int action, int mods);
@@ -84,10 +85,15 @@ public:
 	};
 };
 
+#include "Timer.h"
+#include "Clock.h"
+#include "Rect.h"
 #include "zones.h"
 #include "Animation.h"
 #include "ModelInfo.h"
 #include "ModelIndices.h"
+#include "PtrNode.h"
+#include "PtrList.h"
 #include "Placeable.h"
 #include "Entity.h"
 #include "Building.h"
@@ -95,6 +101,9 @@ public:
 #include "Dummy.h"
 #include "DummyObject.h"
 #include "DummyPed.h"
+#include "Physical.h"
+#include "Camera.h"
+#include "World.h"
 #include "Pools.h"
 #include "PathFind.h"
 #include "ObjectData.h"
@@ -104,6 +113,14 @@ public:
 #include "VisibilityPlugins.h"
 #include "TempColModels.h"
 #include "Game.h"
+#include "Renderer.h"
+#include "streaming.h"
+
+extern CCamera TheCamera;
+extern rw::Camera *rwCamera;
+extern rw::World  *rwWorld;
+extern rw::Light  *ambient;
+extern rw::Light  *direct;
 
 inline float
 clamp(float v, float min, float max){ return v<min ? min : v>max ? max : v; }
@@ -111,6 +128,7 @@ clamp(float v, float min, float max){ return v<min ? min : v>max ? max : v; }
 char *getPath(const char *path);
 FILE *fopen_ci(const char *path, const char *mode);
 char *skipWhite(char *s);
+void convertTxd(rw::TexDictionary *txd);
 
 struct StrAssoc
 {
@@ -265,80 +283,4 @@ public:
 	static void Initialise(void);
 	static void LoadHandlingData(void);
 	static int  GetHandlingData(const char *ident);
-};
-
-class CdStream
-{
-public:
-	static int numImages;
-	static char imageNames[NUMCDIMAGES][64];
-	static FILE *images[NUMCDIMAGES];
-
-	static void init();
-	static void addImage(const char *name);
-	static void removeImages(void);
-	static void read(char *buf, uint pos, uint size);
-};
-
-class CDirectory
-{
-public:
-	struct DirectoryInfo {
-		uint32 position;
-		uint32 size;
-		char name[24];
-	};
-	DirectoryInfo *m_entries;
-	int m_maxEntries;
-	int m_numEntries;
-
-	CDirectory(int size);
-	void AddItem(DirectoryInfo *dirinfo);
-};
-
-class CStreamingInfo
-{
-public:
-	CStreamingInfo *m_next;
-	CStreamingInfo *m_prev;
-	uchar m_loadState;
-	uchar m_flags;	// 8 - priority request, 10 - subway, don't fade?
-
-	short m_nextID;
-	uint  m_position;
-	uint  m_size;
-
-	bool GetCdPosnAndSize(uint *pos, uint *size);
-	void SetCdPosnAndSize(uint pos, uint size);
-	void AddToList(CStreamingInfo *link);
-	void RemoveFromList(void);
-};
-
-class CStreaming
-{
-public:
-	enum {
-		MODELOFFSET = 0,
-		TXDOFFSET = MODELOFFSET+MODELINFOSIZE,
-		NUMSTREAMINFO = TXDOFFSET+TXDSTORESIZE
-	};
-	static CStreamingInfo ms_aInfoForModel[NUMSTREAMINFO];
-	static CDirectory *ms_pExtraObjectsDir;
-	static CStreamingInfo ms_startLoadedList, ms_endLoadedList;
-	static CStreamingInfo ms_startRequestedList, ms_endRequestedList;
-	static int ms_streamingBufferSize;
-	static char *ms_pStreamingBuffer;
-
-	static void Init(void);
-	static void LoadCdDirectory(void);
-	static void LoadCdDirectory(const char *dirname, int n);
-	static void ConvertBufferToObject(char *buffer, int id);
-	static void RequestModel(int id, int flags);
-
-	static void LoadAllRequestedModels(void);
-	static void dumpRequestList(void);
-	static int getNextFile(void);
-
-	static CStreamingInfo *Model(int n) { return &ms_aInfoForModel[MODELOFFSET+n]; };
-	static CStreamingInfo *Txd(int n) { return &ms_aInfoForModel[TXDOFFSET+n]; };
 };

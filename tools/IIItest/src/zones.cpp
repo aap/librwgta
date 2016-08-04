@@ -55,10 +55,10 @@ CTheZones::Init(void)
 	ZoneArray[0].maxx =  4000.0f;
 	ZoneArray[0].maxy =  4000.0f;
 	ZoneArray[0].maxz =  500.0f;
-	ZoneArray[0].level = LEVEL_WHOLEMAP;
+	ZoneArray[0].level = LEVEL_NONE;
 	TotalNumberOfZones = 1;
 
-	m_CurrLevel = LEVEL_WHOLEMAP;
+	m_CurrLevel = LEVEL_NONE;
 	m_pPlayersZone = &ZoneArray[0];
 
 	for(i = 0; i < NUMMAPZONES; i++){
@@ -72,7 +72,7 @@ CTheZones::Init(void)
 	MapZoneArray[0].maxx =  4000.0f;
 	MapZoneArray[0].maxy =  4000.0f;
 	MapZoneArray[0].maxz =  500.0f;
-	MapZoneArray[0].level = LEVEL_WHOLEMAP;
+	MapZoneArray[0].level = LEVEL_NONE;
 	TotalNumberOfMapZones = 1;
 }
 
@@ -240,6 +240,7 @@ CTheZones::GetLevelFromPosition(CVector const *v)
 	for(i = 1; i < TotalNumberOfMapZones; i++)
 		if(PointLiesWithinZone(v, &MapZoneArray[i]))
 			return MapZoneArray[i].level;
+//printf("no zone for %f %f %f\n", v->x, v->y, v->z);
 	return MapZoneArray[0].level;
 }
 

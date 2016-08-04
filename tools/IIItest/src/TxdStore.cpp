@@ -1,5 +1,6 @@
 #include "III.h"
 
+
 CPool<TxdDef,TxdDef> *CTxdStore::ms_pTxdPool;
 rw::TexDictionary *CTxdStore::ms_pStoredTxd;
 
@@ -74,6 +75,13 @@ CTxdStore::AddRef(int slot)
 }
 
 void
+CTxdStore::RemoveRef(int slot)
+{
+	if(--getDef(slot)->refCount <= 0)
+		CStreaming::RemoveModel(slot + TXDOFFSET);
+}
+
+void
 CTxdStore::RemoveRefWithoutDelete(int slot)
 {
 	getDef(slot)->refCount--;
@@ -84,10 +92,10 @@ CTxdStore::LoadTxd(int slot, rw::Stream *stream)
 {
 	TxdDef *def = getDef(slot);
 	if(!rw::findChunk(stream, rw::ID_TEXDICTIONARY, nil, nil)){
-		printf("Failed to load TXD\n");
 		return false;
 	}else{
 		def->texDict = rw::TexDictionary::streamRead(stream);
+		convertTxd(def->texDict);
 		return def->texDict != nil;
 	}
 }
@@ -103,6 +111,14 @@ CTxdStore::LoadTxd(int slot, const char *filename)
 	}
 	printf("Failed to open TXD\n");
 	return false;
+}
+
+void
+CTxdStore::RemoveTxd(int slot)
+{
+	TxdDef *def = getDef(slot);
+	if(def && def->texDict)
+		def->texDict->destroy();
 }
 
 TxdDef*

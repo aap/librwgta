@@ -1,6 +1,11 @@
 #include "III.h"
 #include <cstdarg>
 
+rw::Camera *rwCamera;
+rw::World  *rwWorld;
+rw::Light  *ambient;
+rw::Light  *direct;
+
 uchar work_buff[55000];
 
 char*
@@ -47,6 +52,36 @@ DatDesc::get(DatDesc *desc, const char *name)
 	return (void*)desc->handler;
 }
 
+rw::Raster*
+d3dToGl3(rw::Raster *raster)
+{
+        using namespace rw;
+	if(raster->platform != PLATFORM_D3D8 &&
+	   raster->platform != PLATFORM_D3D9)
+		return raster;
+	d3d::D3dRaster *natras = PLUGINOFFSET(d3d::D3dRaster,
+	                                      raster, d3d::nativeRasterOffset);
+	if(natras->format)
+		assert(0 && "no custom d3d formats");
+
+	Image *image = raster->toImage();
+	raster->destroy();
+	raster = Raster::createFromImage(image, PLATFORM_GL3);
+	image->destroy();
+	return raster;
+}
+
+void
+convertTxd(rw::TexDictionary *txd)
+{
+	using namespace rw;
+	FORLIST(lnk, txd->textures){
+		Texture *tex = Texture::fromDict(lnk);
+		//debug("converting %s\n", tex->name);
+		tex->raster = d3dToGl3(tex->raster);
+	}
+}
+
 void
 debug(const char *fmt, ...)
 {
@@ -58,34 +93,6 @@ debug(const char *fmt, ...)
 }
 
 void
-dump(void)
-{
-	CBaseModelInfo *m;
-	for(int i = 0; i < MODELINFOSIZE; i++){
-		m = CModelInfo::GetModelInfo(i);
-		if(m == nil)
-			continue;
-		//if(m->type == CSimpleModelInfo::ID)
-		//	printf("%d %s\n", i, m->name);
-		//if(m->type == CTimeModelInfo::ID)
-		//	printf("%d %s\n", i, m->name);
-		//if(m->type == CClumpModelInfo::ID)
-		//	printf("%d %s\n", i, m->name);
-		//if(m->type == CPedModelInfo::ID)
-		//	printf("%d %s\n", i, m->name);
-		//if(m->type == CVehicleModelInfo::ID){
-		//	CVehicleModelInfo *vm = (CVehicleModelInfo*)m;
-		//	printf("%d %s %d %d %d\n", i, vm->name, vm->vehicleType, vm->vehicleClass, vm->handlingId);
-		//}
-	}
-	//for(int i = 0; i < 850; i++){
-	//	char *name = CTxdStore::GetTxdName(i);
-	//	if(name)
-	//		printf("%d %s\n", i, name);
-	//}
-}
-
-void
 update(double t)
 {
 }
@@ -93,6 +100,19 @@ update(double t)
 void
 display(void)
 {
+	using namespace rw;
+	static RGBA clearcol = { 0x40, 0x40, 0x40, 0xFF };
+
+	CRenderer::ConstructRenderList();
+
+	TheCamera.update();
+	TheCamera.m_rwcam->clear(&clearcol, Camera::CLEARIMAGE|Camera::CLEARZ);
+	TheCamera.m_rwcam->beginUpdate();
+
+	CRenderer::RenderEverything();
+	CRenderer::RenderFadingInEntities();
+
+	TheCamera.m_rwcam->endUpdate();
 }
 
 void
@@ -107,8 +127,5 @@ init(void)
 	CGame::InitialiseAfterRW();
 	CGame::Initialise();
 
-//	dump();
-	CStreaming::RequestModel(731, 1);
-	CStreaming::LoadAllRequestedModels();
 	return 1;
 }

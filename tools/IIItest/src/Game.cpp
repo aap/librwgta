@@ -17,17 +17,44 @@ CGame::InitialiseRW(void)
 #endif
 
 	rw::d3d::isP8supported = 0;
-	rw::loadTextures = 0;
+	rw::engine->loadTextures = 1;
+	rw::engine->makeDummies = 1;
 
-	rw::TexDictionary::setCurrent(rw::TexDictionary::create());
 	rw::Image::setSearchPath("D:\\rockstargames\\ps2\\gta3\\MODELS\\gta3_archive\\txd_extracted\\;");
 
 	CTxdStore::Initialize();
+	CVisibilityPlugins::Initialise();
+	rwCamera = rw::Camera::create();
+	rwCamera->setFrame(rw::Frame::create());
+	rwCamera->setFarPlane(2000.0f);
+	rwCamera->setNearPlane(0.9f);
+	TheCamera.m_rwcam = rwCamera;
+	TheCamera.m_aspectRatio = 640.0f/480.0f;
+	TheCamera.m_target.set(0.0f, 0.0f, 0.0f);
+	TheCamera.m_position.set(-100.0f, -100.0f, 50.0f);
+
+	rwWorld  = rw::World::create();
+	rwWorld->addCamera(rwCamera);
+
+	// Ambient light
+	ambient = rw::Light::create(rw::Light::AMBIENT);
+	ambient->setColor(0.3f, 0.3f, 0.3f);
+	rwWorld->addLight(ambient);
+
+	// Diffuse light
+	direct = rw::Light::create(rw::Light::DIRECTIONAL);
+	rw::Frame *frm = rw::Frame::create();
+	direct->setFrame(frm);
+	frm->matrix.pointInDirection((rw::V3d){1.0, 0.0, -0.5},
+			(rw::V3d){0.0, 0.0, 1.0});
+	frm->updateObjects();
+	rwWorld->addLight(direct);
 }
 
 void
 CGame::InitialiseAfterRW(void)
 {
+	CTimer::Initialise();
 	CAnimManager::LoadAnimGroups();	// not in III
 	CHandlingData::Initialise();
 	CPedStats::Initialise();
@@ -42,7 +69,7 @@ CGame::Initialise(void)
 	CPools::Initialise();
 
 	CGame::currLevel = LEVEL_INDUSTRIAL;
-	
+
 	printf("--Loading generic textures\n");
 	gameTxdSlot = CTxdStore::AddTxdSlot("generic");
 	CTxdStore::Create(gameTxdSlot);
@@ -67,4 +94,23 @@ CGame::Initialise(void)
 
 	printf("--Setup Streaming\n");
 	CStreaming::Init();
+	CStreaming::RequestInitialVehicles();
+	CStreaming::RequestInitialPeds();
+	CStreaming::RequestBigBuildings(LEVEL_NONE);
+
+//	CStreaming::RequestBigBuildings(LEVEL_INDUSTRIAL);
+	CStreaming::RequestBigBuildings(LEVEL_COMMERCIAL);
+//	CStreaming::RequestBigBuildings(LEVEL_SUBURBAN);
+//	CStreaming::RequestAllBuildings(LEVEL_NONE);
+//	CStreaming::RequestAllBuildings(LEVEL_INDUSTRIAL);
+//	CStreaming::RequestAllBuildings(LEVEL_COMMERCIAL);
+//	CStreaming::RequestAllBuildings(LEVEL_SUBURBAN);
+	CStreaming::LoadAllRequestedModels();
+	CStreaming::RemoveUnusedBigBuildings(LEVEL_COMMERCIAL);
+
+
+	CGame::currLevel = LEVEL_COMMERCIAL;
+
+	printf("--Setup game variables\n");
+	CClock::Initialise(1000);
 }

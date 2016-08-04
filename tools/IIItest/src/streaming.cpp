@@ -85,12 +85,23 @@ CStreamingInfo::RemoveFromList(void)
 	m_prev = nil;
 }
 
-CStreamingInfo CStreaming::ms_aInfoForModel[CStreaming::NUMSTREAMINFO];
+CStreamingInfo CStreaming::ms_aInfoForModel[NUMSTREAMINFO];
 CDirectory *CStreaming::ms_pExtraObjectsDir;
 CStreamingInfo CStreaming::ms_startLoadedList, CStreaming::ms_endLoadedList;
 CStreamingInfo CStreaming::ms_startRequestedList, CStreaming::ms_endRequestedList;
 int CStreaming::ms_streamingBufferSize;
 char *CStreaming::ms_pStreamingBuffer;
+
+int islandLODindust;
+int islandLODcomInd;
+int islandLODcomSub;
+int islandLODsubInd;
+int islandLODsubCom;
+CEntity *pIslandLODsubComEntity;
+CEntity *pIslandLODsubIndEntity;
+CEntity *pIslandLODcomSubEntity;
+CEntity *pIslandLODcomIndEntity;
+CEntity *pIslandLODindustEntity;
 
 void
 CStreaming::Init(void)
@@ -115,9 +126,60 @@ CStreaming::Init(void)
 
 	ms_streamingBufferSize = 0;
 
+	// Mark pre-loaded models as loaded
+	CSimpleModelInfo *mi;
+	for(int i = 0; i < MODELINFOSIZE; i++){
+		mi = (CSimpleModelInfo*)CModelInfo::GetModelInfo(i);
+		if(mi && mi->GetRwObject()){
+			CStreaming::Model(i)->m_loadState = STREAM_LOADED;
+			CStreaming::Model(i)->m_flags = STREAM_DONT_REMOVE;
+			if(mi->IsSimple())
+				mi->m_alpha = 0xFF;
+		}
+	}
+
+	// ...and TXDs too
+	TxdDef *def;
+	for(int i = 0; i < TXDSTORESIZE; i++){
+		def = CTxdStore::getDef(i);
+		if(def && def->texDict)
+			CStreaming::Txd(i)->m_loadState = STREAM_LOADED;
+	}
+
 	ms_pExtraObjectsDir = new CDirectory(EXTRADIRSIZE);
 	CStreaming::LoadCdDirectory();
 	ms_pStreamingBuffer = new char[ms_streamingBufferSize*2048];
+
+	islandLODindust = -1;
+	islandLODcomInd = -1;
+	islandLODcomSub = -1;
+	islandLODsubInd = -1;
+	islandLODsubCom = -1;
+	pIslandLODindustEntity = nil;
+	pIslandLODcomIndEntity = nil;
+	pIslandLODcomSubEntity = nil;
+	pIslandLODsubIndEntity = nil;
+	pIslandLODsubComEntity = nil;
+	CModelInfo::GetModelInfo("IslandLODInd", &islandLODindust);
+	CModelInfo::GetModelInfo("IslandLODcomIND", &islandLODcomInd);
+	CModelInfo::GetModelInfo("IslandLODcomSUB", &islandLODcomSub);
+	CModelInfo::GetModelInfo("IslandLODsubIND", &islandLODsubInd);
+	CModelInfo::GetModelInfo("IslandLODsubCOM", &islandLODsubCom);
+	CBuildingPool &pool = *CPools::GetBuildingPool();
+	for(int i = 0; i < pool.GetSize(); i++){
+		CBuilding *b = pool.GetSlot(i);
+		if(b == nil) continue;
+		if(b->m_modelIndex == islandLODindust)
+			pIslandLODindustEntity = b;
+		if(b->m_modelIndex == islandLODcomInd)
+			pIslandLODcomIndEntity = b;
+		if(b->m_modelIndex == islandLODcomSub)
+			pIslandLODcomSubEntity = b;
+		if(b->m_modelIndex == islandLODsubInd)
+			pIslandLODsubIndEntity = b;
+		if(b->m_modelIndex == islandLODsubCom)
+			pIslandLODsubComEntity = b;
+	}
 }
 
 void
@@ -210,10 +272,10 @@ CStreaming::ConvertBufferToObject(char *buffer, int id)
 		CTxdStore::AddRef(modelinfo->m_txdSlot);
 		CTxdStore::SetCurrentTxd(modelinfo->m_txdSlot);
 		bool success = true;
-		if(modelinfo->m_type == CSimpleModelInfo::ID ||
-		   modelinfo->m_type == CTimeModelInfo::ID){
+		if(modelinfo->IsSimple())
 			success = CFileLoader::LoadAtomicFile(&stream, modelid);
-		}else
+		else
+			// TODO: vehicle
 			success = CFileLoader::LoadClumpFile(&stream, modelid);
 		CTxdStore::RemoveRefWithoutDelete(modelinfo->m_txdSlot);
 		if(!success){
@@ -221,6 +283,13 @@ CStreaming::ConvertBufferToObject(char *buffer, int id)
 			// TODO: remove and request again
 			stream.close();
 			return;
+		}
+
+		if(!(modelinfo->m_type == VEHICLEMODELINFO ||
+		     modelinfo->m_type == PEDMODELINFO)){
+			CSimpleModelInfo *mi = (CSimpleModelInfo*)modelinfo;
+			if(modelinfo->IsSimple() && !mi->m_isBigBuilding)
+				mi->m_alpha = strinfo->m_flags & STREAM_SCENE ? 0xFF:0;
 		}
 	}else if(id >= TXDOFFSET && id < TXDOFFSET+TXDSTORESIZE){
 		slotid = id-TXDOFFSET;
@@ -231,7 +300,7 @@ CStreaming::ConvertBufferToObject(char *buffer, int id)
 			return;
 		}
 	}
-	strinfo->m_loadState = 1;
+	strinfo->m_loadState = STREAM_LOADED;
 	stream.close();
 }
 
@@ -245,6 +314,7 @@ CStreaming::RequestModel(int id, int flags)
 	else
 		strinfo->m_flags &= ~8;
 	strinfo->m_flags |= flags;
+assert(id != 5501);
 	if(strinfo->m_next == nil)
 		strinfo->AddToList(&ms_startRequestedList);
 }
@@ -261,14 +331,14 @@ again:
 		id = strinfo-ms_aInfoForModel;
 		if(id >= MODELOFFSET && id < MODELOFFSET+MODELINFOSIZE){
 			CBaseModelInfo *mi = CModelInfo::GetModelInfo(id);
-			if(CStreaming::Txd(mi->m_txdSlot)->m_loadState != 1){
-				debug("requesting txd for model %d\n", id);
+			if(CStreaming::Txd(mi->m_txdSlot)->m_loadState != STREAM_LOADED){
+//				debug("requesting txd for model %d\n", id);
 				RequestModel(mi->m_txdSlot+TXDOFFSET, CStreaming::Model(id)->m_flags);
 				continue;
 			}
 		}
 		retid = id;
-		strinfo->m_loadState = 1;
+		strinfo->m_loadState = STREAM_LOADED;
 		strinfo->RemoveFromList();
 		break;
 	}
@@ -291,6 +361,147 @@ CStreaming::LoadAllRequestedModels(void)
 		CdStream::read(ms_pStreamingBuffer, pos, size);
 		ConvertBufferToObject(ms_pStreamingBuffer, id);
 	}
+}
+
+void
+CStreaming::RequestInitialVehicles(void)
+{
+	int id;
+	if(CModelInfo::GetModelInfo("taxi", &id))
+		RequestModel(id, 1);
+	if(CModelInfo::GetModelInfo("police", &id))
+		RequestModel(id, 1);
+}
+
+void
+CStreaming::RequestInitialPeds(void)
+{
+	RequestModel(MI_COP, 1);
+	RequestModel(MI_MALE01, 1);
+	RequestModel(MI_TAXI_D, 1);
+}
+
+void
+CStreaming::RequestBigBuildings(eLevelName level)
+{
+	CBuildingPool &pool = *CPools::GetBuildingPool();
+	for(int i = 0; i < pool.GetSize(); i++){
+		CBuilding *b = pool.GetSlot(i);
+		if(b && b->m_isBigBuilding && b->m_level == level)
+			RequestModel(b->m_modelIndex, 9);
+	}
+	RequestIslands(level);
+}
+
+void
+CStreaming::RequestAllBuildings(eLevelName level)
+{
+	CBuildingPool &pool = *CPools::GetBuildingPool();
+	for(int i = 0; i < pool.GetSize(); i++){
+		CBuilding *b = pool.GetSlot(i);
+		if(b && !b->m_isBigBuilding && b->m_level == level)
+			RequestModel(b->m_modelIndex, 1);
+	}
+}
+
+void
+CStreaming::RequestIslands(eLevelName level)
+{
+	switch(level){
+	case LEVEL_INDUSTRIAL:
+		RequestModel(islandLODcomInd, 9);
+		RequestModel(islandLODsubInd, 9);
+		break;
+	case LEVEL_COMMERCIAL:
+		RequestModel(islandLODindust, 9);
+		RequestModel(islandLODsubCom, 9);
+		break;
+	case LEVEL_SUBURBAN:
+		RequestModel(islandLODindust, 9);
+		RequestModel(islandLODcomSub, 9);
+	default:
+		break;
+	}
+}
+
+void
+CStreaming::RemoveModel(int id)
+{
+	switch(ms_aInfoForModel[id].m_loadState){
+	case 0:
+		break;
+	case 1:
+		if(id >= MODELOFFSET && id < MODELOFFSET+MODELINFOSIZE)
+			CModelInfo::GetModelInfo(id-MODELOFFSET)->DeleteRwObject();
+		else if(id >= TXDOFFSET && id < TXDOFFSET+TXDSTORESIZE)
+			CTxdStore::RemoveTxd(id-TXDOFFSET);
+	}
+}
+
+void
+DeleteIsland(CEntity *e)
+{
+	if(e == nil) return;
+	if(e->m_isBeingRendered)
+		debug("Didn't delete island because it was being rendered\n");
+	else{
+		e->DeleteRwObject();
+		CStreaming::RemoveModel(e->m_modelIndex);
+	}
+}
+
+void
+CStreaming::RemoveIslandsNotUsed(eLevelName level)
+{
+	if(level == LEVEL_INDUSTRIAL){
+		DeleteIsland(pIslandLODindustEntity);
+		DeleteIsland(pIslandLODcomSubEntity);
+		DeleteIsland(pIslandLODsubComEntity);
+	}else if(level == LEVEL_COMMERCIAL){
+		DeleteIsland(pIslandLODcomIndEntity);
+		DeleteIsland(pIslandLODcomSubEntity);
+		DeleteIsland(pIslandLODsubIndEntity);
+	}else if(level == LEVEL_SUBURBAN){
+		DeleteIsland(pIslandLODcomIndEntity);
+		DeleteIsland(pIslandLODsubComEntity);
+		DeleteIsland(pIslandLODsubIndEntity);
+	}else{
+		DeleteIsland(pIslandLODindustEntity);
+		DeleteIsland(pIslandLODcomIndEntity);
+		DeleteIsland(pIslandLODcomSubEntity);
+		DeleteIsland(pIslandLODsubIndEntity);
+		DeleteIsland(pIslandLODsubComEntity);
+	}
+}
+
+void
+CStreaming::RemoveBigBuildings(eLevelName level)
+{
+	CBaseModelInfo *mi;
+	CBuildingPool &pool = *CPools::GetBuildingPool();
+	for(int i = 0; i < pool.GetSize(); i++){
+		CBuilding *b = pool.GetSlot(i);
+		if(b && b->m_isBigBuilding && b->m_level == level){
+			mi = CModelInfo::GetModelInfo(b->m_modelIndex);
+			if(!b->m_isBeingRendered){
+				b->DeleteRwObject();
+				if(mi->m_refCount == 0)
+					RemoveModel(b->m_modelIndex);
+			}		
+		}
+	}
+}
+
+void
+CStreaming::RemoveUnusedBigBuildings(eLevelName level)
+{
+	if(level != LEVEL_INDUSTRIAL)
+		RemoveBigBuildings(LEVEL_INDUSTRIAL);
+	if(level != LEVEL_COMMERCIAL)
+		RemoveBigBuildings(LEVEL_COMMERCIAL);
+	if(level != LEVEL_SUBURBAN)
+		RemoveBigBuildings(LEVEL_SUBURBAN);
+	RemoveIslandsNotUsed(level);
 }
 
 void

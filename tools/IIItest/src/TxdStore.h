@@ -18,9 +18,11 @@ public:
 	static void SetCurrentTxd(int slot);
 	static void Create(int slot);
 	static void AddRef(int slot);
+	static void RemoveRef(int slot);
 	static void RemoveRefWithoutDelete(int slot);
 	static bool LoadTxd(int slot, rw::Stream *stream);
 	static bool LoadTxd(int slot, const char *filename);
+	static void RemoveTxd(int slot);
 
 	static TxdDef *getDef(int slot);
 	static bool isTxdLoaded(int slot);

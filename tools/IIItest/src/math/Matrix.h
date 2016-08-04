@@ -3,7 +3,7 @@ class CMatrix
 public:
 	rw::Matrix m_matrix;
 	rw::Matrix *m_attachment;
-	bool m_hasRwMatrix;
+	bool m_hasRwMatrix;	// are we the owner?
 
 	CMatrix(void){
 		m_attachment = nil;

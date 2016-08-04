@@ -2,12 +2,60 @@
 
 Dualshock ds3;
 
+int
+getTimeInMS(void)
+{
+	return glfwGetTime()*1000;
+}
+
 void
 keypress(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
         if(action == GLFW_RELEASE)
                 return;
         switch(key){
+	case GLFW_KEY_W:
+		TheCamera.orbit(0.0f, 0.1f);
+		break;
+
+	case GLFW_KEY_S:
+		TheCamera.orbit(0.0f, -0.1f);
+		break;
+
+	case GLFW_KEY_A:
+		TheCamera.orbit(-0.1f, 0.0f);
+		break;
+
+	case GLFW_KEY_D:
+		TheCamera.orbit(0.1f, 0.0f);
+		break;
+
+	case GLFW_KEY_UP:
+		TheCamera.turn(0.0f, 0.1f);
+		break;
+
+	case GLFW_KEY_DOWN:
+		TheCamera.turn(0.0f, -0.1f);
+		break;
+
+	case GLFW_KEY_LEFT:
+		TheCamera.turn(0.1f, 0.0f);
+		break;
+
+	case GLFW_KEY_RIGHT:
+		TheCamera.turn(-0.1f, 0.0f);
+		break;
+
+	case GLFW_KEY_R:
+//		TheCamera.zoom(0.4f);
+		TheCamera.zoom(10.0f);
+		break;
+
+	case GLFW_KEY_F:
+//		TheCamera.zoom(-0.4f);
+		TheCamera.zoom(-10.0f);
+		break;
+
         case GLFW_KEY_ESCAPE:
         case GLFW_KEY_Q:
                 glfwSetWindowShouldClose(window, GLFW_TRUE);
@@ -18,6 +66,25 @@ keypress(GLFWwindow *window, int key, int scancode, int action, int mods)
 void
 pollinput(GLFWwindow *window)
 {
+	Dualshock *ds = &ds3;
+	if(ds->start && ds->select)
+		glfwSetWindowShouldClose(window, GLFW_TRUE);
+	float sensitivity = 1.0f;
+	if(ds->r2){
+		sensitivity = 2.0f;
+		if(ds->l2)
+			sensitivity = 4.0f;
+	}
+	if(ds->square) TheCamera.zoom(0.4f*sensitivity);
+	if(ds->cross) TheCamera.zoom(-0.4f*sensitivity);
+	TheCamera.orbit(ds->leftX/30.0f*sensitivity,
+	                -ds->leftY/30.0f*sensitivity);
+	TheCamera.turn(-ds->rightX/30.0f*sensitivity,
+	               ds->rightY/30.0f*sensitivity);
+	if(ds->up)
+		TheCamera.dolly(2.0f*sensitivity);
+	if(ds->down)
+		TheCamera.dolly(-2.0f*sensitivity);
 }
 
 void
