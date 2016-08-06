@@ -65,7 +65,7 @@ public:
 	                         // 1: atomic 0 is furthest
 	                         // 2: atomic 1 is furthest
 	uint  m_normalCull    : 1;
-	uint  m_unknownFlag   : 1;
+	uint  m_isDamaged     : 1;
 	uint  m_isBigBuilding : 1;
 	uint  m_noFade        : 1;
 	uint  m_drawLast      : 1;
@@ -107,7 +107,9 @@ public:
 	int m_timeOff;
 	int m_otherTimeModelID;
 
-	CTimeModelInfo(void) : CSimpleModelInfo(TIMEMODELINFO) {}
+	CTimeModelInfo(void) : CSimpleModelInfo(TIMEMODELINFO) {
+		m_otherTimeModelID = -1;
+	}
 	~CTimeModelInfo() {}
 
 	CTimeModelInfo *FindOtherTimeModel(void);

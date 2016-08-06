@@ -55,6 +55,7 @@ public:
 
 class CTheZones
 {
+public:
 	static eLevelName m_CurrLevel;
 	static CZone *m_pPlayersZone;
 	// FindIndex
@@ -67,8 +68,9 @@ class CTheZones
 	static CZone MapZoneArray[NUMMAPZONES];
 	static ushort TotalNumberOfZoneInfos;
 	static CZoneInfo ZoneInfoArray[2*NUMZONES];
-public:
+
 	static void Init(void);
+	static void Update(void);
 	static void PostZoneCreation(void);
 	static void CreateZone(char *name, eZoneType type,
 	                       float minx, float miny, float minz,
@@ -84,6 +86,7 @@ public:
 	static bool ZoneIsEntirelyContainedWithinOtherZone(CZone *z1, CZone *z2);
 	static bool PointLiesWithinZone(CVector const *v, CZone *zone);
 	static eLevelName GetLevelFromPosition(CVector const *v);
+	static CZone *FindSmallestZonePosition(CVector const *v);
 	static void AddZoneToAudioZoneArray(CZone *zone);
 	static void InitialiseAudioZoneArray(void);
 };

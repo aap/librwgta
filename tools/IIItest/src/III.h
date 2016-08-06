@@ -107,6 +107,7 @@ public:
 #include "Pools.h"
 #include "PathFind.h"
 #include "ObjectData.h"
+#include "Collision.h"
 
 #include "TxdStore.h"
 #include "TimeCycle.h"
@@ -121,6 +122,9 @@ extern rw::Camera *rwCamera;
 extern rw::World  *rwWorld;
 extern rw::Light  *ambient;
 extern rw::Light  *direct;
+
+// misc
+CVector FindPlayerCoors(void);
 
 inline float
 clamp(float v, float min, float max){ return v<min ? min : v>max ? max : v; }

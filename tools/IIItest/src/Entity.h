@@ -48,7 +48,8 @@ public:
 	uint m_flagB10 : 1;
 	uint m_flagB20 : 1;
 	uint m_isBigBuilding : 1;
-	uint m_flagB80 : 1;		// from here VC is shifted one probably
+	// VC inserts one more flag here: if drawdist <= 2000
+	uint m_drawDamaged : 1;
 
 	// flagsC
 	uint m_flagC1 : 1;
@@ -80,6 +81,7 @@ public:
 	uint m_flagE40 : 1;
 	uint m_flagE80 : 1;
 
+	short m_scanCode;
 	short m_modelIndex;
 	eLevelName m_level;	// short
 

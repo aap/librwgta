@@ -26,7 +26,8 @@ CGame::InitialiseRW(void)
 	CVisibilityPlugins::Initialise();
 	rwCamera = rw::Camera::create();
 	rwCamera->setFrame(rw::Frame::create());
-	rwCamera->setFarPlane(2000.0f);
+//	rwCamera->setFarPlane(2000.0f);
+	rwCamera->setFarPlane(4000.0f);
 	rwCamera->setNearPlane(0.9f);
 	TheCamera.m_rwcam = rwCamera;
 	TheCamera.m_aspectRatio = 640.0f/480.0f;
@@ -98,19 +99,19 @@ CGame::Initialise(void)
 	CStreaming::RequestInitialPeds();
 	CStreaming::RequestBigBuildings(LEVEL_NONE);
 
-//	CStreaming::RequestBigBuildings(LEVEL_INDUSTRIAL);
-	CStreaming::RequestBigBuildings(LEVEL_COMMERCIAL);
-//	CStreaming::RequestBigBuildings(LEVEL_SUBURBAN);
-//	CStreaming::RequestAllBuildings(LEVEL_NONE);
-//	CStreaming::RequestAllBuildings(LEVEL_INDUSTRIAL);
-//	CStreaming::RequestAllBuildings(LEVEL_COMMERCIAL);
-//	CStreaming::RequestAllBuildings(LEVEL_SUBURBAN);
-	CStreaming::LoadAllRequestedModels();
-	CStreaming::RemoveUnusedBigBuildings(LEVEL_COMMERCIAL);
-
-
-	CGame::currLevel = LEVEL_COMMERCIAL;
-
 	printf("--Setup game variables\n");
 	CClock::Initialise(1000);
+
+	printf("--Load scene\n");
+	CCollision::ms_collisionInMemory = CGame::currLevel;
+}
+
+void
+CGame::Process(void)
+{
+	CStreaming::LoadAllRequestedModels();
+	if(!CTimer::m_UserPause && !CTimer::m_CodePause){
+		CTheZones::Update();
+		CCollision::Update();
+	}
 }

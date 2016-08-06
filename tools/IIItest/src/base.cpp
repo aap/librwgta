@@ -8,6 +8,12 @@ rw::Light  *direct;
 
 uchar work_buff[55000];
 
+CVector
+FindPlayerCoors(void)
+{
+	return TheCamera.m_position;
+}
+
 char*
 getPath(const char *path)
 {
@@ -102,6 +108,9 @@ display(void)
 {
 	using namespace rw;
 	static RGBA clearcol = { 0x40, 0x40, 0x40, 0xFF };
+
+	CTimer::Update();
+	CGame::Process();
 
 	CRenderer::ConstructRenderList();
 

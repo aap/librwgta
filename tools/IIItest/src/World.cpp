@@ -3,6 +3,7 @@
 CPtrList CWorld::ms_bigBuildingsList[4];
 CPtrList CWorld::ms_listMovingEntityPtrs;
 CSector  CWorld::ms_aSectors[100][100];
+ushort CWorld::ms_nCurrentScanCode;
 
 void
 CWorld::Add(CEntity *ent)
@@ -20,6 +21,26 @@ CWorld::Add(CEntity *ent)
 	   ent->m_type != ENTITY_TYPE_DUMMY &&
 	   !ent->m_flagA4)
 		((CPhysical*)ent)->AddToMovingList();
+}
+
+void
+CWorld::ClearScanCodes(void)
+{
+	CPtrNode *node;
+	for(int i = 0; i < 100; i++)
+	for(int j = 0; j < 100; j++){
+		CSector *s = &ms_aSectors[i][j];
+		for(node = s->m_buildings.first; node; node = node->next)
+			((CEntity*)node->item)->m_scanCode = 0;
+		for(node = s->m_vehicles.first; node; node = node->next)
+			((CEntity*)node->item)->m_scanCode = 0;
+		for(node = s->m_peds.first; node; node = node->next)
+			((CEntity*)node->item)->m_scanCode = 0;
+		for(node = s->m_objects.first; node; node = node->next)
+			((CEntity*)node->item)->m_scanCode = 0;
+		for(node = s->m_dummies.first; node; node = node->next)
+			((CEntity*)node->item)->m_scanCode = 0;
+	}
 }
 
 void

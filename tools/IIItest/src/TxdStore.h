@@ -24,7 +24,7 @@ public:
 	static bool LoadTxd(int slot, const char *filename);
 	static void RemoveTxd(int slot);
 
-	static TxdDef *getDef(int slot);
+	static TxdDef *GetSlot(int slot) { return ms_pTxdPool->GetSlot(slot); }
 	static bool isTxdLoaded(int slot);
 };
 

@@ -77,6 +77,14 @@ CTheZones::Init(void)
 }
 
 void
+CTheZones::Update(void)
+{
+	CVector pos = FindPlayerCoors();
+	m_pPlayersZone = FindSmallestZonePosition(&pos);
+	m_CurrLevel = GetLevelFromPosition(&pos);
+}
+
+void
 CTheZones::CreateZone(char *name, eZoneType type,
 	              float minx, float miny, float minz,
 	              float maxx, float maxy, float maxz,
@@ -235,13 +243,29 @@ eLevelName
 CTheZones::GetLevelFromPosition(CVector const *v)
 {
 	int i;
-	if(!PointLiesWithinZone(v, &MapZoneArray[0]))
-		debug("x = %.3f y= %.3f z = %.3f\n", v->x, v->y, v->z);
+//	if(!PointLiesWithinZone(v, &MapZoneArray[0]))
+//		debug("x = %.3f y= %.3f z = %.3f\n", v->x, v->y, v->z);
 	for(i = 1; i < TotalNumberOfMapZones; i++)
 		if(PointLiesWithinZone(v, &MapZoneArray[i]))
 			return MapZoneArray[i].level;
-//printf("no zone for %f %f %f\n", v->x, v->y, v->z);
 	return MapZoneArray[0].level;
+}
+
+CZone*
+CTheZones::FindSmallestZonePosition(CVector const *v)
+{
+	CZone *best = &ZoneArray[0];
+	// zone to test next
+	CZone *zone = ZoneArray[0].child;
+	while(zone)
+		// if in zone, descent into children
+		if(PointLiesWithinZone(v, zone)){
+			best = zone;
+			zone = zone->child;
+		// otherwise try next zone
+		}else
+			zone = zone->next;
+	return best;
 }
 
 void

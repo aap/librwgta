@@ -18,15 +18,17 @@ public:
 
 class CWorld
 {
-	// ms_nCurrentScanCode
 	static CPtrList ms_bigBuildingsList[4];
 	static CPtrList ms_listMovingEntityPtrs;
 	static CSector ms_aSectors[100][100];
 public:
+	static ushort ms_nCurrentScanCode;
+
 	static void Add(CEntity*);
 	static CSector *GetSector(int x, int y) { return &ms_aSectors[x][y]; }
 	static CPtrList &GetBigBuildingList(eLevelName i) { return ms_bigBuildingsList[i]; }
 	static CPtrList &GetMovingEntityList(void) { return ms_listMovingEntityPtrs; }
+	static void ClearScanCodes(void);
 
 	static int GetSectorIndex(float f) { return (f + 2000.0f)/40.0f; }
 };

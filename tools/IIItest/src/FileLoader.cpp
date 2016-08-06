@@ -1,15 +1,5 @@
 #include "III.h"
 
-void
-dumptxd(rw::TexDictionary *txd)
-{
-        FORLIST(lnk, txd->textures){
-                Texture *tex = Texture::fromDict(lnk);
-		debug("+++++ %s\n", tex->name);
-	}
-	debug("+++++ end\n");
-}
-
 char*
 CFileLoader::LoadLine(FILE *f)
 {
@@ -59,7 +49,6 @@ CFileLoader::LoadLevel(const char *filename)
 			txd = CFileLoader::LoadTexDictionary(line+11);
 			CFileLoader::AddTexDictionaries(curTxd, txd);
 			txd->destroy();
-			dumptxd(rw::TexDictionary::getCurrent());
 		}else if(strncmp(line, "COLFILE", 7) == 0){
 			eLevelName currlevel = CGame::currLevel;
 			sscanf(line+8, "%d", (int*)&CGame::currLevel);
@@ -525,7 +514,7 @@ CFileLoader::LoadObjectInstance(char *line)
 	if(mi == nil)
 		return;
 	Matrix *mat = Matrix::create();
-	*mat = Matrix::makeRotation(q);
+	*mat = Matrix::makeRotation(conj(q));
 	mat->pos = t;
 	if(mi->GetObjectID() == -1){
 		CBuilding *build;

@@ -38,20 +38,22 @@ public:
 	void AddItem(DirectoryInfo *dirinfo);
 };
 
-// from LINK for SA, shifted one right
 enum StreamFlags
 {
 	STREAM_DONT_REMOVE = 0x01,
 	STREAM_SCRIPTOWNED = 0x02,
 	STREAM_DEPENDENCY  = 0x04,
 	STREAM_PRIORITY    = 0x08,
-	STREAM_SCENE       = 0x10,	// not NOFADE?
+	STREAM_NOFADE      = 0x10,
 };
 
 enum StreamLoadState
 {
 	STREAM_NOTLOADED = 0,
 	STREAM_LOADED    = 1,
+	STREAM_INQUEUE   = 2,
+	STREAM_READING   = 3,	// what is this?
+	STREAM_BIGFILE   = 4,
 };
 
 class CStreamingInfo
@@ -85,8 +87,11 @@ public:
 	static CDirectory *ms_pExtraObjectsDir;
 	static CStreamingInfo ms_startLoadedList, ms_endLoadedList;
 	static CStreamingInfo ms_startRequestedList, ms_endRequestedList;
-	static int ms_streamingBufferSize;
+	static int ms_numModelsRequested;
+	static int ms_numPriorityRequests;
+	static uint ms_streamingBufferSize;
 	static char *ms_pStreamingBuffer;
+	static bool ms_hasLoadedLODs;
 
 	static void Init(void);
 	static void LoadCdDirectory(void);
@@ -95,6 +100,7 @@ public:
 	static void RequestModel(int id, int flags);
 	static void RequestInitialVehicles(void);
 	static void RequestInitialPeds(void);
+	static void HaveAllBigBuildingsLoaded(eLevelName level);
 	static void RequestBigBuildings(eLevelName level);
 	static void RequestIslands(eLevelName level);
 	static void RequestAllBuildings(eLevelName level);
@@ -102,7 +108,9 @@ public:
 	static void RemoveModel(int id);
 	static void RemoveIslandsNotUsed(eLevelName level);
 	static void RemoveBigBuildings(eLevelName level);
+	static void RemoveBuildings(eLevelName level);
 	static void RemoveUnusedBigBuildings(eLevelName level);
+	static void RemoveUnusedBuildings(eLevelName level);
 
 	static void LoadAllRequestedModels(void);
 	static void dumpRequestList(void);

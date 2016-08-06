@@ -112,7 +112,7 @@ CSimpleModelInfo::Init(void)
 	m_numAtomics = 0;
 	m_furthest      = 0;
 	m_normalCull    = 0;
-	m_unknownFlag   = 0;
+	m_isDamaged     = 0;
 	m_isBigBuilding = 0;
 	m_noFade        = 0;
 	m_drawLast      = 0;
@@ -144,7 +144,7 @@ CSimpleModelInfo::GetLargestLodDistance(void)
 {
 	float d;
 	// TODO: what exactly is going on here?
-	if(m_furthest != 0 && !m_unknownFlag)
+	if(m_furthest != 0 && !m_isDamaged)
 		d = m_lodDistances[m_furthest-1];
 	else
 		d = m_lodDistances[m_numAtomics-1];
@@ -157,7 +157,7 @@ CSimpleModelInfo::GetAtomicFromDistance(float dist)
 	int i;
 	i = 0;
 	// TODO: what exactly is going on here?
-	if(m_unknownFlag)
+	if(m_isDamaged)
 		i = m_furthest;
 	for(; i < m_numAtomics; i++)
 		if(dist < m_lodDistances[i]*TheCamera.m_LODmult)

@@ -7,8 +7,10 @@ class CRenderer
 public:
 	static void ConstructRenderList(void);
 	static void ScanWorld(void);
-	static bool SetupBigBuildingVisibility(CEntity *ent);
 	static void ScanBigBuildingList(CPtrList *list);
+	static void ScanSectorList(CPtrList *list);
+	static bool SetupBigBuildingVisibility(CEntity *ent);
+	static int  SetupEntityVisibility(CEntity *ent);
 
 	static void RenderEverything(void);
 	static void RenderFadingInEntities(void);

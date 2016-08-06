@@ -6,6 +6,7 @@ CEntity::CEntity(void)
 	m_status = ENTITY_STATUS_4;
 	m_doCollision = 0;
 	m_isVisible = 1;
+	m_scanCode = -1;
 	m_modelIndex = -1;
 	m_rwObject = nil;
 }
