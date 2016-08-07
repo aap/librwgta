@@ -14,7 +14,7 @@ void
 CClock::Initialise(uint scale)
 {
 	debug("Initialising CClock...\n");
-	ms_nGameClockHours = 0;
+	ms_nGameClockHours = 12;
 	ms_nGameClockMinutes = 0;
 	ms_nGameClockSeconds = 0;
 	ms_nMillisecondsPerGameMinute = scale;

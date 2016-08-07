@@ -11,6 +11,8 @@ public:
 
 	float m_LODmult;
 
+	void Process(void);
+
 	void setTarget(rw::V3d target);
 	float getHeading(void);
 

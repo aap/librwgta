@@ -109,9 +109,15 @@ CGame::Initialise(void)
 void
 CGame::Process(void)
 {
+	if(IsKeyDown('Q') || IsKeyDown(KEY_ESC))
+		exit(0);
 	CStreaming::LoadAllRequestedModels();
 	if(!CTimer::m_UserPause && !CTimer::m_CodePause){
+		TheCamera.Process();
 		CTheZones::Update();
 		CCollision::Update();
+
+		if(IsKeyDown('J'))
+			TheCamera.dolly(10.0f);
 	}
 }

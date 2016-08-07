@@ -8,6 +8,29 @@ using rw::Quat;
 using rw::V3d;
 
 void
+CCamera::Process(void)
+{
+	float sensitivity = 1.0;
+	if(IsKeyDown(KEY_LSHIFT) || IsKeyDown(KEY_RSHIFT))
+		sensitivity *= 2.0f;
+	if(IsKeyDown('W')) TheCamera.orbit(0.0f, 0.05f);
+	if(IsKeyDown('S')) TheCamera.orbit(0.0f, -0.05f);
+	if(IsKeyDown('A')) TheCamera.orbit(-0.05f, 0.0f);
+	if(IsKeyDown('D')) TheCamera.orbit(0.05f, 0.0f);
+	if(IsKeyDown(KEY_UP)) TheCamera.turn(0.0f, 0.05f);
+	if(IsKeyDown(KEY_DOWN)) TheCamera.turn(0.0f, -0.05f);
+	if(IsKeyDown(KEY_LEFT)) TheCamera.turn(0.05f, 0.0f);
+	if(IsKeyDown(KEY_RIGHT)) TheCamera.turn(-0.05f, 0.0f);
+	if(IsKeyDown(KEY_LALT) || IsKeyDown(KEY_RALT)){
+		if(IsKeyDown('R')) TheCamera.dolly(5.0f*sensitivity);
+		if(IsKeyDown('F')) TheCamera.dolly(-5.0f*sensitivity);
+	}else{
+		if(IsKeyDown('R')) TheCamera.zoom(5.0f*sensitivity);
+		if(IsKeyDown('F')) TheCamera.zoom(-5.0f*sensitivity);
+	}
+}
+
+void
 CCamera::update(void)
 {
 	if(m_rwcam){

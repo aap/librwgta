@@ -164,7 +164,7 @@ runscript(void)
 	char *s, *arg;
 	int cmd;
 	TexDictionary::setCurrent(TexDictionary::create());
-	rw::loadTextures = 1;
+	rw::engine->loadTextures = 1;
 	Texture *tex = NULL;
 	StreamFile out;
 	while(s = getline()){
