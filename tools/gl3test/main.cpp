@@ -215,7 +215,7 @@ initrw(void)
 
 	rw::version = 0x34000;
 	rw::platform = PLATFORM_GL3;
-	rw::loadTextures = 1;
+	rw::engine->loadTextures = 1;
 
 	rw::Engine::init();
 	gta::attachPlugins();

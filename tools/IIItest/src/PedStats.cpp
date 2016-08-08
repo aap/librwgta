@@ -35,7 +35,7 @@ CPedStats::LoadPedStats(void)
 	int fear, temper, lawfullness, sexiness;
 	float attackStrength, defendWeakness;
 	int flags;
-	
+
 	if(file = fopen_ci("data/pedstats.dat", "rb"), file == nil)
 		return;
 	int i = 0;

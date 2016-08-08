@@ -1,6 +1,12 @@
 #include "III.h"
 #include <cstdarg>
 
+rw::Camera *rwCamera;
+rw::World  *rwWorld;
+rw::Light  *ambient;
+rw::Light  *direct;
+bool isRunning;
+
 uchar work_buff[55000];
 
 char*
@@ -47,6 +53,86 @@ DatDesc::get(DatDesc *desc, const char *name)
 	return (void*)desc->handler;
 }
 
+rw::Raster*
+d3dToGl3(rw::Raster *raster)
+{
+        using namespace rw;
+	if(raster->platform != PLATFORM_D3D8 &&
+	   raster->platform != PLATFORM_D3D9)
+		return raster;
+	d3d::D3dRaster *natras = PLUGINOFFSET(d3d::D3dRaster,
+	                                      raster, d3d::nativeRasterOffset);
+	if(natras->format)
+		assert(0 && "no custom d3d formats");
+
+	Image *image = raster->toImage();
+	raster->destroy();
+	raster = Raster::createFromImage(image, PLATFORM_GL3);
+	image->destroy();
+	return raster;
+}
+
+void
+convertTxd(rw::TexDictionary *txd)
+{
+	using namespace rw;
+	FORLIST(lnk, txd->textures){
+		Texture *tex = Texture::fromDict(lnk);
+		//debug("converting %s\n", tex->name);
+		tex->raster = d3dToGl3(tex->raster);
+	}
+}
+
+
+CVector
+FindPlayerCoors(void)
+{
+	return TheCamera.m_position;
+}
+
+float AmbientLightColourForFrame[3];
+float DirectionalLightColourForFrame[3];
+
+void
+SetLightsWithTimeOfDayColour(rw::World*)
+{
+	// TODO: CCoronas::LightsMult
+	AmbientLightColourForFrame[0] = CTimeCycle::m_fCurrentAmbientRed;
+	AmbientLightColourForFrame[1] = CTimeCycle::m_fCurrentAmbientGreen;
+	AmbientLightColourForFrame[2] = CTimeCycle::m_fCurrentAmbientBlue;
+	// TODO: flash and rain etc.
+	ambient->setColor(AmbientLightColourForFrame[0],
+	                  AmbientLightColourForFrame[1],
+	                  AmbientLightColourForFrame[2]);
+
+	// TODO: CCoronas::LightsMult
+	DirectionalLightColourForFrame[0] = CTimeCycle::m_fCurrentDirectionalRed;
+	DirectionalLightColourForFrame[1] = CTimeCycle::m_fCurrentDirectionalGreen;
+	DirectionalLightColourForFrame[2] = CTimeCycle::m_fCurrentDirectionalBlue;
+	direct->setColor(DirectionalLightColourForFrame[0],
+	                 DirectionalLightColourForFrame[1],
+	                 DirectionalLightColourForFrame[2]);
+	// TODO: transform
+}
+
+void
+DefinedState(void)
+{
+	using namespace rw;
+	engine->setRenderState(ZTESTENABLE, 1);
+	engine->setRenderState(ZWRITEENABLE, 1);
+	engine->setRenderState(VERTEXALPHA, 0);
+	engine->setRenderState(SRCBLEND, BLENDSRCALPHA);
+	engine->setRenderState(DESTBLEND, BLENDINVSRCALPHA);
+	engine->setRenderState(FOGENABLE, 0);
+	RGBA c;
+	c.red = CTimeCycle::m_nCurrentFogColourRed;
+	c.green = CTimeCycle::m_nCurrentFogColourGreen;
+	c.blue = CTimeCycle::m_nCurrentFogColourBlue;
+	c.alpha = 0xFF;
+	engine->setRenderState(FOGCOLOR, *(uint32*)&c);
+}
+
 void
 debug(const char *fmt, ...)
 {
@@ -58,57 +144,43 @@ debug(const char *fmt, ...)
 }
 
 void
-dump(void)
+TheGame(void)
 {
-	CBaseModelInfo *m;
-	for(int i = 0; i < MODELINFOSIZE; i++){
-		m = CModelInfo::GetModelInfo(i);
-		if(m == nil)
-			continue;
-		//if(m->type == CSimpleModelInfo::ID)
-		//	printf("%d %s\n", i, m->name);
-		//if(m->type == CTimeModelInfo::ID)
-		//	printf("%d %s\n", i, m->name);
-		//if(m->type == CClumpModelInfo::ID)
-		//	printf("%d %s\n", i, m->name);
-		//if(m->type == CPedModelInfo::ID)
-		//	printf("%d %s\n", i, m->name);
-		//if(m->type == CVehicleModelInfo::ID){
-		//	CVehicleModelInfo *vm = (CVehicleModelInfo*)m;
-		//	printf("%d %s %d %d %d\n", i, vm->name, vm->vehicleType, vm->vehicleClass, vm->handlingId);
-		//}
-	}
-	//for(int i = 0; i < 850; i++){
-	//	char *name = CTxdStore::GetTxdName(i);
-	//	if(name)
-	//		printf("%d %s\n", i, name);
-	//}
-}
+	using namespace rw;
+	static RGBA clearcol = { 0x40, 0x40, 0x40, 0xFF };
 
-void
-update(double t)
-{
-}
+	debug("Into TheGame!!!\n");
 
-void
-display(void)
-{
-}
-
-void
-shutdown(void)
-{
-}
-
-int
-init(void)
-{
+	isRunning = 1;
 	CGame::InitialiseRW();
 	CGame::InitialiseAfterRW();
 	CGame::Initialise();
 
-//	dump();
-	CStreaming::RequestModel(731, 1);
-	CStreaming::LoadAllRequestedModels();
-	return 1;
+	while(isRunning && !plWindowclosed()){
+		plHandleEvents();
+		CTimer::Update();
+		CGame::Process();
+
+		SetLightsWithTimeOfDayColour(rwWorld);
+		clearcol.red = CTimeCycle::m_nCurrentSkyTopRed;
+		clearcol.green = CTimeCycle::m_nCurrentSkyTopGreen;
+		clearcol.blue = CTimeCycle::m_nCurrentSkyTopBlue;
+
+		CRenderer::ConstructRenderList();
+
+		TheCamera.m_rwcam->clear(&clearcol,
+		                         Camera::CLEARIMAGE|Camera::CLEARZ);
+		DefinedState();
+		rwCamera->setFarPlane(CTimeCycle::m_fCurrentFarClip);
+		rwCamera->fogPlane = CTimeCycle::m_fCurrentFogStart;
+		TheCamera.update();
+		TheCamera.m_rwcam->beginUpdate();
+
+		CRenderer::RenderEverything();
+		CRenderer::RenderFadingInEntities();
+
+		TheCamera.m_rwcam->endUpdate();
+		plPresent();
+	}
 }
+

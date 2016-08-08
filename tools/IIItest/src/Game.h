@@ -5,5 +5,6 @@ public:
 	static void Initialise(void);
 	static void InitialiseRW(void);
 	static void InitialiseAfterRW(void);
+	static void Process(void);
 };
 

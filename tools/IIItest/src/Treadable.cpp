@@ -8,7 +8,7 @@ CTreadable::operator new(size_t)
 	return treadable;
 }
 
-void 
+void
 CTreadable::operator delete(void *p, size_t)
 {
 	CPools::GetTreadablePool()->Delete((CTreadable*)p);

@@ -8,7 +8,7 @@ CDummyObject::operator new(size_t)
 	return dummy;
 }
 
-void 
+void
 CDummyObject::operator delete(void *p, size_t)
 {
 	CPools::GetDummyPool()->Delete((CDummy*)p);

@@ -9,4 +9,5 @@ public:
 	CPlaceable(void);
 	virtual ~CPlaceable(void);
 	CVector *GetPosition(void) { return m_matrix.GetPosition(); }
+	void SetTransform(rw::Matrix *m) { m_matrix = CMatrix(m, false); }
 };

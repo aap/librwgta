@@ -7,4 +7,6 @@ public:
 
 	// from CPlaceable
 	~CBuilding(void);
+
+	virtual bool GetIsATreadable(void) { return false; }
 };

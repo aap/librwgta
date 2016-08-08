@@ -1,5 +1,6 @@
 #include "III.h"
 
+
 CPool<TxdDef,TxdDef> *CTxdStore::ms_pTxdPool;
 rw::TexDictionary *CTxdStore::ms_pStoredTxd;
 
@@ -36,7 +37,7 @@ CTxdStore::FindTxdSlot(const char *name)
 char*
 CTxdStore::GetTxdName(int slot)
 {
-	TxdDef *def = getDef(slot);
+	TxdDef *def = GetSlot(slot);
 	return def ? def->name : nil;
 }
 
@@ -56,7 +57,7 @@ CTxdStore::PopCurrentTxd(void)
 void
 CTxdStore::SetCurrentTxd(int slot)
 {
-	TxdDef *def = getDef(slot);
+	TxdDef *def = GetSlot(slot);
 	if(def)
 		rw::TexDictionary::setCurrent(def->texDict);
 }
@@ -64,30 +65,37 @@ CTxdStore::SetCurrentTxd(int slot)
 void
 CTxdStore::Create(int slot)
 {
-	getDef(slot)->texDict = rw::TexDictionary::create();
+	GetSlot(slot)->texDict = rw::TexDictionary::create();
 }
 
 void
 CTxdStore::AddRef(int slot)
 {
-	getDef(slot)->refCount++;
+	GetSlot(slot)->refCount++;
+}
+
+void
+CTxdStore::RemoveRef(int slot)
+{
+	if(--GetSlot(slot)->refCount <= 0)
+		CStreaming::RemoveModel(slot + TXDOFFSET);
 }
 
 void
 CTxdStore::RemoveRefWithoutDelete(int slot)
 {
-	getDef(slot)->refCount--;
+	GetSlot(slot)->refCount--;
 }
 
 bool
 CTxdStore::LoadTxd(int slot, rw::Stream *stream)
 {
-	TxdDef *def = getDef(slot);
+	TxdDef *def = GetSlot(slot);
 	if(!rw::findChunk(stream, rw::ID_TEXDICTIONARY, nil, nil)){
-		printf("Failed to load TXD\n");
 		return false;
 	}else{
 		def->texDict = rw::TexDictionary::streamRead(stream);
+		convertTxd(def->texDict);
 		return def->texDict != nil;
 	}
 }
@@ -105,14 +113,17 @@ CTxdStore::LoadTxd(int slot, const char *filename)
 	return false;
 }
 
-TxdDef*
-CTxdStore::getDef(int slot)
+void
+CTxdStore::RemoveTxd(int slot)
 {
-	return ms_pTxdPool->GetSlot(slot);
+	TxdDef *def = GetSlot(slot);
+	if(def->texDict)
+		def->texDict->destroy();
+	def->texDict = nil;
 }
 
 bool
 CTxdStore::isTxdLoaded(int slot)
 {
-	return getDef(slot)->texDict != nil;
+	return GetSlot(slot)->texDict != nil;
 }

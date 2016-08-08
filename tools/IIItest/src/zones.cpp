@@ -55,10 +55,10 @@ CTheZones::Init(void)
 	ZoneArray[0].maxx =  4000.0f;
 	ZoneArray[0].maxy =  4000.0f;
 	ZoneArray[0].maxz =  500.0f;
-	ZoneArray[0].level = LEVEL_WHOLEMAP;
+	ZoneArray[0].level = LEVEL_NONE;
 	TotalNumberOfZones = 1;
 
-	m_CurrLevel = LEVEL_WHOLEMAP;
+	m_CurrLevel = LEVEL_NONE;
 	m_pPlayersZone = &ZoneArray[0];
 
 	for(i = 0; i < NUMMAPZONES; i++){
@@ -72,8 +72,16 @@ CTheZones::Init(void)
 	MapZoneArray[0].maxx =  4000.0f;
 	MapZoneArray[0].maxy =  4000.0f;
 	MapZoneArray[0].maxz =  500.0f;
-	MapZoneArray[0].level = LEVEL_WHOLEMAP;
+	MapZoneArray[0].level = LEVEL_NONE;
 	TotalNumberOfMapZones = 1;
+}
+
+void
+CTheZones::Update(void)
+{
+	CVector pos = FindPlayerCoors();
+	m_pPlayersZone = FindSmallestZonePosition(&pos);
+	m_CurrLevel = GetLevelFromPosition(&pos);
 }
 
 void
@@ -235,12 +243,29 @@ eLevelName
 CTheZones::GetLevelFromPosition(CVector const *v)
 {
 	int i;
-	if(!PointLiesWithinZone(v, &MapZoneArray[0]))
-		debug("x = %.3f y= %.3f z = %.3f\n", v->x, v->y, v->z);
+//	if(!PointLiesWithinZone(v, &MapZoneArray[0]))
+//		debug("x = %.3f y= %.3f z = %.3f\n", v->x, v->y, v->z);
 	for(i = 1; i < TotalNumberOfMapZones; i++)
 		if(PointLiesWithinZone(v, &MapZoneArray[i]))
 			return MapZoneArray[i].level;
 	return MapZoneArray[0].level;
+}
+
+CZone*
+CTheZones::FindSmallestZonePosition(CVector const *v)
+{
+	CZone *best = &ZoneArray[0];
+	// zone to test next
+	CZone *zone = ZoneArray[0].child;
+	while(zone)
+		// if in zone, descent into children
+		if(PointLiesWithinZone(v, zone)){
+			best = zone;
+			zone = zone->child;
+		// otherwise try next zone
+		}else
+			zone = zone->next;
+	return best;
 }
 
 void

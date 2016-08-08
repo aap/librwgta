@@ -28,6 +28,7 @@ CFileLoader::LoadLevel(const char *filename)
 {
 	FILE *file;
 	char *line;
+	bool objdata = false;
 	if(file = fopen_ci(filename, "rb"), file == nil)
 		return;
 	rw::TexDictionary *curTxd = rw::TexDictionary::getCurrent();
@@ -60,14 +61,13 @@ CFileLoader::LoadLevel(const char *filename)
 		else if(strncmp(line, "IDE", 3) == 0)
 			CFileLoader::LoadObjectTypes(line+4);
 		else if(strncmp(line, "IPL", 3) == 0){
-			static bool objdata = false;
 			if(!objdata){
 				CObjectData::Initialise("DATA\\OBJECT.DAT");
 				objdata = true;
 			}
 			CFileLoader::LoadScene(line+4);
 		}else if(strncmp(line, "MAPZONE", 7) == 0)
-			CFileLoader::LoadMapZone(line+8);
+			CFileLoader::LoadMapZones(line+8);
 		else if(strncmp(line, "SPLASH", 6) == 0){
 			printf("[SPLASH %s]\n", line+7);
 		}
@@ -139,9 +139,7 @@ CFileLoader::LoadObjectTypes(const char *filename)
 	CBaseModelInfo *mi;
 	for(i = 0; i < MODELINFOSIZE; i++){
 		mi = CModelInfo::GetModelInfo(i);
-		if(mi &&
-		   (mi->m_type == CSimpleModelInfo::ID ||
-		    mi->m_type == CTimeModelInfo::ID))
+		if(mi && mi->IsSimple())
 			((CSimpleModelInfo*)mi)->SetupBigBuilding();
 	}
 }
@@ -516,7 +514,7 @@ CFileLoader::LoadObjectInstance(char *line)
 	if(mi == nil)
 		return;
 	Matrix *mat = Matrix::create();
-	*mat = Matrix::makeRotation(q);
+	*mat = Matrix::makeRotation(conj(q));
 	mat->pos = t;
 	if(mi->GetObjectID() == -1){
 		CBuilding *build;
@@ -527,20 +525,36 @@ CFileLoader::LoadObjectInstance(char *line)
 		}else
 			build = new CBuilding;
 		build->SetModelIndexNoCreate(id);
-		build->m_matrix = CMatrix(mat, false);
+		build->SetTransform(mat);
 		build->m_level = CTheZones::GetLevelFromPosition(build->GetPosition());
-		if(mi->m_type == CSimpleModelInfo::ID ||
-		   mi->m_type == CTimeModelInfo::ID){
+		if(mi->IsSimple()){
+			CSimpleModelInfo *simple = (CSimpleModelInfo*)mi;;
+			if(simple->m_isBigBuilding)
+				build->SetupBigBuilding();
+			if(simple->m_isSubway)
+				build->m_flagD10 = 1;
+			if(simple->GetLargestLodDistance() < 2.0f)
+				build->m_isVisible = 0;
 		}
+		CWorld::Add(build);
 	}else{
 		CDummyObject *dummy;
 		dummy = new CDummyObject;
 		dummy->SetModelIndexNoCreate(id);
-		dummy->m_matrix = CMatrix(mat, false);
-		mat->destroy();
-		// TODO: swtich over model index to find glass
+		dummy->SetTransform(mat);
+		CWorld::Add(dummy);
+		if(id == MI_GLASS1 ||
+		   id == MI_GLASS2 ||
+		   id == MI_GLASS3 ||
+		   id == MI_GLASS4 ||
+		   id == MI_GLASS5 ||
+		   id == MI_GLASS6 ||
+		   id == MI_GLASS7 ||
+		   id == MI_GLASS8)
+			dummy->m_isVisible = 0;
 		dummy->m_level = CTheZones::GetLevelFromPosition(dummy->GetPosition());
 	}
+	mat->destroy();
 }
 
 void
@@ -745,6 +759,7 @@ CFileLoader::LoadModelFile(const char *filename)
 	stream.open(getPath(filename), "rb");
 	if(findChunk(&stream, rw::ID_CLUMP, nil, nil)){
 		clump = Clump::streamRead(&stream);
+		assert(clump);
 		FORLIST(lnk, clump->atomics){
 			atomic = rw::Atomic::fromClump(lnk);
 			nodename = gta::getNodeName(atomic->getFrame());
@@ -775,8 +790,10 @@ CFileLoader::LoadTexDictionary(const char *filename)
 	debug("Loading texture dictionary file %s\n", filename);
 	TexDictionary *txd = nil;
 	if(stream.open(getPath(filename), "rb")){
-		if(findChunk(&stream, rw::ID_TEXDICTIONARY, nil, nil))
+		if(findChunk(&stream, rw::ID_TEXDICTIONARY, nil, nil)){
 			txd = TexDictionary::streamRead(&stream);
+			convertTxd(txd);
+		}
 		stream.close();
 	}
 	if(txd == nil)

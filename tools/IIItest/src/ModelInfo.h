@@ -1,6 +1,16 @@
 // temporary
 typedef void unknown;
-typedef float *RwMatrixTag;
+
+enum ModelInfoType
+{
+	SIMPLEMODELINFO    = 1,
+	MLOMODELINFO       = 2,
+	TIMEMODELINFO      = 3,
+	CLUMPMODELINFO     = 4,
+	VEHICLEMODELINFO   = 5,
+	PEDMODELINFO       = 6,
+	XTRACOMPSMODELINFO = 7,
+};
 
 class CBaseModelInfo
 {
@@ -20,10 +30,10 @@ public:
 	CBaseModelInfo(int type);
 	virtual ~CBaseModelInfo() {}
 	virtual unknown Shutdown(void) {}
-	virtual unknown DeleteRwObject(void) = 0;
-	virtual unknown CreateInstance(void) = 0;
-	virtual unknown CreateInstance(RwMatrixTag *) = 0;
-	virtual unknown GetRwObject(void) = 0;
+	virtual void DeleteRwObject(void) = 0;
+	virtual rw::Object *CreateInstance(void) = 0;
+	virtual rw::Object *CreateInstance(rw::Matrix *) = 0;
+	virtual rw::Object *GetRwObject(void) = 0;
 
 	char *GetName(void) { return m_name; }
 	void SetName(const char *name) { strncpy(m_name, name, 24); }
@@ -32,35 +42,101 @@ public:
 	CColModel *GetColModel(void) { return m_colModel; }
 	short GetObjectID(void) { return m_objectId; }
 	void SetObjectID(short id) { m_objectId = id; }
+	short GetTxdSlot(void) { return m_txdSlot; }
 	void AddRef(void);
+	void RemoveRef(void);
 	void SetTexDictionary(const char *name);
 	void AddTexDictionaryRef(void);
+	void RemoveTexDictionaryRef(void);
 	void Add2dEffect(C2dEffect *fx);
+	bool IsSimple(void) { return m_type == 1 || m_type == 3; }
 };
+
+class CSimpleModelInfo : public CBaseModelInfo
+{
+public:
+	// atomics[2] is often a pointer to the non-LOD modelinfo
+	rw::Atomic *m_atomics[3];
+	// m_lodDistances[2] holds the near distance for LODs
+	float m_lodDistances[3];
+	uchar m_numAtomics;
+	uchar m_alpha;
+	uint  m_furthest      : 3; // 0: numAtomics-1 is furthest visible
+	                         // 1: atomic 0 is furthest
+	                         // 2: atomic 1 is furthest
+	uint  m_normalCull    : 1;
+	uint  m_isDamaged     : 1;
+	uint  m_isBigBuilding : 1;
+	uint  m_noFade        : 1;
+	uint  m_drawLast      : 1;
+	uint  m_additive      : 1;
+	uint  m_isSubway      : 1;
+	uint  m_ignoreLight   : 1;
+	uint  m_noZwrite      : 1;
+
+	CSimpleModelInfo(void) : CBaseModelInfo(SIMPLEMODELINFO) {}
+	CSimpleModelInfo(int id) : CBaseModelInfo(id) {}
+	~CSimpleModelInfo() {}
+	void DeleteRwObject(void);
+	rw::Object *CreateInstance(void);
+	rw::Object *CreateInstance(rw::Matrix *);
+	rw::Object *GetRwObject(void) { return (rw::Object*)m_atomics[0]; }
+
+	void Init(void);
+	void IncreaseAlpha(void) { if(m_alpha >= 0xEF) m_alpha = 0xFF; else m_alpha += 0x10; }
+	void SetAtomic(int n, rw::Atomic *atomic);
+	void SetLodDistances(float *dist);
+	float GetLodDistance(int i) { return m_lodDistances[i]; }
+	float GetNearDistance(void) { return m_lodDistances[2]; }
+	float GetLargestLodDistance(void);
+	rw::Atomic *GetAtomicFromDistance(float dist);
+	void FindRelatedModel(void);
+	void SetupBigBuilding(void);
+
+	void SetNumAtomics(int n) { m_numAtomics = n; }
+	CSimpleModelInfo *GetRelatedModel(void){
+		return (CSimpleModelInfo*)m_atomics[2]; }
+	void SetRelatedModel(CSimpleModelInfo *m){
+		m_atomics[2] = (rw::Atomic*)m; }
+};
+
+class CTimeModelInfo : public CSimpleModelInfo
+{
+public:
+	int m_timeOn;
+	int m_timeOff;
+	int m_otherTimeModelID;
+
+	CTimeModelInfo(void) : CSimpleModelInfo(TIMEMODELINFO) {
+		m_otherTimeModelID = -1;
+	}
+	~CTimeModelInfo() {}
+
+	CTimeModelInfo *FindOtherTimeModel(void);
+	CTimeModelInfo *GetOtherModel(void);
+};
+
 
 class CClumpModelInfo : public CBaseModelInfo
 {
 public:
-	enum { ID = 4 };
 	rw::Clump *m_clump;
 
-	CClumpModelInfo(void) : CBaseModelInfo(ID) {}
+	CClumpModelInfo(void) : CBaseModelInfo(CLUMPMODELINFO) {}
 	CClumpModelInfo(int id) : CBaseModelInfo(id) {}
 	~CClumpModelInfo() {}
-	unknown DeleteRwObject(void) {}
-	unknown CreateInstance(void) {}
-	unknown CreateInstance(RwMatrixTag *) {}
-	unknown GetRwObject(void) {}
+	void DeleteRwObject(void) {}
+	rw::Object *CreateInstance(void) { return nil; }
+	rw::Object *CreateInstance(rw::Matrix *) { return nil; }
+	rw::Object *GetRwObject(void) { return nil; }
 
 	virtual void SetClump(rw::Clump *);
 };
-
 
 // Unused
 class CMloModelInfo : public CClumpModelInfo
 {
 public:
-	enum { ID = 2 };
 	float m_drawDist;
 	int   m_firstInstance;
 	int   m_lastInstance;
@@ -68,33 +144,9 @@ public:
 	~CMloModelInfo() {}
 };
 
-class CPedModelInfo : public CClumpModelInfo
-{
-public:
-	enum { ID = 6 };
-	int         m_animGroup;
-	int         m_pedType;
-	int         m_pedStats;
-	int         m_carsCanDrive;
-	CColModel  *m_hitColModel;
-#ifdef SKINNED
-	rw::Atomic *m_head;
-	rw::Atomic *m_lhand;
-	rw::Atomic *m_rhand;
-#endif
-
-	CPedModelInfo(void) : CClumpModelInfo(ID) {}
-	~CPedModelInfo() {}
-	unknown DeleteRwObject(void) {}
-	void SetClump(rw::Clump *clump){
-		CClumpModelInfo::SetClump(clump);
-	}
-};
-
 class CVehicleModelInfo : public CClumpModelInfo
 {
 public:
-	enum { ID = 5 };
 	enum Type { Car, Boat, Train, Heli, Plane, Bike };
 	enum Class { Poorfamily, Richfamily, Executive, Worker, Special, Big, Taxi };
 
@@ -123,10 +175,32 @@ public:
 	rw::Atomic *m_comps[6];
 	int     m_numComps;
 
-	CVehicleModelInfo(void) : CClumpModelInfo(ID) {}
+	CVehicleModelInfo(void) : CClumpModelInfo(VEHICLEMODELINFO) {}
 	~CVehicleModelInfo() {}
-	unknown DeleteRwObject(void) {}
-	unknown CreateInstance(void) {}
+	void DeleteRwObject(void) {}
+	rw::Object *CreateInstance(void) { return nil; }
+	void SetClump(rw::Clump *clump){
+		CClumpModelInfo::SetClump(clump);
+	}
+};
+
+class CPedModelInfo : public CClumpModelInfo
+{
+public:
+	int         m_animGroup;
+	int         m_pedType;
+	int         m_pedStats;
+	int         m_carsCanDrive;
+	CColModel  *m_hitColModel;
+#ifdef SKINNED
+	rw::Atomic *m_head;
+	rw::Atomic *m_lhand;
+	rw::Atomic *m_rhand;
+#endif
+
+	CPedModelInfo(void) : CClumpModelInfo(PEDMODELINFO) {}
+	~CPedModelInfo() {}
+	void DeleteRwObject(void) {}
 	void SetClump(rw::Clump *clump){
 		CClumpModelInfo::SetClump(clump);
 	}
@@ -136,75 +210,15 @@ public:
 class CXtraCompsModelInfo : public CClumpModelInfo
 {
 public:
-	enum { ID = 7 };
 	int m_unk;
 
 	~CXtraCompsModelInfo() {}
 	unknown Shutdown(void) {}
-	unknown CreateInstance(void) {}
+	rw::Object *CreateInstance(void) { return nil; }
 	void SetClump(rw::Clump *clump){
 		CClumpModelInfo::SetClump(clump);
 	}
 };
-
-class CSimpleModelInfo : public CBaseModelInfo
-{
-public:
-	enum { ID = 1 };
-	// atomics[2] is often a pointer to the non-LOD modelinfo
-	rw::Atomic *m_atomics[3];
-	float m_lodDistances[3];
-	uchar m_numAtomics;
-	uchar m_alpha;
-	uint  m_furthest      : 3; // 0: numAtomics-1 is furthest visible
-	                         // 1: atomic 0 is furthest
-	                         // 2: atomic 1 is furthest
-	uint  m_normalCull    : 1;
-	uint  m_unknownFlag   : 1;
-	uint  m_isBigBuilding : 1;
-	uint  m_noFade        : 1;
-	uint  m_drawLast      : 1;
-	uint  m_additive      : 1;
-	uint  m_isSubway      : 1;
-	uint  m_ignoreLight   : 1;
-	uint  m_noZwrite      : 1;
-
-	CSimpleModelInfo(void) : CBaseModelInfo(ID) {}
-	CSimpleModelInfo(int id) : CBaseModelInfo(id) {}
-	~CSimpleModelInfo() {}
-	unknown DeleteRwObject(void) {}
-	unknown CreateInstance(void) {}
-	unknown CreateInstance(RwMatrixTag *) {}
-	unknown GetRwObject(void) {}
-
-	void Init(void);
-	void SetAtomic(int n, rw::Atomic *atomic);
-	void SetLodDistances(float *dist);
-	float GetLargestLodDistance(void);
-	void FindRelatedModel(void);
-	void SetupBigBuilding(void);
-
-	void SetNumAtomics(int n) { m_numAtomics = n; }
-	CSimpleModelInfo *GetRelatedModel(void){
-		return (CSimpleModelInfo*)m_atomics[2]; }
-	void SetRelatedModel(CSimpleModelInfo *m){
-		m_atomics[2] = (rw::Atomic*)m; }
-};
-
-class CTimeModelInfo : public CSimpleModelInfo
-{
-public:
-	enum { ID = 3 };
-	int m_timeOn;
-	int m_timeOff;
-	int m_otherTimeModelID;
-
-	CTimeModelInfo(void) : CSimpleModelInfo(ID) {}
-	~CTimeModelInfo() {}
-
-	CTimeModelInfo *FindOtherTimeModel(void);
-};
-
 
 class CModelInfo
 {
@@ -225,7 +239,7 @@ public:
 	static CPedModelInfo *AddPedModel(int id);
 	static CVehicleModelInfo *AddVehicleModel(int id);
 
-	static CBaseModelInfo *GetModelInfo(char *name, int *id);
+	static CBaseModelInfo *GetModelInfo(const char *name, int *id);
 	static CBaseModelInfo *GetModelInfo(int id){
 		return ms_modelInfoPtrs[id];
 	}

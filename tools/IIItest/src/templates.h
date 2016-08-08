@@ -97,3 +97,65 @@ public:
 		return n;
 	}
 };
+
+template<typename T>
+class CLink
+{
+public:
+	T item;
+	CLink<T> *prev;
+	CLink<T> *next;
+
+	void Insert(CLink<T> *link){
+		link->next = this->next;
+		this->next->prev = link;
+		link->prev = this;
+		this->next = link;
+	}
+	void Remove(void){
+		this->prev->next = this->next;
+		this->next->prev = this->prev;
+	}
+};
+
+template<typename T>
+class CLinkList
+{
+public:
+	CLink<T> head, tail;
+	CLink<T> freeHead, freeTail;
+	CLink<T> *links;
+
+	void Init(int n){
+		links = new CLink<T>[n];
+		head.next = &tail;
+		tail.prev = &head;
+		freeHead.next = &freeTail;
+		freeTail.prev = &freeHead;
+		while(n--)
+			freeHead.Insert(&links[n]);
+	}
+	// Shutdown
+	void Clear(void){
+		while(head.next != &tail)
+			Remove(head.next);
+	}
+	// Insert
+	CLink<T> *InsertSorted(T const &item){
+		CLink<T> *sort;
+		for(sort = head.next; sort != &tail; sort = sort->next)
+			if(sort->item.sort >= item.sort)
+				break;
+		CLink<T> *node = freeHead.next;
+		if(node == &freeTail)
+			return nil;
+		node->item = item;
+		node->Remove();	       // remove from free list
+		sort->prev->Insert(node);
+		return node;
+	}
+	void Remove(CLink<T> *link){
+		link->Remove();        // remove from list
+		freeHead.Insert(link); // insert into free list
+	}
+};

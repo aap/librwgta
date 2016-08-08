@@ -1,8 +1,61 @@
 #include "III.h"
 
+CLinkList<CVisibilityPlugins::AlphaObjectInfo> CVisibilityPlugins::m_alphaList;
+CLinkList<CVisibilityPlugins::AlphaObjectInfo> CVisibilityPlugins::m_alphaEntityList;
+
 int32 CVisibilityPlugins::ms_atomicPluginOffset;
 int32 CVisibilityPlugins::ms_framePluginOffset;
 int32 CVisibilityPlugins::ms_clumpPluginOffset;
+
+void
+CVisibilityPlugins::Initialise(void)
+{
+	m_alphaList.Init(20);
+	m_alphaList.head.item.sort = 0.0f;
+	m_alphaList.tail.item.sort = 100000000.0f;
+	m_alphaEntityList.Init(150);
+	m_alphaEntityList.head.item.sort = 0.0f;
+	m_alphaEntityList.tail.item.sort = 100000000.0f;
+}
+
+void
+CVisibilityPlugins::InitAlphaEntityList(void)
+{
+	m_alphaEntityList.Clear();
+}
+
+bool
+CVisibilityPlugins::InsertEntityIntoSortedList(CEntity *e, float dist)
+{
+	AlphaObjectInfo item;
+	item.entity = e;
+	item.sort = dist;
+	return !!m_alphaEntityList.InsertSorted(item);
+}
+
+void
+CVisibilityPlugins::InitAlphaAtomicList(void)
+{
+	m_alphaList.Clear();
+}
+
+void
+CVisibilityPlugins::RenderFadingEntities(void)
+{
+	CLink<AlphaObjectInfo> *node;
+	for(node = m_alphaEntityList.tail.prev;
+	    node != &m_alphaEntityList.head;
+	    node = node->prev){
+		CEntity *e = node->item.entity;
+		if(e->m_rwObject){
+			e->Render();
+		}
+	}
+}
+
+//
+// RW Plugins
+//
 
 bool
 CVisibilityPlugins::PluginAttach(void)

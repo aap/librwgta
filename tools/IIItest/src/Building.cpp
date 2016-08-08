@@ -8,7 +8,7 @@ CBuilding::operator new(size_t)
 	return building;
 }
 
-void 
+void
 CBuilding::operator delete(void *p, size_t)
 {
 	CPools::GetBuildingPool()->Delete((CBuilding*)p);

@@ -25,6 +25,13 @@ CBaseModelInfo::AddRef(void)
 }
 
 void
+CBaseModelInfo::RemoveRef(void)
+{
+	m_refCount--;
+	RemoveTexDictionaryRef();
+}
+
+void
 CBaseModelInfo::SetTexDictionary(const char *name)
 {
 	int slot = CTxdStore::FindTxdSlot(name);
@@ -37,6 +44,12 @@ void
 CBaseModelInfo::AddTexDictionaryRef(void)
 {
 	CTxdStore::AddRef(m_txdSlot);
+}
+
+void
+CBaseModelInfo::RemoveTexDictionaryRef(void)
+{
+	CTxdStore::RemoveRef(m_txdSlot);
 }
 
 void
@@ -55,6 +68,42 @@ CBaseModelInfo::Add2dEffect(C2dEffect *fx)
 //
 
 void
+CSimpleModelInfo::DeleteRwObject(void)
+{
+	int i;
+	for(i = 0; i < m_numAtomics; i++)
+		if(m_atomics[i]){
+			rw::Frame *f = m_atomics[i]->getFrame();
+			m_atomics[i]->destroy();
+			f->destroy();
+			m_atomics[i] = nil;
+			RemoveTexDictionaryRef();
+		}
+}
+
+rw::Object*
+CSimpleModelInfo::CreateInstance(void)
+{
+	if(GetRwObject()){
+		rw::Atomic *a = ((rw::Atomic*)GetRwObject())->clone();
+		a->setFrame(rw::Frame::create());
+		return (rw::Object*)a;
+	}else
+		return nil;
+}
+
+rw::Object*
+CSimpleModelInfo::CreateInstance(rw::Matrix *mat)
+{
+	if(GetRwObject()){
+		rw::Atomic *a = (rw::Atomic*)CreateInstance();
+		a->getFrame()->matrix = *mat;
+		return (rw::Object*)a;
+	}else
+		return nil;
+}
+
+void
 CSimpleModelInfo::Init(void)
 {
 	m_atomics[0] = nil;
@@ -63,7 +112,7 @@ CSimpleModelInfo::Init(void)
 	m_numAtomics = 0;
 	m_furthest      = 0;
 	m_normalCull    = 0;
-	m_unknownFlag   = 0;
+	m_isDamaged     = 0;
 	m_isBigBuilding = 0;
 	m_noFade        = 0;
 	m_drawLast      = 0;
@@ -94,11 +143,26 @@ float
 CSimpleModelInfo::GetLargestLodDistance(void)
 {
 	float d;
-	if(m_furthest != 0 && !m_unknownFlag)
+	// TODO: what exactly is going on here?
+	if(m_furthest != 0 && !m_isDamaged)
 		d = m_lodDistances[m_furthest-1];
 	else
 		d = m_lodDistances[m_numAtomics-1];
-	return d;	// TODO camera multiplier
+	return d * TheCamera.m_LODmult;
+}
+
+rw::Atomic*
+CSimpleModelInfo::GetAtomicFromDistance(float dist)
+{
+	int i;
+	i = 0;
+	// TODO: what exactly is going on here?
+	if(m_isDamaged)
+		i = m_furthest;
+	for(; i < m_numAtomics; i++)
+		if(dist < m_lodDistances[i]*TheCamera.m_LODmult)
+			return m_atomics[i];
+	return nil;
 }
 
 void
@@ -110,8 +174,7 @@ CSimpleModelInfo::FindRelatedModel(void)
 		mi = CModelInfo::GetModelInfo(i);
 		if(mi && mi != this &&
 		   strcmp(GetName()+3, mi->GetName()+3) == 0){
-			assert(mi->m_type == CSimpleModelInfo::ID ||
-			       mi->m_type == CTimeModelInfo::ID);
+			assert(mi->IsSimple());
 			this->SetRelatedModel((CSimpleModelInfo*)mi);
 			return;
 		}
@@ -124,11 +187,10 @@ CSimpleModelInfo::SetupBigBuilding(void)
 	CSimpleModelInfo *related;
 	if(m_lodDistances[0] > 300.0f && m_atomics[2] == nil){
 		m_isBigBuilding = 1;
-		this->FindRelatedModel();
-		related = this->GetRelatedModel();
+		FindRelatedModel();
+		related = GetRelatedModel();
 		if(related)
-			// TODO camera multiplier
-			m_lodDistances[2] = related->GetLargestLodDistance();
+			m_lodDistances[2] = related->GetLargestLodDistance()/TheCamera.m_LODmult;
 		else
 			m_lodDistances[2] = 100.0f;
 	}
@@ -157,13 +219,19 @@ CTimeModelInfo::FindOtherTimeModel(void)
 
 	for(i = 0; i < MODELINFOSIZE; i++){
 		CBaseModelInfo *mi = CModelInfo::GetModelInfo(i);
-		if(mi && mi->m_type == CTimeModelInfo::ID &&
+		if(mi && mi->m_type == TIMEMODELINFO &&
 		   strncmp(name, mi->GetName(), 24) == 0){
 			m_otherTimeModelID = i;
 			return (CTimeModelInfo*)mi;
 		}
 	}
 	return nil;
+}
+
+CTimeModelInfo*
+CTimeModelInfo::GetOtherModel(void)
+{
+	return (CTimeModelInfo*)CModelInfo::GetModelInfo(m_otherTimeModelID);
 }
 
 //
@@ -281,7 +349,7 @@ CModelInfo::AddVehicleModel(int id)
 }
 
 CBaseModelInfo*
-CModelInfo::GetModelInfo(char *name, int *id)
+CModelInfo::GetModelInfo(const char *name, int *id)
 {
 	CBaseModelInfo *modelinfo;
 	for(int i = 0; i < MODELINFOSIZE; i++){

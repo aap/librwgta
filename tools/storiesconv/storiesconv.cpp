@@ -432,6 +432,7 @@ convertAtomic(RslElement *atomic)
 	}
 	rwg->calculateBoundingSphere();
 	rwg->generateTriangles();
+	rwg->removeUnusedMaterials();
 	return rwa;
 }
 
