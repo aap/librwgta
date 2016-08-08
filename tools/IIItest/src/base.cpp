@@ -5,14 +5,9 @@ rw::Camera *rwCamera;
 rw::World  *rwWorld;
 rw::Light  *ambient;
 rw::Light  *direct;
+bool isRunning;
 
 uchar work_buff[55000];
-
-CVector
-FindPlayerCoors(void)
-{
-	return TheCamera.m_position;
-}
 
 char*
 getPath(const char *path)
@@ -88,6 +83,56 @@ convertTxd(rw::TexDictionary *txd)
 	}
 }
 
+
+CVector
+FindPlayerCoors(void)
+{
+	return TheCamera.m_position;
+}
+
+float AmbientLightColourForFrame[3];
+float DirectionalLightColourForFrame[3];
+
+void
+SetLightsWithTimeOfDayColour(rw::World*)
+{
+	// TODO: CCoronas::LightsMult
+	AmbientLightColourForFrame[0] = CTimeCycle::m_fCurrentAmbientRed;
+	AmbientLightColourForFrame[1] = CTimeCycle::m_fCurrentAmbientGreen;
+	AmbientLightColourForFrame[2] = CTimeCycle::m_fCurrentAmbientBlue;
+	// TODO: flash and rain etc.
+	ambient->setColor(AmbientLightColourForFrame[0],
+	                  AmbientLightColourForFrame[1],
+	                  AmbientLightColourForFrame[2]);
+
+	// TODO: CCoronas::LightsMult
+	DirectionalLightColourForFrame[0] = CTimeCycle::m_fCurrentDirectionalRed;
+	DirectionalLightColourForFrame[1] = CTimeCycle::m_fCurrentDirectionalGreen;
+	DirectionalLightColourForFrame[2] = CTimeCycle::m_fCurrentDirectionalBlue;
+	direct->setColor(DirectionalLightColourForFrame[0],
+	                 DirectionalLightColourForFrame[1],
+	                 DirectionalLightColourForFrame[2]);
+	// TODO: transform
+}
+
+void
+DefinedState(void)
+{
+	using namespace rw;
+	engine->setRenderState(ZTESTENABLE, 1);
+	engine->setRenderState(ZWRITEENABLE, 1);
+	engine->setRenderState(VERTEXALPHA, 0);
+	engine->setRenderState(SRCBLEND, BLENDSRCALPHA);
+	engine->setRenderState(DESTBLEND, BLENDINVSRCALPHA);
+	engine->setRenderState(FOGENABLE, 0);
+	RGBA c;
+	c.red = CTimeCycle::m_nCurrentFogColourRed;
+	c.green = CTimeCycle::m_nCurrentFogColourGreen;
+	c.blue = CTimeCycle::m_nCurrentFogColourBlue;
+	c.alpha = 0xFF;
+	engine->setRenderState(FOGCOLOR, *(uint32*)&c);
+}
+
 void
 debug(const char *fmt, ...)
 {
@@ -99,42 +144,43 @@ debug(const char *fmt, ...)
 }
 
 void
-update(double t)
-{
-}
-
-void
-display(void)
+TheGame(void)
 {
 	using namespace rw;
 	static RGBA clearcol = { 0x40, 0x40, 0x40, 0xFF };
 
-	CTimer::Update();
-	CGame::Process();
+	debug("Into TheGame!!!\n");
 
-	CRenderer::ConstructRenderList();
-
-	TheCamera.update();
-	TheCamera.m_rwcam->clear(&clearcol, Camera::CLEARIMAGE|Camera::CLEARZ);
-	TheCamera.m_rwcam->beginUpdate();
-
-	CRenderer::RenderEverything();
-	CRenderer::RenderFadingInEntities();
-
-	TheCamera.m_rwcam->endUpdate();
-}
-
-void
-shutdown(void)
-{
-}
-
-int
-init(void)
-{
+	isRunning = 1;
 	CGame::InitialiseRW();
 	CGame::InitialiseAfterRW();
 	CGame::Initialise();
 
-	return 1;
+	while(isRunning && !plWindowclosed()){
+		plHandleEvents();
+		CTimer::Update();
+		CGame::Process();
+
+		SetLightsWithTimeOfDayColour(rwWorld);
+		clearcol.red = CTimeCycle::m_nCurrentSkyTopRed;
+		clearcol.green = CTimeCycle::m_nCurrentSkyTopGreen;
+		clearcol.blue = CTimeCycle::m_nCurrentSkyTopBlue;
+
+		CRenderer::ConstructRenderList();
+
+		TheCamera.m_rwcam->clear(&clearcol,
+		                         Camera::CLEARIMAGE|Camera::CLEARZ);
+		DefinedState();
+		rwCamera->setFarPlane(CTimeCycle::m_fCurrentFarClip);
+		rwCamera->fogPlane = CTimeCycle::m_fCurrentFogStart;
+		TheCamera.update();
+		TheCamera.m_rwcam->beginUpdate();
+
+		CRenderer::RenderEverything();
+		CRenderer::RenderFadingInEntities();
+
+		TheCamera.m_rwcam->endUpdate();
+		plPresent();
+	}
 }
+

@@ -18,7 +18,7 @@ void
 CRenderer::ScanWorld(void)
 {
 	CVisibilityPlugins::InitAlphaEntityList();
-	
+
 	if(++CWorld::ms_nCurrentScanCode == 0){
 		CWorld::ClearScanCodes();
 		CWorld::ms_nCurrentScanCode = 1;
@@ -141,11 +141,15 @@ CRenderer::SetupBigBuildingVisibility(CEntity *ent)
 		return true;
 	}
 
+	if(mi->m_noFade){
+		ent->DeleteRwObject();
+		return false;
+	}
+
+
 	// get faded atomic
 	a = mi->GetAtomicFromDistance(dist-20.0f);
-
-	// If nothing to fade...
-	if(mi->m_noFade || a == nil){
+	if(a == nil){
 		ent->DeleteRwObject();
 		return false;
 	}

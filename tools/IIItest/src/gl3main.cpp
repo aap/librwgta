@@ -1,35 +1,83 @@
 #include "III.h"
 
-Dualshock ds3;
+GLFWwindow *glfwwindow;
+
+//
+// platform dependent implementations
+//
+
+int keymap[GLFW_KEY_LAST+1];
+int numPads;
+int currentPad;
 
 int
-getTimeInMS(void)
+plGetTimeInMS(void)
 {
 	return glfwGetTime()*1000;
 }
 
-uchar oldKeystates[KEY_NUMKEYS];
-uchar newKeystates[KEY_NUMKEYS];
-
 bool
-IsKeyJustDown(int key)
+plWindowclosed(void)
 {
-	return oldKeystates[key] == 0 && newKeystates[key] == 1;
+	return glfwWindowShouldClose(glfwwindow);
 }
 
-bool
-IsKeyDown(int key)
+void
+plPresent(void)
 {
-	return newKeystates[key] == 1;
+	glfwSwapBuffers(glfwwindow);
 }
 
-int keymap[GLFW_KEY_LAST];
+void
+plHandleEvents(void)
+{
+	glfwPollEvents();
+}
+
+void
+plCapturePad(int n)
+{
+	currentPad = n;
+}
+
+void
+plUpdatePad(CControllerState *state)
+{
+	if(currentPad >= numPads)
+		return;
+
+	int n = currentPad;
+//	printf("joy: %s\n", glfwGetJoystickName(GLFW_JOYSTICK_1+n));
+	int count;
+	const float *axes = glfwGetJoystickAxes(GLFW_JOYSTICK_1+n, &count);
+	state->leftX = axes[0] * 32767;
+	state->leftY = axes[1] * 32767;
+	state->rightX = axes[2] * 32767;
+	state->rightY = axes[3] * 32767;
+	const unsigned char *buttons = glfwGetJoystickButtons(GLFW_JOYSTICK_1+n, &count);
+	state->triangle   = buttons[12];
+	state->circle     = buttons[13];
+	state->cross      = buttons[14];
+	state->square     = buttons[15];
+	state->l1         = buttons[10];
+	state->l2         = buttons[8];
+	state->leftshock  = buttons[1];
+	state->r1         = buttons[11];
+	state->r2         = buttons[9];
+	state->rightshock = buttons[2];
+	state->select     = buttons[0];
+	state->start      = buttons[3];
+	state->up         = buttons[4];
+	state->right      = buttons[5];
+	state->down       = buttons[6];
+	state->left       = buttons[7];
+}
 
 void
 initkeymap(void)
 {
 	int i;
-	for(i = 0; i < GLFW_KEY_LAST; i++)
+	for(i = 0; i < GLFW_KEY_LAST+1; i++)
 		keymap[i] = KEY_NULL;
 	keymap[GLFW_KEY_SPACE] = ' ';
 	keymap[GLFW_KEY_APOSTROPHE] = '\'';
@@ -156,67 +204,9 @@ void
 keypress(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
 	if(key >= 0 && key <= GLFW_KEY_LAST){
-		if(action == GLFW_RELEASE) newKeystates[keymap[key]] = 0;
-		if(action == GLFW_PRESS)   newKeystates[keymap[key]] = 1;
+		if(action == GLFW_RELEASE) CPad::tempKeystates[keymap[key]] = 0;
+		if(action == GLFW_PRESS)   CPad::tempKeystates[keymap[key]] = 1;
 	}
-//glfwSetWindowShouldClose(window, GLFW_TRUE);
-}
-
-void
-pollinput(GLFWwindow *window)
-{
-	Dualshock *ds = &ds3;
-	if(ds->start && ds->select)
-		glfwSetWindowShouldClose(window, GLFW_TRUE);
-	float sensitivity = 1.0f;
-	if(ds->r2){
-		sensitivity = 2.0f;
-		if(ds->l2)
-			sensitivity = 4.0f;
-	}
-	if(ds->square) TheCamera.zoom(0.4f*sensitivity);
-	if(ds->cross) TheCamera.zoom(-0.4f*sensitivity);
-	TheCamera.orbit(ds->leftX/30.0f*sensitivity,
-	                -ds->leftY/30.0f*sensitivity);
-	TheCamera.turn(-ds->rightX/30.0f*sensitivity,
-	               ds->rightY/30.0f*sensitivity);
-	if(ds->up)
-		TheCamera.dolly(2.0f*sensitivity);
-	if(ds->down)
-		TheCamera.dolly(-2.0f*sensitivity);
-}
-
-void
-pollDS3(int n, Dualshock *ds)
-{
-//	printf("joy: %s\n", glfwGetJoystickName(GLFW_JOYSTICK_1+n));
-	int count;
-	const float *axes = glfwGetJoystickAxes(GLFW_JOYSTICK_1+n, &count);
-//	for(int j = 0; j < count; j++)
-//		printf("axis %d: %f\n", j, axes[j]);
-	ds->leftX = axes[0];
-	ds->leftY = axes[1];
-	ds->rightX = axes[2];
-	ds->rightY = axes[3];
-	const unsigned char *buttons = glfwGetJoystickButtons(GLFW_JOYSTICK_1+n, &count);
-//	for(int j = 0; j < count; j++)
-//		printf("button %d: %d\n", j, buttons[j]);
-	ds->triangle = buttons[12];
-	ds->circle   = buttons[13];
-	ds->cross    = buttons[14];
-	ds->square   = buttons[15];
-	ds->l1       = buttons[10];
-	ds->l2       = buttons[8];
-	ds->l3       = buttons[1];
-	ds->r1       = buttons[11];
-	ds->r2       = buttons[9];
-	ds->r3       = buttons[2];
-	ds->select   = buttons[0];
-	ds->start    = buttons[3];
-	ds->up       = buttons[4];
-	ds->right    = buttons[5];
-	ds->down     = buttons[6];
-	ds->left     = buttons[7];
 }
 
 int
@@ -237,21 +227,20 @@ main(int argc, char *argv[])
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-	win = glfwCreateWindow(640, 480, "OpenGL", 0, 0);
+	win = glfwCreateWindow(640, 480, "GTA III test", 0, 0);
 	if(win == nil){
 		fprintf(stderr, "Error: could not create GLFW window\n");
 		glfwTerminate();
 		return 1;
 	}
+	glfwwindow = win;
 	glfwSetKeyCallback(win, keypress);
 
-	int pad = -1;
+	numPads = 0;
 	for(int i = 0; i < 16; i++){
 		int present = glfwJoystickPresent(GLFW_JOYSTICK_1+i);
-		if(present){
-			pad = i;
-			break;
-		}
+		if(present)
+			numPads++;
 	}
 	glfwMakeContextCurrent(win);
 
@@ -270,27 +259,7 @@ main(int argc, char *argv[])
 
 	initkeymap();
 
-	if(!init())
-		return 1;
-
-	double lastTime = glfwGetTime();
-	double time;
-	while(!glfwWindowShouldClose(win)){
-		memcpy(oldKeystates, newKeystates, sizeof(oldKeystates));
-
-		if(pad >= 0)
-			pollDS3(pad, &ds3);
-		pollinput(win);
-		glfwPollEvents();
-
-		time = glfwGetTime();
-		update(time-lastTime);
-		lastTime = time;
-		display();
-		glfwSwapBuffers(win);
-	}
-
-	shutdown();
+	TheGame();
 
 	glfwDestroyWindow(win);
 	glfwTerminate();

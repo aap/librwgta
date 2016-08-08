@@ -12,5 +12,6 @@ public:
 	static bool   ms_bClockHasBeenStored;
 
 	static void Initialise(uint scale);
+	static void Update(void);
 	static bool GetIsTimeInRange(uchar h1, uchar h2);
 };

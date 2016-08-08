@@ -21,7 +21,7 @@ CTimer::Initialise(void)
 	m_snPreviousTimeInMilliseconds = 0;
 	m_snTimeInMilliseconds = m_snPreviousTimeInMilliseconds;
 	m_FrameCounter = 0;
-	oldPcTimer = getTimeInMS();
+	oldPcTimer = plGetTimeInMS();
 	debug("CTimer ready\n");
 }
 
@@ -29,7 +29,7 @@ void
 CTimer::Update(void)
 {
 	m_snPreviousTimeInMilliseconds = m_snTimeInMilliseconds;
-	int newtime = getTimeInMS();
+	int newtime = plGetTimeInMS();
 	double diff = (newtime - oldPcTimer) * ms_fTimeScale;
 	oldPcTimer = newtime;
 	if(m_UserPause || m_CodePause)

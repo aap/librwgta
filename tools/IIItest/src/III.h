@@ -19,8 +19,6 @@
 
 using namespace gta;
 
-#include "input.h"
-
 using rw::uint8;
 using rw::int8;
 using rw::uint16;
@@ -33,16 +31,7 @@ typedef unsigned char uchar;
 extern  uchar work_buff[55000];
 void debug(const char *fmt, ...);
 
-int init(void);
-void shutdown(void);
-void update(double t);
-void display(void);
-int getTimeInMS(void);
-#ifdef RW_GL3
-void pollinput(GLFWwindow*);
-void keypress(GLFWwindow*, int key, int scancode, int action, int mods);
-#endif
-
+#include "Pad.h"
 #include "templates.h"
 #include "config.h"
 #include "math/Vector.h"
@@ -87,6 +76,7 @@ public:
 
 #include "Timer.h"
 #include "Clock.h"
+#include "Weather.h"
 #include "Rect.h"
 #include "zones.h"
 #include "Animation.h"
@@ -117,15 +107,6 @@ public:
 #include "Renderer.h"
 #include "streaming.h"
 
-extern CCamera TheCamera;
-extern rw::Camera *rwCamera;
-extern rw::World  *rwWorld;
-extern rw::Light  *ambient;
-extern rw::Light  *direct;
-
-// misc
-CVector FindPlayerCoors(void);
-
 inline float
 clamp(float v, float min, float max){ return v<min ? min : v>max ? max : v; }
 
@@ -133,6 +114,28 @@ char *getPath(const char *path);
 FILE *fopen_ci(const char *path, const char *mode);
 char *skipWhite(char *s);
 void convertTxd(rw::TexDictionary *txd);
+
+
+// misc
+extern CCamera TheCamera;
+extern rw::Camera *rwCamera;
+extern rw::World  *rwWorld;
+extern rw::Light  *ambient;
+extern rw::Light  *direct;
+extern bool isRunning;
+CVector FindPlayerCoors(void);
+void SetLightsWithTimeOfDayColour(rw::World*);
+void DefinedState(void);
+
+void TheGame(void);
+
+// platform implementations
+int plGetTimeInMS(void);
+bool plWindowclosed(void);
+void plPresent(void);
+void plHandleEvents(void);
+void plCapturePad(int n);
+void plUpdatePad(CControllerState *state);
 
 struct StrAssoc
 {

@@ -26,7 +26,6 @@ CGame::InitialiseRW(void)
 	CVisibilityPlugins::Initialise();
 	rwCamera = rw::Camera::create();
 	rwCamera->setFrame(rw::Frame::create());
-//	rwCamera->setFarPlane(2000.0f);
 	rwCamera->setFarPlane(4000.0f);
 	rwCamera->setNearPlane(0.9f);
 	TheCamera.m_rwcam = rwCamera;
@@ -84,6 +83,7 @@ CGame::Initialise(void)
 
 	printf("--Setup game variables\n");
 	CPathFind::AllocatePathFindInfoMem(PATHNODESIZE);
+	CWeather::Init();
 	CCullZones::Init();
 	CTheZones::Init();
 	InitModelIndices();
@@ -109,15 +109,22 @@ CGame::Initialise(void)
 void
 CGame::Process(void)
 {
-	if(IsKeyDown('Q') || IsKeyDown(KEY_ESC))
-		exit(0);
-	CStreaming::LoadAllRequestedModels();
-	if(!CTimer::m_UserPause && !CTimer::m_CodePause){
-		TheCamera.Process();
-		CTheZones::Update();
-		CCollision::Update();
+	CPad::UpdatePads();
 
-		if(IsKeyDown('J'))
-			TheCamera.dolly(10.0f);
+	CPad *pad = CPad::GetPad(0);
+	if(CPad::IsKeyDown('Q') || CPad::IsKeyDown(KEY_ESC) ||
+	   pad->NewState.start && pad->NewState.select){
+		isRunning = 0;
+		return;
+	}
+	CStreaming::LoadAllRequestedModels();
+
+	if(!CTimer::m_UserPause && !CTimer::m_CodePause){
+		CTheZones::Update();
+		CClock::Update();
+		CWeather::Update();
+		CCollision::Update();
+		CTimeCycle::Update();
+		TheCamera.Process();
 	}
 }
