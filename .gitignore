@@ -1,0 +1,10 @@
+obj/
+bin/
+lib/
+.vs/
+output/
+customprops.xml
+librwgta.VC.db
+*.user
+librw.props
+librw_toolfolder.props

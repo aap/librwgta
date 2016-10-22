@@ -3,13 +3,8 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <IncludePath>C:\Users\aap\src\librw;$(IncludePath)</IncludePath>
-    <_PropertySheetDisplayName>librw</_PropertySheetDisplayName>
+    <LIBRWSDK_PATH>..\librw\</LIBRWSDK_PATH>
   </PropertyGroup>
-  <ItemDefinitionGroup>
-    <ClCompile>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-  </ItemDefinitionGroup>
+  <ItemDefinitionGroup />
   <ItemGroup />
 </Project>
