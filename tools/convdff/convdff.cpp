@@ -287,8 +287,6 @@ main(int argc, char *argv[])
 	assert(c != NULL);
 	in.close();
 
-	removeUnusedMaterials(c);
-
 	if(surfprops)
 		resetSurfProps(c);
 	if(removebody)
@@ -391,6 +389,8 @@ main(int argc, char *argv[])
 		rw::version = header.version;
 		rw::build = header.build;
 	}
+
+	removeUnusedMaterials(c);
 
 	StreamFile out;
 	if(argc > 1)

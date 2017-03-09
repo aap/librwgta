@@ -240,6 +240,7 @@ main(int argc, char *argv[])
 	rw::Engine::init();
 	gta::attachPlugins();
 	rw::Driver::open();
+	rw::engine->loadTextures = 0;
 //	rw::d3d::isP8supported = 0;
 
 	char *s;

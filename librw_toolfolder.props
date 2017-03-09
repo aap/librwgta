@@ -10,7 +10,7 @@
   <ItemDefinitionGroup>
     <Link>
       <AdditionalLibraryDirectories>..\..\lib\$(Platform)\$(Configuration)\</AdditionalLibraryDirectories>
-      <AdditionalDependencies>librwgta.lib</AdditionalDependencies>
+      <AdditionalDependencies>librwgta.lib;librw.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup />

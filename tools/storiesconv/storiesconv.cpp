@@ -220,14 +220,13 @@ convertMesh(Geometry *rwg, RslGeometry *g, int32 ii)
 	inst += ii;
 	p += inst->dmaPacket;
 	Mesh *m = &rwg->meshHeader->mesh[inst->matID];
-
 	ps2::Vertex v;
 	uint32 mask = 0x1001;	// tex coords, vertices
 	if(rwg->geoflags & Geometry::NORMALS)
 		mask |= 0x10;
 	if(rwg->geoflags & Geometry::PRELIT)
 		mask |= 0x100;
-	Skin *skin = *PLUGINOFFSET(Skin*, rwg, skinGlobals.offset);
+	Skin *skin = *PLUGINOFFSET(Skin*, rwg, skinGlobals.geoOffset);
 	if(skin)
 		mask |= 0x10000;
 
@@ -241,14 +240,15 @@ convertMesh(Geometry *rwg, RslGeometry *g, int32 ii)
 	uint32 *end = (uint32*)(p + ((w[0] & 0xFFFF) + 1)*0x10);
 	w += 4;
 	int32 nvert;
-	bool first = 1;
+	bool firstInst = m->numIndices == 0;
+	bool firstBatch = 1;
 	while(w < end){
 		/* Get data pointers */
 
 		// GIFtag probably
 		assert(w[0] == 0x6C018000);	// UNPACK
 		nvert = w[4] & 0x7FFF;
-		if(!first) nvert -=2;
+		if(!firstBatch) nvert -=2;
 		w += 5;
 
 		// positions
@@ -258,7 +258,7 @@ convertMesh(Geometry *rwg, RslGeometry *g, int32 ii)
 		w += 5;
 		assert((w[0] & 0xFF004000) == 0x79000000);
 		vuVerts = (int16*)(w+1);
-		if(!first) vuVerts += 2*3;
+		if(!firstBatch) vuVerts += 2*3;
 		w = skipUnpack(w);
 
 		// tex coords
@@ -268,27 +268,27 @@ convertMesh(Geometry *rwg, RslGeometry *g, int32 ii)
 		w += 5;
 		assert((w[0] & 0xFF004000) == 0x76004000);
 		vuTex = (uint8*)(w+1);
-		if(!first) vuTex += 2*2;
+		if(!firstBatch) vuTex += 2*2;
 		w = skipUnpack(w);
 
 		if(rwg->geoflags & Geometry::PRELIT){
 			assert((w[0] & 0xFF004000) == 0x6F000000);
 			vuCols = (uint16*)(w+1);
-			if(!first) vuCols += 2;
+			if(!firstBatch) vuCols += 2;
 			w = skipUnpack(w);
 		}
 
 		if(rwg->geoflags & Geometry::NORMALS){
 			assert((w[0] & 0xFF004000) == 0x6A000000);
 			vuNorms = (int8*)(w+1);
-			if(!first) vuNorms += 2*3;
+			if(!firstBatch) vuNorms += 2*3;
 			w = skipUnpack(w);
 		}
 
 		if(skin){
 			assert((w[0] & 0xFF004000) == 0x6C000000);
 			vuSkin = w+1;
-			if(!first) vuSkin += 2*4;
+			if(!firstBatch) vuSkin += 2*4;
 			w = skipUnpack(w);
 		}
 
@@ -326,15 +326,17 @@ convertMesh(Geometry *rwg, RslGeometry *g, int32 ii)
 			int32 idx = ps2::findVertexSkin(rwg, NULL, mask, &v);
 			if(idx < 0)
 				idx = rwg->numVertices++;
-			/* Insert mesh joining indices when we get the index of the first vertex
-			 * in the first VU chunk of a non-first RslMesh. */
-			if(i == 0 && first && ii != 0 && inst[-1].matID == inst->matID){
-				m->indices[m->numIndices] = m->indices[m->numIndices-1];
-				m->numIndices++;
-				m->indices[m->numIndices++] = idx;
-				if(inst[-1].numTriangles % 2)
-					m->indices[m->numIndices++] = idx;
+
+			// Insts normally overlap by two vertices (same as batches).
+			// For some reason each inst is assumed to end in an odd vertex.
+			// This is enforced by doubling the last vertex if necessary,
+			// in which case we have one more overlapping vertex.
+			if(i == 0 && firstBatch && !firstInst){
+				m->numIndices -= 2;
+				if(inst->numTriangles % 2)
+					m->numIndices--;
 			}
+
 			m->indices[m->numIndices++] = idx;
 			ps2::insertVertexSkin(rwg, idx, mask, &v);
 
@@ -344,7 +346,8 @@ convertMesh(Geometry *rwg, RslGeometry *g, int32 ii)
 			vuCols++;
 			vuSkin += 4;
 		}
-		first = 0;
+		firstInst = 0;
+		firstBatch = 0;
 	}
 }
 
@@ -363,6 +366,10 @@ convertAtomic(RslElement *atomic)
 	for(int32 i = 0; i < rwg->numMaterials; i++)
 		rwg->materialList[i] = convertMaterial(g->matList.materials[i]);
 
+	sPs2Geometry *resHeader = (sPs2Geometry*)(g+1);
+	sPs2GeometryMesh *inst = (sPs2GeometryMesh*)(resHeader+1);
+	int32 numInst = resHeader->size >> 20;
+
 	rwg->meshHeader = new MeshHeader;
 	rwg->meshHeader->flags = 1;
 	rwg->meshHeader->numMeshes = rwg->numMaterials;
@@ -372,21 +379,11 @@ convertAtomic(RslElement *atomic)
 	for(uint32 i = 0; i < rwg->meshHeader->numMeshes; i++)
 		meshes[i].numIndices = 0;
 
-	sPs2Geometry *resHeader = (sPs2Geometry*)(g+1);
-	sPs2GeometryMesh *inst = (sPs2GeometryMesh*)(resHeader+1);
-	int32 numInst = resHeader->size >> 20;
 
-	int32 lastId = -1;
 	for(int32 i = 0; i < numInst; i++){
 		Mesh *m = &meshes[inst[i].matID];
 		rwg->numVertices += inst[i].numTriangles+2;
 		m->numIndices += inst[i].numTriangles+2;
-		// Extra indices since we're merging tristrip
-		// meshes with the same material.
-		// Be careful with face winding.
-		if(lastId == inst[i].matID)
-			m->numIndices += inst[i-1].numTriangles % 2 ? 3 : 2;
-		lastId = inst[i].matID;
 	}
 	for(uint32 i = 0; i < rwg->meshHeader->numMeshes; i++){
 		rwg->meshHeader->mesh[i].material = rwg->materialList[i];
@@ -414,7 +411,7 @@ convertAtomic(RslElement *atomic)
 		assert(g->skin);
 	if(g->skin){
 		skin = new Skin;
-		*PLUGINOFFSET(Skin*, rwg, skinGlobals.offset) = skin;
+		*PLUGINOFFSET(Skin*, rwg, skinGlobals.geoOffset) = skin;
 		skin->init(g->skin->numBones, g->skin->numBones, rwg->numVertices);
 		memcpy(skin->inverseMatrices, g->skin->invMatrices, skin->numBones*64);
 	}
@@ -518,7 +515,7 @@ moveAtomics(Frame *f)
 		int i = 0;
 		FORLIST(lnk, f->objectList){
 			ObjectWithFrame *obj = ObjectWithFrame::fromFrame(lnk);
-			assert(obj->type == Atomic::ID);
+			assert(obj->object.type == Atomic::ID);
 			objs[i] = obj;
 			obj->setFrame(NULL);
 			i++;
@@ -884,7 +881,7 @@ main(int argc, char *argv[])
 	if(argc < 1)
 		usage();
 
-	World *world = NULL;
+	::World *world = NULL;
 	Sector *sector = NULL;
 	RslElementGroup *clump = NULL;
 	RslElement *atomic = NULL;
@@ -924,7 +921,7 @@ main(int argc, char *argv[])
 	largefile = rslstr->dataSize > 0x1000000;
 
 	if(rslstr->ident == WRLD_IDENT && largefile){	// hack
-		world = (World*)rslstr->data;
+		world = (::World*)rslstr->data;
 
 		int len = strlen(argv[0])+1;
 		char filename[1024];
