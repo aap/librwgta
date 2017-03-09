@@ -33,6 +33,7 @@ usage(void)
 	fprintf(stderr, "\t-i instance\n");
 	fprintf(stderr, "\t-f don't flip frame hierarchy\n");
 	fprintf(stderr, "\t-d dump frame and hanim hierarchy\n");
+	fprintf(stderr, "\t-w correct face winding of tristrips\n");
 	fprintf(stderr, "\t-v RW version, e.g. 33004 for 3.3.0.4\n");
 	fprintf(stderr, "\t-o output platform. ps2, xbox, mobile, d3d8, d3d9\n");
 	exit(1);
@@ -209,6 +210,7 @@ main(int argc, char *argv[])
 	int surfprops = 0;
 	int removebody = 0;
 	int outplatform = rw::PLATFORM_D3D8;
+	int correctWinding = 0;
 
 	char *s;
 	//char *seconddff = NULL;
@@ -236,6 +238,9 @@ main(int argc, char *argv[])
 		break;
 	case 'b':
 		removebody++;
+		break;
+	case 'w':
+		correctWinding++;
 		break;
 	case 'o':
 		s = EARGF(usage());
@@ -268,7 +273,10 @@ main(int argc, char *argv[])
 	//StreamMemory in;
 	//in.open(data, len);
 	StreamFile in;
-	in.open(argv[0], "rb");
+	if(!in.open(argv[0], "rb")){
+		fprintf(stderr, "Error: couldn't open %s\n", argv[0]);
+		return 1;
+	}
 	currentUVAnimDictionary = NULL;
 	TexDictionary::setCurrent(TexDictionary::create());
 	ChunkHeaderInfo header;
@@ -284,8 +292,11 @@ main(int argc, char *argv[])
 	}
 	debugFile = argv[0];
 	c = Clump::streamRead(&in);
-	assert(c != NULL);
 	in.close();
+	if(c == NULL){
+		fprintf(stderr, "Error: couldn't read clump\n");
+		return 1;
+	}
 
 	if(surfprops)
 		resetSurfProps(c);
@@ -392,11 +403,22 @@ main(int argc, char *argv[])
 
 	removeUnusedMaterials(c);
 
+	if(correctWinding)
+		FORLIST(lnk, c->atomics){
+			Geometry *g = Atomic::fromClump(lnk)->geometry;
+			g->correctTristripWinding();
+		}
+
 	StreamFile out;
+	const char *file;
 	if(argc > 1)
-		assert(out.open(argv[1], "wb"));
+		file = argv[1];
 	else
-		assert(out.open("out.dff", "wb"));
+		file = "out.dff";
+	if(!out.open(file, "wb")){
+		fprintf(stderr, "Error: couldn't open %s\n", file);
+		return 1;
+	}
 	if(currentUVAnimDictionary)
 		currentUVAnimDictionary->streamWrite(&out);
 	c->streamWrite(&out);
