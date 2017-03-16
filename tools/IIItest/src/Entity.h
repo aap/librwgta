@@ -105,7 +105,7 @@ public:
 	// Teleport
 	// PreRender
 	virtual void Render(void);
-	// SetupLighting
-	// RemoveLighting
+	virtual void SetupLighting(void);
+	virtual void RemoveLighting(void);
 	// FlagToDestroyWhenNextProcessed
 };

@@ -120,12 +120,18 @@ void convertTxd(rw::TexDictionary *txd);
 extern CCamera TheCamera;
 extern rw::Camera *rwCamera;
 extern rw::World  *rwWorld;
-extern rw::Light  *ambient;
-extern rw::Light  *direct;
+extern rw::Light  *pAmbient;
+extern rw::Light  *pDirect;
+extern rw::Light  *pExtraDirectionals[4];
 extern bool isRunning;
 CVector FindPlayerCoors(void);
 void SetLightsWithTimeOfDayColour(rw::World*);
+void LightsCreate(rw::World*);
+void DeActivateDirectional(void);
+void SetAmbientColours(void);
 void DefinedState(void);
+
+extern CEntity *debugent;
 
 void TheGame(void);
 

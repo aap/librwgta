@@ -129,7 +129,7 @@ CRenderer::SetupBigBuildingVisibility(CEntity *ent)
 		// Make sure our atomic uses the right geometry and not
 		// that of an atomic for another draw distance.
 		if(a->geometry != rwobj->geometry)
-			rwobj->setGeometry(a->geometry);
+			rwobj->setGeometry(a->geometry, 0);
 		// TODO: GetIsOnScreenComplex
 		if(!ent->IsVisible())
 			return false;
@@ -160,7 +160,7 @@ CRenderer::SetupBigBuildingVisibility(CEntity *ent)
 	assert(ent->m_rwObject);
 	rw::Atomic *rwobj = (rw::Atomic*)ent->m_rwObject;
 	if(a->geometry != rwobj->geometry)
-		rwobj->setGeometry(a->geometry);
+		rwobj->setGeometry(a->geometry, 0);
 	// TODO: GetIsOnScreenComplex
 	if(ent->IsVisible())
 		CVisibilityPlugins::InsertEntityIntoSortedList(ent, dist);
@@ -193,13 +193,15 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 			request = false;
 		}
 	}else if(mi->m_type != SIMPLEMODELINFO){
-		// vehicles and peds and shit
+		// TODO: vehicles and peds and shit
 		return 0;
-	}else if(ent->m_type == ENTITY_TYPE_OBJECT)
+	}else if(ent->m_type == ENTITY_TYPE_OBJECT){
+		// TODO
 		return 0;
+	}
 
-	float dist = (ms_vecCameraPosition-*ent->GetPosition()).Magnitude();
-	// uhm...what? when is is 330.0f < GetLargestLodDistance even true?
+	float dist = (*ent->GetPosition() - ms_vecCameraPosition).Magnitude();
+	// uhm...what? when is 330.0f < GetLargestLodDistance even true?
 	if(330.0f < dist && dist < mi->GetLargestLodDistance())
 		dist = mi->GetLargestLodDistance();
 	if(ent->m_type == ENTITY_TYPE_OBJECT && ent->m_drawDamaged)
@@ -215,7 +217,7 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 		// Make sure our atomic uses the right geometry and not
 		// that of an atomic for another draw distance.
 		if(a->geometry != rwobj->geometry)
-			rwobj->setGeometry(a->geometry);
+			rwobj->setGeometry(a->geometry, 0);
 		mi->IncreaseAlpha();
 
 		if(!(ent->m_rwObject && ent->m_isVisible))
@@ -257,7 +259,7 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 	assert(ent->m_rwObject);
 	rw::Atomic *rwobj = (rw::Atomic*)ent->m_rwObject;
 	if(a->geometry != rwobj->geometry)
-		rwobj->setGeometry(a->geometry);
+		rwobj->setGeometry(a->geometry, 0);
 	mi->IncreaseAlpha();
 
 	if(!(ent->m_rwObject && ent->m_isVisible))
@@ -266,6 +268,45 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 	CVisibilityPlugins::InsertEntityIntoSortedList(ent, dist);
 	ent->m_flagE1 = 1;
 	return 2;
+}
+
+void
+CRenderer::RenderOneNonRoad(CEntity *ent)
+{
+	// TODO: vehicle and ped things
+	ent->SetupLighting();
+	ent->Render();
+	ent->RemoveLighting();
+}
+
+void
+CRenderer::RenderRoads(void)
+{
+	int i;
+	CEntity *e;
+	engine->setRenderState(FOGENABLE, 1);
+	for(i = 0; i < ms_nNoOfVisibleEntities; i++){
+		e = ms_aVisibleEntityPtrs[i];
+		if(e->m_type == ENTITY_TYPE_BUILDING &&
+		   ((CBuilding*)e)->GetIsATreadable())
+			e->Render();
+	}
+}
+
+void
+CRenderer::RenderEverythingBarRoads(void)
+{
+	// TODO: gSortedVehiclesAndPeds, transparency
+	int i;
+	CEntity *e;
+	for(i = 0; i < ms_nNoOfVisibleEntities; i++){
+		ms_aVisibleEntityPtrs[i]->Render();
+		e = ms_aVisibleEntityPtrs[i];
+		if(e->m_type == ENTITY_TYPE_BUILDING &&
+		   ((CBuilding*)e)->GetIsATreadable())
+			continue;
+		CRenderer::RenderOneNonRoad(e);
+	}
 }
 
 void
@@ -279,5 +320,8 @@ CRenderer::RenderEverything(void)
 void
 CRenderer::RenderFadingInEntities(void)
 {
+	engine->setRenderState(FOGENABLE, 1);
+	DeActivateDirectional();
+	SetAmbientColours();
 	CVisibilityPlugins::RenderFadingEntities();
 }

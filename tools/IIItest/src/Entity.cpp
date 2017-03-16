@@ -177,3 +177,15 @@ CEntity::Render(void)
 		m_isBeingRendered = 0;
 	}
 }
+
+void
+CEntity::SetupLighting(void)
+{
+	DeActivateDirectional();
+	SetAmbientColours();
+}
+
+void
+CEntity::RemoveLighting(void)
+{
+}

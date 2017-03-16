@@ -370,26 +370,26 @@ CStreaming::getNextFile(void)
 {
 	int retid = -1;
 	int id;
-again:
-	for(CStreamingInfo *strinfo = ms_startRequestedList.m_next;
-	    strinfo != &ms_endRequestedList;
-	    strinfo = strinfo->m_next){
-		id = strinfo-ms_aInfoForModel;
-		if(id >= MODELOFFSET && id < MODELOFFSET+MODELINFOSIZE){
-			CBaseModelInfo *mi = CModelInfo::GetModelInfo(id);
-			if(CStreaming::Txd(mi->m_txdSlot)->m_loadState != STREAM_LOADED){
-//				debug("requesting txd for model %d\n", id);
-				RequestModel(mi->m_txdSlot+TXDOFFSET, CStreaming::Model(id)->m_flags);
-				continue;
+	do
+		for(CStreamingInfo *strinfo = ms_startRequestedList.m_next;
+		    strinfo != &ms_endRequestedList;
+		    strinfo = strinfo->m_next){
+			id = strinfo-ms_aInfoForModel;
+			if(id >= MODELOFFSET && id < MODELOFFSET+MODELINFOSIZE){
+				CBaseModelInfo *mi = CModelInfo::GetModelInfo(id);
+				if(CStreaming::Txd(mi->m_txdSlot)->m_loadState != STREAM_LOADED){
+//					debug("requesting txd for model %d\n", id);
+					RequestModel(mi->m_txdSlot+TXDOFFSET,
+					             CStreaming::Model(id)->m_flags);
+					continue;
+				}
 			}
+			retid = id;
+			strinfo->m_loadState = STREAM_LOADED;
+			strinfo->RemoveFromList();
+			break;
 		}
-		retid = id;
-		strinfo->m_loadState = STREAM_LOADED;
-		strinfo->RemoveFromList();
-		break;
-	}
-	if(retid == -1 && ms_startRequestedList.m_next != &ms_endRequestedList)
-		goto again;
+	while(retid == -1 && ms_startRequestedList.m_next != &ms_endRequestedList);
 	return retid;
 }
 
@@ -455,8 +455,9 @@ CStreaming::HaveAllBigBuildingsLoaded(eLevelName level)
 	for(int i = 0; i < pool.GetSize(); i++){
 		CBuilding *b = pool.GetSlot(i);
 		if(b && b->m_isBigBuilding && b->m_level == level &&
-		   Model(b->m_modelIndex)->m_loadState != STREAM_LOADED)
+		   Model(b->m_modelIndex)->m_loadState != STREAM_LOADED){
 			return;
+		}
 	}
 	RemoveUnusedBigBuildings(level);
 	ms_hasLoadedLODs = true;

@@ -28,6 +28,22 @@ d3dToGl3(rw::Raster *raster)
 }
 
 void
+im2dshit(void)
+{
+	static rw::gl3::Im2DVertex verts[] = {
+	  { -0.5, -0.5, 0.0,  255, 0, 0, 255,  0.0, 0.0 },
+	  {  0.5, -0.5, 0.0,  0, 255, 0, 255,  0.0, 0.0 },
+	  { -0.5,  0.5, 0.0,  0, 0, 255, 255,  0.0, 0.0 },
+	  {  0.5,  0.5, 0.0,  0, 255, 255, 255,  0.0, 0.0 },
+	};
+	static short indices[] = {
+		0, 1, 2, 3
+	};
+	rw::engine->im2DRenderIndexedPrimitive(rw::PRIMTYPETRISTRIP,
+		&verts, 4, &indices, 4);
+}
+
+void
 display(void)
 {
 	camera->update();
@@ -37,6 +53,7 @@ display(void)
 	camera->m_rwcam->beginUpdate();
 
 	clump->render();
+	im2dshit();
 
 	camera->m_rwcam->endUpdate();
 }
@@ -136,8 +153,8 @@ setCarColor(rw::Clump *clump, rw::RGBA *c1, rw::RGBA *c2)
 	using namespace rw;
 	FORLIST(lnk, clump->atomics){
 		Geometry *g = Atomic::fromClump(lnk)->geometry;
-		for(int32 i = 0; i < g->numMaterials; i++){
-			Material *m = g->materialList[i];
+		for(int32 i = 0; i < g->matList.numMaterials; i++){
+			Material *m = g->matList.materials[i];
 			if(m->color.red ==   0x3C &&
 			   m->color.green == 0xFF &&
 			   m->color.blue ==  0x00){
@@ -162,8 +179,8 @@ removeBodyTextures(rw::Clump *clump)
 	using namespace rw;
 	FORLIST(lnk, clump->atomics){
 		Geometry *g = Atomic::fromClump(lnk)->geometry;
-		for(int32 i = 0; i < g->numMaterials; i++){
-			Material *m = g->materialList[i];
+		for(int32 i = 0; i < g->matList.numMaterials; i++){
+			Material *m = g->matList.materials[i];
 			if(m->texture == nil) continue;
 			if(strstr(m->texture->name, "body")){
 				m->texture->destroy();
@@ -197,8 +214,8 @@ setEnvFrame(rw::Clump *clump)
 
 	FORLIST(lnk1, clump->atomics){
 		Geometry *g = Atomic::fromClump(lnk1)->geometry;
-		for(int32 i = 0; i < g->numMaterials; i++){
-			MatFX *mfx = MatFX::get(g->materialList[i]);
+		for(int32 i = 0; i < g->matList.numMaterials; i++){
+			MatFX *mfx = MatFX::get(g->matList.materials[i]);
 			if(mfx)
 				mfx->setEnvFrame(f);
 		}
@@ -215,13 +232,13 @@ initrw(void)
 
 	rw::version = 0x34000;
 	rw::platform = PLATFORM_GL3;
-	rw::engine->loadTextures = 1;
 
 	rw::Engine::init();
 	gta::attachPlugins();
 	rw::Driver::open();
 	gl3::initializeRender();
 	d3d::isP8supported = 0;
+	rw::engine->loadTextures = 1;
 
 //	char path[] = "MODELS\\taxi.dff";
 	char path[] = "/home/aap/src/librwgta/tools/gl3test/MODELS\\taxi.dff";

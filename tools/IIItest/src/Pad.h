@@ -86,3 +86,5 @@ public:
 	static bool IsKeyDown(int key);
 };
 
+#define IsButtonJustDown(pad, btn) \
+	(!(pad)->OldState.btn && (pad)->NewState.btn)

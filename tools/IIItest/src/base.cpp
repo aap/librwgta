@@ -1,10 +1,13 @@
 #include "III.h"
 #include <cstdarg>
 
+CEntity *debugent;
+
 rw::Camera *rwCamera;
 rw::World  *rwWorld;
-rw::Light  *ambient;
-rw::Light  *direct;
+rw::Light  *pAmbient;
+rw::Light  *pDirect;
+rw::Light  *pExtraDirectionals[4];
 bool isRunning;
 
 uchar work_buff[55000];
@@ -101,18 +104,62 @@ SetLightsWithTimeOfDayColour(rw::World*)
 	AmbientLightColourForFrame[1] = CTimeCycle::m_fCurrentAmbientGreen;
 	AmbientLightColourForFrame[2] = CTimeCycle::m_fCurrentAmbientBlue;
 	// TODO: flash and rain etc.
-	ambient->setColor(AmbientLightColourForFrame[0],
-	                  AmbientLightColourForFrame[1],
-	                  AmbientLightColourForFrame[2]);
+	pAmbient->setColor(AmbientLightColourForFrame[0],
+	                   AmbientLightColourForFrame[1],
+	                   AmbientLightColourForFrame[2]);
 
 	// TODO: CCoronas::LightsMult
 	DirectionalLightColourForFrame[0] = CTimeCycle::m_fCurrentDirectionalRed;
 	DirectionalLightColourForFrame[1] = CTimeCycle::m_fCurrentDirectionalGreen;
 	DirectionalLightColourForFrame[2] = CTimeCycle::m_fCurrentDirectionalBlue;
-	direct->setColor(DirectionalLightColourForFrame[0],
-	                 DirectionalLightColourForFrame[1],
-	                 DirectionalLightColourForFrame[2]);
+	pDirect->setColor(DirectionalLightColourForFrame[0],
+	                  DirectionalLightColourForFrame[1],
+	                  DirectionalLightColourForFrame[2]);
 	// TODO: transform
+}
+
+void
+LightsCreate(rw::World *world)
+{
+	pAmbient = rw::Light::create(rw::Light::AMBIENT);
+	pAmbient->setColor(0.25f, 0.2f, 0.25f);
+	pAmbient->setFlags(rw::Light::LIGHTATOMICS);
+
+	pDirect = rw::Light::create(rw::Light::DIRECTIONAL);
+	pDirect->setFlags(rw::Light::LIGHTATOMICS);
+	pDirect->setColor(1.0f, 0.45f, 0.85f);
+	pDirect->radius = 2.0f;
+	rw::Frame *frm = rw::Frame::create();
+	pDirect->setFrame(frm);
+	rw::V3d axis = { 1.0f, 1.0f, 0.0f };
+	frm->rotate(&axis, 160.0f, COMBINEPRECONCAT);
+
+	world->addLight(pAmbient);
+	world->addLight(pDirect);
+
+	for(int i = 0; i < nelem(pExtraDirectionals); i++){
+		rw::Light *l = rw::Light::create(rw::Light::DIRECTIONAL);
+		pExtraDirectionals[i] = l;
+		l->setFlags(0);
+		l->setColor(1.0f, 0.5f, 0.0f);
+		l->radius = 2.0f;
+		l->setFrame(rw::Frame::create());
+		world->addLight(l);
+	}
+}
+
+void
+DeActivateDirectional(void)
+{
+	pDirect->setFlags(0);
+}
+
+void
+SetAmbientColours(void)
+{
+	pAmbient->setColor(AmbientLightColourForFrame[0],
+	                   AmbientLightColourForFrame[1],
+	                   AmbientLightColourForFrame[2]);
 }
 
 void
@@ -125,6 +172,8 @@ DefinedState(void)
 	engine->setRenderState(SRCBLEND, BLENDSRCALPHA);
 	engine->setRenderState(DESTBLEND, BLENDINVSRCALPHA);
 	engine->setRenderState(FOGENABLE, 0);
+	engine->setRenderState(ALPHATESTREF, 10);
+	engine->setRenderState(ALPHATESTFUNC, ALPHALESS);
 	RGBA c;
 	c.red = CTimeCycle::m_nCurrentFogColourRed;
 	c.green = CTimeCycle::m_nCurrentFogColourGreen;
@@ -176,11 +225,13 @@ TheGame(void)
 		TheCamera.update();
 		TheCamera.m_rwcam->beginUpdate();
 
-		CRenderer::RenderEverything();
+		CRenderer::RenderRoads();
+		engine->setRenderState(FOGENABLE, 1);
+		CRenderer::RenderEverythingBarRoads();
+		DefinedState();
 		CRenderer::RenderFadingInEntities();
 
 		TheCamera.m_rwcam->endUpdate();
 		plPresent();
 	}
 }
-

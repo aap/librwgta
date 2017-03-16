@@ -176,9 +176,9 @@ saUninstanceCB(ps2::MatPipeline *pipe, Geometry *geo, uint32 flags[], Mesh *mesh
 	uint32 mask = 0x1;	// vertices
 	int cinc = 4;
 	int tinc = 2;
-	if((geo->geoflags & Geometry::NORMALS) && hasNormals(id))
+	if((geo->flags & Geometry::NORMALS) && hasNormals(id))
 		mask |= 0x10;
-	if((geo->geoflags & Geometry::PRELIT) && hasColors(id))
+	if((geo->flags & Geometry::PRELIT) && hasColors(id))
 		mask |= 0x100;
 	if(hasColors2(id)){
 		mask |= 0x200;
