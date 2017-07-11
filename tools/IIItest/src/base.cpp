@@ -166,20 +166,20 @@ void
 DefinedState(void)
 {
 	using namespace rw;
-	engine->setRenderState(ZTESTENABLE, 1);
-	engine->setRenderState(ZWRITEENABLE, 1);
-	engine->setRenderState(VERTEXALPHA, 0);
-	engine->setRenderState(SRCBLEND, BLENDSRCALPHA);
-	engine->setRenderState(DESTBLEND, BLENDINVSRCALPHA);
-	engine->setRenderState(FOGENABLE, 0);
-	engine->setRenderState(ALPHATESTREF, 10);
-	engine->setRenderState(ALPHATESTFUNC, ALPHALESS);
+	setRenderState(ZTESTENABLE, 1);
+	setRenderState(ZWRITEENABLE, 1);
+	setRenderState(VERTEXALPHA, 0);
+	setRenderState(SRCBLEND, BLENDSRCALPHA);
+	setRenderState(DESTBLEND, BLENDINVSRCALPHA);
+	setRenderState(FOGENABLE, 0);
+	setRenderState(ALPHATESTREF, 10);
+	setRenderState(ALPHATESTFUNC, ALPHALESS);
 	RGBA c;
 	c.red = CTimeCycle::m_nCurrentFogColourRed;
 	c.green = CTimeCycle::m_nCurrentFogColourGreen;
 	c.blue = CTimeCycle::m_nCurrentFogColourBlue;
 	c.alpha = 0xFF;
-	engine->setRenderState(FOGCOLOR, *(uint32*)&c);
+	setRenderState(FOGCOLOR, *(uint32*)&c);
 }
 
 void
@@ -224,6 +224,10 @@ TheGame(void)
 		rwCamera->fogPlane = CTimeCycle::m_fCurrentFogStart;
 		TheCamera.update();
 		TheCamera.m_rwcam->beginUpdate();
+
+		debug("visible entities, alpha list: %d %d\n",
+			CRenderer::ms_nNoOfVisibleEntities,
+			CVisibilityPlugins::m_alphaEntityList.Count());
 
 		CRenderer::RenderRoads();
 		engine->setRenderState(FOGENABLE, 1);

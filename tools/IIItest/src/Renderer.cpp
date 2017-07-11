@@ -135,7 +135,7 @@ CRenderer::SetupBigBuildingVisibility(CEntity *ent)
 			return false;
 		if(mi->m_drawLast){
 			CVisibilityPlugins::InsertEntityIntoSortedList(ent, dist);
-			ent->m_flagE1 = 0;
+			ent->m_isFading = 0;
 			return false;
 		}
 		return true;
@@ -226,13 +226,13 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 		if(mi->m_alpha == 255){
 			if(mi->m_drawLast || ent->m_flagD20){
 				CVisibilityPlugins::InsertEntityIntoSortedList(ent, dist);
-				ent->m_flagE1 = 0;
+				ent->m_isFading = 0;
 				return 0;
 			}
 			return 1;
 		}
 		CVisibilityPlugins::InsertEntityIntoSortedList(ent, dist);
-		ent->m_flagE1 = 1;
+		ent->m_isFading = 1;
 		return 0;
 	}
 
@@ -266,7 +266,7 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 		return 0;
 	// TODO: GetIsOnScreen
 	CVisibilityPlugins::InsertEntityIntoSortedList(ent, dist);
-	ent->m_flagE1 = 1;
+	ent->m_isFading = 1;
 	return 2;
 }
 
@@ -284,7 +284,7 @@ CRenderer::RenderRoads(void)
 {
 	int i;
 	CEntity *e;
-	engine->setRenderState(FOGENABLE, 1);
+	setRenderState(FOGENABLE, 1);
 	for(i = 0; i < ms_nNoOfVisibleEntities; i++){
 		e = ms_aVisibleEntityPtrs[i];
 		if(e->m_type == ENTITY_TYPE_BUILDING &&
@@ -320,7 +320,7 @@ CRenderer::RenderEverything(void)
 void
 CRenderer::RenderFadingInEntities(void)
 {
-	engine->setRenderState(FOGENABLE, 1);
+	setRenderState(FOGENABLE, 1);
 	DeActivateDirectional();
 	SetAmbientColours();
 	CVisibilityPlugins::RenderFadingEntities();

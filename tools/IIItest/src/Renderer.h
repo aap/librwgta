@@ -1,5 +1,6 @@
 class CRenderer
 {
+public:
 	static int ms_nNoOfVisibleEntities;
 	static int ms_nNoOfInVisibleEntities;
 	static CEntity *ms_aVisibleEntityPtrs[2000];

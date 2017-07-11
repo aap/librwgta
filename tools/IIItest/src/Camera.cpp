@@ -37,7 +37,8 @@ CCamera::Process(void)
 		sensitivity = 2.0f;
 		if(pad->NewState.l2)
 			sensitivity = 4.0f;
-	}
+	}else if(pad->NewState.l2)
+		sensitivity = 0.5f;
 	if(pad->NewState.square) TheCamera.zoom(0.4f*sensitivity);
 	if(pad->NewState.cross) TheCamera.zoom(-0.4f*sensitivity);
 	TheCamera.orbit(pad->NewState.getLeftX()/30.0f*sensitivity,

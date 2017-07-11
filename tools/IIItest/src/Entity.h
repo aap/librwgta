@@ -72,7 +72,7 @@ public:
 	uint m_flagD80 : 1;
 
 	// flagsE
-	uint m_flagE1 : 1;
+	uint m_isFading : 1;
 	uint m_flagE2 : 1;
 	uint m_flagE4 : 1;
 	uint m_flagE8 : 1;
