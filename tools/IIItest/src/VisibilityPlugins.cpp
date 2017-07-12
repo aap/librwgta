@@ -51,9 +51,9 @@ CVisibilityPlugins::RenderFadingAtomic(rw::Atomic *atm, float camdist)
 	CSimpleModelInfo *mi = GetAtomicModelInfo(atm);
 	distatm = mi->GetAtomicFromDistance(camdist - 20.0f);
 	if(mi->m_additive){
-		setRenderState(rw::DESTBLEND, rw::BLENDONE);
+		SetRenderState(rw::DESTBLEND, rw::BLENDONE);
 		rw::Atomic::defaultRenderCB(atm);
-		setRenderState(rw::DESTBLEND, rw::BLENDINVSRCALPHA);
+		SetRenderState(rw::DESTBLEND, rw::BLENDINVSRCALPHA);
 	}else{
 		fadefactor = (mi->GetLargestLodDistance() - (camdist - 20.0f))/20.0f;
 		if(fadefactor > 1.0f)
@@ -90,8 +90,8 @@ CVisibilityPlugins::RenderFadingEntities(void)
 			continue;
 		mi = (CSimpleModelInfo*)CModelInfo::GetModelInfo(e->m_modelIndex);
 		if(mi->m_noZwrite){
-			setRenderState(ALPHATESTFUNC, ALPHANEVER);
-			setRenderState(ZWRITEENABLE, 0);
+			SetRenderState(ALPHATESTFUNC, ALPHANEVER);
+			SetRenderState(ZWRITEENABLE, 0);
 		}
 
 		if(e->m_isFading){
@@ -104,8 +104,8 @@ CVisibilityPlugins::RenderFadingEntities(void)
 			CRenderer::RenderOneNonRoad(e);
 
 		if(mi->m_noZwrite){
-			setRenderState(ZWRITEENABLE, 1);
-			setRenderState(ALPHATESTFUNC, ALPHALESS);
+			SetRenderState(ZWRITEENABLE, 1);
+			SetRenderState(ALPHATESTFUNC, ALPHALESS);
 		}
 	}
 }

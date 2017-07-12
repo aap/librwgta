@@ -323,8 +323,8 @@ initrw(void)
 //	camera->m_up.set(0.0f, 1.0f, 0.0f);
 //	camera->m_localup.set(0.0f, 1.0f, 0.0f);
 
-	rw::setRenderState(rw::FOGENABLE, 1);
-	rw::setRenderState(rw::FOGCOLOR, *(rw::uint32*)&clearcol);
+	rw::SetRenderState(rw::FOGENABLE, 1);
+	rw::SetRenderState(rw::FOGCOLOR, *(rw::uint32*)&clearcol);
 
 	world = rw::World::create();
 	world->addCamera(camera->m_rwcam);

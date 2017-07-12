@@ -166,20 +166,20 @@ void
 DefinedState(void)
 {
 	using namespace rw;
-	setRenderState(ZTESTENABLE, 1);
-	setRenderState(ZWRITEENABLE, 1);
-	setRenderState(VERTEXALPHA, 0);
-	setRenderState(SRCBLEND, BLENDSRCALPHA);
-	setRenderState(DESTBLEND, BLENDINVSRCALPHA);
-	setRenderState(FOGENABLE, 0);
-	setRenderState(ALPHATESTREF, 10);
-	setRenderState(ALPHATESTFUNC, ALPHALESS);
+	SetRenderState(ZTESTENABLE, 1);
+	SetRenderState(ZWRITEENABLE, 1);
+	SetRenderState(VERTEXALPHA, 0);
+	SetRenderState(SRCBLEND, BLENDSRCALPHA);
+	SetRenderState(DESTBLEND, BLENDINVSRCALPHA);
+	SetRenderState(FOGENABLE, 0);
+	SetRenderState(ALPHATESTREF, 10);
+	SetRenderState(ALPHATESTFUNC, ALPHALESS);
 	RGBA c;
 	c.red = CTimeCycle::m_nCurrentFogColourRed;
 	c.green = CTimeCycle::m_nCurrentFogColourGreen;
 	c.blue = CTimeCycle::m_nCurrentFogColourBlue;
 	c.alpha = 0xFF;
-	setRenderState(FOGCOLOR, *(uint32*)&c);
+	SetRenderState(FOGCOLOR, *(uint32*)&c);
 }
 
 void
@@ -230,7 +230,7 @@ TheGame(void)
 			CVisibilityPlugins::m_alphaEntityList.Count());
 
 		CRenderer::RenderRoads();
-		engine->setRenderState(FOGENABLE, 1);
+		SetRenderState(FOGENABLE, 1);
 		CRenderer::RenderEverythingBarRoads();
 		DefinedState();
 		CRenderer::RenderFadingInEntities();

@@ -1,0 +1,28 @@
+RWDIR=$(HOME)/src/librw
+RWGTADIR=$(HOME)/src/librwgta
+
+BUILDDIR=build-$(BUILD)
+SRCDIR=src
+#SRC := $(patsubst %.cpp,$(SRCDIR)/%.cpp, $(wildcard *.cpp))
+SRC := $(wildcard $(SRCDIR)/*.cpp)
+OBJ := $(patsubst $(SRCDIR)/%.cpp,$(BUILDDIR)/%.o,$(SRC))
+DEP := $(patsubst $(SRCDIR)/%.cpp,$(BUILDDIR)/%.d,$(SRC))
+INC := $(INC) -I/usr/local/include -I$(RWDIR) -I$(RWGTADIR)/src
+# define render target, e.g. null -> -DRW_NULL
+BUILDDEF:=$(shell echo $(BUILD) | tr a-z A-Z | sed 's/^/-DRW_/')
+CFLAGS := $(CFLAGS) $(BUILDDEF)
+
+default: $(TARGET)
+
+$(BUILDDIR)/%.o: $(SRCDIR)/%.cpp
+	@mkdir -p $(@D)
+	$(CXX) $(CFLAGS) $(INC) -c $< -o $@
+
+$(BUILDDIR)/%.d: $(SRCDIR)/%.cpp
+	@mkdir -p $(@D)
+	$(CXX) -MM -MT '$(patsubst $(SRCDIR)/%.cpp,$(BUILDDIR)/%.o,$<)' $(CFLAGS) $(INC) $< > $@
+
+clean:
+	rm -f $(BUILDDIR)/*.[od]
+
+-include $(DEP)

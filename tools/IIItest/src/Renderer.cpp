@@ -284,7 +284,7 @@ CRenderer::RenderRoads(void)
 {
 	int i;
 	CEntity *e;
-	setRenderState(FOGENABLE, 1);
+	SetRenderState(FOGENABLE, 1);
 	for(i = 0; i < ms_nNoOfVisibleEntities; i++){
 		e = ms_aVisibleEntityPtrs[i];
 		if(e->m_type == ENTITY_TYPE_BUILDING &&
@@ -320,7 +320,7 @@ CRenderer::RenderEverything(void)
 void
 CRenderer::RenderFadingInEntities(void)
 {
-	setRenderState(FOGENABLE, 1);
+	SetRenderState(FOGENABLE, 1);
 	DeActivateDirectional();
 	SetAmbientColours();
 	CVisibilityPlugins::RenderFadingEntities();
