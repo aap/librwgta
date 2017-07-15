@@ -12,7 +12,7 @@ CGame::InitialiseRW(void)
 #ifdef RW_GL3
 	rw::platform = rw::PLATFORM_GL3;
 	rw::gl3::initializeRender();
-#elif RW_D3D9
+#elif defined(RW_D3D9)
 	rw::platform = rw::PLATFORM_D3D9;
 #endif
 
