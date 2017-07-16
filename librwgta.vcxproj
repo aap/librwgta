@@ -121,13 +121,10 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\collision.cpp" />
-    <ClCompile Include="src\gtaplg.cpp" />
-    <ClCompile Include="src\rsps2.cpp" />
+    <ClCompile Include="src\**\*.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\collision.h" />
-    <ClInclude Include="src\rwgta.h" />
+    <ClInclude Include="src\**\*.h" />
   </ItemGroup>
   <ItemGroup>
     <Xml Include="customprops.xml">

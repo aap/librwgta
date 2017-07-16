@@ -78,28 +78,10 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\Animation.cpp" />
-    <ClCompile Include="src\d3dUtility.cpp" />
-    <ClCompile Include="src\Game.cpp" />
-    <ClCompile Include="src\HandlingData.cpp" />
-    <ClCompile Include="src\PathFind.cpp" />
-    <ClCompile Include="src\PedStats.cpp" />
-    <ClCompile Include="src\PedType.cpp" />
-    <ClCompile Include="src\FileLoader.cpp" />
-    <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\ModelInfo.cpp" />
-    <ClCompile Include="src\streaming.cpp" />
-    <ClCompile Include="src\TxdStore.cpp" />
-    <ClCompile Include="src\TimeCycle.cpp" />
+    <ClCompile Include="src\**\*.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\Animation.h" />
-    <ClInclude Include="src\config.h" />
-    <ClInclude Include="src\d3dUtility.h" />
-    <ClInclude Include="src\III.h" />
-    <ClInclude Include="src\ModelInfo.h" />
-    <ClInclude Include="src\templates.h" />
-    <ClInclude Include="src\TimeCycle.h" />
+    <ClInclude Include="src\**\*.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
