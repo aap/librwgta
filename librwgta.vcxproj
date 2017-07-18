@@ -67,7 +67,7 @@
       </AdditionalDependencies>
     </Lib>
     <PreBuildEvent>
-      <Command>msbuild /p:configuration="$(Configuration)" /p:platform="$(Platform)" /m "$(LIBRWSDK_PATH)\librw.sln"</Command>
+      <Command>msbuild /t:librw /p:configuration="$(Configuration)" /p:platform="$(Platform)" /m "$(LIBRWSDK_PATH)\librw.sln"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -85,7 +85,7 @@
       </AdditionalDependencies>
     </Lib>
     <PreBuildEvent>
-      <Command>msbuild /p:configuration="$(Configuration)" /p:platform="$(Platform)" /m "$(LIBRWSDK_PATH)\librw.sln"</Command>
+      <Command>msbuild /t:librw /p:configuration="$(Configuration)" /p:platform="$(Platform)" /m "$(LIBRWSDK_PATH)\librw.sln"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -108,7 +108,7 @@
       </AdditionalDependencies>
     </Lib>
     <PreBuildEvent>
-      <Command>msbuild /p:configuration="$(Configuration)" /p:platform="$(Platform)" /m "$(LIBRWSDK_PATH)\librw.sln"</Command>
+      <Command>msbuild /t:librw /p:configuration="$(Configuration)" /p:platform="$(Platform)" /m "$(LIBRWSDK_PATH)\librw.sln"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -130,7 +130,7 @@
       </AdditionalDependencies>
     </Lib>
     <PreBuildEvent>
-      <Command>msbuild /p:configuration="$(Configuration)" /p:platform="$(Platform)" /m "$(LIBRWSDK_PATH)\librw.sln"</Command>
+      <Command>msbuild /t:librw /p:configuration="$(Configuration)" /p:platform="$(Platform)" /m "$(LIBRWSDK_PATH)\librw.sln"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
