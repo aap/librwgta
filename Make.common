@@ -1,5 +1,5 @@
-RWDIR=$(HOME)/src/librw
-RWGTADIR=$(HOME)/src/librwgta
+RWDIR=$(CURDIR)/../librw
+RWGTADIR=$(CURDIR)
 
 BUILDDIR=build-$(BUILD)
 SRCDIR=src

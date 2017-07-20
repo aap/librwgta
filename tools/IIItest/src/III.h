@@ -4,9 +4,7 @@
 #include <cctype>
 #include <cassert>
 
-#ifdef _WIN32
-#define RW_D3D9
-#else
+#ifndef _WIN32
 // RW_GL3 defined by makefile
 
 #include <GL/glew.h>
@@ -15,7 +13,6 @@
 
 #include <rw.h>
 #include "rwgta.h"
-#include "collision.h"
 
 using namespace gta;
 
@@ -27,6 +24,7 @@ using rw::uint32;
 using rw::int32;
 typedef unsigned int uint;
 typedef unsigned char uchar;
+typedef unsigned short ushort;
 
 extern  uchar work_buff[55000];
 void debug(const char *fmt, ...);
@@ -79,6 +77,7 @@ public:
 #include "Weather.h"
 #include "Rect.h"
 #include "zones.h"
+#include "collisions.h"
 #include "Animation.h"
 #include "ModelInfo.h"
 #include "ModelIndices.h"

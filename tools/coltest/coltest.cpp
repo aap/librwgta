@@ -7,17 +7,15 @@
 #include <args.h>
 
 #include <rwgta.h>
-#include <collision.h>
-
-using namespace rw;
+#include <collisions.h>
 
 char *argv0;
 
 #define COLL 0x4C4C4F43
 
 struct ColHeader {
-	uint32 ident;
-	uint32 size;
+	rw::uint32 ident;
+	rw::uint32 size;
 };
 
 void
@@ -25,8 +23,8 @@ writeSingleCol(CColModel *colmodel, char *name)
 {
 	char colname[24];
 	ColHeader header;
-	uint8 *buf;
-	StreamFile stream;
+	rw::uint8 *buf;
+	rw::StreamFile stream;
 	stream.open("out.col", "wb");
 	header.ident = COLL;
 	header.size = writeColModel(colmodel, &buf)+24;
@@ -40,7 +38,7 @@ writeSingleCol(CColModel *colmodel, char *name)
 }
 
 void
-readColFile(Stream *stream)
+readColFile(rw::Stream *stream)
 {
 	ColHeader header;
 	char name[24];
@@ -50,7 +48,7 @@ readColFile(Stream *stream)
 		if(stream->read(&header, 8) == 0 ||
 		   header.ident != COLL)
 			return;
-		uint8 *buf = new uint8[header.size];
+		rw::uint8 *buf = new rw::uint8[header.size];
 		stream->read(buf, header.size);
 		memcpy(name, buf, 24);
 		CColModel *colmodel = new CColModel;
@@ -81,8 +79,8 @@ main(int argc, char *argv[])
 	}ARGEND;
 	if(argc < 1)
 		usage();
-
-	StreamFile in;
+    
+	rw::StreamFile in;
 	if(in.open(argv[0], "rb") == NULL)
 		return 1;
 

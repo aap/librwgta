@@ -104,16 +104,15 @@ CEntity::Add(void)
 void
 CEntity::DeleteRwObject(void)
 {
-	using namespace rw;
 	m_matrix.Detach();
 	if(m_rwObject){
-		if(m_rwObject->type == Atomic::ID){
-			Atomic *a = (Atomic*)m_rwObject;
-			Frame *f = a->getFrame();
+		if(m_rwObject->type == rw::Atomic::ID){
+			rw::Atomic *a = (rw::Atomic*)m_rwObject;
+			rw::Frame *f = a->getFrame();
 			a->destroy();
 			f->destroy();
-		}else if(m_rwObject->type == Clump::ID)
-			((Clump*)m_rwObject)->destroy();
+		}else if(m_rwObject->type == rw::Clump::ID)
+			((rw::Clump*)m_rwObject)->destroy();
 		m_rwObject = nil;
 		CModelInfo::GetModelInfo(m_modelIndex)->RemoveRef();
 	}
@@ -122,16 +121,15 @@ CEntity::DeleteRwObject(void)
 void
 CEntity::CreateRwObject(void)
 {
-	using namespace rw;
 	CBaseModelInfo *mi = CModelInfo::GetModelInfo(m_modelIndex);
 	m_rwObject = mi->CreateInstance();
 	if(m_rwObject == nil)
 		return;
-	if(m_rwObject->type == Atomic::ID){
-		Atomic *a = (Atomic*)m_rwObject;
+	if(m_rwObject->type == rw::Atomic::ID){
+		rw::Atomic *a = (rw::Atomic*)m_rwObject;
 		m_matrix.AttachRW(&a->getFrame()->matrix, false);
-	}else if(m_rwObject->type == Clump::ID){
-		Clump *c = (Clump*)m_rwObject;
+	}else if(m_rwObject->type == rw::Clump::ID){
+		rw::Clump *c = (rw::Clump*)m_rwObject;
 		m_matrix.AttachRW(&c->getFrame()->matrix, false);
 	}
 	mi->AddRef();

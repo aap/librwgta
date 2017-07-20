@@ -59,18 +59,17 @@ DatDesc::get(DatDesc *desc, const char *name)
 rw::Raster*
 d3dToGl3(rw::Raster *raster)
 {
-        using namespace rw;
-	if(raster->platform != PLATFORM_D3D8 &&
-	   raster->platform != PLATFORM_D3D9)
+	if(raster->platform != rw::PLATFORM_D3D8 &&
+	   raster->platform != rw::PLATFORM_D3D9)
 		return raster;
-	d3d::D3dRaster *natras = PLUGINOFFSET(d3d::D3dRaster,
-	                                      raster, d3d::nativeRasterOffset);
+	rw::d3d::D3dRaster *natras = PLUGINOFFSET(rw::d3d::D3dRaster,
+	                                      raster, rw::d3d::nativeRasterOffset);
 	if(natras->format)
 		assert(0 && "no custom d3d formats");
 
-	Image *image = raster->toImage();
+	rw::Image *image = raster->toImage();
 	raster->destroy();
-	raster = Raster::createFromImage(image, PLATFORM_GL3);
+	raster = rw::Raster::createFromImage(image, rw::PLATFORM_GL3);
 	image->destroy();
 	return raster;
 }
@@ -78,9 +77,8 @@ d3dToGl3(rw::Raster *raster)
 void
 convertTxd(rw::TexDictionary *txd)
 {
-	using namespace rw;
 	FORLIST(lnk, txd->textures){
-		Texture *tex = Texture::fromDict(lnk);
+		rw::Texture *tex = rw::Texture::fromDict(lnk);
 		//debug("converting %s\n", tex->name);
 		tex->raster = d3dToGl3(tex->raster);
 	}
@@ -132,7 +130,7 @@ LightsCreate(rw::World *world)
 	rw::Frame *frm = rw::Frame::create();
 	pDirect->setFrame(frm);
 	rw::V3d axis = { 1.0f, 1.0f, 0.0f };
-	frm->rotate(&axis, 160.0f, COMBINEPRECONCAT);
+	frm->rotate(&axis, 160.0f, rw::COMBINEPRECONCAT);
 
 	world->addLight(pAmbient);
 	world->addLight(pDirect);
@@ -165,21 +163,20 @@ SetAmbientColours(void)
 void
 DefinedState(void)
 {
-	using namespace rw;
-	SetRenderState(ZTESTENABLE, 1);
-	SetRenderState(ZWRITEENABLE, 1);
-	SetRenderState(VERTEXALPHA, 0);
-	SetRenderState(SRCBLEND, BLENDSRCALPHA);
-	SetRenderState(DESTBLEND, BLENDINVSRCALPHA);
-	SetRenderState(FOGENABLE, 0);
-	SetRenderState(ALPHATESTREF, 10);
-	SetRenderState(ALPHATESTFUNC, ALPHALESS);
-	RGBA c;
+	SetRenderState(rw::ZTESTENABLE, 1);
+	SetRenderState(rw::ZWRITEENABLE, 1);
+	SetRenderState(rw::VERTEXALPHA, 0);
+	SetRenderState(rw::SRCBLEND, rw::BLENDSRCALPHA);
+	SetRenderState(rw::DESTBLEND, rw::BLENDINVSRCALPHA);
+	SetRenderState(rw::FOGENABLE, 0);
+	SetRenderState(rw::ALPHATESTREF, 10);
+	SetRenderState(rw::ALPHATESTFUNC, rw::ALPHALESS);
+	rw::RGBA c;
 	c.red = CTimeCycle::m_nCurrentFogColourRed;
 	c.green = CTimeCycle::m_nCurrentFogColourGreen;
 	c.blue = CTimeCycle::m_nCurrentFogColourBlue;
 	c.alpha = 0xFF;
-	SetRenderState(FOGCOLOR, *(uint32*)&c);
+	SetRenderState(rw::FOGCOLOR, *(uint32*)&c);
 }
 
 void
@@ -195,8 +192,7 @@ debug(const char *fmt, ...)
 void
 TheGame(void)
 {
-	using namespace rw;
-	static RGBA clearcol = { 0x40, 0x40, 0x40, 0xFF };
+	static rw::RGBA clearcol = { 0x40, 0x40, 0x40, 0xFF };
 
 	debug("Into TheGame!!!\n");
 
@@ -218,7 +214,7 @@ TheGame(void)
 		CRenderer::ConstructRenderList();
 
 		TheCamera.m_rwcam->clear(&clearcol,
-		                         Camera::CLEARIMAGE|Camera::CLEARZ);
+		                         rw::Camera::CLEARIMAGE|rw::Camera::CLEARZ);
 		DefinedState();
 		rwCamera->setFarPlane(CTimeCycle::m_fCurrentFarClip);
 		rwCamera->fogPlane = CTimeCycle::m_fCurrentFogStart;
@@ -230,7 +226,7 @@ TheGame(void)
 			CVisibilityPlugins::m_alphaEntityList.Count());
 
 		CRenderer::RenderRoads();
-		SetRenderState(FOGENABLE, 1);
+		SetRenderState(rw::FOGENABLE, 1);
 		CRenderer::RenderEverythingBarRoads();
 		DefinedState();
 		CRenderer::RenderFadingInEntities();

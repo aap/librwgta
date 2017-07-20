@@ -4,7 +4,6 @@ void switchPipes(Clump *c, int32 platform);
 };
 
 namespace gta {
-using namespace rw;
 
 enum
 {
@@ -35,71 +34,71 @@ void attachPlugins(void);
 
 // Node name
 
-extern int32 nodeNameOffset;
+extern rw::int32 nodeNameOffset;
 void registerNodeNamePlugin(void);
-char *getNodeName(Frame *f);
+char *getNodeName(rw::Frame *f);
 
 // Breakable model
 
 struct Breakable
 {
-	uint32 position;
-	uint32 numVertices;
-	uint32 numFaces;
-	uint32 numMaterials;
+	rw::uint32 position;
+	rw::uint32 numVertices;
+	rw::uint32 numFaces;
+	rw::uint32 numMaterials;
 
-	float32 *vertices;
-	float32 *texCoords;
-	uint8   *colors;
-	uint16  *faces;
-	uint16  *matIDs;
+	rw::float32 *vertices;
+	rw::float32 *texCoords;
+	rw::uint8   *colors;
+	rw::uint16  *faces;
+	rw::uint16  *matIDs;
 	char    (*texNames)[32];
 	char    (*maskNames)[32];
-	float32 (*surfaceProps)[3];
+	rw::float32 (*surfaceProps)[3];
 };
 
-extern int32 breakableOffset;
+extern rw::int32 breakableOffset;
 void registerBreakableModelPlugin(void);
 
 // Extra normals (only on Xbox)
 
-extern int32 extraNormalsOffset;
+extern rw::int32 extraNormalsOffset;
 void registerExtraNormalsPlugin(void);
 
 // Extra vert colors (not on Xbox)
 
 struct ExtraVertColors
 {
-	uint8 *nightColors;
-	uint8 *dayColors;
+	rw::uint8 *nightColors;
+	rw::uint8 *dayColors;
 	float balance;
 };
 
-extern int32 extraVertColorOffset;
-void allocateExtraVertColors(Geometry *g);
+extern rw::int32 extraVertColorOffset;
+void allocateExtraVertColors(rw::Geometry *g);
 void registerExtraVertColorPlugin(void);
 
 // Environment mat
 
 struct EnvMat
 {
-	int8 scaleX, scaleY;
-	int8 transScaleX, transScaleY;
-	uint8 shininess;
-	Texture *texture;
+	rw::int8 scaleX, scaleY;
+	rw::int8 transScaleX, transScaleY;
+	rw::uint8 shininess;
+	rw::Texture *texture;
 };
 
-extern int32 envMatOffset;
+extern rw::int32 envMatOffset;
 
 // Specular mat
 
 struct SpecMat
 {
 	float specularity;
-	Texture *texture;
+	rw::Texture *texture;
 };
 
-extern int32 specMatOffset;
+extern rw::int32 specMatOffset;
 
 void registerEnvSpecPlugin(void);
 
@@ -149,31 +148,31 @@ void registerEnvSpecPlugin(void);
 //  4640  53f20084 53f2008b	// vehicles
 //   418  53f20088 53f20089	// peds
 
-extern int32 pipelineOffset;
+extern rw::int32 pipelineOffset;
 
 void registerPipelinePlugin(void);
-uint32 getPipelineID(Atomic *atomic);
-void setPipelineID(Atomic *atomic, uint32 id);
+rw::uint32 getPipelineID(rw::Atomic *atomic);
+void setPipelineID(rw::Atomic *atomic, rw::uint32 id);
 
 // 2dEffect
 
-extern int32 twodEffectOffset;
+extern rw::int32 twodEffectOffset;
 
 void register2dEffectPlugin(void);
 
 // Collision
 
-extern int32 collisionOffset;
+extern rw::int32 collisionOffset;
 
 void registerCollisionPlugin(void);
 
 // PDS pipes
 
-struct SaVert : ps2::Vertex {
-	uint8   c1[4];
+struct SaVert : rw::ps2::Vertex {
+	rw::uint8   c1[4];
 };
-void insertSAVertex(Geometry *geo, int32 i, uint32 mask, SaVert *v);
-int32 findSAVertex(Geometry *g, uint32 flags[], uint32 mask, SaVert *v);
+void insertSAVertex(rw::Geometry *geo, rw::int32 i, rw::uint32 mask, SaVert *v);
+rw::int32 findSAVertex(rw::Geometry *g, rw::uint32 flags[], rw::uint32 mask, SaVert *v);
 
 void registerPDSPipes(void);
 

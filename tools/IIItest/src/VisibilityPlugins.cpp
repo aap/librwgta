@@ -90,8 +90,8 @@ CVisibilityPlugins::RenderFadingEntities(void)
 			continue;
 		mi = (CSimpleModelInfo*)CModelInfo::GetModelInfo(e->m_modelIndex);
 		if(mi->m_noZwrite){
-			SetRenderState(ALPHATESTFUNC, ALPHANEVER);
-			SetRenderState(ZWRITEENABLE, 0);
+			SetRenderState(rw::ALPHATESTFUNC, rw::ALPHANEVER);
+			SetRenderState(rw::ZWRITEENABLE, 0);
 		}
 
 		if(e->m_isFading){
@@ -104,8 +104,8 @@ CVisibilityPlugins::RenderFadingEntities(void)
 			CRenderer::RenderOneNonRoad(e);
 
 		if(mi->m_noZwrite){
-			SetRenderState(ZWRITEENABLE, 1);
-			SetRenderState(ALPHATESTFUNC, ALPHALESS);
+			SetRenderState(rw::ZWRITEENABLE, 1);
+			SetRenderState(rw::ALPHATESTFUNC, rw::ALPHALESS);
 		}
 	}
 }

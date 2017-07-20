@@ -30,5 +30,5 @@ public:
 	static CPtrList &GetMovingEntityList(void) { return ms_listMovingEntityPtrs; }
 	static void ClearScanCodes(void);
 
-	static int GetSectorIndex(float f) { return (f + 2000.0f)/40.0f; }
+	static int GetSectorIndex(float f) { return (int)( (f + 2000.0f)/40.0f ); }
 };

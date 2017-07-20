@@ -1,5 +1,7 @@
 #include "III.h"
 
+#ifdef __linux__
+
 GLFWwindow *glfwwindow;
 
 //
@@ -265,3 +267,5 @@ main(int argc, char *argv[])
 	glfwTerminate();
 	return 0;
 }
+
+#endif __linux__
