@@ -21,6 +21,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{6FFC755C-5993-4B51-8B46-EA99C6B92B91}</ProjectGuid>
     <RootNamespace>librwgta</RootNamespace>
+    <WindowsTargetPlatformVersion>7.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
@@ -48,8 +49,8 @@
   </ItemGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <OutDir>.\lib\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>.\obj\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(ProjectDir).\lib\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir).\obj\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -65,6 +66,9 @@
       <AdditionalDependencies>
       </AdditionalDependencies>
     </Lib>
+    <PreBuildEvent>
+      <Command>msbuild /t:librw /p:configuration="$(Configuration)" /p:platform="$(Platform)" /m "$(LIBRWSDK_PATH)\librw.sln"</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -80,6 +84,9 @@
       <AdditionalDependencies>
       </AdditionalDependencies>
     </Lib>
+    <PreBuildEvent>
+      <Command>msbuild /t:librw /p:configuration="$(Configuration)" /p:platform="$(Platform)" /m "$(LIBRWSDK_PATH)\librw.sln"</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -89,6 +96,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>false</SDLCheck>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -99,6 +107,9 @@
       <AdditionalDependencies>
       </AdditionalDependencies>
     </Lib>
+    <PreBuildEvent>
+      <Command>msbuild /t:librw /p:configuration="$(Configuration)" /p:platform="$(Platform)" /m "$(LIBRWSDK_PATH)\librw.sln"</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -118,15 +129,15 @@
       <AdditionalDependencies>
       </AdditionalDependencies>
     </Lib>
+    <PreBuildEvent>
+      <Command>msbuild /t:librw /p:configuration="$(Configuration)" /p:platform="$(Platform)" /m "$(LIBRWSDK_PATH)\librw.sln"</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\collision.cpp" />
-    <ClCompile Include="src\gtaplg.cpp" />
-    <ClCompile Include="src\rsps2.cpp" />
+    <ClCompile Include="src\**\*.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\collision.h" />
-    <ClInclude Include="src\rwgta.h" />
+    <ClInclude Include="src\**\*.h" />
   </ItemGroup>
   <ItemGroup>
     <Xml Include="customprops.xml">

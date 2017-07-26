@@ -37,7 +37,8 @@ CCamera::Process(void)
 		sensitivity = 2.0f;
 		if(pad->NewState.l2)
 			sensitivity = 4.0f;
-	}
+	}else if(pad->NewState.l2)
+		sensitivity = 0.5f;
 	if(pad->NewState.square) TheCamera.zoom(0.4f*sensitivity);
 	if(pad->NewState.cross) TheCamera.zoom(-0.4f*sensitivity);
 	TheCamera.orbit(pad->NewState.getLeftX()/30.0f*sensitivity,
@@ -48,6 +49,11 @@ CCamera::Process(void)
 		TheCamera.dolly(2.0f*sensitivity);
 	if(pad->NewState.down)
 		TheCamera.dolly(-2.0f*sensitivity);
+
+	if(IsButtonJustDown(pad, start)){
+		printf("cam.position: %f, %f, %f\n", m_position.x, m_position.y, m_position.z);
+		printf("cam.target: %f, %f, %f\n", m_target.x, m_target.y, m_target.z);
+	}
 }
 
 void
@@ -157,6 +163,7 @@ CCamera::CCamera()
 {
 	m_position.set(0.0f, 6.0f, 0.0f);
 	m_target.set(0.0f, 0.0f, 0.0f);
+
 	m_up.set(0.0f, 0.0f, 1.0f);
 	m_localup = m_up;
 	m_fov = 70.0f;

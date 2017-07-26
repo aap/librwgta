@@ -6,68 +6,74 @@
 #include <rw.h>
 #include "rwgta.h"
 
+typedef rw::uint8 uint8;
+typedef rw::uint16 uint16;
+typedef rw::uint32 uint32;
+typedef rw::float32 float32;
+typedef rw::int8 int8;
+typedef rw::int16 int16;
+typedef rw::int32 int32;
+
 namespace gta {
 
-using namespace ps2;
-
-PipeAttribute saXYZADC = {
+rw::ps2::PipeAttribute saXYZADC = {
 	"saXYZADC",
-	AT_V4_16 | AT_RW
+	rw::ps2::AT_V4_16 | rw::ps2::AT_RW
 };
 
-PipeAttribute saUV = {
+rw::ps2::PipeAttribute saUV = {
 	"saUV",
-	AT_V2_16 | AT_RW
+	rw::ps2::AT_V2_16 | rw::ps2::AT_RW
 };
 
-PipeAttribute saUV2 = {
+rw::ps2::PipeAttribute saUV2 = {
 	"saUV2",
-	AT_V4_16 | AT_RW
+	rw::ps2::AT_V4_16 | rw::ps2::AT_RW
 };
 
-PipeAttribute saRGBA = {
+rw::ps2::PipeAttribute saRGBA = {
 	"saRGBA",
-	AT_V4_8 | AT_UNSGN | AT_RW
+	rw::ps2::AT_V4_8 | rw::ps2::AT_UNSGN | rw::ps2::AT_RW
 };
 
-PipeAttribute saRGBA2 = {
+rw::ps2::PipeAttribute saRGBA2 = {
 	"saRGBA2",
-	AT_V4_16 | AT_UNSGN | AT_RW
+	rw::ps2::AT_V4_16 | rw::ps2::AT_UNSGN | rw::ps2::AT_RW
 };
 
-PipeAttribute saNormal = {
+rw::ps2::PipeAttribute saNormal = {
 	"saNormal",
-	AT_V4_8 | AT_RW
+	rw::ps2::AT_V4_8 | rw::ps2::AT_RW
 };
 
-PipeAttribute saWeights = {
+rw::ps2::PipeAttribute saWeights = {
 	"saWeights",
-	AT_V4_32 | AT_RW
+	rw::ps2::AT_V4_32 | rw::ps2::AT_RW
 };
 
-static bool hasTex2(uint32 id)
+static bool hasTex2(rw::uint32 id)
 {
 	return id == 0x53f2008b;
 }
-static bool hasNormals(uint32 id)
+static bool hasNormals(rw::uint32 id)
 {
 	return id == 0x53f20085 || id == 0x53f20087 || id == 0x53f20089 ||
 		id == 0x53f2008b || id == 0x53f2008d || id == 0x53f2008f;
 }
-static bool hasColors(uint32 id)
+static bool hasColors(rw::uint32 id)
 {
 	return id == 0x53f20081 || id == 0x53f20083 || id == 0x53f2008d ||
 	       id == 0x53f2008f || id == 0x53f20091 || id == 0x53f20093;
 }
-static bool hasColors2(uint32 id)
+static bool hasColors2(rw::uint32 id)
 {
 	return id == 0x53f20083 || id == 0x53f2008f || id == 0x53f20093;
 }
 
 static void
-saPreCB(MatPipeline *p, Geometry *geo)
+saPreCB(rw::ps2::MatPipeline *p, rw::Geometry *geo)
 {
-	allocateADC(geo);
+	rw::ps2::allocateADC(geo);
 	if(hasColors2(p->pluginData) && extraVertColorOffset)
 		allocateExtraVertColors(geo);
 	if(p->pluginData == 0x53f20089)
@@ -75,32 +81,32 @@ saPreCB(MatPipeline *p, Geometry *geo)
 }
 
 static void
-saPostCB(MatPipeline *p, Geometry *geo)
+saPostCB(rw::ps2::MatPipeline *p, rw::Geometry *geo)
 {
 	skinPostCB(p, geo);
 }
 
-int32
-findSAVertex(Geometry *g, uint32 flags[], uint32 mask, SaVert *v)
+rw::int32
+findSAVertex(rw::Geometry *g, rw::uint32 flags[], rw::uint32 mask, SaVert *v)
 {
-	Skin *skin = Skin::get(g);
-	float32 *wghts = NULL;
-	uint8 *inds    = NULL;
+	rw::Skin *skin = rw::Skin::get(g);
+	rw::float32 *wghts = NULL;
+	rw::uint8 *inds    = NULL;
 	if(skin){
 		wghts = skin->weights;
 		inds = skin->indices;
 	}
-	float32 *verts = g->morphTargets[0].vertices;
-	float32 *tex0  = g->texCoords[0];
-	float32 *tex1  = g->texCoords[1];
-	float32 *norms = g->morphTargets[0].normals;
-	uint8 *cols0   = g->colors;
-	uint8 *cols1   = NULL;
+	rw::float32 *verts = g->morphTargets[0].vertices;
+	rw::float32 *tex0  = g->texCoords[0];
+	rw::float32 *tex1  = g->texCoords[1];
+	rw::float32 *norms = g->morphTargets[0].normals;
+	rw::uint8 *cols0   = g->colors;
+	rw::uint8 *cols1   = NULL;
 	if(extraVertColorOffset)
 		cols1 = PLUGINOFFSET(ExtraVertColors, g, extraVertColorOffset)->nightColors;
 
-	for(int32 i = 0; i < g->numVertices; i++){
-		uint32 flag = flags ? flags[i] : ~0;
+	for(rw::int32 i = 0; i < g->numVertices; i++){
+		rw::uint32 flag = flags ? flags[i] : ~0;
 		if(mask & flag & 0x1 &&
 		   !(verts[0] == v->p[0] && verts[1] == v->p[1] && verts[2] == v->p[2]))
 			goto cont;
@@ -142,7 +148,7 @@ findSAVertex(Geometry *g, uint32 flags[], uint32 mask, SaVert *v)
 }
 
 void
-insertSAVertex(Geometry *geo, int32 i, uint32 mask, SaVert *v)
+insertSAVertex(rw::Geometry *geo, rw::int32 i, rw::uint32 mask, SaVert *v)
 {
 	insertVertex(geo, i, mask, v);
 	if(mask & 0x200 && extraVertColorOffset){
@@ -153,15 +159,15 @@ insertSAVertex(Geometry *geo, int32 i, uint32 mask, SaVert *v)
 		cols1[2] = v->c1[2];
 		cols1[3] = v->c1[3];
 	}
-	if(mask & 0x10000 && skinGlobals.geoOffset){
-		Skin *skin = Skin::get(geo);
+	if(mask & 0x10000 && rw::skinGlobals.geoOffset){
+		rw::Skin *skin = rw::Skin::get(geo);
 		memcpy(&skin->weights[i*4], v->w, 16);
 		memcpy(&skin->indices[i*4], v->i, 4);
 	}
 }
 
 static void
-saUninstanceCB(ps2::MatPipeline *pipe, Geometry *geo, uint32 flags[], Mesh *mesh, uint8 *data[])
+saUninstanceCB(rw::ps2::MatPipeline *pipe, rw::Geometry *geo, uint32 flags[], rw::Mesh *mesh, uint8 *data[])
 {
 	uint32 id = pipe->pluginData;
 	int16 *verts       = (int16*)data[0];
@@ -176,9 +182,9 @@ saUninstanceCB(ps2::MatPipeline *pipe, Geometry *geo, uint32 flags[], Mesh *mesh
 	uint32 mask = 0x1;	// vertices
 	int cinc = 4;
 	int tinc = 2;
-	if((geo->geoflags & Geometry::NORMALS) && hasNormals(id))
+	if((geo->flags & rw::Geometry::NORMALS) && hasNormals(id))
 		mask |= 0x10;
-	if((geo->geoflags & Geometry::PRELIT) && hasColors(id))
+	if((geo->flags & rw::Geometry::PRELIT) && hasColors(id))
 		mask |= 0x100;
 	if(hasColors2(id)){
 		mask |= 0x200;
@@ -194,9 +200,9 @@ saUninstanceCB(ps2::MatPipeline *pipe, Geometry *geo, uint32 flags[], Mesh *mesh
 		mask |= 0x10000;
 	SaVert v;
 	int32 idxstart = 0;
-	for(Mesh *m = geo->meshHeader->mesh; m < mesh; m++)
+	for(rw::Mesh *m = geo->meshHeader->mesh; m < mesh; m++)
 		idxstart += m->numIndices;
-	int8 *adc = getADCbitsForMesh(geo, mesh);
+	int8 *adc = rw::ps2::getADCbitsForMesh(geo, mesh);
 	for(uint32 i = 0; i < mesh->numIndices; i++){
 		v.p[0] = verts[0]*vertScale;
 		v.p[1] = verts[1]*vertScale;
@@ -254,7 +260,7 @@ saUninstanceCB(ps2::MatPipeline *pipe, Geometry *geo, uint32 flags[], Mesh *mesh
 }
 
 static void
-instanceSAPositions(Geometry *g, Mesh *m, int8 *adc, int16 *dst, float32 scale)
+instanceSAPositions(rw::Geometry *g, rw::Mesh *m, int8 *adc, int16 *dst, float32 scale)
 {
 	float32 *verts = g->morphTargets[0].vertices;
 	uint16 j;
@@ -269,7 +275,7 @@ instanceSAPositions(Geometry *g, Mesh *m, int8 *adc, int16 *dst, float32 scale)
 }
 
 static void
-instanceSATex(Geometry *g, Mesh *m, int16 *dst)
+instanceSATex(rw::Geometry *g, rw::Mesh *m, int16 *dst)
 {
 	float32 *tex = g->texCoords[0];
 	uint16 j;
@@ -287,7 +293,7 @@ instanceSATex(Geometry *g, Mesh *m, int16 *dst)
 }
 
 static void
-instanceSADualTex(Geometry *g, Mesh *m, int16 *dst)
+instanceSADualTex(rw::Geometry *g, rw::Mesh *m, int16 *dst)
 {
 	float32 *tex0 = g->texCoords[0];
 	float32 *tex1 = g->texCoords[1];
@@ -313,7 +319,7 @@ instanceSADualTex(Geometry *g, Mesh *m, int16 *dst)
 }
 
 static void
-instanceSAColors(Geometry *g, Mesh *m, uint8 *dst)
+instanceSAColors(rw::Geometry *g, rw::Mesh *m, uint8 *dst)
 {
 	uint8 *c = g->colors;
 	uint16 j;
@@ -328,7 +334,7 @@ instanceSAColors(Geometry *g, Mesh *m, uint8 *dst)
 }
 
 static void
-instanceSADualColors(Geometry *g, Mesh *m, uint8 *dst)
+instanceSADualColors(rw::Geometry *g, rw::Mesh *m, uint8 *dst)
 {
 	uint8 *c0 = g->colors;
 	uint8 *c1 =
@@ -363,7 +369,7 @@ instanceSADualColors(Geometry *g, Mesh *m, uint8 *dst)
 }
 
 static void
-instanceSANormals(Geometry *g, Mesh *m, int8 *dst)
+instanceSANormals(rw::Geometry *g, rw::Mesh *m, int8 *dst)
 {
 	float32 *norms = g->morphTargets[0].normals;
 	uint16 j;
@@ -381,17 +387,17 @@ instanceSANormals(Geometry *g, Mesh *m, int8 *dst)
 }
 
 static void
-saInstanceCB(MatPipeline *pipe, Geometry *g, Mesh *m, uint8 **data)
+saInstanceCB(rw::ps2::MatPipeline *pipe, rw::Geometry *g, rw::Mesh *m, uint8 **data)
 {
 	uint32 id = pipe->pluginData;
 	float vertScale = 128.0f;
 	if(id == 0x53f20085 || id == 0x53f20087 ||
 	   id == 0x53f20089 || id == 0x53f2008b)
 		vertScale = 1024.0f;
-	ADCData *adc = PLUGINOFFSET(ADCData, g, adcOffset);
+	rw::ps2::ADCData *adc = PLUGINOFFSET(rw::ps2::ADCData, g, rw::ps2::adcOffset);
 
 	for(uint32 i = 0; i < nelem(pipe->attribs); i++){
-		PipeAttribute *a = pipe->attribs[i];
+		rw::ps2::PipeAttribute *a = pipe->attribs[i];
 		if(a == &saXYZADC)
 			instanceSAPositions(g, m, adc->adcFormatted ? adc->adcBits : NULL,
 			                    (int16*)data[i], vertScale);
@@ -406,8 +412,8 @@ saInstanceCB(MatPipeline *pipe, Geometry *g, Mesh *m, uint8 **data)
 		if(a == &saNormal)
 			instanceSANormals(g, m, (int8*)data[i]);
 		if(a == &saWeights){
-			Skin *skin = Skin::get(g);
-			instanceSkinData(g, m, skin, (uint32*)data[i]);
+			rw::Skin *skin = rw::Skin::get(g);
+			rw::ps2::instanceSkinData(g, m, skin, (uint32*)data[i]);
 		}
 	}
 }
@@ -415,95 +421,95 @@ saInstanceCB(MatPipeline *pipe, Geometry *g, Mesh *m, uint8 **data)
 void
 registerPS2BuildingPipes(void)
 {
-	Pipeline *pipe;
-	MatPipeline *mpipe;
+	rw::Pipeline *pipe;
+	rw::ps2::MatPipeline *mpipe;
 	uint32 vertCount;
 
-	pipe = new ps2::ObjPipeline(PLATFORM_PS2);
-	pipe->pluginID = ID_PDS;
+	pipe = new rw::ps2::ObjPipeline(rw::PLATFORM_PS2);
+	pipe->pluginID = rw::ID_PDS;
 	pipe->pluginData = 0x53f20080;
-	ps2::registerPDSPipe(pipe);
+	rw::ps2::registerPDSPipe(pipe);
 
-	mpipe = new MatPipeline(PLATFORM_PS2);
-	mpipe->pluginID = ID_PDS;
+	mpipe = new rw::ps2::MatPipeline(rw::PLATFORM_PS2);
+	mpipe->pluginID = rw::ID_PDS;
 	mpipe->pluginData = 0x53f20081;
 	mpipe->attribs[0] = &saXYZADC;
 	mpipe->attribs[1] = &saUV;
 	mpipe->attribs[2] = &saRGBA;
-	vertCount = MatPipeline::getVertCount(VU_Lights, 3, 3, 2);
+	vertCount = rw::ps2::MatPipeline::getVertCount(rw::ps2::VU_Lights, 3, 3, 2);
 	mpipe->setTriBufferSizes(3, vertCount);
 	mpipe->vifOffset = mpipe->inputStride*vertCount;
 	mpipe->instanceCB = saInstanceCB;
 	mpipe->preUninstCB = saPreCB;
 	mpipe->uninstanceCB = saUninstanceCB;
-	ps2::registerPDSPipe(mpipe);
+	rw::ps2::registerPDSPipe(mpipe);
 
-	pipe = new ps2::ObjPipeline(PLATFORM_PS2);
-	pipe->pluginID = ID_PDS;
+	pipe = new rw::ps2::ObjPipeline(rw::PLATFORM_PS2);
+	pipe->pluginID = rw::ID_PDS;
 	pipe->pluginData = 0x53f20082;
-	ps2::registerPDSPipe(pipe);
+	rw::ps2::registerPDSPipe(pipe);
 
-	mpipe = new MatPipeline(PLATFORM_PS2);
-	mpipe->pluginID = ID_PDS;
+	mpipe = new rw::ps2::MatPipeline(rw::PLATFORM_PS2);
+	mpipe->pluginID = rw::ID_PDS;
 	mpipe->pluginData = 0x53f20083;
 	mpipe->attribs[0] = &saXYZADC;
 	mpipe->attribs[1] = &saUV;
 	mpipe->attribs[2] = &saRGBA2;
-	vertCount = MatPipeline::getVertCount(VU_Lights, 3, 3, 2);
+	vertCount = rw::ps2::MatPipeline::getVertCount(rw::ps2::VU_Lights, 3, 3, 2);
 	mpipe->setTriBufferSizes(3, vertCount);
 	mpipe->vifOffset = mpipe->inputStride*vertCount;
 	mpipe->instanceCB = saInstanceCB;
 	mpipe->preUninstCB = saPreCB;
 	mpipe->uninstanceCB = saUninstanceCB;
-	ps2::registerPDSPipe(mpipe);
+	rw::ps2::registerPDSPipe(mpipe);
 
-	pipe = new ps2::ObjPipeline(PLATFORM_PS2); //unused in DFFs
-	pipe->pluginID = ID_PDS;
+	pipe = new rw::ps2::ObjPipeline(rw::PLATFORM_PS2); //unused in DFFs
+	pipe->pluginID = rw::ID_PDS;
 	pipe->pluginData = 0x53f2008C;
-	ps2::registerPDSPipe(pipe);
+	rw::ps2::registerPDSPipe(pipe);
 
-	mpipe = new MatPipeline(PLATFORM_PS2);	// use with 0x53f20080
-	mpipe->pluginID = ID_PDS;
+	mpipe = new rw::ps2::MatPipeline(rw::PLATFORM_PS2);	// use with 0x53f20080
+	mpipe->pluginID = rw::ID_PDS;
 	mpipe->pluginData = 0x53f2008D;
 	mpipe->attribs[0] = &saXYZADC;
 	mpipe->attribs[1] = &saUV;
 	mpipe->attribs[2] = &saRGBA;
 	mpipe->attribs[3] = &saNormal;
-	vertCount = MatPipeline::getVertCount(0x3BD, 4, 3, 3);
+	vertCount = rw::ps2::MatPipeline::getVertCount(0x3BD, 4, 3, 3);
 	mpipe->setTriBufferSizes(4, vertCount);
 	mpipe->vifOffset = mpipe->inputStride*vertCount;
 	mpipe->instanceCB = saInstanceCB;
 	mpipe->preUninstCB = saPreCB;
 	mpipe->uninstanceCB = saUninstanceCB;
-	ps2::registerPDSPipe(mpipe);
+	rw::ps2::registerPDSPipe(mpipe);
 
-	pipe = new ps2::ObjPipeline(PLATFORM_PS2); //unused in DFFs
-	pipe->pluginID = ID_PDS;
+	pipe = new rw::ps2::ObjPipeline(rw::PLATFORM_PS2); //unused in DFFs
+	pipe->pluginID = rw::ID_PDS;
 	pipe->pluginData = 0x53f2008E;
-	ps2::registerPDSPipe(pipe);
+	rw::ps2::registerPDSPipe(pipe);
 
-	mpipe = new MatPipeline(PLATFORM_PS2);	// use with 0x53f20082
-	mpipe->pluginID = ID_PDS;
+	mpipe = new rw::ps2::MatPipeline(rw::PLATFORM_PS2);	// use with 0x53f20082
+	mpipe->pluginID = rw::ID_PDS;
 	mpipe->pluginData = 0x53f2008F;
 	mpipe->attribs[0] = &saXYZADC;
 	mpipe->attribs[1] = &saUV;
 	mpipe->attribs[2] = &saRGBA2;
 	mpipe->attribs[3] = &saNormal;
-	vertCount = MatPipeline::getVertCount(0x3BD, 4, 3, 3);
+	vertCount = rw::ps2::MatPipeline::getVertCount(0x3BD, 4, 3, 3);
 	mpipe->setTriBufferSizes(4, vertCount);
 	mpipe->vifOffset = mpipe->inputStride*vertCount;
 	mpipe->instanceCB = saInstanceCB;
 	mpipe->preUninstCB = saPreCB;
 	mpipe->uninstanceCB = saUninstanceCB;
-	ps2::registerPDSPipe(mpipe);
+	rw::ps2::registerPDSPipe(mpipe);
 
-	pipe = new ps2::ObjPipeline(PLATFORM_PS2); //unused in DFFs
-	pipe->pluginID = ID_PDS;
+	pipe = new rw::ps2::ObjPipeline(rw::PLATFORM_PS2); //unused in DFFs
+	pipe->pluginID = rw::ID_PDS;
 	pipe->pluginData = 0x53f20090;
-	ps2::registerPDSPipe(pipe);
+	rw::ps2::registerPDSPipe(pipe);
 
-	mpipe = new MatPipeline(PLATFORM_PS2); // unused in DFFs
-	mpipe->pluginID = ID_PDS;
+	mpipe = new rw::ps2::MatPipeline(rw::PLATFORM_PS2); // unused in DFFs
+	mpipe->pluginID = rw::ID_PDS;
 	mpipe->pluginData = 0x53f20091;
 	mpipe->attribs[0] = &saXYZADC;
 	mpipe->attribs[1] = &saUV;
@@ -514,15 +520,15 @@ registerPS2BuildingPipes(void)
 	mpipe->instanceCB = saInstanceCB;
 	mpipe->preUninstCB = saPreCB;
 	mpipe->uninstanceCB = saUninstanceCB;
-	ps2::registerPDSPipe(mpipe);
+	rw::ps2::registerPDSPipe(mpipe);
 
-	pipe = new ps2::ObjPipeline(PLATFORM_PS2); // unused in DFFs
-	pipe->pluginID = ID_PDS;
+	pipe = new rw::ps2::ObjPipeline(rw::PLATFORM_PS2); // unused in DFFs
+	pipe->pluginID = rw::ID_PDS;
 	pipe->pluginData = 0x53f20092;
-	ps2::registerPDSPipe(pipe);
+	rw::ps2::registerPDSPipe(pipe);
 
-	mpipe = new MatPipeline(PLATFORM_PS2); // unused in DFFs
-	mpipe->pluginID = ID_PDS;
+	mpipe = new rw::ps2::MatPipeline(rw::PLATFORM_PS2); // unused in DFFs
+	mpipe->pluginID = rw::ID_PDS;
 	mpipe->pluginData = 0x53f20093;
 	mpipe->attribs[0] = &saXYZADC;
 	mpipe->attribs[1] = &saUV;
@@ -533,86 +539,86 @@ registerPS2BuildingPipes(void)
 	mpipe->instanceCB = saInstanceCB;
 	mpipe->preUninstCB = saPreCB;
 	mpipe->uninstanceCB = saUninstanceCB;
-	ps2::registerPDSPipe(mpipe);
+	rw::ps2::registerPDSPipe(mpipe);
 }
 
 void
 registerPS2VehiclePipes(void)
 {
-	Pipeline *pipe;
-	MatPipeline *mpipe;
+	rw::Pipeline *pipe;
+	rw::ps2::MatPipeline *mpipe;
 	uint32 vertCount;
 
-	pipe = new ps2::ObjPipeline(PLATFORM_PS2);
-	pipe->pluginID = ID_PDS;
+	pipe = new rw::ps2::ObjPipeline(rw::PLATFORM_PS2);
+	pipe->pluginID = rw::ID_PDS;
 	pipe->pluginData = 0x53f20084;
-	ps2::registerPDSPipe(pipe);
+	rw::ps2::registerPDSPipe(pipe);
 
 	// No effects whatsoever
-	mpipe = new MatPipeline(PLATFORM_PS2);
-	mpipe->pluginID = ID_PDS;
+	mpipe = new rw::ps2::MatPipeline(rw::PLATFORM_PS2);
+	mpipe->pluginID = rw::ID_PDS;
 	mpipe->pluginData = 0x53f20085;
 	mpipe->attribs[0] = &saXYZADC;
 	mpipe->attribs[1] = &saUV;
 	mpipe->attribs[3] = &saNormal;
-	vertCount = MatPipeline::getVertCount(VU_Lights, 4, 3, 2);
+	vertCount = rw::ps2::MatPipeline::getVertCount(rw::ps2::VU_Lights, 4, 3, 2);
 	mpipe->setTriBufferSizes(4, vertCount);
 	mpipe->vifOffset = mpipe->inputStride*vertCount;
 	mpipe->instanceCB = saInstanceCB;
 	mpipe->preUninstCB = saPreCB;
 	mpipe->uninstanceCB = saUninstanceCB;
-	ps2::registerPDSPipe(mpipe);
+	rw::ps2::registerPDSPipe(mpipe);
 
-	pipe = new ps2::ObjPipeline(PLATFORM_PS2); // unused in DFFs
-	pipe->pluginID = ID_PDS;
+	pipe = new rw::ps2::ObjPipeline(rw::PLATFORM_PS2); // unused in DFFs
+	pipe->pluginID = rw::ID_PDS;
 	pipe->pluginData = 0x53f20086;
-	ps2::registerPDSPipe(pipe);
+	rw::ps2::registerPDSPipe(pipe);
 
 	// Environment map (+ Specular map)
-	mpipe = new MatPipeline(PLATFORM_PS2);	// use with 0x53f20084
-	mpipe->pluginID = ID_PDS;
+	mpipe = new rw::ps2::MatPipeline(rw::PLATFORM_PS2);	// use with 0x53f20084
+	mpipe->pluginID = rw::ID_PDS;
 	mpipe->pluginData = 0x53f20087;
 	mpipe->attribs[0] = &saXYZADC;
 	mpipe->attribs[1] = &saUV;
 	mpipe->attribs[3] = &saNormal;
-	vertCount = MatPipeline::getVertCount(0x3BD, 4, 3, 3);
+	vertCount = rw::ps2::MatPipeline::getVertCount(0x3BD, 4, 3, 3);
 	mpipe->setTriBufferSizes(4, vertCount);
 	mpipe->vifOffset = mpipe->inputStride*vertCount;
 	mpipe->instanceCB = saInstanceCB;
 	mpipe->preUninstCB = saPreCB;
 	mpipe->uninstanceCB = saUninstanceCB;
-	ps2::registerPDSPipe(mpipe);
+	rw::ps2::registerPDSPipe(mpipe);
 
 	// x-Environment map (+ Specular map)
-	mpipe = new MatPipeline(PLATFORM_PS2);	// use with 0x53f20084
-	mpipe->pluginID = ID_PDS;
+	mpipe = new rw::ps2::MatPipeline(rw::PLATFORM_PS2);	// use with 0x53f20084
+	mpipe->pluginID = rw::ID_PDS;
 	mpipe->pluginData = 0x53f2008B;
 	mpipe->attribs[0] = &saXYZADC;
 	mpipe->attribs[1] = &saUV2;
 	mpipe->attribs[3] = &saNormal;
-	vertCount = MatPipeline::getVertCount(0x3BD, 4, 3, 3);
+	vertCount = rw::ps2::MatPipeline::getVertCount(0x3BD, 4, 3, 3);
 	mpipe->setTriBufferSizes(4, vertCount);
 	mpipe->vifOffset = mpipe->inputStride*vertCount;
 	mpipe->instanceCB = saInstanceCB;
 	mpipe->preUninstCB = saPreCB;
 	mpipe->uninstanceCB = saUninstanceCB;
-	ps2::registerPDSPipe(mpipe);
+	rw::ps2::registerPDSPipe(mpipe);
 }
 
 void
 registerPS2SkinPipe(void)
 {
-	Pipeline *pipe;
-	MatPipeline *mpipe;
+	rw::Pipeline *pipe;
+	rw::ps2::MatPipeline *mpipe;
 	uint32 vertCount;
 
-	pipe = new ps2::ObjPipeline(PLATFORM_PS2);
-	pipe->pluginID = ID_PDS;
+	pipe = new rw::ps2::ObjPipeline(rw::PLATFORM_PS2);
+	pipe->pluginID = rw::ID_PDS;
 	pipe->pluginData = 0x53f20088;
-	ps2::registerPDSPipe(pipe);
+	rw::ps2::registerPDSPipe(pipe);
 
-	mpipe = new MatPipeline(PLATFORM_PS2);	// use with 0x53f20088
-	mpipe->pluginID = ID_PDS;
+	mpipe = new rw::ps2::MatPipeline(rw::PLATFORM_PS2);	// use with 0x53f20088
+	mpipe->pluginID = rw::ID_PDS;
 	mpipe->pluginData = 0x53f20089;
 	mpipe->attribs[0] = &saXYZADC;
 	mpipe->attribs[1] = &saUV;
@@ -627,7 +633,7 @@ registerPS2SkinPipe(void)
 	mpipe->preUninstCB = saPreCB;
 	mpipe->uninstanceCB = saUninstanceCB;
 	mpipe->postUninstCB = saPostCB;
-	ps2::registerPDSPipe(mpipe);
+	rw::ps2::registerPDSPipe(mpipe);
 }
 
 void

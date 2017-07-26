@@ -4,8 +4,8 @@ SRCDIR=src
 SRC := $(wildcard $(SRCDIR)/*.cpp $(SRCDIR)/*/*.cpp)
 OBJ := $(patsubst %.cpp, $(BUILDDIR)/%.o, $(SRC))
 DEP := $(patsubst %.cpp, $(BUILDDIR)/%.d, $(SRC))
-RWDIR=$(HOME)/src/librw
-RWGTADIR=$(HOME)/src/librwgta
+RWDIR=$(CURDIR)/../../../librw
+RWGTADIR=$(CURDIR)/../..
 
 INC := -I/usr/local/include -I$(RWDIR) -I$(RWGTADIR)/src
 LDLIBS=-lGL -lGLEW -lglfw

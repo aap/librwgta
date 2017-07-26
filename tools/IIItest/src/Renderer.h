@@ -1,5 +1,6 @@
 class CRenderer
 {
+public:
 	static int ms_nNoOfVisibleEntities;
 	static int ms_nNoOfInVisibleEntities;
 	static CEntity *ms_aVisibleEntityPtrs[2000];
@@ -12,6 +13,9 @@ public:
 	static bool SetupBigBuildingVisibility(CEntity *ent);
 	static int  SetupEntityVisibility(CEntity *ent);
 
+	static void RenderOneNonRoad(CEntity *ent);
 	static void RenderEverything(void);
+	static void RenderEverythingBarRoads(void);
+	static void RenderRoads(void);
 	static void RenderFadingInEntities(void);
 };

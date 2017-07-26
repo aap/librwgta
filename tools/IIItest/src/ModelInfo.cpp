@@ -128,7 +128,7 @@ CSimpleModelInfo::SetAtomic(int n, rw::Atomic *atomic)
 	AddTexDictionaryRef();
 	m_atomics[n] = atomic;
 	if(m_ignoreLight)
-		atomic->geometry->geoflags &= ~rw::Geometry::LIGHT;
+		atomic->geometry->flags &= ~rw::Geometry::LIGHT;
 }
 
 void

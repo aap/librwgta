@@ -4,6 +4,36 @@
 
 IDirect3DDevice9 *Device = 0;
 
+bool plWindowclosed( void )
+{
+    return true;
+}
+
+void plPresent( void )
+{
+    return;
+}
+
+void plHandleEvents( void )
+{
+    return;
+}
+
+void plCapturePad( int arg )
+{
+    return;
+}
+
+void plUpdatePad( CControllerState *cs )
+{
+    return;
+}
+
+int plGetTimeInMS( void )
+{
+    return (int)GetTickCount();
+}
+
 bool
 display(float timeDelta)
 {
@@ -60,11 +90,6 @@ WinMain(HINSTANCE hinstance, HINSTANCE prevInstance,
 
 	if(!wininit()){
 		MessageBox(0, "wininit() - FAILED", 0, 0);
-		return 0;
-	}
-
-	if(!init()){
-		MessageBox(0, "init() - FAILED", 0, 0);
 		return 0;
 	}
 

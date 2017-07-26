@@ -135,8 +135,8 @@ removeBodyTextures(Clump *clump)
 {
 	FORLIST(lnk, clump->atomics){
 		Geometry *g = Atomic::fromClump(lnk)->geometry;
-		for(int32 i = 0; i < g->numMaterials; i++){
-			Material *m = g->materialList[i];
+		for(int32 i = 0; i < g->matList.numMaterials; i++){
+			Material *m = g->matList.materials[i];
 			if(m->texture == nil) continue;
 			if(strstr(m->texture->name, "body") &&
 			   (isPrimaryColor(&m->color) || isSecondaryColor(&m->color))){
@@ -152,8 +152,8 @@ resetSurfProps(Clump *clump)
 {
 	FORLIST(lnk, clump->atomics){
 		Geometry *g = Atomic::fromClump(lnk)->geometry;
-		for(int32 i = 0; i < g->numMaterials; i++){
-			Material *m = g->materialList[i];
+		for(int32 i = 0; i < g->matList.numMaterials; i++){
+			Material *m = g->matList.materials[i];
 			//if(m->texture)
 			//	printf("%24s ", m->texture->name);
 			//printf("%f %f %f\n", m->surfaceProps.ambient, m->surfaceProps.diffuse, m->surfaceProps.specular);
@@ -176,8 +176,8 @@ void
 removeEffects(Atomic *atomic)
 {
 	Geometry *geo = atomic->geometry;
-	for(int i = 0; i < geo->numMaterials; i++){
-		Material *mat = geo->materialList[i];
+	for(int i = 0; i < geo->matList.numMaterials; i++){
+		Material *mat = geo->matList.materials[i];
 		MatFX *matfx = *PLUGINOFFSET(MatFX*, mat, matFXGlobals.materialOffset);
 		if(matfx){
 			matfx->type = 0;
@@ -408,6 +408,11 @@ main(int argc, char *argv[])
 			Geometry *g = Atomic::fromClump(lnk)->geometry;
 			g->correctTristripWinding();
 		}
+
+	FORLIST(lnk, c->atomics){
+		Geometry *g = Atomic::fromClump(lnk)->geometry;
+		g->buildMeshes();
+	}
 
 	StreamFile out;
 	const char *file;

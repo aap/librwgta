@@ -13,6 +13,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{0E8B48B4-71CF-4674-B43C-FBB7CE267660}</ProjectGuid>
     <RootNamespace>IIItest</RootNamespace>
+    <WindowsTargetPlatformVersion>7.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -45,10 +46,12 @@
       <SDLCheck>false</SDLCheck>
       <AdditionalIncludeDirectories>..\..\src\</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
+      <PreprocessorDefinitions>RW_D3D9;_USING_V110_SDK71_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>d3d9.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <SubSystem>Windows</SubSystem>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /Y "$(TargetPath)" "..\..\output\"</Command>
@@ -63,40 +66,25 @@
       <SDLCheck>false</SDLCheck>
       <AdditionalIncludeDirectories>..\..\src\</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <PreprocessorDefinitions>RW_D3D9;_USING_V110_SDK71_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>d3d9.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <SubSystem>Windows</SubSystem>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /Y "$(TargetPath)" "..\..\output\"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\Animation.cpp" />
-    <ClCompile Include="src\d3dUtility.cpp" />
-    <ClCompile Include="src\Game.cpp" />
-    <ClCompile Include="src\HandlingData.cpp" />
-    <ClCompile Include="src\PathFind.cpp" />
-    <ClCompile Include="src\PedStats.cpp" />
-    <ClCompile Include="src\PedType.cpp" />
-    <ClCompile Include="src\FileLoader.cpp" />
-    <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\ModelInfo.cpp" />
-    <ClCompile Include="src\streaming.cpp" />
-    <ClCompile Include="src\TxdStore.cpp" />
-    <ClCompile Include="src\TimeCycle.cpp" />
+    <ClCompile Include="src\**\*.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\Animation.h" />
-    <ClInclude Include="src\config.h" />
-    <ClInclude Include="src\d3dUtility.h" />
-    <ClInclude Include="src\III.h" />
-    <ClInclude Include="src\ModelInfo.h" />
-    <ClInclude Include="src\templates.h" />
-    <ClInclude Include="src\TimeCycle.h" />
+    <ClInclude Include="src\**\*.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

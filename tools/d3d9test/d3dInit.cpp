@@ -17,17 +17,17 @@ rw::Clump *clump;
 void
 initrw(void)
 {
-        rw::version = 0x34000;
-        rw::platform = rw::PLATFORM_D3D9;
-	rw::loadTextures = 1;
+    rw::Engine::init();
+    rw::version = 0x34000;
+    rw::platform = rw::PLATFORM_D3D9;
+	rw::engine->loadTextures = 1;
 	rw::d3d::device = Device;
 
-        rw::Engine::init();
-        gta::attachPlugins();
-        rw::Driver::open();
-        rw::d3d::initializeRender();
+    gta::attachPlugins();
+    rw::Driver::open();
+    rw::d3d::initializeRender();
 
-	rw::currentTexDictionary = rw::TexDictionary::create();
+	rw::engine->currentTexDictionary = rw::TexDictionary::create();
 	rw::Image::setSearchPath("Y:\\ps2\\gta3\\MODELS\\gta3_archive\\txd_extracted\\;"
 	                         "Y:\\ps2\\gtavc\\MODELS\\gta3_archive\\txd_extracted\\;"
 	                         "Y:\\ps2\\gtasa\\models\\gta3_archive\\txd_extracted\\");
@@ -46,7 +46,7 @@ initrw(void)
 		txd = rw::TexDictionary::streamRead(&in);
 		assert(txd);
 		in.close();
-		rw::currentTexDictionary = txd;
+		rw::engine->currentTexDictionary = txd;
 	}
 
 	char *filename = "Y:\\pc\\gtavc\\models\\gta3_archive\\admiral.dff";

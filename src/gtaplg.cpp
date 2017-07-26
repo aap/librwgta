@@ -43,6 +43,14 @@ switchPipes(Clump *c, int32 platform)
 
 }
 
+typedef rw::int32 int32;
+typedef rw::int16 int16;
+typedef rw::int8 int8;
+typedef rw::uint32 uint32;
+typedef rw::uint16 uint16;
+typedef rw::uint8 uint8;
+typedef rw::float32 float32;
+
 namespace gta {
 
 void
@@ -103,8 +111,8 @@ destroyNodeName(void *object, int32, int32)
 	return object;
 }
 
-static Stream*
-readNodeName(Stream *stream, int32 len, void *object, int32 offset, int32)
+static rw::Stream*
+readNodeName(rw::Stream *stream, int32 len, void *object, int32 offset, int32)
 {
 	char *name = PLUGINOFFSET(char, object, offset);
 	stream->read(name, len);
@@ -113,8 +121,8 @@ readNodeName(Stream *stream, int32 len, void *object, int32 offset, int32)
 	return stream;
 }
 
-static Stream*
-writeNodeName(Stream *stream, int32 len, void *object, int32 offset, int32)
+static rw::Stream*
+writeNodeName(rw::Stream *stream, int32 len, void *object, int32 offset, int32)
 {
 	char *name = PLUGINOFFSET(char, object, offset);
 	stream->write(name, len);
@@ -133,18 +141,18 @@ getSizeNodeName(void *object, int32 offset, int32)
 void
 registerNodeNamePlugin(void)
 {
-	nodeNameOffset = Frame::registerPlugin(24, ID_NODENAME,
+	nodeNameOffset = rw::Frame::registerPlugin(24, ID_NODENAME,
 	                                       createNodeName,
 	                                       destroyNodeName,
 	                                       copyNodeName);
-	Frame::registerPluginStream(ID_NODENAME,
+	rw::Frame::registerPluginStream(ID_NODENAME,
 	                            readNodeName,
 	                            writeNodeName,
 	                            getSizeNodeName);
 }
 
 char*
-getNodeName(Frame *f)
+getNodeName(rw::Frame *f)
 {
 	return PLUGINOFFSET(char, f, nodeNameOffset);
 }
@@ -172,8 +180,8 @@ destroyBreakableModel(void *object, int32 offset, int32)
 	return object;
 }
 
-static Stream*
-readBreakableModel(Stream *stream, int32, void *object, int32 o, int32)
+static rw::Stream*
+readBreakableModel(rw::Stream *stream, int32, void *object, int32 o, int32)
 {
 	uint32 header[13];
 	uint32 hasBreakable = stream->readU32();
@@ -209,8 +217,8 @@ readBreakableModel(Stream *stream, int32, void *object, int32 o, int32)
 	return stream;
 }
 
-static Stream*
-writeBreakableModel(Stream *stream, int32, void *object, int32 o, int32)
+static rw::Stream*
+writeBreakableModel(rw::Stream *stream, int32, void *object, int32 o, int32)
 {
 	uint32 header[13];
 	Breakable *breakable = *PLUGINOFFSET(Breakable*, object, o);
@@ -247,11 +255,11 @@ getSizeBreakableModel(void *object, int32 offset, int32)
 void
 registerBreakableModelPlugin(void)
 {
-	breakableOffset = Geometry::registerPlugin(sizeof(Breakable*),
+	breakableOffset = rw::Geometry::registerPlugin(sizeof(Breakable*),
 	                                           ID_BREAKABLE,
 	                                           createBreakableModel,
 	                                           destroyBreakableModel, NULL);
-	Geometry::registerPluginStream(ID_BREAKABLE,
+	rw::Geometry::registerPluginStream(ID_BREAKABLE,
 	                               readBreakableModel,
 	                               writeBreakableModel,
 	                               getSizeBreakableModel);
@@ -277,10 +285,10 @@ destroyExtraNormals(void *object, int32 offset, int32)
 	return object;
 }
 
-static Stream*
-readExtraNormals(Stream *stream, int32, void *object, int32 offset, int32)
+static rw::Stream*
+readExtraNormals(rw::Stream *stream, int32, void *object, int32 offset, int32)
 {
-	Geometry *geo = (Geometry*)object;
+	rw::Geometry *geo = (rw::Geometry*)object;
 	float **plgp = PLUGINOFFSET(float*, object, offset);
 	if(*plgp)
 		delete[] *plgp;
@@ -298,10 +306,10 @@ readExtraNormals(Stream *stream, int32, void *object, int32 offset, int32)
 	return stream;
 }
 
-static Stream*
-writeExtraNormals(Stream *stream, int32, void *object, int32 offset, int32)
+static rw::Stream*
+writeExtraNormals(rw::Stream *stream, int32, void *object, int32 offset, int32)
 {
-	Geometry *geo = (Geometry*)object;
+	rw::Geometry *geo = (rw::Geometry*)object;
 	float *extranormals = *PLUGINOFFSET(float*, object, offset);
 	assert(extranormals != NULL);
 	stream->write(extranormals, geo->numVertices*3*4);
@@ -311,7 +319,7 @@ writeExtraNormals(Stream *stream, int32, void *object, int32 offset, int32)
 static int32
 getSizeExtraNormals(void *object, int32 offset, int32)
 {
-	Geometry *geo = (Geometry*)object;
+	rw::Geometry *geo = (rw::Geometry*)object;
 	if(*PLUGINOFFSET(float*, object, offset))
 		return geo->numVertices*3*4;
 	return 0;
@@ -320,12 +328,12 @@ getSizeExtraNormals(void *object, int32 offset, int32)
 void
 registerExtraNormalsPlugin(void)
 {
-	extraNormalsOffset = Geometry::registerPlugin(sizeof(void*),
+	extraNormalsOffset = rw::Geometry::registerPlugin(sizeof(void*),
 	                                              ID_EXTRANORMALS,
 	                                              createExtraNormals,
 	                                              destroyExtraNormals,
 	                                              NULL);
-	Geometry::registerPluginStream(ID_EXTRANORMALS,
+	rw::Geometry::registerPluginStream(ID_EXTRANORMALS,
 	                               readExtraNormals,
 	                               writeExtraNormals,
 	                               getSizeExtraNormals);
@@ -337,7 +345,7 @@ registerExtraNormalsPlugin(void)
 int32 extraVertColorOffset;
 
 void
-allocateExtraVertColors(Geometry *g)
+allocateExtraVertColors(rw::Geometry *g)
 {
 	ExtraVertColors *colordata =
 		PLUGINOFFSET(ExtraVertColors, g, extraVertColorOffset);
@@ -367,8 +375,8 @@ destroyExtraVertColors(void *object, int32 offset, int32)
 	return object;
 }
 
-static Stream*
-readExtraVertColors(Stream *stream, int32, void *object, int32 offset, int32)
+static rw::Stream*
+readExtraVertColors(rw::Stream *stream, int32, void *object, int32 offset, int32)
 {
 	uint32 hasData;
 	ExtraVertColors *colordata =
@@ -376,7 +384,7 @@ readExtraVertColors(Stream *stream, int32, void *object, int32 offset, int32)
 	hasData = stream->readU32();
 	if(!hasData)
 		return stream;
-	Geometry *geometry = (Geometry*)object;
+	rw::Geometry *geometry = (rw::Geometry*)object;
 	colordata->nightColors = new uint8[geometry->numVertices*4];
 	colordata->dayColors = new uint8[geometry->numVertices*4];
 	colordata->balance = 1.0f;
@@ -387,14 +395,14 @@ readExtraVertColors(Stream *stream, int32, void *object, int32 offset, int32)
 	return stream;
 }
 
-static Stream*
-writeExtraVertColors(Stream *stream, int32, void *object, int32 offset, int32)
+static rw::Stream*
+writeExtraVertColors(rw::Stream *stream, int32, void *object, int32 offset, int32)
 {
 	ExtraVertColors *colordata =
 		PLUGINOFFSET(ExtraVertColors, object, offset);
 	stream->writeU32(colordata->nightColors != NULL);
 	if(colordata->nightColors){
-		Geometry *geometry = (Geometry*)object;
+		rw::Geometry *geometry = (rw::Geometry*)object;
 		stream->write(colordata->nightColors, geometry->numVertices*4);
 	}
 	return stream;
@@ -405,7 +413,7 @@ getSizeExtraVertColors(void *object, int32 offset, int32)
 {
 	ExtraVertColors *colordata =
 		PLUGINOFFSET(ExtraVertColors, object, offset);
-	Geometry *geometry = (Geometry*)object;
+	rw::Geometry *geometry = (rw::Geometry*)object;
 	if(colordata->nightColors)
 		return 4 + geometry->numVertices*4;
 	return 0;
@@ -414,12 +422,12 @@ getSizeExtraVertColors(void *object, int32 offset, int32)
 void
 registerExtraVertColorPlugin(void)
 {
-	extraVertColorOffset = Geometry::registerPlugin(sizeof(ExtraVertColors),
+	extraVertColorOffset = rw::Geometry::registerPlugin(sizeof(ExtraVertColors),
 	                                                ID_EXTRAVERTCOLORS,
 	                                                createExtraVertColors,
 	                                                destroyExtraVertColors,
 	                                                NULL);
-	Geometry::registerPluginStream(ID_EXTRAVERTCOLORS,
+	rw::Geometry::registerPluginStream(ID_EXTRAVERTCOLORS,
 	                               readExtraVertColors,
 	                               writeExtraVertColors,
 	                               getSizeExtraVertColors);
@@ -469,8 +477,8 @@ struct EnvStream {
 	int32 zero;
 };
 
-static Stream*
-readEnvMat(Stream *stream, int32, void *object, int32 offset, int32)
+static rw::Stream*
+readEnvMat(rw::Stream *stream, int32, void *object, int32 offset, int32)
 {
 	EnvStream buf;
 	EnvMat *env = new EnvMat;
@@ -485,8 +493,8 @@ readEnvMat(Stream *stream, int32, void *object, int32 offset, int32)
 	return stream;
 }
 
-static Stream*
-writeEnvMat(Stream *stream, int32, void *object, int32 offset, int32)
+static rw::Stream*
+writeEnvMat(rw::Stream *stream, int32, void *object, int32 offset, int32)
 {
 	EnvStream buf;
 	EnvMat *env = *PLUGINOFFSET(EnvMat*, object, offset);
@@ -550,21 +558,21 @@ struct SpecStream {
 	char texname[24];
 };
 
-static Stream*
-readSpecMat(Stream *stream, int32, void *object, int32 offset, int32)
+static rw::Stream*
+readSpecMat(rw::Stream *stream, int32, void *object, int32 offset, int32)
 {
 	SpecStream buf;
 	SpecMat *spec = new SpecMat;
 	*PLUGINOFFSET(SpecMat*, object, offset) = spec;
 	stream->read(&buf, sizeof(buf));
 	spec->specularity = buf.specularity;
-	spec->texture = Texture::create(NULL);
+	spec->texture = rw::Texture::create(NULL);
 	strncpy(spec->texture->name, buf.texname, 24);
 	return stream;
 }
 
-static Stream*
-writeSpecMat(Stream *stream, int32, void *object, int32 offset, int32)
+static rw::Stream*
+writeSpecMat(rw::Stream *stream, int32, void *object, int32 offset, int32)
 {
 	SpecStream buf;
 	SpecMat *spec = *PLUGINOFFSET(SpecMat*, object, offset);
@@ -584,18 +592,18 @@ getSizeSpecMat(void *object, int32 offset, int32)
 void
 registerEnvSpecPlugin(void)
 {
-	envMatOffset = Material::registerPlugin(sizeof(EnvMat*), ID_ENVMAT,
+	envMatOffset = rw::Material::registerPlugin(sizeof(EnvMat*), ID_ENVMAT,
 	                                        createEnvMat,
                                                 destroyEnvMat,
                                                 copyEnvMat);
-	Material::registerPluginStream(ID_ENVMAT, readEnvMat,
+	rw::Material::registerPluginStream(ID_ENVMAT, readEnvMat,
                                                   writeEnvMat,
                                                   getSizeEnvMat);
-	specMatOffset = Material::registerPlugin(sizeof(SpecMat*), ID_SPECMAT,
+	specMatOffset = rw::Material::registerPlugin(sizeof(SpecMat*), ID_SPECMAT,
 	                                         createSpecMat,
                                                  destroySpecMat,
                                                  copySpecMat);
-	Material::registerPluginStream(ID_SPECMAT, readSpecMat,
+	rw::Material::registerPluginStream(ID_SPECMAT, readSpecMat,
                                                    writeSpecMat,
                                                    getSizeSpecMat);
 }
@@ -618,16 +626,16 @@ copyPipeline(void *dst, void *src, int32 offset, int32)
 	return dst;
 }
 
-static Stream*
-readPipeline(Stream *stream, int32, void *object, int32 offset, int32)
+static rw::Stream*
+readPipeline(rw::Stream *stream, int32, void *object, int32 offset, int32)
 {
 	*PLUGINOFFSET(uint32, object, offset) = stream->readU32();
 //	printf("%x\n", *PLUGINOFFSET(uint32, object, offset));
 	return stream;
 }
 
-static Stream*
-writePipeline(Stream *stream, int32, void *object, int32 offset, int32)
+static rw::Stream*
+writePipeline(rw::Stream *stream, int32, void *object, int32 offset, int32)
 {
 	stream->writeU32(*PLUGINOFFSET(uint32, object, offset));
 	return stream;
@@ -644,22 +652,22 @@ getSizePipeline(void *object, int32 offset, int32)
 void
 registerPipelinePlugin(void)
 {
-	pipelineOffset = Atomic::registerPlugin(sizeof(uint32), ID_PIPELINE,
+	pipelineOffset = rw::Atomic::registerPlugin(sizeof(uint32), ID_PIPELINE,
 	                                        createPipeline,
                                                 NULL,
                                                 copyPipeline);
-	Atomic::registerPluginStream(ID_PIPELINE, readPipeline,
+	rw::Atomic::registerPluginStream(ID_PIPELINE, readPipeline,
 	                             writePipeline, getSizePipeline);
 }
 
 uint32
-getPipelineID(Atomic *atomic)
+getPipelineID(rw::Atomic *atomic)
 {
 	return *PLUGINOFFSET(uint32, atomic, pipelineOffset);
 }
 
 void
-setPipelineID(Atomic *atomic, uint32 id)
+setPipelineID(rw::Atomic *atomic, uint32 id)
 {
 	*PLUGINOFFSET(uint32, atomic, pipelineOffset) = id;
 }
@@ -709,8 +717,8 @@ copy2dEffect(void *dst, void *src, int32 offset, int32)
 	return dst;
 }
 
-static Stream*
-read2dEffect(Stream *stream, int32 size, void *object, int32 offset, int32)
+static rw::Stream*
+read2dEffect(rw::Stream *stream, int32 size, void *object, int32 offset, int32)
 {
 	SizedData *data = PLUGINOFFSET(SizedData, object, offset);
 	data->size = size;
@@ -719,8 +727,8 @@ read2dEffect(Stream *stream, int32 size, void *object, int32 offset, int32)
 	return stream;
 }
 
-static Stream*
-write2dEffect(Stream *stream, int32, void *object, int32 offset, int32)
+static rw::Stream*
+write2dEffect(rw::Stream *stream, int32, void *object, int32 offset, int32)
 {
 	SizedData *data = PLUGINOFFSET(SizedData, object, offset);
 	stream->write(data->data, data->size);
@@ -737,11 +745,11 @@ getSize2dEffect(void *object, int32 offset, int32)
 void
 register2dEffectPlugin(void)
 {
-	twodEffectOffset = Geometry::registerPlugin(sizeof(SizedData), ID_2DEFFECT,
+	twodEffectOffset = rw::Geometry::registerPlugin(sizeof(SizedData), ID_2DEFFECT,
 	                                            create2dEffect,
                                                     destroy2dEffect,
                                                     copy2dEffect);
-	Geometry::registerPluginStream(ID_2DEFFECT, read2dEffect,
+	rw::Geometry::registerPluginStream(ID_2DEFFECT, read2dEffect,
 	                               write2dEffect, getSize2dEffect);
 }
 
@@ -784,8 +792,8 @@ copyCollision(void *dst, void *src, int32 offset, int32)
 	return dst;
 }
 
-static Stream*
-readCollision(Stream *stream, int32 size, void *object, int32 offset, int32)
+static rw::Stream*
+readCollision(rw::Stream *stream, int32 size, void *object, int32 offset, int32)
 {
 	SizedData *data = PLUGINOFFSET(SizedData, object, offset);
 	data->size = size;
@@ -794,8 +802,8 @@ readCollision(Stream *stream, int32 size, void *object, int32 offset, int32)
 	return stream;
 }
 
-static Stream*
-writeCollision(Stream *stream, int32, void *object, int32 offset, int32)
+static rw::Stream*
+writeCollision(rw::Stream *stream, int32, void *object, int32 offset, int32)
 {
 	SizedData *data = PLUGINOFFSET(SizedData, object, offset);
 	stream->write(data->data, data->size);
@@ -812,11 +820,11 @@ getSizeCollision(void *object, int32 offset, int32)
 void
 registerCollisionPlugin(void)
 {
-	collisionOffset = Clump::registerPlugin(sizeof(SizedData), ID_COLLISION,
+	collisionOffset = rw::Clump::registerPlugin(sizeof(SizedData), ID_COLLISION,
 	                                        createCollision,
                                                 destroyCollision,
                                                 copyCollision);
-	Clump::registerPluginStream(ID_COLLISION, readCollision,
+	rw::Clump::registerPluginStream(ID_COLLISION, readCollision,
 	                            writeCollision, getSizeCollision);
 }
 

@@ -150,12 +150,19 @@ public:
 		if(node == &freeTail)
 			return nil;
 		node->item = item;
-		node->Remove();	       // remove from free list
+		node->Remove();		// remove from free list
 		sort->prev->Insert(node);
 		return node;
 	}
 	void Remove(CLink<T> *link){
-		link->Remove();        // remove from list
-		freeHead.Insert(link); // insert into free list
+		link->Remove();		// remove from list
+		freeHead.Insert(link);	// insert into free list
+	}
+	int Count(void){
+		int n = 0;
+		CLink<T> *lnk;
+		for(lnk = head.next; lnk != &tail; lnk = lnk->next)
+			n++;
+		return n;
 	}
 };

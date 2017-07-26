@@ -18,6 +18,7 @@ public:
 	static bool InsertEntityIntoSortedList(CEntity *e, float dist);
 	static void InitAlphaAtomicList(void);
 
+	static void RenderFadingAtomic(rw::Atomic *atm, float dist);
 	static void RenderFadingEntities(void);
 
 	//
@@ -30,6 +31,7 @@ public:
 		int flags;
 	};
 	static void SetAtomicModelInfo(rw::Atomic*, CSimpleModelInfo*);
+	static CSimpleModelInfo *GetAtomicModelInfo(rw::Atomic *atomic);
 //	this is a useless wrapper
 //	static void SetAtomicRenderCallback(rw::Atomic*, rw::Atomic::RenderCB);
 

@@ -13,7 +13,7 @@ CVisibilityPlugins::Initialise(void)
 	m_alphaList.Init(20);
 	m_alphaList.head.item.sort = 0.0f;
 	m_alphaList.tail.item.sort = 100000000.0f;
-	m_alphaEntityList.Init(150);
+	m_alphaEntityList.Init(350);	// TODO: set back to 150 when things are fixed
 	m_alphaEntityList.head.item.sort = 0.0f;
 	m_alphaEntityList.tail.item.sort = 100000000.0f;
 }
@@ -30,7 +30,10 @@ CVisibilityPlugins::InsertEntityIntoSortedList(CEntity *e, float dist)
 	AlphaObjectInfo item;
 	item.entity = e;
 	item.sort = dist;
-	return !!m_alphaEntityList.InsertSorted(item);
+	bool ret = !!m_alphaEntityList.InsertSorted(item);
+	if(!ret)
+		printf("list full %d\n", m_alphaEntityList.Count());
+	return ret;
 }
 
 void
@@ -40,15 +43,69 @@ CVisibilityPlugins::InitAlphaAtomicList(void)
 }
 
 void
+CVisibilityPlugins::RenderFadingAtomic(rw::Atomic *atm, float camdist)
+{
+	rw::Atomic *distatm;
+	float fadefactor;
+	uchar alpha;
+	CSimpleModelInfo *mi = GetAtomicModelInfo(atm);
+	distatm = mi->GetAtomicFromDistance(camdist - 20.0f);
+	if(mi->m_additive){
+		SetRenderState(rw::DESTBLEND, rw::BLENDONE);
+		rw::Atomic::defaultRenderCB(atm);
+		SetRenderState(rw::DESTBLEND, rw::BLENDINVSRCALPHA);
+	}else{
+		fadefactor = (mi->GetLargestLodDistance() - (camdist - 20.0f))/20.0f;
+		if(fadefactor > 1.0f)
+			fadefactor = 1.0f;
+		alpha = mi->m_alpha * fadefactor;
+		if(alpha == 255)
+			rw::Atomic::defaultRenderCB(atm);
+		else{
+			rw::Geometry *g = distatm->geometry;
+			uint32 oldflags = g->flags & 0xFF;
+			g->flags |= rw::Geometry::MODULATE;
+			for(int32 i = 0; i < g->matList.numMaterials; i++)
+				g->matList.materials[i]->color.alpha = alpha;
+			if(g != atm->geometry)
+				atm->setGeometry(g, 0);
+			rw::Atomic::defaultRenderCB(atm);
+			for(int32 i = 0; i < g->matList.numMaterials; i++)
+				g->matList.materials[i]->color.alpha = 255;
+			g->flags = oldflags | g->flags&~0xFF;
+		}
+	}
+}
+
+void
 CVisibilityPlugins::RenderFadingEntities(void)
 {
 	CLink<AlphaObjectInfo> *node;
+	CSimpleModelInfo *mi;
 	for(node = m_alphaEntityList.tail.prev;
 	    node != &m_alphaEntityList.head;
 	    node = node->prev){
 		CEntity *e = node->item.entity;
-		if(e->m_rwObject){
-			e->Render();
+		if(e->m_rwObject == nil)
+			continue;
+		mi = (CSimpleModelInfo*)CModelInfo::GetModelInfo(e->m_modelIndex);
+		if(mi->m_noZwrite){
+			SetRenderState(rw::ALPHATESTFUNC, rw::ALPHANEVER);
+			SetRenderState(rw::ZWRITEENABLE, 0);
+		}
+
+		if(e->m_isFading){
+			DeActivateDirectional();
+			SetAmbientColours();
+			e->m_isBeingRendered = 1;
+			RenderFadingAtomic((rw::Atomic*)e->m_rwObject, node->item.sort);
+			e->m_isBeingRendered = 0;
+		}else
+			CRenderer::RenderOneNonRoad(e);
+
+		if(mi->m_noZwrite){
+			SetRenderState(rw::ZWRITEENABLE, 1);
+			SetRenderState(rw::ALPHATESTFUNC, rw::ALPHALESS);
 		}
 	}
 }
@@ -111,6 +168,12 @@ CVisibilityPlugins::SetAtomicModelInfo(rw::Atomic *atomic,
 	AtomicExt *ext = ATOMICEXT(atomic);
 	ext->modelInfo = modelInfo;
 	// TODO: set renderCB from modelInfo->type
+}
+
+CSimpleModelInfo*
+CVisibilityPlugins::GetAtomicModelInfo(rw::Atomic *atomic)
+{
+	return ATOMICEXT(atomic)->modelInfo;
 }
 
 //

@@ -12,7 +12,7 @@ CGame::InitialiseRW(void)
 #ifdef RW_GL3
 	rw::platform = rw::PLATFORM_GL3;
 	rw::gl3::initializeRender();
-#elif RW_D3D9
+#elif defined(RW_D3D9)
 	rw::platform = rw::PLATFORM_D3D9;
 #endif
 
@@ -30,25 +30,15 @@ CGame::InitialiseRW(void)
 	rwCamera->setNearPlane(0.9f);
 	TheCamera.m_rwcam = rwCamera;
 	TheCamera.m_aspectRatio = 640.0f/480.0f;
-	TheCamera.m_target.set(0.0f, 0.0f, 0.0f);
-	TheCamera.m_position.set(-100.0f, -100.0f, 50.0f);
+//	TheCamera.m_target.set(0.0f, 0.0f, 0.0f);
+//	TheCamera.m_position.set(-100.0f, -100.0f, 50.0f);
+	TheCamera.m_target.set(1155.0f, -190.0f, -18.0f);
+	TheCamera.m_position.set(1286.0f, -211.0f, 50.0f);
 
 	rwWorld  = rw::World::create();
 	rwWorld->addCamera(rwCamera);
 
-	// Ambient light
-	ambient = rw::Light::create(rw::Light::AMBIENT);
-	ambient->setColor(0.3f, 0.3f, 0.3f);
-	rwWorld->addLight(ambient);
-
-	// Diffuse light
-	direct = rw::Light::create(rw::Light::DIRECTIONAL);
-	rw::Frame *frm = rw::Frame::create();
-	direct->setFrame(frm);
-	frm->matrix.pointInDirection((rw::V3d){1.0, 0.0, -0.5},
-			(rw::V3d){0.0, 0.0, 1.0});
-	frm->updateObjects();
-	rwWorld->addLight(direct);
+	LightsCreate(rwWorld);
 }
 
 void
@@ -68,7 +58,7 @@ CGame::Initialise(void)
 {
 	CPools::Initialise();
 
-	CGame::currLevel = LEVEL_INDUSTRIAL;
+	CGame::currLevel = LEVEL_NONE;	// INDUSTRIAL gives problems :/
 
 	printf("--Loading generic textures\n");
 	gameTxdSlot = CTxdStore::AddTxdSlot("generic");
@@ -98,6 +88,7 @@ CGame::Initialise(void)
 	CStreaming::RequestInitialVehicles();
 	CStreaming::RequestInitialPeds();
 	CStreaming::RequestBigBuildings(LEVEL_NONE);
+	CStreaming::LoadAllRequestedModels();
 
 	printf("--Setup game variables\n");
 	CClock::Initialise(1000);

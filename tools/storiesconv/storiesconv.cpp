@@ -222,9 +222,9 @@ convertMesh(Geometry *rwg, RslGeometry *g, int32 ii)
 	Mesh *m = &rwg->meshHeader->mesh[inst->matID];
 	ps2::Vertex v;
 	uint32 mask = 0x1001;	// tex coords, vertices
-	if(rwg->geoflags & Geometry::NORMALS)
+	if(rwg->flags & Geometry::NORMALS)
 		mask |= 0x10;
-	if(rwg->geoflags & Geometry::PRELIT)
+	if(rwg->flags & Geometry::PRELIT)
 		mask |= 0x100;
 	Skin *skin = *PLUGINOFFSET(Skin*, rwg, skinGlobals.geoOffset);
 	if(skin)
@@ -275,14 +275,14 @@ convertMesh(Geometry *rwg, RslGeometry *g, int32 ii)
 		if(!firstBatch) vuTex += 2*2;
 		w = skipUnpack(w);
 
-		if(rwg->geoflags & Geometry::PRELIT){
+		if(rwg->flags & Geometry::PRELIT){
 			assert((w[0] & 0xFF004000) == 0x6F000000);
 			vuCols = (uint16*)(w+1);
 			if(!firstBatch) vuCols += 2;
 			w = skipUnpack(w);
 		}
 
-		if(rwg->geoflags & Geometry::NORMALS){
+		if(rwg->flags & Geometry::NORMALS){
 			assert((w[0] & 0xFF004000) == 0x6A000000);
 			vuNorms = (int8*)(w+1);
 			if(!firstBatch) vuNorms += 2*3;
@@ -379,10 +379,11 @@ convertAtomic(RslElement *atomic)
 
 	*PLUGINOFFSET(RslElement*, rwa, atmOffset) = atomic;
 
-	rwg->numMaterials = g->matList.numMaterials;
-	rwg->materialList = new Material*[rwg->numMaterials];
-	for(int32 i = 0; i < rwg->numMaterials; i++)
-		rwg->materialList[i] = convertMaterial(g->matList.materials[i]);
+	rwg->matList.numMaterials = g->matList.numMaterials;
+	rwg->matList.space = rwg->matList.numMaterials;
+	rwg->matList.materials = new Material*[rwg->matList.numMaterials];
+	for(int32 i = 0; i < rwg->matList.numMaterials; i++)
+		rwg->matList.materials[i] = convertMaterial(g->matList.materials[i]);
 
 	sPs2Geometry *resHeader = (sPs2Geometry*)(g+1);
 	sPs2GeometryMesh *inst = (sPs2GeometryMesh*)(resHeader+1);
@@ -390,7 +391,7 @@ convertAtomic(RslElement *atomic)
 
 	rwg->meshHeader = new MeshHeader;
 	rwg->meshHeader->flags = 1;
-	rwg->meshHeader->numMeshes = rwg->numMaterials;
+	rwg->meshHeader->numMeshes = rwg->matList.numMaterials;
 	rwg->meshHeader->mesh = new Mesh[rwg->meshHeader->numMeshes];
 	rwg->meshHeader->totalIndices = 0;
 	Mesh *meshes = rwg->meshHeader->mesh;
@@ -404,21 +405,21 @@ convertAtomic(RslElement *atomic)
 		m->numIndices += inst[i].numTriangles+2 +3;
 	}
 	for(uint32 i = 0; i < rwg->meshHeader->numMeshes; i++){
-		rwg->meshHeader->mesh[i].material = rwg->materialList[i];
+		rwg->meshHeader->mesh[i].material = rwg->matList.materials[i];
 		rwg->meshHeader->totalIndices += meshes[i].numIndices;
 	}
-	rwg->geoflags = Geometry::TRISTRIP |
+	rwg->flags = Geometry::TRISTRIP |
 	                Geometry::LIGHT;
 	if(rwg->hasColoredMaterial())
-		rwg->geoflags |= Geometry::MODULATE;
+		rwg->flags |= Geometry::MODULATE;
 	if(resHeader->flags & 0x1)
-		rwg->geoflags |= Geometry::POSITIONS;
+		rwg->flags |= Geometry::POSITIONS;
 	if(resHeader->flags & 0x2)
-		rwg->geoflags |= Geometry::NORMALS;
+		rwg->flags |= Geometry::NORMALS;
 	if(resHeader->flags & 0x4)
-		rwg->geoflags |= Geometry::TEXTURED;
+		rwg->flags |= Geometry::TEXTURED;
 	if(resHeader->flags & 0x8)
-		rwg->geoflags |= Geometry::PRELIT;
+		rwg->flags |= Geometry::PRELIT;
 	rwg->numTexCoordSets = 1;
 
 	rwg->allocateData();
