@@ -244,6 +244,10 @@ convertMesh(Geometry *rwg, RslGeometry *g, int32 ii)
 	bool firstBatch = 1;
 	while(w < end){
 		/* Get data pointers */
+//if(firstInst)
+//printf("$$$$$$$$$$\n");
+//if(firstBatch)
+//printf("##########\n");
 
 		// GIFtag probably
 		assert(w[0] == 0x6C018000);	// UNPACK
@@ -327,14 +331,28 @@ convertMesh(Geometry *rwg, RslGeometry *g, int32 ii)
 			if(idx < 0)
 				idx = rwg->numVertices++;
 
+			// For some geometry
 			// Insts normally overlap by two vertices (same as batches).
 			// For some reason each inst is assumed to end in an odd vertex.
 			// This is enforced by doubling the last vertex if necessary,
 			// in which case we have one more overlapping vertex.
+//			if(i == 0 && firstBatch && !firstInst){
+//				m->numIndices -= 2;
+//				if(inst->numTriangles % 2)
+//					m->numIndices--;
+//			}
+
+//printf("%d %d\n", m->numIndices % 2, idx);
+
 			if(i == 0 && firstBatch && !firstInst){
-				m->numIndices -= 2;
-				if(inst->numTriangles % 2)
-					m->numIndices--;
+				m->indices[m->numIndices++] = m->indices[m->numIndices-1];
+				m->indices[m->numIndices++] = idx;
+	//			if(inst->numTriangles % 2)
+	//				m->indices[m->numIndices++] = idx;
+				if(m->numIndices % 2)
+					m->indices[m->numIndices++] = idx;
+	//			if(inst[-1].numTriangles % 2)
+	//				m->indices[m->numIndices++] = idx;
 			}
 
 			m->indices[m->numIndices++] = idx;
@@ -383,7 +401,7 @@ convertAtomic(RslElement *atomic)
 	for(int32 i = 0; i < numInst; i++){
 		Mesh *m = &meshes[inst[i].matID];
 		rwg->numVertices += inst[i].numTriangles+2;
-		m->numIndices += inst[i].numTriangles+2;
+		m->numIndices += inst[i].numTriangles+2 +3;
 	}
 	for(uint32 i = 0; i < rwg->meshHeader->numMeshes; i++){
 		rwg->meshHeader->mesh[i].material = rwg->materialList[i];
