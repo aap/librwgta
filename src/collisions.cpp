@@ -3,7 +3,6 @@
 #include <cstring>
 #include <cassert>
 
-#include <args.h>
 #include <rw.h>
 
 #include "rwgta.h"

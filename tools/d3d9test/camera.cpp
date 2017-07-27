@@ -1,7 +1,6 @@
 #include <cstdio>
 #include <cassert>
 
-#define RW_D3D9
 #include <rw.h>
 
 #define PI 3.14159265359f

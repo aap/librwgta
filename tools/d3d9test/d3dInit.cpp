@@ -3,7 +3,6 @@
 //#include <DirectXMath.h>
 //using namespace DirectX;
 
-#define RW_D3D9
 #include <rw.h>
 #include "rwgta.h"
 #include "camera.h"
