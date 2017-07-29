@@ -374,10 +374,7 @@ RslElementGroup*
 RslElementGroupForAllElements(RslElementGroup *clump, RslElementCallBack callback, void *pData)
 {
 	RslElement *a;
-	RslLLLink *link;
-	for(link = rslLLLinkGetNext(&clump->atomicList.link);
-	    link != rslLinkListGetTerminator(&clump->atomicList);
-	    link = link->next){
+	RSLFORLIST(link, clump->atomicList){
 		a = rslLLLinkGetData(link, RslElement, inElementGroupLink);
 		if(callback(a, pData) == NULL)
 			break;
@@ -389,10 +386,7 @@ int32
 RslElementGroupGetNumElements(RslElementGroup *clump)
 {
 	int32 n = 0;
-	RslLLLink *link;
-	for(link = rslLLLinkGetNext(&clump->atomicList.link);
-	    link != rslLinkListGetTerminator(&clump->atomicList);
-	    link = link->next)
+	RSLFORLIST(link, clump->atomicList)
 		n++;
 	return n;
 }
@@ -568,10 +562,7 @@ RslTexList*
 RslTexListForAllTextures(RslTexList *dict, RslTextureCallBack fpCallBack, void *pData)
 {
 	RslTexture *t;
-	RslLLLink *link;
-	for(link = rslLLLinkGetNext(&dict->texturesInDict.link);
-	    link != rslLinkListGetTerminator(&dict->texturesInDict);
-	    link = link->next){
+	RSLFORLIST(link, dict->texturesInDict){
 		t = rslLLLinkGetData(link, RslTexture, lInDictionary);
 		if(fpCallBack(t, pData) == NULL)
 			break;

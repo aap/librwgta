@@ -9,11 +9,11 @@ struct RslStream {
 	bool32   isMulti;
 	uint32   fileSize;
 	uint32   dataSize;
-	uint8 ***reloc;
-	uint32   relocSize;
-	uint8  **hashTab;   // ??
-	uint16   hashTabSize;
-	uint16   numElements;
+	uint32   relocTab;
+	uint32   numRelocs;
+	uint32   globalTab;
+	uint16   numClasses;
+	uint16   numFuncs;
 
 	uint8 *data;
 	void relocate(void);
@@ -104,6 +104,10 @@ struct RslLinkList
 #define rslLinkListGetTerminator(list)                                 \
     (&((list)->link))
 
+#define RSLFORLIST(_link, _list) \
+	for(RslLLLink *_next = nil, *_link = rslLLLinkGetNext(&(_list).link); \
+	    _next = rslLLLinkGetNext(_link), (_link) != rslLinkListGetTerminator(&_list); \
+	    (_link) = _next)
 
 struct RslObject {
 	uint8  type;
@@ -238,19 +242,19 @@ int32 RslElementGroupGetNumElements(RslElementGroup *clump);
 RslElementGroup *RslElementGroupForAllElements(RslElementGroup *clump, RslElementCallBack callback, void *pData);
 
 struct RslElement {
-	RslObjectHasNode  object;
+	RslObjectHasNode   object;
 	RslGeometry       *geometry;
-	RslElementGroup          *clump;
+	RslElementGroup   *clump;
 	RslLLLink          inElementGroupLink;
 
-	// what's this? rpWorldObj?
-	uint32             unk1;
-	uint16             unk2;
-	uint16             unk3;
+	uint32             renderCallBack;
+	// CVisibilityComponents
+	int16              modelInfoId;
+	uint16             visIdFlag;
 	// RpSkin
 	RslTAnimTree      *hier;
 	// what about visibility? matfx?
-	int32              pad;	// 0xAAAAAAAA
+	// int32              pad;	// 0xAAAAAAAA
 };
 
 #define RslElementGetNode(_atomic)                                  \

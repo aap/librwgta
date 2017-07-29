@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <cassert>
+#include <stdarg.h>
 
 #include <args.h>
 #include <rw.h>
@@ -16,17 +17,30 @@ char *argv0;
 int32 atmOffset;
 
 void
+panic(const char *fmt, ...)
+{
+	va_list ap;
+	va_start(ap, fmt);
+	fprintf(stderr, "error: ");
+	vfprintf(stderr, fmt, ap);
+	fprintf(stderr, "\n");
+	va_end(ap);
+	exit(1);
+}
+
+void
 RslStream::relocate(void)
 {
 	uint32 off = (uint32)(uintptr)this->data;
 	off -= 0x20;
-	*(uint32*)&this->reloc += off;
-	*(uint32*)&this->hashTab += off;
+	this->relocTab += off;
+	this->globalTab += off;
 
-	uint8 **rel = (uint8**)this->reloc;
-	for(uint32 i = 0; i < this->relocSize; i++){
+	uint8 **rel = (uint8**)this->relocTab;
+	uint8 ***tab = (uint8***)this->relocTab;
+	for(uint32 i = 0; i < this->numRelocs; i++){
 		rel[i] += off;
-		*this->reloc[i] += off;
+		*tab[i] += off;
 	}
 }
 
@@ -55,7 +69,7 @@ RslMaterial *dumpMaterialCB(RslMaterial *material, void*)
 
 RslElement *dumpElementCB(RslElement *atomic, void*)
 {
-	printf(" atm: %x %x %x %p\n", atomic->unk1, atomic->unk2, atomic->unk3, atomic->hier);
+	printf(" atm: %x %x %x %p\n", atomic->renderCallBack, atomic->modelInfoId, atomic->visIdFlag, atomic->hier);
 	RslGeometry *g = atomic->geometry;
 	RslGeometryForAllMaterials(g, dumpMaterialCB, NULL);
 	return atomic;
@@ -184,8 +198,8 @@ convertMaterial(RslMaterial *m)
 		rwm->texture = convertTexture(m->texture);
 
 	if(m->matfx){
-		MatFX *matfx = new MatFX;
-		matfx->setEffects(m->matfx->effectType);
+		MatFX::setEffects(rwm, m->matfx->effectType);
+		MatFX *matfx = MatFX::get(rwm);
 		matfx->setEnvCoefficient(m->matfx->env.intensity);
 		if(m->matfx->env.texture)
 			matfx->setEnvTexture(convertTexture(m->matfx->env.texture));
@@ -547,7 +561,7 @@ moveAtomics(Frame *f)
 			char *end = strrchr(name, '_');
 			if(end){
 				*(++end) = '\0';
-				strcat(end, names[rsla->unk3&3]);
+				strcat(end, names[rsla->visIdFlag&3]);
 			}
 			f->addChild(ff);
 			objs[i]->setFrame(ff);
@@ -557,8 +571,6 @@ moveAtomics(Frame *f)
 	moveAtomics(f->next);
 	moveAtomics(f->child);
 }
-
-
 
 uint8*
 getPalettePS2(RslRaster *raster)
@@ -854,6 +866,121 @@ convertTXD(RslTexList *txd)
 	return rwtxd;
 }
 
+Clump*
+LoadSimple(uint8 *data, const char *name, int nElements)
+{
+	int i;
+	Clump *c;
+	Atomic *a;
+	Frame *root, *child;
+	RslElement **e;
+	char *nodename;
+
+	e = (RslElement**)data;
+	for(i = 0; i < nElements; i++)
+		if(e[i]->object.object.type != 1)
+			return nil;
+
+	c = Clump::create();
+	root = Frame::create();
+	strncpy(gta::getNodeName(root), name, 24);
+	c->setFrame(root);
+	for(i = 0; i < nElements; i++){
+		child = Frame::create();
+		nodename = gta::getNodeName(child);
+		snprintf(nodename, 24, "%s_L%d", name, i);
+		root->addChild(child);
+		makeTextures(e[i], NULL);
+		a = convertAtomic(e[i]);
+		a->setFrame(child);
+		c->addAtomic(a);
+	}
+	return c;
+}
+
+Clump*
+LoadElementGroup(uint8 *data)
+{
+	RslElementGroup *eg;
+	eg = (RslElementGroup*)data;
+	if(eg->object.type != 2)
+		return nil;
+	RslElementGroupForAllElements(eg, makeTextures, NULL);
+	return convertClump(eg);
+}
+
+Clump*
+LoadVehicle(uint8 *data)
+{
+	struct VehicleData
+	{
+		RslElementGroup *elementgroup;
+		int32 numExtras;
+		RslElement **extras;
+		RslMaterial *primaryMaterials[25];
+		RslMaterial *secondaryMaterials[25];
+	};
+	int i;
+	assert(sizeof(VehicleData) == 0xD4);
+	VehicleData *veh = (VehicleData*)data;
+	if(veh->elementgroup->object.type != 2)
+		return nil;
+	for(i = 0; i < 25; i++){
+		if(veh->primaryMaterials[i]){
+			veh->primaryMaterials[i]->color.red = 0x3C;
+			veh->primaryMaterials[i]->color.green = 0xFF;
+			veh->primaryMaterials[i]->color.blue = 0;
+		}
+	}
+	for(i = 0; i < 25; i++){
+		if(veh->secondaryMaterials[i]){
+			veh->secondaryMaterials[i]->color.red = 0xFF;
+			veh->secondaryMaterials[i]->color.green = 0;
+			veh->secondaryMaterials[i]->color.blue = 0xAF;
+		}
+	}
+	Clump *rwc = LoadElementGroup((uint8*)veh->elementgroup);
+	moveAtomics(rwc->getFrame());
+	for(i = 0; i < veh->numExtras; i++){
+		Atomic *a = convertAtomic(veh->extras[i]);
+		Frame *f = convertFrame((RslNode*)veh->extras[i]->object.object.parent);
+		a->setFrame(f);
+		rwc->getFrame()->addChild(f);
+		rwc->addAtomic(a);
+	}
+	return rwc;
+}
+
+Clump*
+LoadPed(uint8 *data)
+{
+	struct PedData
+	{
+		void *colModel;
+		RslElementGroup *elementgroup;
+	};
+	PedData *ped = (PedData*)data;
+	if(ped->elementgroup->object.type != 2)
+		return nil;
+	Clump *rwc = LoadElementGroup((uint8*)ped->elementgroup);
+	return rwc;
+}
+
+Clump*
+LoadAny(RslStream *rslstr, const char *name)
+{
+	Clump *c;
+	c = LoadSimple(rslstr->data, "object", rslstr->numFuncs);
+	if(c) return c;
+	c = LoadElementGroup(rslstr->data);
+	if(c) return c;
+	c = LoadVehicle(rslstr->data);
+	if(c) return c;
+	c = LoadPed(rslstr->data);
+	if(c) return c;
+	return nil;
+}
+
 void
 usage(void)
 {
@@ -861,9 +988,16 @@ usage(void)
 	fprintf(stderr, "\t-v RW version, e.g. 33004 for 3.3.0.4\n");
 	fprintf(stderr, "\t-x extract textures to tga\n");
 	fprintf(stderr, "\t-s don't unswizzle textures\n");
-	fprintf(stderr, "\t-a fix Atomics placement inside hierarchy (mdl files)\n");
 	exit(1);
 }
+
+enum MdlType {
+	MDL_SIMPLE,
+	MDL_ELEMENTGROUP,
+	MDL_VEHICLE,
+	MDL_PED,
+	MDL_ANY
+};
 
 int
 main(int argc, char *argv[])
@@ -878,7 +1012,8 @@ main(int argc, char *argv[])
 
 	assert(sizeof(void*) == 4);
 	int extract = 0;
-	int fixAtomics = 0;
+
+	int mdltype = MDL_ANY;
 
 	ARGBEGIN{
 	case 'v':
@@ -889,9 +1024,6 @@ main(int argc, char *argv[])
 		break;
 	case 'x':
 		extract++;
-		break;
-	case 'a':
-		fixAtomics++;
 		break;
 	default:
 		usage();
@@ -905,10 +1037,12 @@ main(int argc, char *argv[])
 	RslElementGroup *clump = NULL;
 	RslElement *atomic = NULL;
 	RslTexList *txd = NULL;
+	Clump *rwc;
 
 
 	StreamFile stream;
-	assert(stream.open(argv[0], "rb"));
+	if(stream.open(argv[0], "rb") == nil)
+		panic("couldn't open %s", argv[0]);
 
 	uint32 ident = stream.readU32();
 	stream.seek(0, 0);
@@ -925,6 +1059,7 @@ main(int argc, char *argv[])
 		clump = RslElementGroupStreamRead(&stream);
 		stream.close();
 		assert(clump);
+		rwc = convertClump(clump);
 		goto writeDff;
 	}
 
@@ -949,7 +1084,8 @@ main(int argc, char *argv[])
 		filename[len-2] = 'm';
 		filename[len-1] = 'g';
 		filename[len] = '\0';
-		assert(stream.open(filename, "rb"));
+		if(stream.open(filename, "rb") == nil)
+			panic("couldn't open %s", filename);
 		filename[len-4] = '\\';
 		filename[len-3] = '\0';
 
@@ -961,7 +1097,8 @@ main(int argc, char *argv[])
 		for(h = world->sectors->sector; h->ident == WRLD_IDENT; h++){
 			sprintf(name, "world%04d.wrld", i++);
 			strcat(filename, name);
-			assert(outf.open(filename, "wb"));
+			if(outf.open(filename, "wb") == 0)
+				panic("couldn't open %s", filename);
 			data = new uint8[h->fileEnd];
 			memcpy(data, h, 0x20);
 			stream.seek(h->root, 0);
@@ -975,7 +1112,8 @@ main(int argc, char *argv[])
 		for(i = 0; i < world->numTextures; i++){
 			sprintf(name, "txd%04d.chk", i);
 			strcat(filename, name);
-			assert(outf.open(filename, "wb"));
+			if(outf.open(filename, "wb") == nil)
+				panic("couldn't open %s", filename);
 			data = new uint8[h->fileEnd];
 			memcpy(data, h, 0x20);
 			stream.seek(h->root, 0);
@@ -1004,45 +1142,40 @@ main(int argc, char *argv[])
 		for(p = sector->sectionA; p < sector->sectionEnd; p++)
 			printf("%f %f %f\n", p->matrix[12], p->matrix[13], p->matrix[14]);
 	}else if(rslstr->ident == MDL_IDENT){
-		uint8 *p;
-		p = *rslstr->hashTab;
-		p -= 0x24;
-		atomic = (RslElement*)p;
-		clump = atomic->clump;
-		Clump *rwc;
-		if(clump){
-			RslElementGroupForAllElements(clump, makeTextures, NULL);
-			//RslElementGroupForAllElements(clump, dumpElementCB, NULL);
-			//RslNodeForAllChildren(RslElementGroupGetNode(clump), dumpNodeCB, NULL);
-		}else{
-			makeTextures(atomic, NULL);
-			clump = RslElementGroupCreate();
-			RslElementSetNode(atomic, RslNodeCreate());
-			RslElementGroupSetNode(clump, RslElementGetNode(atomic));
-			RslElementGroupAddElement(clump, atomic);
-			//dumpElementCB(a, NULL);
-			//RslNodeForAllChildren(RslElementGetNode(atomic), dumpNodeCB, NULL);
+		switch(mdltype){
+		case MDL_SIMPLE:
+			rwc = LoadSimple(rslstr->data, "object", rslstr->numFuncs);
+			break;
+		case MDL_ELEMENTGROUP:
+			rwc = LoadElementGroup(rslstr->data);
+			break;
+		case MDL_VEHICLE:
+			rwc = LoadVehicle(rslstr->data);
+			break;
+		case MDL_PED:
+			rwc = LoadPed(rslstr->data);
+			break;
+		case MDL_ANY:
+			rwc = LoadAny(rslstr, "object");
+			break;
+		default:
+			panic("unknown model type");
 		}
 	writeDff:
-		rwc = convertClump(clump);
-		if(fixAtomics)
-			moveAtomics(rwc->getFrame());
-		if(argc > 1)
-			assert(stream.open(argv[1], "wb"));
-		else
-			assert(stream.open("out.dff", "wb"));
+		if(rwc == nil)
+			panic("couldn't load object");
+		if(stream.open(argc > 1 ? argv[1] : "out.dff", "wb") == nil)
+			panic("couldn't open file %s", argc > 1 ? argv[1] : "out.dff");
 		rwc->streamWrite(&stream);
-		stream.close();
+		stream.close();		
 	}else if(rslstr->ident == TEX_IDENT){
 		txd = (RslTexList*)rslstr->data;
 	writeTxd:
 		if(extract)
 			RslTexListForAllTextures(txd, dumpTextureCB, NULL);
 		TexDictionary *rwtxd = convertTXD(txd);
-		if(argc > 1)
-			assert(stream.open(argv[1], "wb"));
-		else
-			assert(stream.open("out.txd", "wb"));
+		if(stream.open(argc > 1 ? argv[1] : "out.txd", "wb") == nil)
+			panic("couldn't open file %s", argc > 1 ? argv[1] : "out.txd");
 		rwtxd->streamWrite(&stream);
 		stream.close();
 	}

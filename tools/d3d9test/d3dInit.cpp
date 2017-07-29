@@ -233,7 +233,7 @@ WinMain(HINSTANCE hinstance, HINSTANCE prevInstance,
 		MessageBox(0, "InitD3D() - FAILED", 0, 0);
 		return 0;
 	}
-		
+
 	if(!Setup()){
 		MessageBox(0, "Setup() - FAILED", 0, 0);
 		return 0;
