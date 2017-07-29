@@ -15,3 +15,8 @@ Currently it can render the map:
 ![Liberty City (GTA3) rendered by IIItest](http://aap.papnet.eu/gta/screens/mapviewer1.png)
 
 [Click here for a video](https://www.youtube.com/watch?v=6H8YP2q_-ls)
+
+# Building
+
+Set the LIBRW environment variable to point to the librw directory.
+Otherwise just like librw, i.e. premake5.
