@@ -87,10 +87,17 @@ project "convtxd"
 	kind "ConsoleApp"
 	removeplatforms { "*gl3", "*d3d9" }
 
-project "storiesconv"
+project "lcsconv"
 	tool("storiesconv")
 	kind "ConsoleApp"
 	removeplatforms { "*gl3", "*d3d9" }
+	defines { "LCS" }
+
+project "vcsconv"
+	tool("storiesconv")
+	kind "ConsoleApp"
+	removeplatforms { "*gl3", "*d3d9" }
+	defines { "VCS" }
 
 project "coltest"
 	tool("coltest")

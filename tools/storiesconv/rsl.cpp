@@ -13,6 +13,12 @@ using namespace std;
 using namespace rw;
 #include "rsl.h"
 
+// defined in storiesconv, meh
+void panic(const char *fmt, ...);
+
+#define MAKENAME(x) #x
+#define mustFindChunk(s, type, length, version) do{if(!findChunk(s, type, length, version)) panic("couldn't find chunk %s", MAKENAME(type));}while(0)
+
 static void matfxRead(Stream *stream, RslMaterial *mat);
 static void hanimRead(Stream *stream, RslNode *f);
 
@@ -107,7 +113,7 @@ rslNodeListStreamRead(Stream *stream, rslNodeList *framelist)
 	StreamNode strfrm;
 	RslNode *f;
 
-	assert(findChunk(stream, ID_STRUCT, NULL, NULL));
+	mustFindChunk(stream, ID_STRUCT, NULL, NULL);
 	stream->read(&framelist->numNodes, 4);
 	framelist->frames = new RslNode*[framelist->numNodes];
 	for(int32 i = 0; i < framelist->numNodes; i++){
@@ -124,7 +130,7 @@ rslNodeListStreamRead(Stream *stream, rslNodeList *framelist)
 	ChunkHeaderInfo header;
 	for(int32 i = 0; i < framelist->numNodes; i++){
 		f = framelist->frames[i];
-		assert(findChunk(stream, ID_EXTENSION, &length, NULL));
+		mustFindChunk(stream, ID_EXTENSION, &length, NULL);
 		while(length){
 			readChunkHeaderInfo(stream, &header);
 			if(header.type == ID_HANIMPLUGIN){
@@ -170,9 +176,11 @@ RslTAnimTreeCreate(int32 numNodes, uint32 *nodeFlags, int32 *nodeIDs, int32 flag
 		maxKeySize = 0x24;
 	hier->flags = flags;
 	hier->numNodes = numNodes;
+#ifdef LCS
 	hier->parentNode = 0;
 	hier->maxKeyFrameSize = maxKeySize;
 	hier->currentKeyFrameSize = 0x24;
+#endif
 
 	int32 msz = numNodes*0x40 + 0x3f;
 	uint8 *p = new uint8[msz];
@@ -189,7 +197,9 @@ RslTAnimTreeCreate(int32 numNodes, uint32 *nodeFlags, int32 *nodeIDs, int32 flag
 		hier->pNodeInfo[i].flags = nodeFlags[i];
 		hier->pNodeInfo[i].frame = NULL;
 	}
+#ifdef LCS
 	hier->parentTree = hier;
+#endif
 	return hier;
 }
 
@@ -255,11 +265,11 @@ RslElementStreamRead(Stream *stream, rslNodeList *framelist)
 	uint32 length;
 	int32 buf[4];
 	RslElement *a;
-	assert(findChunk(stream, ID_STRUCT, NULL, NULL));
+	mustFindChunk(stream, ID_STRUCT, NULL, NULL);
 	stream->read(buf, 16);
 	a = RslElementCreate();
 	a->object.object.flags = buf[2];
-	assert(findChunk(stream, ID_GEOMETRY, NULL, NULL));
+	mustFindChunk(stream, ID_GEOMETRY, NULL, NULL);
 
 	sPs2Geometry res, *rp;
 	stream->read(&res, sizeof(sPs2Geometry));
@@ -275,7 +285,7 @@ RslElementStreamRead(Stream *stream, rslNodeList *framelist)
 	// This is not how it's done in LCS, they got extensions wrong :(
 	// Geometry
 	ChunkHeaderInfo header;
-	assert(findChunk(stream, ID_EXTENSION, &length, NULL));
+	mustFindChunk(stream, ID_EXTENSION, &length, NULL);
 	while(length){
 		readChunkHeaderInfo(stream, &header);
 		if(header.type == ID_SKIN){
@@ -286,7 +296,7 @@ RslElementStreamRead(Stream *stream, rslNodeList *framelist)
 	}
 
 	// Element
-	assert(findChunk(stream, ID_EXTENSION, &length, NULL));
+	mustFindChunk(stream, ID_EXTENSION, &length, NULL);
 	while(length){
 		readChunkHeaderInfo(stream, &header);
 		stream->seek(header.length);
@@ -333,7 +343,8 @@ RslElementGroupStreamRead(Stream *stream)
 	rslNodeList framelist;
 	RslElementGroup *clump;
 
-	assert(findChunk(stream, ID_STRUCT, NULL, &version));
+	if(!findChunk(stream, ID_STRUCT, NULL, &version))
+		panic("Couldn't find struct");
 	if(version > 0x33000){
 		stream->read(buf, 12);
 		numElements = buf[0];
@@ -341,18 +352,18 @@ RslElementGroupStreamRead(Stream *stream)
 		stream->read(&numElements, 4);
 
 	clump = RslElementGroupCreate();
-	assert(findChunk(stream, ID_FRAMELIST, NULL, NULL));
+	mustFindChunk(stream, ID_FRAMELIST, NULL, NULL);
 	rslNodeListStreamRead(stream, &framelist);
 	clump->object.parent = framelist.frames[0];
 
 	for(int32 i = 0; i < numElements; i++){
-		assert(findChunk(stream, ID_ATOMIC, NULL, &version));
+		mustFindChunk(stream, ID_ATOMIC, NULL, &version);
 		RslElement *a = RslElementStreamRead(stream, &framelist);
 		RslElementGroupAddElement(clump, a);
 	}
 
 	ChunkHeaderInfo header;
-	assert(findChunk(stream, ID_EXTENSION, &length, NULL));
+	mustFindChunk(stream, ID_EXTENSION, &length, NULL);
 	while(length){
 		readChunkHeaderInfo(stream, &header);
 		stream->seek(header.length);
@@ -439,7 +450,7 @@ RslMaterialStreamRead(Stream *stream)
 {
 	uint32 length;
 	RslMaterialChunkInfo chunk;
-	assert(findChunk(stream, ID_STRUCT, NULL, NULL));
+	mustFindChunk(stream, ID_STRUCT, NULL, NULL);
 	stream->read(&chunk, sizeof(chunk));
 	RslMaterial *mat = RslMaterialCreate();
 	mat->color = chunk.color;
@@ -447,7 +458,7 @@ RslMaterialStreamRead(Stream *stream)
 		mat->texture = RslTextureStreamRead(stream);
 
 	ChunkHeaderInfo header;
-	assert(findChunk(stream, ID_EXTENSION, &length, NULL));
+	mustFindChunk(stream, ID_EXTENSION, &length, NULL);
 	while(length){
 		readChunkHeaderInfo(stream, &header);
 		if(header.type == ID_MATFX)
@@ -524,14 +535,14 @@ rslMaterialListStreamRead(Stream *stream, RslMaterialList *matlist)
 {
 	int32 numMaterials;
 	RslMaterial *mat;
-	assert(findChunk(stream, ID_MATLIST, NULL, NULL));
-	assert(findChunk(stream, ID_STRUCT, NULL, NULL));
+	mustFindChunk(stream, ID_MATLIST, NULL, NULL);
+	mustFindChunk(stream, ID_STRUCT, NULL, NULL);
 	numMaterials = stream->readI32();
 	int32 *refs = new int32[numMaterials];
 	stream->read(refs, 4*numMaterials);
 	for(int32 i = 0; i < numMaterials; i++){
 		assert(refs[i] < 0);
-		assert(findChunk(stream, ID_MATERIAL, NULL, NULL));
+		mustFindChunk(stream, ID_MATERIAL, NULL, NULL);
 		mat = RslMaterialStreamRead(stream);
 		rpMaterialListAppendMaterial(matlist, mat);
 	}
@@ -591,16 +602,16 @@ RslTextureStreamRead(Stream *stream)
 {
 	uint32 length;
 	RslTexture *tex = RslTextureCreate(NULL);
-	assert(findChunk(stream, ID_TEXTURE, NULL, NULL));
-	assert(findChunk(stream, ID_STRUCT, NULL, NULL));
+	mustFindChunk(stream, ID_TEXTURE, NULL, NULL);
+	mustFindChunk(stream, ID_STRUCT, NULL, NULL);
 	stream->readI32();	// filter addressing
-	assert(findChunk(stream, ID_STRING, &length, NULL));
+	mustFindChunk(stream, ID_STRING, &length, NULL);
 	stream->read(tex->name, length);
-	assert(findChunk(stream, ID_STRING, &length, NULL));
+	mustFindChunk(stream, ID_STRING, &length, NULL);
 	stream->read(tex->mask, length);
 
 	ChunkHeaderInfo header;
-	assert(findChunk(stream, ID_EXTENSION, &length, NULL));
+	mustFindChunk(stream, ID_EXTENSION, &length, NULL);
 	while(length){
 		readChunkHeaderInfo(stream, &header);
 		stream->seek(header.length);
@@ -657,22 +668,22 @@ RslReadNativeTexturePS2(Stream *stream)
 	uint32 len;
 	uint32 buf[2];
 	RslTexture *tex = RslTextureCreate(NULL);
-	assert(findChunk(stream, ID_STRUCT, NULL, NULL));
+	mustFindChunk(stream, ID_STRUCT, NULL, NULL);
 	stream->read(buf, sizeof(buf));
 	assert(buf[0] == 0x00505350); /* "PSP\0" */
-	assert(findChunk(stream, ID_STRING, &len, NULL));
+	mustFindChunk(stream, ID_STRING, &len, NULL);
 	stream->read(tex->name, len);
-	assert(findChunk(stream, ID_STRING, &len, NULL));
+	mustFindChunk(stream, ID_STRING, &len, NULL);
 	stream->read(tex->mask, len);
-	assert(findChunk(stream, ID_STRUCT, NULL, NULL));
-	assert(findChunk(stream, ID_STRUCT, &len, NULL));
+	mustFindChunk(stream, ID_STRUCT, NULL, NULL);
+	mustFindChunk(stream, ID_STRUCT, &len, NULL);
 	stream->read(&rasterInfo, sizeof(rasterInfo));
-	assert(findChunk(stream, ID_STRUCT, &len, NULL));
+	mustFindChunk(stream, ID_STRUCT, &len, NULL);
 	tex->raster = RslCreateRasterPS2(rasterInfo.width,
 		rasterInfo.height, rasterInfo.depth, rasterInfo.mipmaps);
 	tex->raster->ps2.data = new uint8[len];
 	stream->read(tex->raster->ps2.data, len);
-	assert(findChunk(stream, ID_EXTENSION, &len, NULL));
+	(stream, ID_EXTENSION, &len, NULL);
 	stream->seek(len);
 	return tex;
 }
@@ -680,11 +691,11 @@ RslReadNativeTexturePS2(Stream *stream)
 RslTexList*
 RslTexListStreamRead(Stream *stream)
 {
-	assert(findChunk(stream, ID_STRUCT, NULL, NULL));
+	mustFindChunk(stream, ID_STRUCT, NULL, NULL);
 	int32 numTex = stream->readI32();
 	RslTexList *txd = RslTexListCreate();
 	for(int32 i = 0; i < numTex; i++){
-		assert(findChunk(stream, ID_TEXTURENATIVE, NULL, NULL));
+		mustFindChunk(stream, ID_TEXTURENATIVE, NULL, NULL);
 		RslTexture *tex = RslReadNativeTexturePS2(stream);
 		RslTexListAddTexture(txd, tex);
 	}

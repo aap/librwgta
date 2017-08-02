@@ -6,7 +6,7 @@ enum {
 
 struct RslStream {
 	uint32   ident;
-	bool32   isMulti;
+	bool32   type;
 	uint32   fileSize;
 	uint32   dataSize;
 	uint32   relocTab;
@@ -201,12 +201,18 @@ struct RslNode {
 	RslNode          *root;
 
 	// RwHAnimNodeExtension
+#ifdef LCS
 	int32              nodeId;
+#else
+	int32		nodeId;
+	int32		nodeId2;
+#endif
 	RslTAnimTree      *hier;
 	// R* Node name
 	char              *name;
 	// R* Visibility
 	int32              hierId;
+// VCS
 };
 
 RslNode *RslNodeCreate(void);
@@ -336,6 +342,7 @@ struct RslTAnimTree {
 	float32           *pMatrixArray;
 	void              *pMatrixArrayUnaligned;
 	RslTAnimNodeInfo  *pNodeInfo;
+#ifdef LCS
 	RslNode           *parentNode;
 	int32              maxKeyFrameSize;
 	int32              currentKeyFrameSize;
@@ -346,6 +353,7 @@ struct RslTAnimTree {
 	RslTAnimTree      *parentTree;
 	int32              offsetInParent;
 	int32              rootParentOffset;
+#endif
 };
 
 struct RslSkin {

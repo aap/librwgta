@@ -48,7 +48,12 @@ RslStream::relocate(void)
 
 RslNode *dumpNodeCB(RslNode *frame, void *data)
 {
-	printf(" frm: %x %s %x\n", frame->nodeId, frame->name, frame->hierId);
+#ifdef LCS
+	printf("%08x %08x %s %d\n", frame->nodeId, frame->hier, frame->name, frame->hierId);
+#else
+	printf("%08x %08x %08x %s %d\n", frame->nodeId, frame->nodeId2, frame->hier, frame->name, frame->hierId);
+#endif
+//	printf(" frm: %x %s %x\n", frame->nodeId, frame->name, frame->hierId);
 	RslNodeForAllChildren(frame, dumpNodeCB, data);
 	return frame;
 }
@@ -130,6 +135,7 @@ convertFrame(RslNode *f)
 	if(f->name)
 		strncpy(gta::getNodeName(rwf), f->name, 24);
 
+#ifdef LCS
 	HAnimData *hanim = PLUGINOFFSET(HAnimData, rwf, hAnimOffset);
 	hanim->id = f->nodeId;
 	if(f->hier){
@@ -174,6 +180,58 @@ convertFrame(RslNode *f)
 		delete[] nodeIDs;
 		delete[] nodehier;
 	}
+#else
+	HAnimData *hanim = PLUGINOFFSET(HAnimData, rwf, hAnimOffset);
+	hanim->id = -1;
+	if(f->hier){
+		int32 numNodes = f->hier->numNodes;
+		int32 *nodeFlags = new int32[numNodes];
+		int32 *nodeIDs = new int32[numNodes];
+
+		nextId = 2000;
+		Node *nodehier = new Node[numNodes];
+		int32 stack[100];
+		int32 sp = 0;
+		stack[sp] = -1;
+		// Match up nodes with frames to fix and assign IDs
+		// NOTE: assignment can only work reliably when not more
+		//       than one child node needs an ID
+		for(int32 i = 0; i < numNodes; i++){
+			RslTAnimNodeInfo *ni = &f->hier->pNodeInfo[i];
+			printf("%d %d %d %p\n", ni->id, ni->index, ni->flags, ni->frame);
+			//Node *n = &nodehier[i];
+			//n->parent = stack[sp];
+			if(ni->flags & HAnimHierarchy::PUSH)
+				sp++;
+			stack[sp] = i;
+			//RslNode *ff = findNode(f, (uint8)ni->id);
+			//n->id = ff->nodeId;
+			//if(n->id < 0){
+			//	ff = findNode(f, nodehier[n->parent].id);
+			//	ff = findChild(ff);
+			//	n->id = ff->nodeId = nextId++;
+			//}
+			//printf("%d %s %d %d\n", i, ff->name, n->id, n->parent);
+			if(ni->flags & HAnimHierarchy::POP)
+				sp--;
+
+			nodeFlags[i] = ni->flags;
+			nodeIDs[i] = ni->id; //n->id;
+		}
+
+#ifdef LCS
+		int kfsz = f->hier->maxKeyFrameSize
+#else
+		int kfsz = 0x24;
+#endif
+		HAnimHierarchy *hier = HAnimHierarchy::create(numNodes, nodeFlags, nodeIDs, f->hier->flags, kfsz);
+		hanim->hierarchy = hier;
+
+		delete[] nodeFlags;
+		delete[] nodeIDs;
+		delete[] nodehier;
+	}
+#endif
 	return rwf;
 }
 
@@ -906,8 +964,17 @@ LoadElementGroup(uint8 *data)
 	if(eg->object.type != 2)
 		return nil;
 	RslElementGroupForAllElements(eg, makeTextures, NULL);
+	dumpNodeCB((RslNode*)eg->object.parent, NULL);
 	return convertClump(eg);
 }
+
+#ifdef LCS
+#define NUMPRIM 25
+#define NUMSEC 25
+#else
+#define NUMPRIM 30
+#define NUMSEC 27
+#endif
 
 Clump*
 LoadVehicle(uint8 *data)
@@ -917,22 +984,21 @@ LoadVehicle(uint8 *data)
 		RslElementGroup *elementgroup;
 		int32 numExtras;
 		RslElement **extras;
-		RslMaterial *primaryMaterials[25];
-		RslMaterial *secondaryMaterials[25];
+		RslMaterial *primaryMaterials[NUMPRIM];
+		RslMaterial *secondaryMaterials[NUMSEC];
 	};
 	int i;
-	assert(sizeof(VehicleData) == 0xD4);
 	VehicleData *veh = (VehicleData*)data;
 	if(veh->elementgroup->object.type != 2)
 		return nil;
-	for(i = 0; i < 25; i++){
+	for(i = 0; i < NUMPRIM; i++){
 		if(veh->primaryMaterials[i]){
 			veh->primaryMaterials[i]->color.red = 0x3C;
 			veh->primaryMaterials[i]->color.green = 0xFF;
 			veh->primaryMaterials[i]->color.blue = 0;
 		}
 	}
-	for(i = 0; i < 25; i++){
+	for(i = 0; i < NUMSEC; i++){
 		if(veh->secondaryMaterials[i]){
 			veh->secondaryMaterials[i]->color.red = 0xFF;
 			veh->secondaryMaterials[i]->color.green = 0;
