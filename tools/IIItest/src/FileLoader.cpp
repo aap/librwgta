@@ -514,7 +514,7 @@ CFileLoader::LoadObjectInstance(char *line)
 	if(mi == nil)
 		return;
 	Matrix *mat = Matrix::create();
-	*mat = Matrix::makeRotation(conj(q));
+	mat->rotate(conj(q), COMBINEREPLACE);
 	mat->pos = t;
 	if(mi->GetObjectID() == -1){
 		CBuilding *build;

@@ -1,6 +1,5 @@
 #include "III.h"
-
-#ifdef __linux__
+#ifdef RW_GL3
 
 GLFWwindow *glfwwindow;
 
@@ -268,4 +267,4 @@ main(int argc, char *argv[])
 	return 0;
 }
 
-#endif __linux__
+#endif

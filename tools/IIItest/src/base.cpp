@@ -221,9 +221,9 @@ TheGame(void)
 		TheCamera.update();
 		TheCamera.m_rwcam->beginUpdate();
 
-		debug("visible entities, alpha list: %d %d\n",
-			CRenderer::ms_nNoOfVisibleEntities,
-			CVisibilityPlugins::m_alphaEntityList.Count());
+//		debug("visible entities, alpha list: %d %d\n",
+//			CRenderer::ms_nNoOfVisibleEntities,
+//			CVisibilityPlugins::m_alphaEntityList.Count());
 
 		CRenderer::RenderRoads();
 		SetRenderState(rw::FOGENABLE, 1);

@@ -143,21 +143,21 @@ CEntity::GetBoundRect(void)
 	CColModel *col = CModelInfo::GetModelInfo(m_modelIndex)->GetColModel();
 
 	v = col->boundingBox.min;
-	v = m_matrix.m_matrix.transPoint(v);
+	rw::V3d::transformPoints(&v, &v, 1, &m_matrix.m_matrix);
 	rect.ContainPoint(CVector(v));
 
 	v = col->boundingBox.max;
-	v = m_matrix.m_matrix.transPoint(v);
+	rw::V3d::transformPoints(&v, &v, 1, &m_matrix.m_matrix);
 	rect.ContainPoint(CVector(v));
 
 	v = col->boundingBox.min;
 	v.x = col->boundingBox.max.x;
-	v = m_matrix.m_matrix.transPoint(v);
+	rw::V3d::transformPoints(&v, &v, 1, &m_matrix.m_matrix);
 	rect.ContainPoint(CVector(v));
 
 	v = col->boundingBox.max;
 	v.x = col->boundingBox.min.x;
-	v = m_matrix.m_matrix.transPoint(v);
+	rw::V3d::transformPoints(&v, &v, 1, &m_matrix.m_matrix);
 	rect.ContainPoint(CVector(v));
 
 	return rect;

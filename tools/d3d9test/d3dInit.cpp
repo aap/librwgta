@@ -16,15 +16,15 @@ rw::Clump *clump;
 void
 initrw(void)
 {
-    rw::Engine::init();
-    rw::version = 0x34000;
-    rw::platform = rw::PLATFORM_D3D9;
+	rw::Engine::init();
+	rw::version = 0x34000;
+	rw::platform = rw::PLATFORM_D3D9;
 	rw::engine->loadTextures = 1;
 	rw::d3d::device = Device;
 
-    gta::attachPlugins();
-    rw::Driver::open();
-    rw::d3d::initializeRender();
+	gta::attachPlugins();
+	rw::Driver::open();
+	rw::d3d::initializeRender();
 
 	rw::engine->currentTexDictionary = rw::TexDictionary::create();
 	rw::Image::setSearchPath("Y:\\ps2\\gta3\\MODELS\\gta3_archive\\txd_extracted\\;"
