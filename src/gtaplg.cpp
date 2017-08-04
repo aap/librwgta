@@ -223,7 +223,7 @@ writeBreakableModel(rw::Stream *stream, int32, void *object, int32 o, int32)
 	uint32 header[13];
 	Breakable *breakable = *PLUGINOFFSET(Breakable*, object, o);
 	uint8 *p = (uint8*)breakable;
-	if(breakable == NULL){
+	if(breakable == nil){
 		stream->writeU32(0);
 		return stream;
 	}
@@ -245,7 +245,7 @@ static int32
 getSizeBreakableModel(void *object, int32 offset, int32)
 {
 	Breakable *breakable = *PLUGINOFFSET(Breakable*, object, offset);
-	if(breakable == NULL)
+	if(breakable == nil)
 		return 0; //4;
 	return 56 + breakable->numVertices*(12+8+4) +
 	            breakable->numFaces*(6+2) +
@@ -258,7 +258,7 @@ registerBreakableModelPlugin(void)
 	breakableOffset = rw::Geometry::registerPlugin(sizeof(Breakable*),
 	                                           ID_BREAKABLE,
 	                                           createBreakableModel,
-	                                           destroyBreakableModel, NULL);
+	                                           destroyBreakableModel, nil);
 	rw::Geometry::registerPluginStream(ID_BREAKABLE,
 	                               readBreakableModel,
 	                               writeBreakableModel,
@@ -272,7 +272,7 @@ int32 extraNormalsOffset;
 static void*
 createExtraNormals(void *object, int32 offset, int32)
 {
-	*PLUGINOFFSET(float*, object, offset) = NULL;
+	*PLUGINOFFSET(float*, object, offset) = nil;
 	return object;
 }
 
@@ -281,7 +281,7 @@ destroyExtraNormals(void *object, int32 offset, int32)
 {
 	float *extranormals = *PLUGINOFFSET(float*, object, offset);
 	delete[] extranormals;
-	*PLUGINOFFSET(float*, object, offset) = NULL;
+	*PLUGINOFFSET(float*, object, offset) = nil;
 	return object;
 }
 
@@ -311,7 +311,7 @@ writeExtraNormals(rw::Stream *stream, int32, void *object, int32 offset, int32)
 {
 	rw::Geometry *geo = (rw::Geometry*)object;
 	float *extranormals = *PLUGINOFFSET(float*, object, offset);
-	assert(extranormals != NULL);
+	assert(extranormals != nil);
 	stream->write(extranormals, geo->numVertices*3*4);
 	return stream;
 }
@@ -332,7 +332,7 @@ registerExtraNormalsPlugin(void)
 	                                              ID_EXTRANORMALS,
 	                                              createExtraNormals,
 	                                              destroyExtraNormals,
-	                                              NULL);
+	                                              nil);
 	rw::Geometry::registerPluginStream(ID_EXTRANORMALS,
 	                               readExtraNormals,
 	                               writeExtraNormals,
@@ -349,8 +349,8 @@ allocateExtraVertColors(rw::Geometry *g)
 {
 	ExtraVertColors *colordata =
 		PLUGINOFFSET(ExtraVertColors, g, extraVertColorOffset);
-	colordata->nightColors = new uint8[g->numVertices*4];
-	colordata->dayColors = new uint8[g->numVertices*4];
+	colordata->nightColors = new rw::RGBA[g->numVertices];
+	colordata->dayColors = new rw::RGBA[g->numVertices];
 	colordata->balance = 1.0f;
 }
 
@@ -359,8 +359,8 @@ createExtraVertColors(void *object, int32 offset, int32)
 {
 	ExtraVertColors *colordata =
 		PLUGINOFFSET(ExtraVertColors, object, offset);
-	colordata->nightColors = NULL;
-	colordata->dayColors = NULL;
+	colordata->nightColors = nil;
+	colordata->dayColors = nil;
 	colordata->balance = 0.0f;
 	return object;
 }
@@ -385,8 +385,8 @@ readExtraVertColors(rw::Stream *stream, int32, void *object, int32 offset, int32
 	if(!hasData)
 		return stream;
 	rw::Geometry *geometry = (rw::Geometry*)object;
-	colordata->nightColors = new uint8[geometry->numVertices*4];
-	colordata->dayColors = new uint8[geometry->numVertices*4];
+	colordata->nightColors = new rw::RGBA[geometry->numVertices];
+	colordata->dayColors = new rw::RGBA[geometry->numVertices];
 	colordata->balance = 1.0f;
 	stream->read(colordata->nightColors, geometry->numVertices*4);
 	if(geometry->colors)
@@ -400,7 +400,7 @@ writeExtraVertColors(rw::Stream *stream, int32, void *object, int32 offset, int3
 {
 	ExtraVertColors *colordata =
 		PLUGINOFFSET(ExtraVertColors, object, offset);
-	stream->writeU32(colordata->nightColors != NULL);
+	stream->writeU32(colordata->nightColors != nil);
 	if(colordata->nightColors){
 		rw::Geometry *geometry = (rw::Geometry*)object;
 		stream->write(colordata->nightColors, geometry->numVertices*4);
@@ -426,7 +426,7 @@ registerExtraVertColorPlugin(void)
 	                                                ID_EXTRAVERTCOLORS,
 	                                                createExtraVertColors,
 	                                                destroyExtraVertColors,
-	                                                NULL);
+	                                                nil);
 	rw::Geometry::registerPluginStream(ID_EXTRAVERTCOLORS,
 	                               readExtraVertColors,
 	                               writeExtraVertColors,
@@ -440,7 +440,7 @@ int32 envMatOffset;
 static void*
 createEnvMat(void *object, int32 offset, int32)
 {
-	*PLUGINOFFSET(EnvMat*, object, offset) = NULL;
+	*PLUGINOFFSET(EnvMat*, object, offset) = nil;
 	return object;
 }
 
@@ -449,7 +449,7 @@ destroyEnvMat(void *object, int32 offset, int32)
 {
 	EnvMat **envmat = PLUGINOFFSET(EnvMat*, object, offset);
 	delete *envmat;
-	*envmat = NULL;
+	*envmat = nil;
 	return object;
 }
 
@@ -457,7 +457,7 @@ static void*
 copyEnvMat(void *dst, void *src, int32 offset, int32)
 {
 	EnvMat *srcenv = *PLUGINOFFSET(EnvMat*, src, offset);
-	if(srcenv == NULL)
+	if(srcenv == nil)
 		return dst;
 	EnvMat *dstenv = new EnvMat;
 	dstenv->scaleX = srcenv->scaleX;
@@ -465,7 +465,7 @@ copyEnvMat(void *dst, void *src, int32 offset, int32)
 	dstenv->transScaleX = srcenv->transScaleX;
 	dstenv->transScaleY = srcenv->transScaleY;
 	dstenv->shininess = srcenv->shininess;
-	dstenv->texture = NULL;
+	dstenv->texture = nil;
 	*PLUGINOFFSET(EnvMat*, dst, offset) = dstenv;
 	return dst;
 }
@@ -489,7 +489,7 @@ readEnvMat(rw::Stream *stream, int32, void *object, int32 offset, int32)
 	env->transScaleX = (int8)(buf.transScaleX*8.0f);
 	env->transScaleY = (int8)(buf.transScaleY*8.0f);
 	env->shininess = (uint8)(buf.shininess*255.0f);
-	env->texture = NULL;
+	env->texture = nil;
 	return stream;
 }
 
@@ -522,7 +522,7 @@ int32 specMatOffset;
 static void*
 createSpecMat(void *object, int32 offset, int32)
 {
-	*PLUGINOFFSET(SpecMat*, object, offset) = NULL;
+	*PLUGINOFFSET(SpecMat*, object, offset) = nil;
 	return object;
 }
 
@@ -530,12 +530,12 @@ static void*
 destroySpecMat(void *object, int32 offset, int32)
 {
 	SpecMat **specmat = PLUGINOFFSET(SpecMat*, object, offset);
-	if(*specmat == NULL)
+	if(*specmat == nil)
 		return object;
 	if((*specmat)->texture)
 		(*specmat)->texture->destroy();
 	delete *specmat;
-	*specmat = NULL;
+	*specmat = nil;
 	return object;
 }
 
@@ -543,7 +543,7 @@ static void*
 copySpecMat(void *dst, void *src, int32 offset, int32)
 {
 	SpecMat *srcspec = *PLUGINOFFSET(SpecMat*, src, offset);
-	if(srcspec == NULL)
+	if(srcspec == nil)
 		return dst;
 	SpecMat *dstspec = new SpecMat;
 	*PLUGINOFFSET(SpecMat*, dst, offset) = dstspec;
@@ -566,7 +566,7 @@ readSpecMat(rw::Stream *stream, int32, void *object, int32 offset, int32)
 	*PLUGINOFFSET(SpecMat*, object, offset) = spec;
 	stream->read(&buf, sizeof(buf));
 	spec->specularity = buf.specularity;
-	spec->texture = rw::Texture::create(NULL);
+	spec->texture = rw::Texture::create(nil);
 	strncpy(spec->texture->name, buf.texname, 24);
 	return stream;
 }
@@ -654,7 +654,7 @@ registerPipelinePlugin(void)
 {
 	pipelineOffset = rw::Atomic::registerPlugin(sizeof(uint32), ID_PIPELINE,
 	                                        createPipeline,
-                                                NULL,
+                                                nil,
                                                 copyPipeline);
 	rw::Atomic::registerPluginStream(ID_PIPELINE, readPipeline,
 	                             writePipeline, getSizePipeline);
@@ -688,7 +688,7 @@ create2dEffect(void *object, int32 offset, int32)
 	SizedData *data;
 	data = PLUGINOFFSET(SizedData, object, offset);
 	data->size = 0;
-	data->data = NULL;
+	data->data = nil;
 	return object;
 }
 
@@ -698,7 +698,7 @@ destroy2dEffect(void *object, int32 offset, int32)
 	SizedData *data;
 	data = PLUGINOFFSET(SizedData, object, offset);
 	delete[] data->data;
-	data->data = NULL;
+	data->data = nil;
 	data->size = 0;
 	return object;
 }
@@ -763,7 +763,7 @@ createCollision(void *object, int32 offset, int32)
 	SizedData *data;
 	data = PLUGINOFFSET(SizedData, object, offset);
 	data->size = 0;
-	data->data = NULL;
+	data->data = nil;
 	return object;
 }
 
@@ -773,7 +773,7 @@ destroyCollision(void *object, int32 offset, int32)
 	SizedData *data;
 	data = PLUGINOFFSET(SizedData, object, offset);
 	delete[] data->data;
-	data->data = NULL;
+	data->data = nil;
 	data->size = 0;
 	return object;
 }

@@ -19,7 +19,7 @@ public:
 			x = 0.0f;
 	}
 	rw::V3d ToRW(void){
-		return rw::V3d(x, y, z);
+		return rw::makeV3d(x, y, z);
 	}
 	void operator=(rw::V3d const &rhs){
 		x = rhs.x;

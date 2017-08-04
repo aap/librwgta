@@ -91,7 +91,8 @@ void
 CCamera::turn(float yaw, float pitch)
 {
 	V3d dir = sub(m_target, m_position);
-	Quat r = Quat::rotation(yaw, V3d(0.0f, 0.0f, 1.0f));
+	V3d zaxis = { 0.0f, 0.0f, 1.0f };
+	Quat r = Quat::rotation(yaw, zaxis);
 	dir = rotate(dir, r);
 	m_localup = rotate(m_localup, r);
 
@@ -109,7 +110,8 @@ void
 CCamera::orbit(float yaw, float pitch)
 {
 	V3d dir = sub(m_target, m_position);
-	Quat r = Quat::rotation(yaw, V3d(0.0f, 0.0f, 1.0f));
+	V3d zaxis = { 0.0f, 0.0f, 1.0f };
+	Quat r = Quat::rotation(yaw, zaxis);
 	dir = rotate(dir, r);
 	m_localup = rotate(m_localup, r);
 

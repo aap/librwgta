@@ -90,42 +90,34 @@ rw::int32
 findSAVertex(rw::Geometry *g, rw::uint32 flags[], rw::uint32 mask, SaVert *v)
 {
 	rw::Skin *skin = rw::Skin::get(g);
-	rw::float32 *wghts = NULL;
-	rw::uint8 *inds    = NULL;
+	rw::float32 *wghts = nil;
+	rw::uint8 *inds    = nil;
 	if(skin){
 		wghts = skin->weights;
 		inds = skin->indices;
 	}
-	rw::float32 *verts = g->morphTargets[0].vertices;
-	rw::float32 *tex0  = g->texCoords[0];
-	rw::float32 *tex1  = g->texCoords[1];
-	rw::float32 *norms = g->morphTargets[0].normals;
-	rw::uint8 *cols0   = g->colors;
-	rw::uint8 *cols1   = NULL;
+	rw::V3d *verts = g->morphTargets[0].vertices;
+	rw::TexCoords *tex0  = g->texCoords[0];
+	rw::TexCoords *tex1  = g->texCoords[1];
+	rw::V3d *norms = g->morphTargets[0].normals;
+	rw::RGBA *cols0   = g->colors;
+	rw::RGBA *cols1   = nil;
 	if(extraVertColorOffset)
 		cols1 = PLUGINOFFSET(ExtraVertColors, g, extraVertColorOffset)->nightColors;
 
 	for(rw::int32 i = 0; i < g->numVertices; i++){
 		rw::uint32 flag = flags ? flags[i] : ~0;
-		if(mask & flag & 0x1 &&
-		   !(verts[0] == v->p[0] && verts[1] == v->p[1] && verts[2] == v->p[2]))
+		if(mask & flag & 0x1 && !equal(*verts, v->p))
 			goto cont;
-		if(mask & flag & 0x10 &&
-		   !(norms[0] == v->n[0] && norms[1] == v->n[1] && norms[2] == v->n[2]))
+		if(mask & flag & 0x10 && !equal(*norms, v->n))
 			goto cont;
-		if(mask & flag & 0x100 &&
-		   !(cols0[0] == v->c[0] && cols0[1] == v->c[1] &&
-		     cols0[2] == v->c[2] && cols0[3] == v->c[3]))
+		if(mask & flag & 0x100 && !equal(*cols0, v->c))
 			goto cont;
-		if(mask & flag & 0x200 &&
-		   !(cols1[0] == v->c1[0] && cols1[1] == v->c1[1] &&
-		     cols1[2] == v->c1[2] && cols1[3] == v->c1[3]))
+		if(mask & flag & 0x200 && !equal(*cols1, v->c1))
 			goto cont;
-		if(mask & flag & 0x1000 &&
-		   !(tex0[0] == v->t[0] && tex0[1] == v->t[1]))
+		if(mask & flag & 0x1000 && !equal(*tex0, v->t))
 			goto cont;
-		if(mask & flag & 0x2000 &&
-		   !(tex1[0] == v->t1[0] && tex1[1] == v->t1[1]))
+		if(mask & flag & 0x2000 && !equal(*tex1, v->t1))
 			goto cont;
 		if(mask & flag & 0x10000 &&
 		   !(wghts[0] == v->w[0] && wghts[1] == v->w[1] &&
@@ -135,12 +127,12 @@ findSAVertex(rw::Geometry *g, rw::uint32 flags[], rw::uint32 mask, SaVert *v)
 			goto cont;
 		return i;
 	cont:
-		verts += 3;
-		tex0 += 2;
-		tex1 += 2;
-		norms += 3;
-		cols0 += 4;
-		cols1 += 4;
+		verts++;
+		tex0++;
+		tex1++;
+		norms++;
+		cols0++;
+		cols1++;
 		wghts += 4;
 		inds += 4;
 	}
@@ -152,12 +144,9 @@ insertSAVertex(rw::Geometry *geo, rw::int32 i, rw::uint32 mask, SaVert *v)
 {
 	insertVertex(geo, i, mask, v);
 	if(mask & 0x200 && extraVertColorOffset){
-		uint8 *cols1 =
-		 &PLUGINOFFSET(ExtraVertColors, geo, extraVertColorOffset)->nightColors[i*4];
-		cols1[0] = v->c1[0];
-		cols1[1] = v->c1[1];
-		cols1[2] = v->c1[2];
-		cols1[3] = v->c1[3];
+		rw::RGBA *cols1 =
+		 &PLUGINOFFSET(ExtraVertColors, geo, extraVertColorOffset)->nightColors[i];
+		*cols1 = v->c1;
 	}
 	if(mask & 0x10000 && rw::skinGlobals.geoOffset){
 		rw::Skin *skin = rw::Skin::get(geo);
@@ -204,36 +193,36 @@ saUninstanceCB(rw::ps2::MatPipeline *pipe, rw::Geometry *geo, uint32 flags[], rw
 		idxstart += m->numIndices;
 	int8 *adc = rw::ps2::getADCbitsForMesh(geo, mesh);
 	for(uint32 i = 0; i < mesh->numIndices; i++){
-		v.p[0] = verts[0]*vertScale;
-		v.p[1] = verts[1]*vertScale;
-		v.p[2] = verts[2]*vertScale;
+		v.p.x = verts[0]*vertScale;
+		v.p.y = verts[1]*vertScale;
+		v.p.z = verts[2]*vertScale;
 		if(mask & 0x10){
-			v.n[0] = norms[0]/127.0f;
-			v.n[1] = norms[1]/127.0f;
-			v.n[2] = norms[2]/127.0f;
+			v.n.x = norms[0]/127.0f;
+			v.n.y = norms[1]/127.0f;
+			v.n.z = norms[2]/127.0f;
 		}
 		if(mask & 0x200){
-			v.c[0] = colors[0];
-			v.c[1] = colors[2];
-			v.c[2] = colors[4];
-			v.c[3] = colors[6];
-			v.c1[0] = colors[1];
-			v.c1[1] = colors[3];
-			v.c1[2] = colors[5];
-			v.c1[3] = colors[7];
+			v.c.red    = colors[0];
+			v.c.green  = colors[2];
+			v.c.blue   = colors[4];
+			v.c.alpha  = colors[6];
+			v.c1.red   = colors[1];
+			v.c1.green = colors[3];
+			v.c1.blue  = colors[5];
+			v.c1.alpha = colors[7];
 		}else if(mask & 0x100){
-			v.c[0] = colors[0];
-			v.c[1] = colors[1];
-			v.c[2] = colors[2];
-			v.c[3] = colors[3];
+			v.c.red   = colors[0];
+			v.c.green = colors[1];
+			v.c.blue  = colors[2];
+			v.c.alpha = colors[3];
 		}
 		if(mask & 0x1000){
-			v.t[0] = texcoords[0]/4096.0f;
-			v.t[1] = texcoords[1]/4096.0f;
+			v.t.u = texcoords[0]/4096.0f;
+			v.t.v = texcoords[1]/4096.0f;
 		}
 		if(mask & 0x2000){
-			v.t1[0] = texcoords[2]/4096.0f;
-			v.t1[1] = texcoords[3]/4096.0f;
+			v.t1.u = texcoords[2]/4096.0f;
+			v.t1.v = texcoords[3]/4096.0f;
 		}
 		if(mask & 0x10000){
 			for(int j = 0; j < 4; j++){
@@ -262,13 +251,13 @@ saUninstanceCB(rw::ps2::MatPipeline *pipe, rw::Geometry *geo, uint32 flags[], rw
 static void
 instanceSAPositions(rw::Geometry *g, rw::Mesh *m, int8 *adc, int16 *dst, float32 scale)
 {
-	float32 *verts = g->morphTargets[0].vertices;
+	rw::V3d *verts = g->morphTargets[0].vertices;
 	uint16 j;
 	for(uint32 i = 0; i < m->numIndices; i++){
 		j = m->indices[i];
-		dst[0] = verts[j*3+0]*scale;
-		dst[1] = verts[j*3+1]*scale;
-		dst[2] = verts[j*3+2]*scale;
+		dst[0] = verts[j].x*scale;
+		dst[1] = verts[j].y*scale;
+		dst[2] = verts[j].z*scale;
 		dst[3] = adc ? 0x8000*adc[i] : 0;
 		dst += 4;
 	}
@@ -277,13 +266,13 @@ instanceSAPositions(rw::Geometry *g, rw::Mesh *m, int8 *adc, int16 *dst, float32
 static void
 instanceSATex(rw::Geometry *g, rw::Mesh *m, int16 *dst)
 {
-	float32 *tex = g->texCoords[0];
+	rw::TexCoords *tex = g->texCoords[0];
 	uint16 j;
 	for(uint32 i = 0; i < m->numIndices; i++){
 		j = m->indices[i];
 		if(tex){
-			dst[0] = tex[j*2+0]*4096.0f;
-			dst[1] = tex[j*2+1]*4096.0f;
+			dst[0] = tex[j].u*4096.0f;
+			dst[1] = tex[j].v*4096.0f;
 		}else{
 			dst[0] = 0;
 			dst[1] = 0;
@@ -295,21 +284,21 @@ instanceSATex(rw::Geometry *g, rw::Mesh *m, int16 *dst)
 static void
 instanceSADualTex(rw::Geometry *g, rw::Mesh *m, int16 *dst)
 {
-	float32 *tex0 = g->texCoords[0];
-	float32 *tex1 = g->texCoords[1];
+	rw::TexCoords *tex0 = g->texCoords[0];
+	rw::TexCoords *tex1 = g->texCoords[1];
 	uint16 j;
 	for(uint32 i = 0; i < m->numIndices; i++){
 		j = m->indices[i];
 		if(tex0){
-			dst[0] = tex0[j*2+0]*4096.0f;
-			dst[1] = tex0[j*2+1]*4096.0f;
+			dst[0] = tex0[j].u*4096.0f;
+			dst[1] = tex0[j].v*4096.0f;
 		}else{
 			dst[0] = 0;
 			dst[1] = 0;
 		}
 		if(tex1){
-			dst[2] = tex1[j*2+0]*4096.0f;
-			dst[3] = tex1[j*2+1]*4096.0f;
+			dst[2] = tex1[j].u*4096.0f;
+			dst[3] = tex1[j].v*4096.0f;
 		}else{
 			dst[2] = 0;
 			dst[3] = 0;
@@ -321,12 +310,12 @@ instanceSADualTex(rw::Geometry *g, rw::Mesh *m, int16 *dst)
 static void
 instanceSAColors(rw::Geometry *g, rw::Mesh *m, uint8 *dst)
 {
-	uint8 *c = g->colors;
+	rw::RGBA *c = g->colors;
 	uint16 j;
 	for(uint32 i = 0; i < m->numIndices; i++){
 		j = m->indices[i];
 		if(c)
-			memcpy(dst, &c[j*4], 4);
+			memcpy(dst, &c[j], 4);
 		else
 			memset(dst, 0xFF, 4);
 		dst += 4;
@@ -336,17 +325,17 @@ instanceSAColors(rw::Geometry *g, rw::Mesh *m, uint8 *dst)
 static void
 instanceSADualColors(rw::Geometry *g, rw::Mesh *m, uint8 *dst)
 {
-	uint8 *c0 = g->colors;
-	uint8 *c1 =
+	rw::RGBA *c0 = g->colors;
+	rw::RGBA *c1 =
 	 PLUGINOFFSET(ExtraVertColors, g, extraVertColorOffset)->nightColors;
 	uint16 j;
 	for(uint32 i = 0; i < m->numIndices; i++){
 		j = m->indices[i];
 		if(c0){
-			dst[0] = c0[j*4+0];
-			dst[2] = c0[j*4+1];
-			dst[4] = c0[j*4+2];
-			dst[6] = c0[j*4+3];
+			dst[0] = c0[j].red;
+			dst[2] = c0[j].green;
+			dst[4] = c0[j].blue;
+			dst[6] = c0[j].alpha;
 		}else{
 			dst[0] = 0xFF;
 			dst[2] = 0xFF;
@@ -354,10 +343,10 @@ instanceSADualColors(rw::Geometry *g, rw::Mesh *m, uint8 *dst)
 			dst[6] = 0xFF;
 		}
 		if(c1){
-			dst[1] = c1[j*4+0];
-			dst[3] = c1[j*4+1];
-			dst[6] = c1[j*4+2];
-			dst[7] = c1[j*4+3];
+			dst[1] = c1[j].red;
+			dst[3] = c1[j].green;
+			dst[6] = c1[j].blue;
+			dst[7] = c1[j].alpha;
 		}else{
 			dst[1] = 0xFF;
 			dst[3] = 0xFF;
@@ -371,14 +360,14 @@ instanceSADualColors(rw::Geometry *g, rw::Mesh *m, uint8 *dst)
 static void
 instanceSANormals(rw::Geometry *g, rw::Mesh *m, int8 *dst)
 {
-	float32 *norms = g->morphTargets[0].normals;
+	rw::V3d *norms = g->morphTargets[0].normals;
 	uint16 j;
 	for(uint32 i = 0; i < m->numIndices; i++){
 		j = m->indices[i];
 		if(norms){
-			dst[0] = norms[j*3+0]*127.0f;
-			dst[1] = norms[j*3+1]*127.0f;
-			dst[2] = norms[j*3+2]*127.0f;
+			dst[0] = norms[j].x*127.0f;
+			dst[1] = norms[j].y*127.0f;
+			dst[2] = norms[j].z*127.0f;
 			dst[3] = 0;
 		}else
 			memset(dst, 0, 4);
@@ -399,7 +388,7 @@ saInstanceCB(rw::ps2::MatPipeline *pipe, rw::Geometry *g, rw::Mesh *m, uint8 **d
 	for(uint32 i = 0; i < nelem(pipe->attribs); i++){
 		rw::ps2::PipeAttribute *a = pipe->attribs[i];
 		if(a == &saXYZADC)
-			instanceSAPositions(g, m, adc->adcFormatted ? adc->adcBits : NULL,
+			instanceSAPositions(g, m, adc->adcFormatted ? adc->adcBits : nil,
 			                    (int16*)data[i], vertScale);
 		if(a == &saUV)
 			instanceSATex(g, m, (int16*)data[i]);

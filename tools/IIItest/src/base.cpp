@@ -129,7 +129,7 @@ LightsCreate(rw::World *world)
 	pDirect->radius = 2.0f;
 	rw::Frame *frm = rw::Frame::create();
 	pDirect->setFrame(frm);
-	rw::V3d axis(1.0f, 1.0f, 0.0f);
+	rw::V3d axis = { 1.0f, 1.0f, 0.0f };
 	frm->rotate(&axis, 160.0f, rw::COMBINEPRECONCAT);
 
 	world->addLight(pAmbient);

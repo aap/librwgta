@@ -69,8 +69,8 @@ void registerExtraNormalsPlugin(void);
 
 struct ExtraVertColors
 {
-	rw::uint8 *nightColors;
-	rw::uint8 *dayColors;
+	rw::RGBA *nightColors;
+	rw::RGBA *dayColors;
 	float balance;
 };
 
@@ -169,7 +169,7 @@ void registerCollisionPlugin(void);
 // PDS pipes
 
 struct SaVert : rw::ps2::Vertex {
-	rw::uint8   c1[4];
+	rw::RGBA   c1;
 };
 void insertSAVertex(rw::Geometry *geo, rw::int32 i, rw::uint32 mask, SaVert *v);
 rw::int32 findSAVertex(rw::Geometry *g, rw::uint32 flags[], rw::uint32 mask, SaVert *v);
