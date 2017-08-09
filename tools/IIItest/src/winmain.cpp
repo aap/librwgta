@@ -163,12 +163,34 @@ WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		PostQuitMessage(0);
 		break;
 
+	case WM_SYSKEYDOWN:
 	case WM_KEYDOWN:
-		CPad::tempKeystates[keymap[wParam]] = 1;
+		if(wParam == VK_MENU){
+			CPad::tempKeystates[keymap[VK_LMENU]] = !!(GetKeyState(VK_LMENU) & 0x8000);
+			CPad::tempKeystates[keymap[VK_RMENU]] = !!(GetKeyState(VK_RMENU) & 0x8000);
+		}else if(wParam == VK_CONTROL){
+			CPad::tempKeystates[keymap[VK_LCONTROL]] = !!(GetKeyState(VK_LCONTROL) & 0x8000);
+			CPad::tempKeystates[keymap[VK_RCONTROL]] = !!(GetKeyState(VK_RCONTROL) & 0x8000);
+		}else if(wParam == VK_SHIFT){
+			CPad::tempKeystates[keymap[VK_LSHIFT]] = !!(GetKeyState(VK_LSHIFT) & 0x8000);
+			CPad::tempKeystates[keymap[VK_RSHIFT]] = !!(GetKeyState(VK_RSHIFT) & 0x8000);
+		}else
+			CPad::tempKeystates[keymap[wParam]] = 1;
 		break;
 
+	case WM_SYSKEYUP:
 	case WM_KEYUP:
-		CPad::tempKeystates[keymap[wParam]] = 0;
+		if(wParam == VK_MENU){
+			CPad::tempKeystates[keymap[VK_LMENU]] = !!(GetKeyState(VK_LMENU) & 0x8000);
+			CPad::tempKeystates[keymap[VK_RMENU]] = !!(GetKeyState(VK_RMENU) & 0x8000);
+		}else if(wParam == VK_CONTROL){
+			CPad::tempKeystates[keymap[VK_LCONTROL]] = !!(GetKeyState(VK_LCONTROL) & 0x8000);
+			CPad::tempKeystates[keymap[VK_RCONTROL]] = !!(GetKeyState(VK_RCONTROL) & 0x8000);
+		}else if(wParam == VK_SHIFT){
+			CPad::tempKeystates[keymap[VK_LSHIFT]] = !!(GetKeyState(VK_LSHIFT) & 0x8000);
+			CPad::tempKeystates[keymap[VK_RSHIFT]] = !!(GetKeyState(VK_RSHIFT) & 0x8000);
+		}else
+			CPad::tempKeystates[keymap[wParam]] = 0;
 		break;
 
 	case WM_CLOSE:

@@ -260,8 +260,10 @@ convertMaterial(RslMaterial *m)
 	rwm = Material::create();
 
 	rwm->color = m->color;
-	if(m->texture)
+	if(m->texture){
 		rwm->texture = convertTexture(m->texture);
+		rwm->refCount++;
+	}
 
 	if(m->matfx){
 		MatFX::setEffects(rwm, m->matfx->effectType);
@@ -972,7 +974,7 @@ LoadElementGroup(uint8 *data)
 	if(eg->object.type != 2)
 		return nil;
 	RslElementGroupForAllElements(eg, makeTextures, NULL);
-	dumpNodeCB((RslNode*)eg->object.parent, NULL);
+//	dumpNodeCB((RslNode*)eg->object.parent, NULL);
 	return convertClump(eg);
 }
 
@@ -981,7 +983,7 @@ LoadElementGroup(uint8 *data)
 #define NUMSEC 25
 #else
 #define NUMPRIM 30
-#define NUMSEC 27
+#define NUMSEC 25
 #endif
 
 Clump*
@@ -1016,6 +1018,7 @@ LoadVehicle(uint8 *data)
 	Clump *rwc = LoadElementGroup((uint8*)veh->elementgroup);
 	moveAtomics(rwc->getFrame());
 	for(i = 0; i < veh->numExtras; i++){
+		makeTextures(veh->extras[i], nil);
 		Atomic *a = convertAtomic(veh->extras[i]);
 		Frame *f = convertFrame((RslNode*)veh->extras[i]->object.object.parent);
 		a->setFrame(f);
