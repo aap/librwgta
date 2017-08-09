@@ -5,7 +5,44 @@ CEntity::CEntity(void)
 	m_type = ENTITY_TYPE_NOTHING;
 	m_status = ENTITY_STATUS_4;
 	m_doCollision = 0;
+	m_flagA2 = 0;
+	m_flagA4 = 0;
+	m_flagA8 = 0;
+	m_flagA10 = 0;
+	m_flagA20 = 0;
+	m_flagA40 = 0;
+	m_flagA80 = 0;
+
+	m_flagB1 = 0;
+	m_flagB2 = 0;
 	m_isVisible = 1;
+	m_flagB8 = 0;
+	m_flagB10 = 0;
+	m_flagB20 = 0;
+	m_isBigBuilding = 0;
+	m_drawDamaged = 0;
+
+	m_flagC1 = 0;
+	m_flagC2 = 0;
+	m_flagC4 = 0;
+	m_flagC8 = 0;
+	m_flagC10 = 0;
+	m_flagC20 = 0;
+	m_flagC40 = 0;
+	m_flagC80 = 0;
+
+	m_flagD1 = 0;
+	m_flagD2 = 0;
+	m_isBeingRendered = 0;
+	m_flagD8 = 0;
+	m_flagD10 = 0;
+	m_flagD20 = 0;
+	m_flagD40 = 0;
+	m_flagD80 = 0;
+
+	m_isFading = 0;
+	m_flagE2 = 0;
+
 	m_scanCode = -1;
 	m_modelIndex = -1;
 	m_rwObject = nil;

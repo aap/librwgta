@@ -86,7 +86,8 @@ public:
 		return m_flags[i].u + (i<<8);
 	}
 	int GetJustIndex(T *entry){
-		return (U*)entry - m_entries;
+		// TODO: the cast is unsafe
+		return (int)((U*)entry - m_entries);
 	}
 	int GetNoOfUsedSpaces(void){
 		int i;

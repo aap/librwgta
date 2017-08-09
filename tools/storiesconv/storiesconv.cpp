@@ -44,7 +44,15 @@ RslStream::relocate(void)
 	}
 }
 
-
+void
+writeClump(const char *filename, Clump *c)
+{
+	StreamFile stream;
+	if(stream.open(filename, "wb") == nil)
+		panic("couldn't open file %s", filename);
+	c->streamWrite(&stream);
+	stream.close();
+}
 
 RslNode *dumpNodeCB(RslNode *frame, void *data)
 {
@@ -374,21 +382,21 @@ convertMesh(Geometry *rwg, RslGeometry *g, int32 ii)
 
 		/* Insert Data */
 		for(int32 i = 0; i < nvert; i++){
-			v.p[0] = vuVerts[0]/32768.0f*resHeader->scale[0] + resHeader->pos[0];
-			v.p[1] = vuVerts[1]/32768.0f*resHeader->scale[1] + resHeader->pos[1];
-			v.p[2] = vuVerts[2]/32768.0f*resHeader->scale[2] + resHeader->pos[2];
-			v.t[0] = vuTex[0]/128.0f*inst->uvScale[0];
-			v.t[1] = vuTex[1]/128.0f*inst->uvScale[1];
+			v.p.x = vuVerts[0]/32768.0f*resHeader->scale[0] + resHeader->pos[0];
+			v.p.y = vuVerts[1]/32768.0f*resHeader->scale[1] + resHeader->pos[1];
+			v.p.z = vuVerts[2]/32768.0f*resHeader->scale[2] + resHeader->pos[2];
+			v.t.u = vuTex[0]/128.0f*inst->uvScale[0];
+			v.t.v = vuTex[1]/128.0f*inst->uvScale[1];
 			if(mask & 0x10){
-				v.n[0] = vuNorms[0]/127.0f;
-				v.n[1] = vuNorms[1]/127.0f;
-				v.n[2] = vuNorms[2]/127.0f;
+				v.n.x = vuNorms[0]/127.0f;
+				v.n.y = vuNorms[1]/127.0f;
+				v.n.z = vuNorms[2]/127.0f;
 			}
 			if(mask & 0x100){
-				v.c[0] = (vuCols[0] & 0x1f) * 255 / 0x1F;
-				v.c[1] = (vuCols[0]>>5 & 0x1f) * 255 / 0x1F;
-				v.c[2] = (vuCols[0]>>10 & 0x1f) * 255 / 0x1F;
-				v.c[3] = vuCols[0]&0x8000 ? 0xFF : 0;
+				v.c.red   = (vuCols[0] & 0x1f) * 255 / 0x1F;
+				v.c.green = (vuCols[0]>>5 & 0x1f) * 255 / 0x1F;
+				v.c.blue  = (vuCols[0]>>10 & 0x1f) * 255 / 0x1F;
+				v.c.alpha = vuCols[0]&0x8000 ? 0xFF : 0;
 			}
 			if(mask & 0x10000){
 				for(int j = 0; j < 4; j++){
@@ -1048,6 +1056,33 @@ LoadAny(RslStream *rslstr, const char *name)
 }
 
 void
+extractResourceVCS(RslStream *rslstr)
+{
+	int i;
+	char tempname[128];
+	RslElementGroup **C3dMarkers__m_pRslElementGroupArray;
+	struct ResourceImage {
+		char xxx[0xa8];
+		RslElementGroup **markers;	// [32] in LCS
+	} *res;
+
+	res = (ResourceImage*)rslstr->data;
+	C3dMarkers__m_pRslElementGroupArray = res->markers;
+
+	for(i = 0; i < 32; i++){
+		if(C3dMarkers__m_pRslElementGroupArray[i]){
+			snprintf(tempname, 128, "marker%d.dff", i);
+			printf("extracting %s\n", tempname);
+			Clump *c = convertClump(C3dMarkers__m_pRslElementGroupArray[i]);
+			if(c == nil)
+				panic("couldn't convert marker %d", i);
+			writeClump(tempname, c);
+			c->destroy();
+		}
+	}
+}
+
+void
 usage(void)
 {
 	fprintf(stderr, "%s [-v version] [-x] [-s] input [output.{txd|dff}]\n", argv0);
@@ -1070,7 +1105,8 @@ main(int argc, char *argv[])
 {
 	rw::Engine::init();
 	gta::attachPlugins();
-	rw::Driver::open();
+	rw::Engine::open();
+	rw::Engine::start(nil);
 
 	atmOffset = Atomic::registerPlugin(sizeof(void*), 0x1000000, NULL, NULL, NULL);
 	rw::version = 0x34003;
@@ -1104,7 +1140,6 @@ main(int argc, char *argv[])
 	RslElement *atomic = NULL;
 	RslTexList *txd = NULL;
 	Clump *rwc;
-
 
 	StreamFile stream;
 	if(stream.open(argv[0], "rb") == nil)
@@ -1244,7 +1279,12 @@ main(int argc, char *argv[])
 			panic("couldn't open file %s", argc > 1 ? argv[1] : "out.txd");
 		rwtxd->streamWrite(&stream);
 		stream.close();
-	}
+	}else if(rslstr->ident == GTAG_IDENT){
+#ifdef VCS
+		extractResourceVCS(rslstr);
+#endif
+	}else
+		printf("unknown file type %X\n", rslstr->ident);
 
 	return 0;
 }

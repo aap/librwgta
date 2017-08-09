@@ -8,17 +8,13 @@ CGame::InitialiseRW(void)
 	rw::Engine::init();
 	gta::attachPlugins();
 	CVisibilityPlugins::PluginAttach();
-	rw::Driver::open();
-#ifdef RW_GL3
-	rw::platform = rw::PLATFORM_GL3;
-	rw::gl3::initializeRender();
-#elif defined(RW_D3D9)
-	rw::platform = rw::PLATFORM_D3D9;
-#endif
+	rw::Engine::open();
+	rw::Engine::start(&engineStartParams);
+	plAttachInput();
 
 	rw::d3d::isP8supported = 0;
 	rw::engine->loadTextures = 1;
-	rw::engine->makeDummies = 1;
+	//rw::engine->makeDummies = 1;
 
 	rw::Image::setSearchPath("D:\\rockstargames\\ps2\\gta3\\MODELS\\gta3_archive\\txd_extracted\\;");
 

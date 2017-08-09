@@ -26,6 +26,7 @@ Camera::update(void)
 			f->matrix.up = nup;
 			f->matrix.at = forward;
 			f->matrix.pos = m_position;
+			f->matrix.optimize();
 			f->updateObjects();
 		}
 	}
@@ -50,7 +51,7 @@ void
 Camera::turn(float yaw, float pitch)
 {
 	V3d dir = sub(m_target, m_position);
-	Quat r = Quat::rotation(yaw, V3d(0.0f, 0.0f, 1.0f));
+	Quat r = Quat::rotation(yaw, rw::makeV3d(0.0f, 0.0f, 1.0f));
 	dir = rotate(dir, r);
 	m_localup = rotate(m_localup, r);
 
@@ -68,7 +69,7 @@ void
 Camera::orbit(float yaw, float pitch)
 {
 	V3d dir = sub(m_target, m_position);
-	Quat r = Quat::rotation(yaw, V3d(0.0f, 0.0f, 1.0f));
+	Quat r = Quat::rotation(yaw, rw::makeV3d(0.0f, 0.0f, 1.0f));
 	dir = rotate(dir, r);
 	m_localup = rotate(m_localup, r);
 

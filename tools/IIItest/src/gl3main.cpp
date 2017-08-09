@@ -1,6 +1,7 @@
 #include "III.h"
 #ifdef RW_GL3
 
+rw::EngineStartParams engineStartParams;
 GLFWwindow *glfwwindow;
 
 //
@@ -20,13 +21,7 @@ plGetTimeInMS(void)
 bool
 plWindowclosed(void)
 {
-	return glfwWindowShouldClose(glfwwindow);
-}
-
-void
-plPresent(void)
-{
-	glfwSwapBuffers(glfwwindow);
+	return glfwWindowShouldClose(glfwwindow) != 0;
 }
 
 void
@@ -56,25 +51,48 @@ plUpdatePad(CControllerState *state)
 	state->rightX = axes[2] * 32767;
 	state->rightY = axes[3] * 32767;
 	const unsigned char *buttons = glfwGetJoystickButtons(GLFW_JOYSTICK_1+n, &count);
-	state->triangle   = buttons[12];
-	state->circle     = buttons[13];
-	state->cross      = buttons[14];
-	state->square     = buttons[15];
-	state->l1         = buttons[10];
-	state->l2         = buttons[8];
-	state->leftshock  = buttons[1];
-	state->r1         = buttons[11];
-	state->r2         = buttons[9];
-	state->rightshock = buttons[2];
-	state->select     = buttons[0];
-	state->start      = buttons[3];
-	state->up         = buttons[4];
-	state->right      = buttons[5];
-	state->down       = buttons[6];
-	state->left       = buttons[7];
+//	for(int i = 0; i < 6; i++)
+//		printf("%f ", axes[i]);
+//	printf("\n");
+	if(strcmp(glfwGetJoystickName(GLFW_JOYSTICK_1+n), "Xbox 360 Controller") == 0){
+		state->triangle   = buttons[3];
+		state->circle     = buttons[1];
+		state->cross      = buttons[0];
+		state->square     = buttons[2];
+		state->l1         = buttons[4];
+		state->l2         = axes[4] > -0.8;
+		state->leftshock  = buttons[8];
+		state->r1         = buttons[5];
+		state->r2         = axes[5] > -0.8;
+		state->rightshock = buttons[9];
+		state->select     = buttons[6];
+		state->start      = buttons[7];
+		state->up         = buttons[10];
+		state->right      = buttons[11];
+		state->down       = buttons[12];
+		state->left       = buttons[13];
+	}else{
+		// linux dualshock 3
+		state->triangle   = buttons[12];
+		state->circle     = buttons[13];
+		state->cross      = buttons[14];
+		state->square     = buttons[15];
+		state->l1         = buttons[10];
+		state->l2         = buttons[8];
+		state->leftshock  = buttons[1];
+		state->r1         = buttons[11];
+		state->r2         = buttons[9];
+		state->rightshock = buttons[2];
+		state->select     = buttons[0];
+		state->start      = buttons[3];
+		state->up         = buttons[4];
+		state->right      = buttons[5];
+		state->down       = buttons[6];
+		state->left       = buttons[7];
+	}
 }
 
-void
+static void
 initkeymap(void)
 {
 	int i;
@@ -201,7 +219,7 @@ initkeymap(void)
 	keymap[GLFW_KEY_MENU] = KEY_NULL;
 }
 
-void
+static void
 keypress(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
 	if(key >= 0 && key <= GLFW_KEY_LAST){
@@ -210,32 +228,12 @@ keypress(GLFWwindow *window, int key, int scancode, int action, int mods)
 	}
 }
 
-int
-main(int argc, char *argv[])
+void
+plAttachInput(void)
 {
-	GLenum status;
-	GLFWwindow *win;
+	initkeymap();
 
-	/* Init GLFW */
-
-	if(!glfwInit()){
-		fprintf(stderr, "Error: could not initialize GLFW\n");
-		return 1;
-	}
-	glfwWindowHint(GLFW_SAMPLES, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-	win = glfwCreateWindow(640, 480, "GTA III test", 0, 0);
-	if(win == nil){
-		fprintf(stderr, "Error: could not create GLFW window\n");
-		glfwTerminate();
-		return 1;
-	}
-	glfwwindow = win;
-	glfwSetKeyCallback(win, keypress);
+	glfwSetKeyCallback(glfwwindow, keypress);
 
 	numPads = 0;
 	for(int i = 0; i < 16; i++){
@@ -243,27 +241,18 @@ main(int argc, char *argv[])
 		if(present)
 			numPads++;
 	}
-	glfwMakeContextCurrent(win);
+}
 
-	/* Init GLEW */
-
-	glewExperimental = GL_TRUE;
-	status = glewInit();
-	if(status != GLEW_OK){
-		fprintf(stderr, "Error: %s\n", glewGetErrorString(status));
-		return 1;
-	}
-	if(!GLEW_VERSION_3_3){
-		fprintf(stderr, "Error: OpenGL 3.3 needed\n");
-		return 1;
-	}
-
-	initkeymap();
+int
+main(int argc, char *argv[])
+{
+	engineStartParams.window = &glfwwindow;
+	engineStartParams.width = 640;
+	engineStartParams.height = 480;
+	engineStartParams.windowtitle = "III";
 
 	TheGame();
 
-	glfwDestroyWindow(win);
-	glfwTerminate();
 	return 0;
 }
 

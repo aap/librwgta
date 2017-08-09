@@ -74,7 +74,8 @@ main(int argc, char *argv[])
 {
 	rw::Engine::init();
 	gta::attachPlugins();
-	rw::Driver::open();
+	rw::Engine::open();
+	rw::Engine::start(nil);
 	ARGBEGIN{
 	}ARGEND;
 	if(argc < 1)

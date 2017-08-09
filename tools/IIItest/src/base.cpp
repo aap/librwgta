@@ -80,7 +80,9 @@ convertTxd(rw::TexDictionary *txd)
 	FORLIST(lnk, txd->textures){
 		rw::Texture *tex = rw::Texture::fromDict(lnk);
 		//debug("converting %s\n", tex->name);
+#ifdef RW_GL3
 		tex->raster = d3dToGl3(tex->raster);
+#endif
 	}
 }
 
@@ -170,7 +172,7 @@ DefinedState(void)
 	SetRenderState(rw::DESTBLEND, rw::BLENDINVSRCALPHA);
 	SetRenderState(rw::FOGENABLE, 0);
 	SetRenderState(rw::ALPHATESTREF, 10);
-	SetRenderState(rw::ALPHATESTFUNC, rw::ALPHALESS);
+	SetRenderState(rw::ALPHATESTFUNC, rw::ALPHAGREATEREQUAL);
 	rw::RGBA c;
 	c.red = CTimeCycle::m_nCurrentFogColourRed;
 	c.green = CTimeCycle::m_nCurrentFogColourGreen;
@@ -192,6 +194,7 @@ debug(const char *fmt, ...)
 void
 TheGame(void)
 {
+	int lasttick, tick, acc, nframes;
 	static rw::RGBA clearcol = { 0x40, 0x40, 0x40, 0xFF };
 
 	debug("Into TheGame!!!\n");
@@ -200,6 +203,10 @@ TheGame(void)
 	CGame::InitialiseRW();
 	CGame::InitialiseAfterRW();
 	CGame::Initialise();
+
+	lasttick = plGetTimeInMS();
+	nframes = 0;
+	acc = 0;
 
 	while(isRunning && !plWindowclosed()){
 		plHandleEvents();
@@ -232,6 +239,18 @@ TheGame(void)
 		CRenderer::RenderFadingInEntities();
 
 		TheCamera.m_rwcam->endUpdate();
-		plPresent();
+		TheCamera.m_rwcam->showRaster();
+
+		nframes++;
+		tick = plGetTimeInMS();
+		acc += tick - lasttick;
+		lasttick = tick;
+		if(acc >= 10000){
+			printf("%f FPS\n", nframes/10.0f);
+			nframes = 0;
+			acc -= 10000;
+		}
 	}
+
+	rw::Engine::stop();
 }

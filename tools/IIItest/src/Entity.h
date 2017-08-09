@@ -74,12 +74,6 @@ public:
 	// flagsE
 	uint m_isFading : 1;
 	uint m_flagE2 : 1;
-	uint m_flagE4 : 1;
-	uint m_flagE8 : 1;
-	uint m_flagE10 : 1;
-	uint m_flagE20 : 1;
-	uint m_flagE40 : 1;
-	uint m_flagE80 : 1;
 
 	short m_scanCode;
 	short m_modelIndex;

@@ -529,10 +529,6 @@ CFileLoader::LoadObjectInstance(char *line)
 		build->m_level = CTheZones::GetLevelFromPosition(build->GetPosition());
 		if(mi->IsSimple()){
 			CSimpleModelInfo *simple = (CSimpleModelInfo*)mi;
-if(strcmp(simple->GetName(), "treeshads02") == 0){
-	debugent = build;
-	printf("found treeshad\n");
-}
 			if(simple->m_isBigBuilding)
 				build->SetupBigBuilding();
 			if(simple->m_isSubway)

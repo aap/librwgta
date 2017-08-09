@@ -1,40 +1,33 @@
-#include <assert.h>
-#include "d3dUtility.h"
-//#include <DirectXMath.h>
-//using namespace DirectX;
-
 #include <rw.h>
 #include "rwgta.h"
 #include "camera.h"
-
-IDirect3DDevice9 *Device = 0;
+#include <assert.h>
 
 Camera *camera;
-
 rw::Clump *clump;
+rw::World *world;
+rw::EngineStartParams engineStartParams;
 
-void
-initrw(void)
+bool
+Init()
 {
+//	rw::platform = rw::PLATFORM_D3D8;
+//	rw::version = 0x34000;
 	rw::Engine::init();
-	rw::version = 0x34000;
-	rw::platform = rw::PLATFORM_D3D9;
-	rw::engine->loadTextures = 1;
-	rw::d3d::device = Device;
-
 	gta::attachPlugins();
-	rw::Driver::open();
-	rw::d3d::initializeRender();
+	rw::Engine::open();
+	rw::Engine::start(&engineStartParams);
+	rw::engine->loadTextures = 1;
 
-	rw::engine->currentTexDictionary = rw::TexDictionary::create();
+	rw::TexDictionary::setCurrent(rw::TexDictionary::create());
 	rw::Image::setSearchPath("Y:\\ps2\\gta3\\MODELS\\gta3_archive\\txd_extracted\\;"
 	                         "Y:\\ps2\\gtavc\\MODELS\\gta3_archive\\txd_extracted\\;"
 	                         "Y:\\ps2\\gtasa\\models\\gta3_archive\\txd_extracted\\");
 
-
 	if(1){
 		//char *filename = "Y:\\pc\\gtasa\\models\\gta3_archive\\admiral.txd";
-		char *filename = "Y:\\pc\\gtavc\\models\\gta3_archive\\admiral.txd";
+//		char *filename = "Y:\\pc\\gtavc\\models\\gta3_archive\\admiral.txd";
+		char *filename = "data\\admiral.txd";
 		rw::StreamFile in;
 		if(in.open(filename, "rb") == NULL){
 			MessageBox(0, "couldn't open file\n", 0, 0);
@@ -45,10 +38,11 @@ initrw(void)
 		txd = rw::TexDictionary::streamRead(&in);
 		assert(txd);
 		in.close();
-		rw::engine->currentTexDictionary = txd;
+		rw::TexDictionary::setCurrent(txd);
 	}
 
-	char *filename = "Y:\\pc\\gtavc\\models\\gta3_archive\\admiral.dff";
+	char *filename = "data\\admiral.dff";
+//	char *filename = "Y:\\pc\\gtavc\\models\\gta3_archive\\admiral.dff";
 //	char *filename = "Y:\\pc\\gta3\\models\\gta3_archive\\kuruma.dff";
 //	char *filename = "Y:\\pc\\gtavc\\models\\gta3_archive\\player.dff";
 //	char *filename = "Y:\\pc\\gtavc\\models\\gta3_archive\\od_newscafe_dy.dff";
@@ -89,38 +83,22 @@ initrw(void)
 	//out.open("out.txd", "wb");
 	//rw::currentTexDictionary->streamWrite(&out);
 	//out.close();
-}
 
-bool
-Setup()
-{
-	D3DLIGHT9 light;
-	light.Type = D3DLIGHT_DIRECTIONAL;
-	light.Diffuse =  { 0.8f, 0.8f, 0.8f, 1.0f };
-	light.Specular = { 0.0f, 0.0f, 0.0f, 0.0f };
-	light.Ambient =  { 0.0f, 0.0f, 0.0f, 0.0f };
-	light.Position = { 0.0f, 0.0f, 0.0f };
-	light.Direction = { 0.0f, 0.0f, -1.0f };
-	light.Range = 0.0f;
-	light.Falloff = 0.0f;
-	light.Attenuation0 = 0.0f;
-	light.Attenuation1 = 0.0f;
-	light.Attenuation2 = 0.0f;
-	light.Theta = 0.0f;
-	light.Phi = 0.0f;
 
-	initrw();
 
-	Device->SetRenderState(D3DRS_LIGHTING, true);
-	Device->SetLight(0, &light);
-	Device->LightEnable(0, 1);
 
-	Device->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
-	Device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
-	Device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
-	Device->SetRenderState(D3DRS_ALPHABLENDENABLE, 1);
-	Device->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
+	world = rw::World::create();
 
+	rw::Light *ambient = rw::Light::create(rw::Light::AMBIENT);
+	ambient->setColor(0.2f, 0.2f, 0.2f);
+	world->addLight(ambient);
+
+	rw::V3d xaxis = { 1.0f, 0.0f, 0.0f };
+	rw::Light *direct = rw::Light::create(rw::Light::DIRECTIONAL);
+	direct->setColor(0.8f, 0.8f, 0.8f);
+	direct->setFrame(rw::Frame::create());
+	direct->getFrame()->rotate(&xaxis, 180.0f, rw::COMBINEREPLACE);
+	world->addLight(direct);
 
 	camera = new Camera;
 	camera->m_rwcam = rw::Camera::create();
@@ -135,37 +113,40 @@ Setup()
 //	camera->setPosition(Vec3(0.0f, -1.0f, 3.0f));
 	camera->update();
 
+	world->addCamera(camera->m_rwcam);
+
 	return true;
 }
 
 bool
-Display(float timeDelta)
+Draw(float timeDelta)
 {
-	if(Device == NULL)
-		return true;
-	
-	Device->Clear(0, 0, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER,
-	              0xff808080, 1.0f, 0);
-	Device->BeginScene();
-
+	static rw::RGBA clearcol = { 0x80, 0x80, 0x80, 0xFF };
+	camera->m_rwcam->clear(&clearcol, rw::Camera::CLEARIMAGE|rw::Camera::CLEARZ);
 	camera->update();
 	camera->m_rwcam->beginUpdate();
 
 	clump->render();
 
 	camera->m_rwcam->endUpdate();
-
-	Device->EndScene();
-
-	Device->Present(0, 0, 0, 0);
+	camera->m_rwcam->showRaster();
 	return true;
 }
 
+void
+Shutdown()
+{
+	rw::Engine::stop();
+}
+
+bool running;
+
 LRESULT CALLBACK
-d3d::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch(msg){
 	case WM_DESTROY:
+		printf("DESTROY\n");
 		PostQuitMessage(0);
 		break;
 
@@ -209,19 +190,83 @@ d3d::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		}
 		break;
 	case WM_CLOSE:
-			DestroyWindow(hwnd);
+		printf("CLOSE\n");
+		DestroyWindow(hwnd);
+		break;
+
+	case WM_QUIT:
+		printf("QUIT\n");
+		running = false;
 		break;
 	}
 	return DefWindowProc(hwnd, msg, wParam, lParam);
 }
 
-void
-Cleanup()
+HWND
+MakeWindow(HINSTANCE instance, int width, int height)
 {
+	WNDCLASS wc;
+	wc.style         = CS_HREDRAW | CS_VREDRAW;
+	wc.lpfnWndProc   = WndProc;
+	wc.cbClsExtra    = 0;
+	wc.cbWndExtra    = 0;
+	wc.hInstance     = instance;
+	wc.hIcon         = LoadIcon(0, IDI_APPLICATION);
+	wc.hCursor       = LoadCursor(0, IDC_ARROW);
+	wc.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
+	wc.lpszMenuName  = 0;
+	wc.lpszClassName = "librwD3D9";
+	if(!RegisterClass(&wc)){
+		MessageBox(0, "RegisterClass() - FAILED", 0, 0);
+		return 0;
+	}
+
+	HWND win;
+	win = CreateWindow("librwD3D9", "D3D9 test",
+		WS_BORDER | WS_CAPTION | WS_SYSMENU |
+		            WS_MINIMIZEBOX | WS_MAXIMIZEBOX,
+		0, 0, width, height, 0, 0, instance, 0);
+	if(!win){
+		MessageBox(0, "CreateWindow() - FAILED", 0, 0);
+		return 0;
+	}
+	ShowWindow(win, SW_SHOW);
+	UpdateWindow(win);
+	return win;
+}
+
+void
+pollEvents(void)
+{
+	MSG msg;
+	while(PeekMessage(&msg, 0, 0, 0, PM_REMOVE)){
+		if(msg.message == WM_QUIT){
+			running = false;
+			break;
+		}else{
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+	}
+}
+
+void
+MsgLoop(bool (*draw)(float timeDelta))
+{
+	float lastTime = (float)timeGetTime();
+	running = true;
+	while(pollEvents(), running){
+		float currTime  = (float)timeGetTime();
+		float timeDelta = (currTime - lastTime)*0.001f;
+
+		draw(timeDelta);
+
+		lastTime = currTime;
+	}
 }
 
 int WINAPI
-WinMain(HINSTANCE hinstance, HINSTANCE prevInstance,
+WinMain(HINSTANCE instance, HINSTANCE,
         PSTR cmdLine, int showCmd)
 {
 	AllocConsole();
@@ -229,21 +274,18 @@ WinMain(HINSTANCE hinstance, HINSTANCE prevInstance,
 	freopen("CONOUT$", "w", stdout);
 	freopen("CONOUT$", "w", stderr);
 
-	if(!d3d::InitD3D(hinstance, 640, 480, true, D3DDEVTYPE_HAL, &Device)){
-		MessageBox(0, "InitD3D() - FAILED", 0, 0);
+	HWND win = MakeWindow(instance, 640, 480);
+	if(win == 0){
+		MessageBox(0, "MakeWindow() - FAILED", 0, 0);
 		return 0;
 	}
+	engineStartParams.window = win;
 
-	if(!Setup()){
-		MessageBox(0, "Setup() - FAILED", 0, 0);
-		return 0;
-	}
+	Init();
 
-	d3d::EnterMsgLoop(Display);
+	MsgLoop(Draw);
 
-	Cleanup();
-
-	Device->Release();
+	Shutdown();
 
 	return 0;
 }

@@ -4,13 +4,6 @@
 #include <cctype>
 #include <cassert>
 
-#ifndef _WIN32
-// RW_GL3 defined by makefile
-
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
-#endif
-
 #include <rw.h>
 #include "rwgta.h"
 
@@ -135,12 +128,13 @@ extern CEntity *debugent;
 void TheGame(void);
 
 // platform implementations
+extern rw::EngineStartParams engineStartParams;
 int plGetTimeInMS(void);
 bool plWindowclosed(void);
-void plPresent(void);
 void plHandleEvents(void);
 void plCapturePad(int n);
 void plUpdatePad(CControllerState *state);
+void plAttachInput(void);
 
 struct StrAssoc
 {
