@@ -63,7 +63,7 @@ CVisibilityPlugins::RenderFadingAtomic(rw::Atomic *atm, float camdist)
 			rw::Atomic::defaultRenderCB(atm);
 		else{
 			rw::Geometry *g = distatm->geometry;
-			uint32 oldflags = g->flags & 0xFF;
+			uint32 oldflags = g->flags;
 			g->flags |= rw::Geometry::MODULATE;
 			for(int32 i = 0; i < g->matList.numMaterials; i++)
 				g->matList.materials[i]->color.alpha = alpha;
@@ -72,7 +72,7 @@ CVisibilityPlugins::RenderFadingAtomic(rw::Atomic *atm, float camdist)
 			rw::Atomic::defaultRenderCB(atm);
 			for(int32 i = 0; i < g->matList.numMaterials; i++)
 				g->matList.materials[i]->color.alpha = 255;
-			g->flags = oldflags | g->flags&~0xFF;
+			g->flags = oldflags;
 		}
 	}
 }

@@ -379,8 +379,7 @@ main(int argc, char *argv[])
 	if(uninstance)
 		FORLIST(lnk, c->atomics){
 			Atomic *a = Atomic::fromClump(lnk);
-			ObjPipeline *p = a->getPipeline();
-			p->uninstance(a);
+			a->uninstance();
 			if(outplatform != PLATFORM_PS2)
 				ps2::unconvertADC(a->geometry);
 		}
@@ -391,10 +390,9 @@ main(int argc, char *argv[])
 	if(instance)
 		FORLIST(lnk, c->atomics){
 			Atomic *a = Atomic::fromClump(lnk);
-			ObjPipeline *p = a->getPipeline();
-			p->instance(a);
 			if(outplatform != PLATFORM_PS2)
 				ps2::convertADC(a->geometry);
+			a->instance();
 		}
 
 	if(rw::version == 0){
