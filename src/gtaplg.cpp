@@ -51,6 +51,16 @@ typedef rw::uint16 uint16;
 typedef rw::uint8 uint8;
 typedef rw::float32 float32;
 
+/* broken NTL dragonball online plugin - we have no better place to do this than here */
+static rw::Stream *ntlread(rw::Stream *stream, int32, void*, int32, int32) { return stream; }
+static rw::Stream *ntlwrite(rw::Stream *stream, int32, void*, int32, int32) { return stream; }
+static int32 ntlsize(void*, int32, int32) { return 0; }
+static void registerNTLmaterialPlugin(void)
+{
+	rw::Material::registerPlugin(0x0, 0x177, nil, nil, nil);
+	rw::Material::registerPluginStream(0x177, ntlread, ntlwrite, ntlsize);
+}
+
 namespace gta {
 
 void
@@ -80,6 +90,8 @@ attachPlugins(void)
 	gta::registerCollisionPlugin();
 	gta::register2dEffectPlugin();
 	gta::registerPipelinePlugin();
+
+	registerNTLmaterialPlugin();
 }
 
 //
