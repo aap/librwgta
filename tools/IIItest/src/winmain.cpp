@@ -265,13 +265,10 @@ int WINAPI
 WinMain(HINSTANCE hinstance, HINSTANCE prevInstance,
         PSTR cmdLine, int showCmd)
 {
-	char *argv[1] = {
-		"IIItest",
-	};
 	AllocConsole();
 	freopen("CONIN$", "r", stdin);
 	freopen("CONOUT$", "w", stdout);
 	freopen("CONOUT$", "w", stderr);
-	return main(1, argv);
+	return main(__argc, __argv);
 }
 #endif

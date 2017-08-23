@@ -66,11 +66,13 @@ attachPlugins(void)
 	rw::registerMaterialRightsPlugin();
 	rw::xbox::registerVertexFormatPlugin();
 	rw::registerSkinPlugin();
+	rw::registerUserDataPlugin();	// not GTA
 	rw::registerHAnimPlugin();
 	gta::registerNodeNamePlugin();
 	rw::registerMatFXPlugin();
 	rw::registerUVAnimPlugin();
 	rw::ps2::registerADCPlugin();
+
 	gta::registerExtraNormalsPlugin();
 	gta::registerExtraVertColorPlugin();
 	gta::registerEnvSpecPlugin();

@@ -408,10 +408,12 @@ main(int argc, char *argv[])
 			g->correctTristripWinding();
 		}
 
+/*
 	FORLIST(lnk, c->atomics){
 		Geometry *g = Atomic::fromClump(lnk)->geometry;
 		g->buildMeshes();
 	}
+*/
 
 	StreamFile out;
 	const char *file;
