@@ -430,7 +430,7 @@ main(int argc, char *argv[])
 	c->streamWrite(&out);
 	out.close();
 
-//	data = new rw::uint8[1024*1024];
+//	data = rwNewT(uint8, 1024*1024, 0);
 //	rw::StreamMemory out;
 //	out.open(data, 0, 1024*1024);
 //	if(currentUVAnimDictionary)
@@ -446,7 +446,7 @@ main(int argc, char *argv[])
 //	fwrite(data, out.getLength(), 1, cf);
 //	fclose(cf);
 //	out.close();
-//	delete[] data;
+//	rwFree(data);
 
 	c->destroy();
 	if(currentUVAnimDictionary)

@@ -189,7 +189,7 @@ saUninstanceCB(rw::ps2::MatPipeline *pipe, rw::Geometry *geo, uint32 flags[], rw
 		mask |= 0x10000;
 	SaVert v;
 	int32 idxstart = 0;
-	for(rw::Mesh *m = geo->meshHeader->mesh; m < mesh; m++)
+	for(rw::Mesh *m = geo->meshHeader->getMeshes(); m < mesh; m++)
 		idxstart += m->numIndices;
 	int8 *adc = rw::ps2::getADCbitsForMesh(geo, mesh);
 	for(uint32 i = 0; i < mesh->numIndices; i++){

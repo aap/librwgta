@@ -133,7 +133,7 @@ rslNodeListStreamRead(Stream *stream, rslNodeList *framelist)
 		mustFindChunk(stream, ID_EXTENSION, &length, NULL);
 		while(length){
 			readChunkHeaderInfo(stream, &header);
-			if(header.type == ID_HANIMPLUGIN){
+			if(header.type == ID_HANIM){
 				hanimRead(stream, f);
 			}else if(header.type == gta::ID_NODENAME){
 				f->name = new char[header.length+1];

@@ -301,7 +301,7 @@ convertMesh(Geometry *rwg, RslGeometry *g, int32 ii)
 	uint8 *p = (uint8*)(inst+numInst);
 	inst += ii;
 	p += inst->dmaPacket;
-	Mesh *m = &rwg->meshHeader->mesh[inst->matID];
+	Mesh *m = &rwg->meshHeader->getMeshes()[inst->matID];
 	ps2::Vertex v;
 	uint32 mask = 0x1001;	// tex coords, vertices
 	if(rwg->flags & Geometry::NORMALS)
@@ -471,23 +471,17 @@ convertAtomic(RslElement *atomic)
 	sPs2GeometryMesh *inst = (sPs2GeometryMesh*)(resHeader+1);
 	int32 numInst = resHeader->size >> 20;
 
-	rwg->meshHeader = new MeshHeader;
-	rwg->meshHeader->flags = 1;
-	rwg->meshHeader->numMeshes = rwg->matList.numMaterials;
-	rwg->meshHeader->mesh = new Mesh[rwg->meshHeader->numMeshes];
-	rwg->meshHeader->totalIndices = 0;
-	Mesh *meshes = rwg->meshHeader->mesh;
-	for(uint32 i = 0; i < rwg->meshHeader->numMeshes; i++)
-		meshes[i].numIndices = 0;
-
+	// allocate empty meshes
+	rwg->allocateMeshes(rwg->matList.numMaterials, 0, 1);
+	rwg->meshHeader->flags = PRIMTYPETRISTRIP;
+	Mesh *meshes = rwg->meshHeader->getMeshes();
 
 	for(int32 i = 0; i < numInst; i++){
-		Mesh *m = &meshes[inst[i].matID];
 		rwg->numVertices += inst[i].numTriangles+2;
-		m->numIndices += inst[i].numTriangles+2 +3;
+		meshes[inst[i].matID].numIndices += inst[i].numTriangles+2 +3;
 	}
 	for(uint32 i = 0; i < rwg->meshHeader->numMeshes; i++){
-		rwg->meshHeader->mesh[i].material = rwg->matList.materials[i];
+		meshes[i].material = rwg->matList.materials[i];
 		rwg->meshHeader->totalIndices += meshes[i].numIndices;
 	}
 	rwg->flags = Geometry::TRISTRIP |
@@ -504,8 +498,9 @@ convertAtomic(RslElement *atomic)
 		rwg->flags |= Geometry::PRELIT;
 	rwg->numTexCoordSets = 1;
 
+	rwg->numTriangles = rwg->meshHeader->guessNumTriangles();
 	rwg->allocateData();
-	rwg->meshHeader->allocateIndices();
+	rwg->allocateMeshes(rwg->meshHeader->numMeshes, rwg->meshHeader->totalIndices, 0);
 
 	Skin *skin = NULL;
 	if(resHeader->flags & 0x10)
