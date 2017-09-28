@@ -89,6 +89,44 @@ dumpFrameHier(Frame *frame, int ind = 0)
 }
 
 void
+dumpMatFXData(Material *m)
+{
+	if(MatFX::getEffects(m) != MatFX::ENVMAP)
+		return;
+	MatFX *matfx = MatFX::get(m);
+	int i = matfx->getEffectIndex(MatFX::ENVMAP);
+	MatFX::Env *env = &matfx->fx[i].env;
+	printf("\tenv: %4.2f ", env->coefficient);
+	if(env->tex)
+		printf("%-32s ", env->tex->name);
+	printf("\n");
+
+	if(env->coefficient){
+		env->coefficient = 1.0f;
+		m->surfaceProps.specular = 0.5f;
+	}else
+		m->surfaceProps.specular = 0.0f;
+}
+
+void
+dumpMat(Material *m)
+{
+	// remove primary color
+//	if(m->color.red == 255 && m->color.green == 0 && m->color.blue == 175){
+//		m->color.red = 255;
+//		m->color.green = 255;
+//		m->color.blue = 255;
+//	}
+//	if(m->color.red == 60 && m->color.green == 255 && m->color.blue == 0){
+//		m->color.red = 255;
+//		m->color.green = 255;
+//		m->color.blue = 255;
+//	}
+	printf("%3d %3d %3d %3d %-32s\n", m->color.red, m->color.green, m->color.blue, m->color.alpha, m->texture ? m->texture->name : "");
+	dumpMatFXData(m);
+}
+
+void
 dumpReflData(Material *m)
 {
 	using namespace gta;
@@ -205,6 +243,8 @@ main(int argc, char *argv[])
 	rw::Engine::open();
 	rw::Engine::start(nil);
 
+	rw::Texture::setCreateDummies(1);
+
 	int uninstance = 0;
 	int instance = 0;
 	int dump = 0;
@@ -279,7 +319,6 @@ main(int argc, char *argv[])
 		return 1;
 	}
 	currentUVAnimDictionary = NULL;
-	TexDictionary::setCurrent(TexDictionary::create());
 	ChunkHeaderInfo header;
 	readChunkHeaderInfo(&in, &header);
 	if(header.type == ID_UVANIMDICT){
@@ -362,13 +401,14 @@ main(int argc, char *argv[])
 	//		removeEffects(atomic);
 	//}
 
-	//FORLIST(lnk, c->atomics){
-	//	Geometry *g = Atomic::fromClump(lnk)->geometry;
-	//	for(int i = 0; i < g->numMaterials; i++){
-	//		Material *m = g->materialList[i];
-	//		dumpReflData(m);
-	//	}
-	//}
+//	FORLIST(lnk, c->atomics){
+//		Geometry *g = Atomic::fromClump(lnk)->geometry;
+//		for(int i = 0; i < g->matList.numMaterials; i++){
+//			Material *m = g->matList.materials[i];
+//			dumpMat(m);
+//	//		dumpReflData(m);
+//		}
+//	}
 
 	int32 platform = findPlatform(c);
 	if(platform){

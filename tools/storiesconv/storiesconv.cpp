@@ -13,8 +13,16 @@ using namespace std;
 using namespace rw;
 #include "rsl.h"
 
+#ifdef VCS
+#include "vcs.h"
+#endif
+
 char *argv0;
 int32 atmOffset;
+
+const char *lookupHashKey(uint32 key);
+uint32 GetKey(const char *str, int len);
+uint32 GetUppercaseKey(const char *str, int len);
 
 void
 panic(const char *fmt, ...)
@@ -1053,6 +1061,26 @@ LoadAny(RslStream *rslstr, const char *name)
 	return nil;
 }
 
+#ifdef VCS
+
+struct CPool_generic
+{
+	void *items;
+	void *flags;
+	int  size;
+	int  allocPtr;
+	char name[16];
+};
+
+struct CPool_txd
+{
+	TexListDef *items;
+	void *flags;
+	int  size;
+	int  allocPtr;
+	char name[16];
+};
+
 void
 extractResourceVCS(RslStream *rslstr)
 {
@@ -1060,11 +1088,144 @@ extractResourceVCS(RslStream *rslstr)
 	char tempname[128];
 	RslElementGroup **C3dMarkers__m_pRslElementGroupArray;
 	struct ResourceImage {
-		char xxx[0xa8];
+		int paths;
+		CPool_generic *buildingPool;
+		CPool_generic *treadablePool;
+		CPool_generic *dummyPool;
+		CPool_generic *entryInfoNodePool;
+		CPool_generic *ptrNodePool;
+		int numModelInfos;
+		CBaseModelInfo **modelInfoPtrs;
+		void *carArrays;
+		void *totalNumOfCarsOfRating;
+		void *theZones;
+		void *sectors;
+		void *bigBuildingList;
+		void *_2deffectStore;
+		void *_2deffects;
+		short *modelIndices;
+		CPool_txd *texlistPool;
+		RslTexList *storedTexList;
+		CPool_generic *colPool;
+		int colOnlyBB;
+		void *tempColModels;
+		void *objectInfo;	// object.dat
+		void *vehicleModelInfo_Info;
+		void *streaming_Inst;
+
+		char xxx[0x48];
+
+/* LCS:
+  int animManagerInst;
+  int fightMoves;
+  int pedAnimInfo;
+  int pedType;
+  int pedStats;
+  int numAttributeZones;
+  int attributeZones;
+  int numOccludersOnMap;
+  int occluders;
+  int waterLevelInst;
+  int handlingManager;
+  int adhesiveLimitTable;
+  int timecycle;
+  int pedGroups;
+  int particleSystemManager;
+  int weaponTables;
+  int _3dmarkerArray;
+  int cutsceneDir;
+  int ferryInst;
+  int trainInst;
+  int planeInst;
+  int UNUSED;
+  int menuCompressedTextures;
+  int fontTexListSize;
+  int fontCompressedTexList;
+*/
 		RslElementGroup **markers;	// [32] in LCS
 	} *res;
+	assert(sizeof(ResourceImage) == 0xAC);
 
 	res = (ResourceImage*)rslstr->data;
+
+	CBaseModelInfo *bmi;
+	const char *texname;
+	for(i = 0; i < res->numModelInfos; i++){
+		bmi = res->modelInfoPtrs[i];
+		if(bmi == nil)
+			continue;
+
+		CSimpleModelInfo *smi = (CSimpleModelInfo*)bmi;
+		if(bmi->type == MODELINFO_SIMPLE || bmi->type == MODELINFO_TIME)
+			if(smi->relatedObject && smi->relatedObject->relatedObject == nil)
+				smi->relatedObject->relatedObject = smi;
+
+		bmi->name = lookupHashKey(bmi->hashKey);
+		if(bmi->hashKey == 0)
+			bmi->name = "NULL";
+
+//		texname = nil;
+//		if(bmi->txdSlot >= 0)
+//			texname = res->texlistPool->items[bmi->txdSlot].name;
+
+//		try txd name
+//		if(bmi->name == nil && texname){
+//			uint32 txdhash = GetUppercaseKey(texname, strlen(texname));
+//			if(txdhash == bmi->hashKey)
+//				bmi->name = texname;
+//		}
+	}
+
+	char tmpbuffer[30];
+	for(i = 0; i < res->numModelInfos; i++){
+		bmi = res->modelInfoPtrs[i];
+		if(bmi == nil)
+			continue;
+		CSimpleModelInfo *smi = (CSimpleModelInfo*)bmi;
+
+//		const char *relname = nil;
+//		if(bmi->name == nil && (bmi->type == MODELINFO_SIMPLE || bmi->type == MODELINFO_TIME)){
+//			if(smi->relatedObject)
+//				relname = smi->relatedObject->name;
+//			if(relname){
+//				if((smi->flags & 0x10) == 0){
+//					//fprintf(stderr, "%d has LOD %s\n", i, relname);
+//				}else{
+//					strcpy(tmpbuffer, relname);
+//					tmpbuffer[0] = 'L';
+//					tmpbuffer[1] = 'O';
+//					tmpbuffer[2] = 'D';
+//					uint32 hash = GetUppercaseKey(tmpbuffer, strlen(tmpbuffer));
+//					if(hash == bmi->hashKey)
+//						bmi->name = strdup(tmpbuffer);
+//				}
+//			}
+//		}
+
+		texname = nil;
+		if(bmi->txdSlot >= 0)
+			texname = res->texlistPool->items[bmi->txdSlot].name;
+		else
+			texname = "NULL";
+
+		if(bmi->name)
+			printf("%d %s %s ", i, bmi->name, texname);
+		else
+			printf("%d hash:%x %s ", i, bmi->hashKey, texname);
+
+		if(bmi->type == MODELINFO_SIMPLE || bmi->type == MODELINFO_TIME){
+			printf("%x %.0f ", smi->flags, smi->drawDistances[0]);
+			if(smi->relatedObject)
+				if(smi->relatedObject->name)
+					printf("REL:%s ", smi->relatedObject->name);
+				else
+					printf("REL:0x%x ", smi->relatedObject->hashKey);
+		}
+
+		printf("\n");
+	}
+	return;
+
 	C3dMarkers__m_pRslElementGroupArray = res->markers;
 
 	for(i = 0; i < 32; i++){
@@ -1079,6 +1240,7 @@ extractResourceVCS(RslStream *rslstr)
 		}
 	}
 }
+#endif
 
 void
 usage(void)

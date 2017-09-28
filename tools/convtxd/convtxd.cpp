@@ -164,7 +164,7 @@ runscript(void)
 	char *s, *arg;
 	int cmd;
 	TexDictionary::setCurrent(TexDictionary::create());
-	rw::engine->loadTextures = 1;
+	rw::Texture::setLoadTextures(true);
 	Texture *tex = NULL;
 	StreamFile out;
 	while(s = getline()){
@@ -218,6 +218,7 @@ usage(void)
 	fprintf(stderr, "usage: %s [-v version] [-o platform] in.txd [out.txd]\n", argv0);
 	fprintf(stderr, "\t-v RW version, e.g. 33004 for 3.3.0.4\n");
 	fprintf(stderr, "\t-o output platform. ps2, xbox, mobile, d3d8, d3d9\n");
+	fprintf(stderr, "\t-t convert palettized to 32 bit\n");
 	fprintf(stderr, "\t-s run script from stdin, see source code\n");
 	exit(1);
 }
@@ -236,12 +237,13 @@ main(int argc, char *argv[])
 	int script = 0;
 	int extract = 0;
 	int separatemask = 0;
+	int unpalettize = 0;
 
 	rw::Engine::init();
 	gta::attachPlugins();
 	rw::Engine::open();
 	rw::Engine::start(nil);
-	rw::engine->loadTextures = 0;
+	rw::Texture::setLoadTextures(false);
 //	rw::d3d::isP8supported = 0;
 
 	char *s;
@@ -269,6 +271,9 @@ main(int argc, char *argv[])
 		break;
 	case 'm':
 		separatemask++;
+		break;
+	case 't':
+		unpalettize++;
 		break;
 	default:
 		usage();
@@ -313,6 +318,18 @@ main(int argc, char *argv[])
 //	for(Texture *tex = txd->first; tex; tex = tex->next)
 //		tex->filterAddressing = (tex->filterAddressing&~0xF) | 0x2;
 	rw::platform = outplatform;
+
+	if(unpalettize){
+		FORLIST(lnk, txd->textures){
+			Texture *tex = Texture::fromDict(lnk);
+			Image *img = tex->raster->toImage();
+			img->unindex();
+			Raster *ras = tex->raster;
+			tex->raster = Raster::createFromImage(img);
+			ras->destroy();
+			img->destroy();
+		}
+	}
 
 	char filename[1024];
 	if(extract){
