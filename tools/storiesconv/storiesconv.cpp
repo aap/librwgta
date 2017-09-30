@@ -13,9 +13,13 @@ using namespace std;
 using namespace rw;
 #include "rsl.h"
 
+#include "leedsgta.h"
+
 #ifdef VCS
 #include "vcs.h"
 #endif
+
+#include "streamworld.h"
 
 char *argv0;
 int32 atmOffset;
@@ -1063,87 +1067,13 @@ LoadAny(RslStream *rslstr, const char *name)
 
 #ifdef VCS
 
-struct CPool_generic
-{
-	void *items;
-	void *flags;
-	int  size;
-	int  allocPtr;
-	char name[16];
-};
-
-struct CPool_txd
-{
-	TexListDef *items;
-	void *flags;
-	int  size;
-	int  allocPtr;
-	char name[16];
-};
-
 void
 extractResourceVCS(RslStream *rslstr)
 {
 	int i;
 	char tempname[128];
 	RslElementGroup **C3dMarkers__m_pRslElementGroupArray;
-	struct ResourceImage {
-		int paths;
-		CPool_generic *buildingPool;
-		CPool_generic *treadablePool;
-		CPool_generic *dummyPool;
-		CPool_generic *entryInfoNodePool;
-		CPool_generic *ptrNodePool;
-		int numModelInfos;
-		CBaseModelInfo **modelInfoPtrs;
-		void *carArrays;
-		void *totalNumOfCarsOfRating;
-		void *theZones;
-		void *sectors;
-		void *bigBuildingList;
-		void *_2deffectStore;
-		void *_2deffects;
-		short *modelIndices;
-		CPool_txd *texlistPool;
-		RslTexList *storedTexList;
-		CPool_generic *colPool;
-		int colOnlyBB;
-		void *tempColModels;
-		void *objectInfo;	// object.dat
-		void *vehicleModelInfo_Info;
-		void *streaming_Inst;
-
-		char xxx[0x48];
-
-/* LCS:
-  int animManagerInst;
-  int fightMoves;
-  int pedAnimInfo;
-  int pedType;
-  int pedStats;
-  int numAttributeZones;
-  int attributeZones;
-  int numOccludersOnMap;
-  int occluders;
-  int waterLevelInst;
-  int handlingManager;
-  int adhesiveLimitTable;
-  int timecycle;
-  int pedGroups;
-  int particleSystemManager;
-  int weaponTables;
-  int _3dmarkerArray;
-  int cutsceneDir;
-  int ferryInst;
-  int trainInst;
-  int planeInst;
-  int UNUSED;
-  int menuCompressedTextures;
-  int fontTexListSize;
-  int fontCompressedTexList;
-*/
-		RslElementGroup **markers;	// [32] in LCS
-	} *res;
+	ResourceImage *res;
 	assert(sizeof(ResourceImage) == 0xAC);
 
 	res = (ResourceImage*)rslstr->data;
@@ -1215,11 +1145,13 @@ extractResourceVCS(RslStream *rslstr)
 
 		if(bmi->type == MODELINFO_SIMPLE || bmi->type == MODELINFO_TIME){
 			printf("%x %.0f ", smi->flags, smi->drawDistances[0]);
+			if(smi->flags & 0x10)
+				printf("BIGBUILD ");
 			if(smi->relatedObject)
 				if(smi->relatedObject->name)
 					printf("REL:%s ", smi->relatedObject->name);
 				else
-					printf("REL:0x%x ", smi->relatedObject->hashKey);
+					printf("REL:%x ", smi->relatedObject->hashKey);
 		}
 
 		printf("\n");
@@ -1295,7 +1227,7 @@ main(int argc, char *argv[])
 		usage();
 
 	::World *world = NULL;
-	Sector *sector = NULL;
+//	Sector *sector = NULL;
 	RslElementGroup *clump = NULL;
 	RslElement *atomic = NULL;
 	RslTexList *txd = NULL;
@@ -1332,6 +1264,7 @@ main(int argc, char *argv[])
 	stream.close();
 	rslstr->relocate();
 
+#if 0
 	bool32 largefile;
 	largefile = rslstr->dataSize > 0x1000000;
 
@@ -1402,7 +1335,9 @@ main(int argc, char *argv[])
 		//}
 		for(p = sector->sectionA; p < sector->sectionEnd; p++)
 			printf("%f %f %f\n", p->matrix[12], p->matrix[13], p->matrix[14]);
-	}else if(rslstr->ident == MDL_IDENT){
+	}else
+#endif
+	if(rslstr->ident == MDL_IDENT){
 		switch(mdltype){
 		case MDL_SIMPLE:
 			rwc = LoadSimple(rslstr->data, "object", rslstr->numFuncs);

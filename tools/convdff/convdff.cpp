@@ -127,6 +127,18 @@ dumpMat(Material *m)
 }
 
 void
+setSpecMap(Material *m, const char *name)
+{
+	if(m->surfaceProps.specular != 0.0f){
+		MatFX::setEffects(m, MatFX::ENVMAP);
+		MatFX *mfx = MatFX::get(m);
+		mfx->setEnvCoefficient(1.0f);
+		rw::Texture *tex = rw::Texture::read(name, nil);
+		mfx->setEnvTexture(tex);
+	}
+}
+
+void
 dumpReflData(Material *m)
 {
 	using namespace gta;
@@ -401,6 +413,14 @@ main(int argc, char *argv[])
 	//		removeEffects(atomic);
 	//}
 
+	FORLIST(lnk, c->atomics){
+		Geometry *g = Atomic::fromClump(lnk)->geometry;
+		for(int i = 0; i < g->matList.numMaterials; i++){
+			Material *m = g->matList.materials[i];
+			setSpecMap(m, "cabbiespeca");
+		}
+	}
+
 //	FORLIST(lnk, c->atomics){
 //		Geometry *g = Atomic::fromClump(lnk)->geometry;
 //		for(int i = 0; i < g->matList.numMaterials; i++){
@@ -491,7 +511,6 @@ main(int argc, char *argv[])
 	c->destroy();
 	if(currentUVAnimDictionary)
 		currentUVAnimDictionary->destroy();
-	TexDictionary::getCurrent()->destroy();
 
 	return 0;
 }

@@ -399,6 +399,8 @@ struct sPs2GeometryMesh {
 	int16    max[3];
 };
 
+#if 0
+
 struct RslStreamHeader {
 	uint32   ident;
 	uint32   unk;
@@ -493,3 +495,5 @@ struct World {
 	uint32           numTextures;
 	RslStreamHeader *textures; // stream headers
 };
+
+#endif

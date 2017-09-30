@@ -1,11 +1,4 @@
 
-enum ModelInfoType
-{
-	MODELINFO_SIMPLE = 1,
-	MODELINFO_TIME   = 3,
-	MODELINFO_PED    = 7,
-};
-
 struct CBaseModelInfo
 {
 	int32	field0;
@@ -41,11 +34,4 @@ struct CTimeModelInfo : public CSimpleModelInfo
 	int32	timeOff;
 	int16	otherModel;
 	// int16 pad
-};
-
-struct TexListDef
-{
-	RslTexList *texlist;
-	int32 refCount;
-	char name[20];
 };

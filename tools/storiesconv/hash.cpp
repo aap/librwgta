@@ -97,6 +97,44 @@ GetUppercaseKey(const char *str, int len)
 }
 
 HashedName gtanames[] = {
+	// brute forced
+	{ 0x23290d47, "NB_NEON01" },
+	{ 0xba205cfd, "NB_NEON02" },
+	{ 0x5343f9c8, "NB_NEON04" },
+	{ 0x2444c95e, "NB_NEON05" },
+	{ 0xca4aa872, "NB_NEON07" },
+	{ 0x2df28575, "NB_NEON09" },
+	{ 0xF303F824, "LODNEON01" },
+	{ 0x6A0AA99E, "LODNEON02" },
+	{ 0x83690CAB, "LODNEON04" },
+	{ 0xF46E3C3D, "LODNEON05" },
+	{ 0x1A605D11, "LODNEON07" },
+	{ 0xFDD87016, "LODNEON09" },
+	{ 0x6E1402CF, "NB_NEONBACK" },
+	{ 0xED13EC12, "LODNEONBACK" },
+	{ 0xCFAD19AC, "cdseabed34" },
+	{ 0x21A37880, "cdseabed36" },
+	{ 0xC61B5587, "cdseabed38" },
+	{ 0xCA8DE4CE, "LODeabed34" },
+	{ 0x248385E2, "LODeabed36" },
+	{ 0xC33BA8E5, "LODeabed38" },
+	{ 0xB0949DBA, "nb_RAMP" },
+	{ 0x711B4B3B, "DR_CONDOA" },
+	{ 0xE8121A81, "DR_CONDOB" },
+	{ 0x48A405ED, "LODCONDOA" },
+	{ 0xD1AD5457, "LODCONDOB" },
+	{ 0xDDA6734D, "dr_htn_NEONA" },
+	{ 0x6186F660, "LODhtn_NEONA" },
+	{ 0x4F299E57, "dr_odhotel" },
+	{ 0x20A056F8, "LODodhotel" },
+	{ 0xC2787351, "DR_NEWCAFE" },
+	{ 0xADF1BBFE, "LODNEWCAFE" },
+	{ 0x40D8FAC2, "DR_UMBERTO" },
+	{ 0x2F51326D, "LODUMBERTO" },
+
+
+
+
 	// same as TXD
 	{ 0x34D1D8B6, "seamine" },
 
