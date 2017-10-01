@@ -1,5 +1,3 @@
-// Stuff shared by LCS and VCS (even though they might differ)
-
 enum ModelInfoType
 {
 	MODELINFO_SIMPLE       = 1,
@@ -37,6 +35,83 @@ struct TexListDef
 	char name[20];
 };
 
+
+struct CBaseModelInfo
+{
+	int32	field0;
+	int32	field4;
+	uint32	hashKey;
+	const char *name;	// we'll use it for the name for now
+//	int32	fieldC;	// char *name?
+	uint8	type;
+	int8	num2dFx;
+	bool	ownsColModel;
+	int8	field15;	// alpha?
+	void	*colModel;
+	int16	_2dfxIndex;
+	int16	objectIndex;
+	int16	refCount;
+	int16	txdSlot;
+#ifdef VCS
+	int16	unknownIndex;
+#endif
+	void	*vtable;
+};
+#ifdef LCS
+static_assert(sizeof(CBaseModelInfo) == 0x24, "CBaseModelInfo: error");
+#else
+static_assert(sizeof(CBaseModelInfo) == 0x28, "CBaseModelInfo: error");
+#endif
+
+
+struct CSimpleModelInfo : public CBaseModelInfo
+{
+	RslObject **objects;
+	float	drawDistances[3];
+	uint8	numObjects;
+	uint16	flags;
+	CSimpleModelInfo *relatedObject;
+};
+
+struct CTimeModelInfo : public CSimpleModelInfo
+{
+	int32	timeOn;
+	int32	timeOff;
+	int16	otherModel;
+	// int16 pad
+};
+
+struct CWeaponModelInfo : public CSimpleModelInfo
+{
+	union {
+		char *animFile;
+		int32 animFileIndex;
+	};
+
+	int32 GetWeaponType(void) { return *(int32*)&this->relatedObject; }
+	void SetWeaponType(int32 type) { *(int32*)&this->relatedObject = type; }
+};
+
+struct CElementGroupModelInfo : public CBaseModelInfo
+{
+	RslElementGroup *elementGroup;
+	union {
+		char *animFile;
+		int32 animFileIndex;
+	};
+};
+
+struct CPedModelInfo : CElementGroupModelInfo
+{
+	int32 animGroup;
+	int32 pedType;
+	int32 pedStatType;
+	uint32 carsDriveMask;
+	void *hitColModel;
+	int8 radio1, radio2;
+};
+
+
 // might be nicer to have this as proper templates
 struct CPool_generic
 {
@@ -56,7 +131,7 @@ struct CPool_txd
 	char name[16];
 };
 
-struct CBaseModelInfo;
+#include "animation.h"
 
 struct ResourceImage {
 	void *paths;
@@ -88,7 +163,7 @@ struct ResourceImage {
 #endif
 	void *streaming_Inst;	// gta3.dir
 
-	void *animManagerInst;	// ifps
+	CAnimManager *animManagerInst;
 	void *fightMoves;		// fistfite.dat
 
 #ifdef LCS
@@ -151,6 +226,7 @@ struct ResourceImage {
 #endif
 };
 #ifdef VCS
+static_assert(offsetof(ResourceImage, animManagerInst)+0x20 == 0x80, "ResourceImage: error");
 static_assert(offsetof(ResourceImage, weatherTypeList) == 0x8C, "ResourceImage: error");
 static_assert(offsetof(ResourceImage, timecycle) == 0x94, "ResourceImage: error");
 static_assert(offsetof(ResourceImage, markers)+0x20 == 0xC8, "ResourceImage: error");
@@ -158,6 +234,7 @@ static_assert(offsetof(ResourceImage, menuCompressedTextures)+0x20 == 0xE0, "Res
 static_assert(offsetof(ResourceImage, fontTexListSize)+0x20 == 0xF8, "ResourceImage: error");
 #endif
 #ifdef LCS
+static_assert(offsetof(ResourceImage, animManagerInst)+0x20 == 0x80, "ResourceImage: error");
 static_assert(offsetof(ResourceImage, markers)+0x20 == 0xC0, "ResourceImage: error");
 static_assert(offsetof(ResourceImage, ferryInst)+0x20 == 0xC8, "ResourceImage: error");
 #endif

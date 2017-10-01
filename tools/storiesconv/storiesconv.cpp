@@ -9,16 +9,13 @@
 
 #include <rwgta.h>
 
+#define PS2
+
 using namespace std;
 using namespace rw;
 #include "rsl.h"
 
 #include "leedsgta.h"
-
-#ifdef VCS
-#include "vcs.h"
-#endif
-
 #include "streamworld.h"
 
 char *argv0;
@@ -27,6 +24,8 @@ int32 atmOffset;
 const char *lookupHashKey(uint32 key);
 uint32 GetKey(const char *str, int len);
 uint32 GetUppercaseKey(const char *str, int len);
+
+ResourceImage *gamedata;
 
 void
 panic(const char *fmt, ...)
@@ -1065,23 +1064,160 @@ LoadAny(RslStream *rslstr, const char *name)
 	return nil;
 }
 
+int
+computeFlags(int miflags)
+{
+	int f = 0;
+	// 1, 2 are object index
+	if(miflags & 4) f |= 1;		// wet road effect
+	// 8?
+	// 10 is big building flag
+	if(miflags & 0x20) f |= 2;	// no fade
+	if(miflags & 0x40) f |= 4;	// draw last
+	if(miflags & 0x80) f |= 8;	// additive blend
+	if(miflags & 0x100) f |= 0x10;	// is subway (also in VC?)
+	if(miflags & 0x200) f |= 0x20;	// no lighting
+	if(miflags & 0x400) f |= 0x40;	// no depth write
+	if(miflags & 0x800) f |= 0x80;	// no shadows
+	if(miflags & 0x1000) f |= 0x100;	// no draw distance
+	if(miflags & 0x2000) f |= 0x200;	// glass1
+	if(miflags & 0x4000) f |= 0x400;	// glass2
+	return f;
+}
+
+#ifdef LCS
+#include "animgroups_lcs.h"
+
+#define GROUPDEFEND };
+
+#define GROUPDEF(name, assocName, blockname, modelIndex) static char *name##names[] = {
+#define ANIMDEF(animName, id, flags) animName
+ANIMGROUPS
+#undef ANIMDEF
+#undef GROUPDEF
+
+#define GROUPDEF(name, assocName, blockName, modelIndex) static AnimAssocInfo name##info[] = {
+#define ANIMDEF(animName, id, flags) { id, flags },
+ANIMGROUPS
+#undef ANIMDEF
+#undef GROUPDEF
+
+#undef GROUPDEFEND
+
+AnimAssocDefinition assocDefs[] = {
+#define GROUPDEF(name, assocName, blockName, modelIndex) { assocName, blockName, modelIndex, nelem(name##names), name##names, name##info },
+#define GROUPDEFEND
+#define ANIMDEF(name, id, flags)
+ANIMGROUPS
+#undef ANIMDEF
+#undef GROUPDEF
+#undef GROUPDEFEND
+};
+
+#endif
+
+const char*
+getAnimBlockName(int32 i)
+{
+	if(i < 0)
+		return "null";
+	else
+		return gamedata->animManagerInst->m_aAnimBlocks[i].name;
+}
+
+const char*
+getAnimGroupName(int32 id)
+{
+#ifdef LCS
+	return assocDefs[id].name;
+#else
+	return gamedata->animManagerInst->assocGroups[id].groupname;
+#endif
+}
+
+void
+writeAllModelInfo(void)
+{
+	int i, j;
+	CBaseModelInfo *mi;
+	CSimpleModelInfo *smi;
+	CTimeModelInfo *tmi;
+	CElementGroupModelInfo *emi;
+	CWeaponModelInfo *wmi;
+	CPedModelInfo *pmi;
+	char tmpname[50];
+	const char *name;
+	for(i = 0; i < gamedata->numModelInfos; i++){
+		mi = gamedata->modelInfoPtrs[i];
+		if(mi == nil)
+			continue;
+		smi = (CSimpleModelInfo*)mi;
+		tmi = (CTimeModelInfo*)mi;
+		emi = (CElementGroupModelInfo*)mi;
+		wmi = (CWeaponModelInfo*)mi;
+		pmi = (CPedModelInfo*)mi;
+
+if(mi->type != MODELINFO_PED)
+	continue;
+
+		printf("%d", i);
+
+		name = lookupHashKey(mi->hashKey);
+		if(mi->hashKey == 0)
+			name = "null";
+		else if(name == nil){
+			snprintf(tmpname, 50, "hash:%x", mi->hashKey);
+			name = tmpname;
+		}
+		printf(", %s", name);
+
+		if(mi->txdSlot >= 0)
+			name = gamedata->texlistPool->items[mi->txdSlot].name;
+		else
+			name = "null";
+		printf(", %s", name);
+
+		if(mi->type == MODELINFO_SIMPLE || mi->type == MODELINFO_TIME){
+			printf(", %d", smi->numObjects);
+			for(j = 0; j < smi->numObjects; j++)
+				printf(", %.0f", smi->drawDistances[j]);
+			printf(", %d", computeFlags(smi->flags));
+			if(mi->type == MODELINFO_TIME)
+				printf(", %d, %d", tmi->timeOn, tmi->timeOff);
+		}
+
+		if(mi->type == MODELINFO_ELEMENTGROUP)
+			printf(", %s", getAnimBlockName(emi->animFileIndex));
+
+		if(mi->type == MODELINFO_PED){
+			// TODO:
+			//  ped type
+			//  ped stats
+			printf(", %s", getAnimGroupName(pmi->animGroup));
+			printf(", %x", pmi->carsDriveMask);
+			printf(", %s", getAnimBlockName(pmi->animFileIndex));
+			printf(", %d, %d", pmi->radio1, pmi->radio2);
+		}
+
+		if(mi->type == MODELINFO_WEAPON)
+			printf(", %s, 1, %.0f", getAnimBlockName(wmi->animFileIndex), wmi->drawDistances[0]);
+
+//		printf(", %d", mi->type);
+
+		printf("\n");
+	}
+}
+
 #ifdef VCS
 
 void
-extractResourceVCS(RslStream *rslstr)
+dumpVCSObjects(void)
 {
 	int i;
-	char tempname[128];
-	RslElementGroup **C3dMarkers__m_pRslElementGroupArray;
-	ResourceImage *res;
-	assert(sizeof(ResourceImage) == 0xAC);
-
-	res = (ResourceImage*)rslstr->data;
-
 	CBaseModelInfo *bmi;
 	const char *texname;
-	for(i = 0; i < res->numModelInfos; i++){
-		bmi = res->modelInfoPtrs[i];
+	for(i = 0; i < gamedata->numModelInfos; i++){
+		bmi = gamedata->modelInfoPtrs[i];
 		if(bmi == nil)
 			continue;
 
@@ -1107,8 +1243,8 @@ extractResourceVCS(RslStream *rslstr)
 	}
 
 	char tmpbuffer[30];
-	for(i = 0; i < res->numModelInfos; i++){
-		bmi = res->modelInfoPtrs[i];
+	for(i = 0; i < gamedata->numModelInfos; i++){
+		bmi = gamedata->modelInfoPtrs[i];
 		if(bmi == nil)
 			continue;
 		CSimpleModelInfo *smi = (CSimpleModelInfo*)bmi;
@@ -1134,7 +1270,7 @@ extractResourceVCS(RslStream *rslstr)
 
 		texname = nil;
 		if(bmi->txdSlot >= 0)
-			texname = res->texlistPool->items[bmi->txdSlot].name;
+			texname = gamedata->texlistPool->items[bmi->txdSlot].name;
 		else
 			texname = "NULL";
 
@@ -1156,10 +1292,17 @@ extractResourceVCS(RslStream *rslstr)
 
 		printf("\n");
 	}
-	return;
+}
 
-	C3dMarkers__m_pRslElementGroupArray = res->markers;
+#endif
 
+void
+extractMarkers(void)
+{
+	int i;
+	char tempname[128];
+	RslElementGroup **C3dMarkers__m_pRslElementGroupArray;
+	C3dMarkers__m_pRslElementGroupArray = gamedata->markers;
 	for(i = 0; i < 32; i++){
 		if(C3dMarkers__m_pRslElementGroupArray[i]){
 			snprintf(tempname, 128, "marker%d.dff", i);
@@ -1172,7 +1315,47 @@ extractResourceVCS(RslStream *rslstr)
 		}
 	}
 }
+
+void
+dumpAnimations(CAnimManager *mgr)
+{
+	CAnimBlock *block;
+	int i, j;
+	for(i = 0; i < mgr->m_numAnimBlocks; i++){
+		block = &mgr->m_aAnimBlocks[i];
+		printf("%s\n", block->name);
+		for(j = 0; j < block->numAnims; j++)
+			printf("  %s\n", mgr->m_aAnimations[j + block->animBase].name);
+	}
+}
+
+#ifdef VCS
+void
+dumpVCSanimData(CAnimManager *mgr)
+{
+	int i, j;
+	CAnimAssocGroup_vcs *a = mgr->assocGroups;
+	for(i = 0; i < mgr->numAssocGroups; i++){
+		printf("%s %s %x %x\n", a->groupname, a->blockname, a->animBase, a->numAnims);
+		for(j = 0; j < a->numAnims; j++)
+			printf("  %s\n", mgr->associations[j+a->animBase].name);
+		a++;
+	}
+}
 #endif
+
+void
+extractResource(void)
+{
+#ifdef VCS
+//	dumpVCSanimData(gamedata->animManagerInst);
+#else
+//	dumpAnimations();
+#endif
+	writeAllModelInfo();
+//	extractMarkers();
+}
+
 
 void
 usage(void)
@@ -1181,6 +1364,7 @@ usage(void)
 	fprintf(stderr, "\t-v RW version, e.g. 33004 for 3.3.0.4\n");
 	fprintf(stderr, "\t-x extract textures to tga\n");
 	fprintf(stderr, "\t-s don't unswizzle textures\n");
+	fprintf(stderr, "\t-m dump data to find missing names in VCS\n");
 	exit(1);
 }
 
@@ -1206,6 +1390,7 @@ main(int argc, char *argv[])
 
 	assert(sizeof(void*) == 4);
 	int extract = 0;
+	int missing = 0;
 
 	int mdltype = MDL_ANY;
 
@@ -1218,6 +1403,9 @@ main(int argc, char *argv[])
 		break;
 	case 'x':
 		extract++;
+		break;
+	case 'm':
+		missing++;
 		break;
 	default:
 		usage();
@@ -1375,9 +1563,13 @@ main(int argc, char *argv[])
 		rwtxd->streamWrite(&stream);
 		stream.close();
 	}else if(rslstr->ident == GTAG_IDENT){
+		gamedata = (ResourceImage*)rslstr->data;
 #ifdef VCS
-		extractResourceVCS(rslstr);
+		if(missing)
+			dumpVCSObjects();
+		else
 #endif
+			extractResource();
 	}else
 		printf("unknown file type %X\n", rslstr->ident);
 
