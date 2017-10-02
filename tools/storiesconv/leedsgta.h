@@ -10,9 +10,28 @@ enum ModelInfoType
 	MODELINFO_XTRACOMP     = 8,	// unused
 };
 
+enum VehicleType
+{
+	VEHICLETYPE_CAR,
+	VEHICLETYPE_BOAT,
+#ifdef VCS
+	VEHICLETYPE_JETSKI,
+#endif
+	VEHICLETYPE_TRAIN,
+	VEHICLETYPE_HELI,
+	VEHICLETYPE_PLANE,
+	VEHICLETYPE_BIKE,
+	VEHICLETYPE_FERRY,
+};
+
 struct CVector
 {
 	float x, y, z;
+};
+
+struct CVector4d	// or VuVector?
+{
+	float x, y, z, w;
 };
 
 struct sChunkHeader
@@ -157,6 +176,95 @@ static_assert(sizeof(CPedModelInfo) == 0x44, "ResourceImage: error");
 static_assert(sizeof(CPedModelInfo) == 0xFC, "ResourceImage: error");
 #endif
 
+struct CVehicleModelInfo__inst
+{
+	void *unused;	// probably ms_pEnvironmentMaps
+	RGBA m_vehicleColourTable[256];
+	char m_compsUsed[2];
+	char ms_compsToUse[2];
+};
+
+#ifdef LCS
+#define NUMPRIM 25
+#define NUMSEC 25
+#else
+#define NUMPRIM 30
+#define NUMSEC 25
+#endif
+
+
+// hash: 51964ff
+struct CVehicleModelInfo : CElementGroupModelInfo
+{
+#ifdef LCS
+	uint8 m_lastColours[2];
+	char m_gameName[10];
+	uint32 m_vehicleType;
+	float m_wheelScale;
+	int16 m_wheelId;
+	int16 m_handlingId;
+	uint8 m_numDoors;
+	int8 m_vehicleClass;
+	uint8 m_level;
+	uint8 m_numExtras;
+	uint16 m_frequency;
+	int32 unk0;	// probably pad for CVector4d
+	CVector4d m_dummyPos[5];
+	uint32 m_compRules;
+	float m_bikeSteerAngle;
+	RslMaterial *m_materialsPrimary[NUMPRIM];
+	RslMaterial *m_materialsSecondary[NUMSEC];
+	uint8 m_colours[2][8];	// from carcols.dat
+	uint8 m_numColours;
+	uint8 m_lastColour;
+	int8 m_currentColours[2];
+	float m_normalSplay;	// "amount the normals are splayed by to improve the environment mapping on PSP"
+	RslElement **m_extras;
+	int32 m_animFileIndex;
+#else
+/*
+	still looking for:
+	uint8 m_numExtras;
+*/
+	int unk0[2];
+	void *m_handling;
+	int unk1[5];
+	float m_normalSplay;	// "amount the normals are splayed by to improve the environment mapping on PSP"
+	uint32 m_vehicleType;
+	float m_wheelScale;
+	float m_wheelScaleRear;
+	CVector4d m_dummyPos[15];
+	uint32 m_compRules;
+	float m_bikeSteerAngle;
+	char m_gameName[8];
+
+	uint8 unk2;	// m_lastColour ?
+	uint8 m_numColours;
+	uint8 unk3;	// 0/1?
+	uint8 m_colours[8][2];	// from carcols.dat
+	char unk4[25];
+	RslMaterial *m_materialsPrimary[NUMPRIM];
+	RslMaterial *m_materialsSecondary[NUMSEC];
+
+	RslElement **m_extras;
+	int32 m_animFileIndex;
+	int16 m_wheelId;
+	uint16 m_frequency;
+	uint8 m_numDoors;
+	int8 m_vehicleClass;
+	uint8 m_level;
+	char unk5[0x29];
+#endif
+};
+#ifdef LCS
+static_assert(sizeof(CVehicleModelInfo) == 0x190, "CVehicleModelInfo: error");
+#else
+static_assert(offsetof(CVehicleModelInfo, m_dummyPos)-sizeof(CElementGroupModelInfo) == 0x30, "CVehicleModelInfo: error");
+static_assert(offsetof(CVehicleModelInfo, m_gameName)-sizeof(CElementGroupModelInfo) == 0x128, "CVehicleModelInfo: error");
+static_assert(sizeof(CVehicleModelInfo) == 0x2a0, "CVehicleModelInfo: error");
+#endif
+
+
 // might be nicer to have this as proper templates
 struct CPool_generic
 {
@@ -202,7 +310,7 @@ struct ResourceImage {
 	void *tempColModels;
 	void *objectInfo;	// object.dat
 #ifdef LCS
-	void *vehicleModelInfo_Info;	// carcols.dat
+	CVehicleModelInfo__inst *vehicleModelInfo_Info;	// carcols.dat
 #else
 	void *unknown0;
 #endif
@@ -218,7 +326,7 @@ struct ResourceImage {
 	PedStats **pedStats;		// pedstats.dat [42]
 
 #ifdef VCS
-	void *vehicleModelInfo_Info;	// carcols.dat
+	uint8 *colourTable;	// pedcols.dat + carcols.dat
 	void *unknown1;
 #endif
 
@@ -230,7 +338,7 @@ struct ResourceImage {
 #ifdef LCS
 	void *handlingManager;		// handling.dat
 #else
-	void *weatherTypeList;		// not hardcoded in VCS?
+	void *weatherTypeList;
 #endif
 	void *adhesiveLimitTable;		// surface.dat
 	void *timecycle;			// timecyc.dat
