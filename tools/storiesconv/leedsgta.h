@@ -35,14 +35,42 @@ struct TexListDef
 	char name[20];
 };
 
+struct PedStats
+{
+#ifdef LCS
+	int32 index;
+	char name[24];
+	float fleeDistance;
+	float headingChangeRate;
+	uint8 fear;
+	uint8 temper;
+	uint8 lawfulness;
+	uint8 sexiness;
+	float attackStrength;
+	float defendWeakness;
+	uint16 flags;
+#else
+	int32 index;
+	float fleeDistance;
+	float headingChangeRate;
+	float attackStrength;
+	float defendWeakness;
+	uint16 flags;
+	uint8 fear;
+	uint8 temper;
+	uint8 lawfulness;
+	uint8 sexiness;
+	char name[24];
+#endif
+};
 
 struct CBaseModelInfo
 {
 	int32	field0;
-	int32	field4;
+	const char *name;	// we'll use field4 for the name for now
+//	int32	field4;
 	uint32	hashKey;
-	const char *name;	// we'll use it for the name for now
-//	int32	fieldC;	// char *name?
+	void	*mdlFile;	// points to chunk header of mdl file at runtime
 	uint8	type;
 	int8	num2dFx;
 	bool	ownsColModel;
@@ -101,6 +129,7 @@ struct CElementGroupModelInfo : public CBaseModelInfo
 	};
 };
 
+// hash: c8807962
 struct CPedModelInfo : CElementGroupModelInfo
 {
 	int32 animGroup;
@@ -109,8 +138,24 @@ struct CPedModelInfo : CElementGroupModelInfo
 	uint32 carsDriveMask;
 	void *hitColModel;
 	int8 radio1, radio2;
+#ifdef VCS
+	// colour indices? maybe bytes?
+	short unknown0[55];
+	// editable materials it would seem, but how do they work?
+	struct {
+		RslMaterial *mat;	// filled at runtime
+		int32 numX;
+	} materialthing[6];
+	char someName[16];	// 16 is just a wild guess, possibly wrong
+	uint32 unknown1;	// always 0x7ffe9f0, even at runtime
+	uint32 unknown2;	// awlays 0
+#endif
 };
-
+#ifdef LCS
+static_assert(sizeof(CPedModelInfo) == 0x44, "ResourceImage: error");
+#else
+static_assert(sizeof(CPedModelInfo) == 0xFC, "ResourceImage: error");
+#endif
 
 // might be nicer to have this as proper templates
 struct CPool_generic
@@ -170,7 +215,7 @@ struct ResourceImage {
 	void *pedAnimInfo;
 #endif
 	void *pedType;		// ped.dat
-	void *pedStats;		// pedstats.dat
+	PedStats **pedStats;		// pedstats.dat [42]
 
 #ifdef VCS
 	void *vehicleModelInfo_Info;	// carcols.dat

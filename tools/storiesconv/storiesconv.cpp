@@ -24,8 +24,34 @@ int32 atmOffset;
 const char *lookupHashKey(uint32 key);
 uint32 GetKey(const char *str, int len);
 uint32 GetUppercaseKey(const char *str, int len);
+uint32 CalcHashKey(const char *str, int len);
+uint32 CalcHashKey(const char *str);
 
 ResourceImage *gamedata;
+
+const char *pedTypeStrings[] = {
+	"PLAYER1",
+	"PLAYER2",
+	"PLAYER3",
+	"PLAYER4",
+	"CIVMALE",
+	"CIVFEMALE",
+	"COP",
+	"GANG1",
+	"GANG2",
+	"GANG3",
+	"GANG4",
+	"GANG5",
+	"GANG6",
+	"GANG7",
+	"GANG8",
+	"GANG9",
+	"EMERGENCY",
+	"FIREMAN",
+	"CRIMINAL",
+	"SPECIAL",
+	"PROSTITUTE",
+};
 
 void
 panic(const char *fmt, ...)
@@ -1190,22 +1216,36 @@ if(mi->type != MODELINFO_PED)
 			printf(", %s", getAnimBlockName(emi->animFileIndex));
 
 		if(mi->type == MODELINFO_PED){
-			// TODO:
-			//  ped type
-			//  ped stats
+			printf(", %s", pedTypeStrings[pmi->pedType]);
+			printf(", %s", gamedata->pedStats[pmi->pedStatType]->name);
 			printf(", %s", getAnimGroupName(pmi->animGroup));
 			printf(", %x", pmi->carsDriveMask);
 			printf(", %s", getAnimBlockName(pmi->animFileIndex));
-			printf(", %d, %d", pmi->radio1, pmi->radio2);
+			printf(", %d,%d", pmi->radio1, pmi->radio2);
+//#ifdef VCS
+//			printf(", %s(%d), %x, %x", pmi->someName, strlen(pmi->someName), pmi->unknown1, pmi->unknown2);
+//#endif
 		}
 
 		if(mi->type == MODELINFO_WEAPON)
 			printf(", %s, 1, %.0f", getAnimBlockName(wmi->animFileIndex), wmi->drawDistances[0]);
 
-//		printf(", %d", mi->type);
-
 		printf("\n");
 	}
+}
+
+void
+dumpPedStats(void)
+{
+	int i;
+	PedStats **pedstats = gamedata->pedStats;
+	for(i = 0; i < 42; i++)	// LCS
+		printf("%s\t%.1f\t%.1f\t%d\t%d\t%d\t%d\t%.1f\t%.1f\t%d\n", pedstats[i]->name,
+			pedstats[i]->fleeDistance, pedstats[i]->headingChangeRate,
+			pedstats[i]->fear, pedstats[i]->temper,
+			pedstats[i]->lawfulness, pedstats[i]->sexiness,
+			pedstats[i]->attackStrength, pedstats[i]->defendWeakness,
+			pedstats[i]->flags);
 }
 
 #ifdef VCS
@@ -1352,6 +1392,7 @@ extractResource(void)
 #else
 //	dumpAnimations();
 #endif
+//	dumpPedStats();
 	writeAllModelInfo();
 //	extractMarkers();
 }

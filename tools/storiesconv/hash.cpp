@@ -96,6 +96,23 @@ GetUppercaseKey(const char *str, int len)
 	return hash;
 }
 
+// Jenkins hash used for relocatable chunks
+uint32
+CalcHashKey(const char *str, int len)
+{
+	uint32 hash = 0;
+	for(int i = 0; i < len; i++){
+		hash += str[i];
+		hash += (hash << 10);
+		hash ^= (hash >> 6);
+	}
+	hash += (hash << 3);
+	hash ^= (hash >> 11);
+	hash += (hash << 15);
+	return hash;
+}
+uint32 CalcHashKey(const char *str) { return CalcHashKey(str, strlen(str)); }
+
 HashedName gtanames[] = {
 	// brute forced
 	{ 0x23290d47, "nb_neon01" },
