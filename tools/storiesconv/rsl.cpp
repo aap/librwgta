@@ -1,20 +1,14 @@
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <cassert>
-#include <stddef.h>
+#include "storiesconv.h"
 
-#include <args.h>
-#include <rw.h>
-
-#include <rwgta.h>
-
-using namespace std;
-using namespace rw;
-#include "rsl.h"
-
-// defined in storiesconv, meh
-void panic(const char *fmt, ...);
+float
+halfFloatToFloat(uint16 half)
+{
+	uint32 sign = half & 0x8000;
+	int32 exp = (half >> 10) & 0x1F;
+	uint32 mant = half & 0x3FF;
+	uint32 f = sign << 16 | (exp + 127 - 15) << 23 | mant << 13;
+	return *(float*)&f;
+}
 
 #define MAKENAME(x) #x
 #define mustFindChunk(s, type, length, version) do{if(!findChunk(s, type, length, version)) panic("couldn't find chunk %s", MAKENAME(type));}while(0)
@@ -343,8 +337,7 @@ RslElementGroupStreamRead(Stream *stream)
 	rslNodeList framelist;
 	RslElementGroup *clump;
 
-	if(!findChunk(stream, ID_STRUCT, NULL, &version))
-		panic("Couldn't find struct");
+	mustFindChunk(stream, ID_STRUCT, NULL, &version);
 	if(version > 0x33000){
 		stream->read(buf, 12);
 		numElements = buf[0];

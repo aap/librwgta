@@ -289,9 +289,9 @@ main(int argc, char *argv[])
 	case 'r':
 		surfprops++;
 		break;
-	case 'b':
-		removebody++;
-		break;
+//	case 'b':
+//		removebody++;
+//		break;
 	case 'w':
 		correctWinding++;
 		break;

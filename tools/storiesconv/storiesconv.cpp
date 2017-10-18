@@ -1,6 +1,3 @@
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
 #include "storiesconv.h"
 
 #include "leedsgta.h"
@@ -82,22 +79,6 @@ panic(const char *fmt, ...)
 }
 
 void
-RslStream::relocate(void)
-{
-	uint32 off = (uint32)(uintptr)this->data;
-	off -= 0x20;
-	this->relocTab += off;
-	this->globalTab += off;
-
-	uint8 **rel = (uint8**)this->relocTab;
-	uint8 ***tab = (uint8***)this->relocTab;
-	for(uint32 i = 0; i < this->numRelocs; i++){
-		rel[i] += off;
-		*tab[i] += off;
-	}
-}
-
-void
 writeClump(const char *filename, Clump *c)
 {
 	StreamFile stream;
@@ -110,9 +91,9 @@ writeClump(const char *filename, Clump *c)
 RslNode *dumpNodeCB(RslNode *frame, void *data)
 {
 #ifdef LCS
-	printf("%08x %08x %s %d\n", frame->nodeId, frame->hier, frame->name, frame->hierId);
+	printf("%08x %p %s %d\n", frame->nodeId, frame->hier, frame->name, frame->hierId);
 #else
-	printf("%08x %08x %08x %s %d\n", frame->nodeId, frame->nodeId2, frame->hier, frame->name, frame->hierId);
+	printf("%08x %08x %p %s %d\n", frame->nodeId, frame->nodeId2, frame->hier, frame->name, frame->hierId);
 #endif
 //	printf(" frm: %x %s %x\n", frame->nodeId, frame->name, frame->hierId);
 	RslNodeForAllChildren(frame, dumpNodeCB, data);
@@ -243,16 +224,16 @@ LoadPed(uint8 *data)
 }
 
 Clump*
-LoadAny(RslStream *rslstr, const char *name)
+LoadAny(sChunkHeader &header, uint8 *data, const char *name)
 {
 	Clump *c;
-	c = LoadSimple(rslstr->data, "object", rslstr->numFuncs);
+	c = LoadSimple(data, "object", header.numFuncs);
 	if(c) return c;
-	c = LoadElementGroup(rslstr->data);
+	c = LoadElementGroup(data);
 	if(c) return c;
-	c = LoadVehicle(rslstr->data);
+	c = LoadVehicle(data);
 	if(c) return c;
-	c = LoadPed(rslstr->data);
+	c = LoadPed(data);
 	if(c) return c;
 	return nil;
 }
@@ -511,7 +492,7 @@ dumpVCSObjects(void)
 //		}
 	}
 
-	char tmpbuffer[30];
+//	char tmpbuffer[30];
 	for(i = 0; i < gamedata->numModelInfos; i++){
 		bmi = gamedata->modelInfoPtrs[i];
 		if(bmi == nil)
@@ -650,6 +631,223 @@ extractResource(void)
 //	extractMarkers();
 }
 
+char *arg1;
+
+void
+dumpLevel(sLevelChunk *level)
+{
+	rw::StreamFile stream;
+
+	int len = strlen(arg1)+1;
+	char filename[1024];
+	strncpy(filename, arg1, len);
+	filename[len-3] = 'i';
+	filename[len-2] = 'm';
+	filename[len-1] = 'g';
+	filename[len] = '\0';
+	if(stream.open(filename, "rb") == nil)
+		panic("couldn't open %s", filename);
+	filename[len-4] = '\\';
+	filename[len-3] = '\0';
+
+	char name[1024];
+	uint8 *data;
+	StreamFile outf;
+	sChunkHeader *h;
+	uint32 i = 0;
+	for(h = level->sectorRows[0].header; h->ident == WRLD_IDENT; h++){
+		sprintf(name, "world%04d.wrld", i++);
+		strcat(filename, name);
+		if(outf.open(filename, "wb") == 0)
+			panic("couldn't open %s", filename);
+		data = new uint8[h->fileSize];
+		memcpy(data, h, sizeof(sChunkHeader));
+		stream.seek(h->globalTab, 0);	// this is the offset for some reason
+		stream.read(data+0x20, h->fileSize-sizeof(sChunkHeader));
+		outf.write(data, h->fileSize);
+		outf.close();
+		filename[len-3] = '\0';
+	}
+/*
+	// radar textures
+	h = world->textures;
+	for(i = 0; i < world->numTextures; i++){
+		sprintf(name, "txd%04d.chk", i);
+		strcat(filename, name);
+		if(outf.open(filename, "wb") == nil)
+			panic("couldn't open %s", filename);
+		data = new uint8[h->fileEnd];
+		memcpy(data, h, 0x20);
+		stream.seek(h->root, 0);
+		stream.read(data+0x20, h->fileEnd-0x20);
+		outf.write(data, h->fileEnd);
+		outf.close();
+		filename[len-3] = '\0';
+		h++;
+	}
+*/
+	stream.close();
+}
+
+void
+dumpSector(Sector *sector)
+{
+	CVector min = { 10000000.0f, 10000000.0f, 10000000.0f };
+	CVector max = { -10000000.0f, -10000000.0f, -10000000.0f };
+	sGeomInstance *inst;
+
+	printf("%x %s %p %p %p %p %p %p %p %p\n", sector->unk1, arg1,
+		sector->sectionA, sector->sectionB, sector->sectionC, sector->sectionD,
+		sector->sectionE, sector->sectionF, sector->sectionG, sector->sectionEnd);
+	fflush(stdout);
+	// what is this?
+//	if((sector->unk1 & 2) == 0)	// this is wrong
+		return;
+
+	for(inst = sector->sectionA; inst != sector->sectionEnd; inst++){
+		// these are in worldspace, and per object not per model placement
+		float x = halfFloatToFloat(inst->bound[0]);
+		float y = halfFloatToFloat(inst->bound[1]);
+		float z = halfFloatToFloat(inst->bound[2]);
+		float r = halfFloatToFloat(inst->bound[3]);
+
+
+//		printf("%d %f %f %f %f\n", inst->id & 0x7FFF, x, y, z, r);
+		RslV3 v = inst->matrix.pos;
+//		printf("%d %8.2f %8.2f %8.2f %8.2f\n", inst->id & 0x7FFF, inst->matrix.right.x, inst->matrix.up.x, inst->matrix.at.x, inst->matrix.pos.x);
+//		printf("%d %8.2f %8.2f %8.2f %8.2f\n", inst->id & 0x7FFF, inst->matrix.right.y, inst->matrix.up.y, inst->matrix.at.y, inst->matrix.pos.y);
+//		printf("%d %8.2f %8.2f %8.2f %8.2f\n", inst->id & 0x7FFF, inst->matrix.right.z, inst->matrix.up.z, inst->matrix.at.z, inst->matrix.pos.z);
+//		printf("%d %8.2f %8.2f %8.2f %8.2f\n", inst->id & 0x7FFF, inst->matrix.rightw, inst->matrix.upw, inst->matrix.atw, inst->matrix.posw);
+		// ignore placement, just get center
+		v.x = x;
+		v.y = y;
+		v.z = z;
+		if(v.x < min.x) min.x = v.x;
+		if(v.y < min.y) min.y = v.y;
+		if(v.z < min.z) min.z = v.z;
+		if(v.x > max.x) max.x = v.x;
+		if(v.y > max.y) max.y = v.y;
+		if(v.z > max.z) max.z = v.z;
+//		printf("point pos:[%f, %f, %f] scale:[0.5, 0.5, 0.5]\n", inst->matrix.pos.x, inst->matrix.pos.y, inst->matrix.pos.z);
+//		printf("%d %d\n", inst->id, inst->resId);
+	}
+	CVector pos = { (min.x+max.x)/2.0f, (min.y+max.y)/2.0f, min.z };
+	float w = max.x-min.x;
+	float l = max.y-min.y;
+	float h = max.z-min.z;
+//	printf("box width:%f length:%f height:%f pos:[%f,%f,%f] name:\"%s\"\n", w, l, h, pos.x, pos.y, pos.z, arg1);
+}
+
+void
+dumpVifCmd(uint32 *data, int32 size)
+{
+	int32 i;
+	uint32 vifcode;
+	uint32 op, num, imm;
+	uint32 unpacksz;
+	for(i = 0; i*4 < size;){
+		vifcode = data[i++];
+		op = (vifcode>>24) & 0xFF;
+		num = (vifcode>>16) & 0xFF;
+		imm = vifcode & 0xFFFF;
+
+		printf(" %08X\n", vifcode);
+		switch(op & 0x7F){
+		case 0x20:	// STMASK
+			i++;
+			break;
+		case 0x30:	// STROW
+			i += 4;
+			break;
+		case 0x31:	// STCOL
+			i += 4;
+			break;
+		case 0x4A:	// MPG
+			i += num*2;
+			break;
+		case 0x50:	// DIRECT
+			i += imm*4;
+			break;
+		case 0x51:	// DIRECTHL
+			i += imm*4;
+			break;
+		unpack:
+			unpacksz = 0;
+			switch(op&0xF){
+			case 0x0:	// S-32
+				unpacksz = 4;
+				break;
+			case 0x1:	// S-16
+				unpacksz = 2;
+				break;
+			case 0x2:	// S-8
+				unpacksz = 1;
+				break;
+
+			case 0x4:	// V2-32
+				unpacksz = 2*4;
+				break;
+			case 0x5:	// V2-16
+				unpacksz = 2*2;
+				break;
+			case 0x6:	// V2-8
+				unpacksz = 2*1;
+				break;
+
+			case 0x8:	// V3-32
+				unpacksz = 3*4;
+				break;
+			case 0x9:	// V3-16
+				unpacksz = 3*2;
+				break;
+			case 0xA:	// V3-8
+				unpacksz = 3*1;
+				break;
+
+			case 0xC:	// V4-32
+				unpacksz = 4*4;
+				break;
+			case 0xD:	// V4-16
+				unpacksz = 4*2;
+				break;
+			case 0xE:	// V4-8
+				unpacksz = 4*1;
+				break;
+
+			case 0xF:	// V4-5
+				unpacksz = 2;
+				break;
+			}
+			// unpacksz in bytes
+			unpacksz *= num;
+			unpacksz = (unpacksz+3)>>2;
+			i += unpacksz;
+			break;
+		default:
+			if((op & 0x60) == 0x60)
+				goto unpack;
+			break;
+		}
+	}
+}
+
+void
+dumpBuildingGeom(sBuildingGeometry *building)
+{
+	uint8 *vifData;
+	sClippableBuildingMesh *mesh;
+	int i;
+
+	printf("building: %x %x\n", building->numMeshes, building->size);
+	mesh = (sClippableBuildingMesh*)(building+1);
+	vifData = (uint8*)(building+1) + building->size;
+	for(i = 0; i < building->numMeshes; i++){
+		printf("%x %x\n", mesh->texID, mesh->packetSize);
+		dumpVifCmd((uint32*)vifData, mesh->packetSize);
+		vifData += mesh->packetSize;
+		mesh++;
+	}
+}
 
 void
 usage(void)
@@ -708,8 +906,6 @@ main(int argc, char *argv[])
 	if(argc < 1)
 		usage();
 
-	::World *world = NULL;
-//	Sector *sector = NULL;
 	RslElementGroup *clump = NULL;
 	RslElement *atomic = NULL;
 	RslTexList *txd = NULL;
@@ -718,6 +914,7 @@ main(int argc, char *argv[])
 	StreamFile stream;
 	if(stream.open(argv[0], "rb") == nil)
 		panic("couldn't open %s", argv[0]);
+	arg1 = argv[0];
 
 	uint32 ident = stream.readU32();
 	stream.seek(0, 0);
@@ -738,69 +935,26 @@ main(int argc, char *argv[])
 		goto writeDff;
 	}
 
-	RslStream *rslstr;
-	rslstr = new RslStream;
-	stream.read(rslstr, 0x20);
-	rslstr->data = new uint8[rslstr->fileSize-0x20];
-	stream.read(rslstr->data, rslstr->fileSize-0x20);
+	assert(sizeof(sChunkHeader) == 0x20);
+
+	sChunkHeader header;
+	stream.read(&header, sizeof(sChunkHeader));
+	uint8 *data = (uint8*)malloc(header.fileSize-sizeof(sChunkHeader));
+	stream.read(data, header.fileSize-sizeof(sChunkHeader));
 	stream.close();
-	rslstr->relocate();
+	cReloctableChunk(header.ident, header.shrink).Fixup(header, data);
 
-#if 0
 	bool32 largefile;
-	largefile = rslstr->dataSize > 0x1000000;
+	largefile = header.dataSize > 4*1024*1024;
 
-	if(rslstr->ident == WRLD_IDENT && largefile){	// hack
-		world = (::World*)rslstr->data;
+	if(header.ident == WRLD_IDENT && largefile){	// hack
+		dumpLevel((sLevelChunk*)data);
 
-		int len = strlen(argv[0])+1;
-		char filename[1024];
-		strncpy(filename, argv[0], len);
-		filename[len-3] = 'i';
-		filename[len-2] = 'm';
-		filename[len-1] = 'g';
-		filename[len] = '\0';
-		if(stream.open(filename, "rb") == nil)
-			panic("couldn't open %s", filename);
-		filename[len-4] = '\\';
-		filename[len-3] = '\0';
+	//	dumpBuildingGeom(((sLevelChunk*)data)->resourceTable[0xbe1].geometry);
 
-		char name[1024];
-		uint8 *data;
-		StreamFile outf;
-		RslStreamHeader *h;
-		uint32 i = 0;
-		for(h = world->sectors->sector; h->ident == WRLD_IDENT; h++){
-			sprintf(name, "world%04d.wrld", i++);
-			strcat(filename, name);
-			if(outf.open(filename, "wb") == 0)
-				panic("couldn't open %s", filename);
-			data = new uint8[h->fileEnd];
-			memcpy(data, h, 0x20);
-			stream.seek(h->root, 0);
-			stream.read(data+0x20, h->fileEnd-0x20);
-			outf.write(data, h->fileEnd);
-			outf.close();
-			filename[len-3] = '\0';
-		}
-		// radar textures
-		h = world->textures;
-		for(i = 0; i < world->numTextures; i++){
-			sprintf(name, "txd%04d.chk", i);
-			strcat(filename, name);
-			if(outf.open(filename, "wb") == nil)
-				panic("couldn't open %s", filename);
-			data = new uint8[h->fileEnd];
-			memcpy(data, h, 0x20);
-			stream.seek(h->root, 0);
-			stream.read(data+0x20, h->fileEnd-0x20);
-			outf.write(data, h->fileEnd);
-			outf.close();
-			filename[len-3] = '\0';
-			h++;
-		}
-		stream.close();
-	}else if(rslstr->ident == WRLD_IDENT){	// sector
+	}else if(header.ident == WRLD_IDENT){	// sector
+		dumpSector((Sector*)data);
+#if 0
 		sector = (Sector*)rslstr->data;
 		fprintf(stderr, "%d\n",sector->unk1);
 		//printf("resources\n");
@@ -817,24 +971,23 @@ main(int argc, char *argv[])
 		//}
 		for(p = sector->sectionA; p < sector->sectionEnd; p++)
 			printf("%f %f %f\n", p->matrix[12], p->matrix[13], p->matrix[14]);
-	}else
 #endif
-	if(rslstr->ident == MDL_IDENT){
+	}else if(header.ident == MDL_IDENT){
 		switch(mdltype){
 		case MDL_SIMPLE:
-			rwc = LoadSimple(rslstr->data, "object", rslstr->numFuncs);
+			rwc = LoadSimple(data, "object", header.numFuncs);
 			break;
 		case MDL_ELEMENTGROUP:
-			rwc = LoadElementGroup(rslstr->data);
+			rwc = LoadElementGroup(data);
 			break;
 		case MDL_VEHICLE:
-			rwc = LoadVehicle(rslstr->data);
+			rwc = LoadVehicle(data);
 			break;
 		case MDL_PED:
-			rwc = LoadPed(rslstr->data);
+			rwc = LoadPed(data);
 			break;
 		case MDL_ANY:
-			rwc = LoadAny(rslstr, "object");
+			rwc = LoadAny(header, data, "object");
 			break;
 		default:
 			panic("unknown model type");
@@ -846,8 +999,8 @@ main(int argc, char *argv[])
 			panic("couldn't open file %s", argc > 1 ? argv[1] : "out.dff");
 		rwc->streamWrite(&stream);
 		stream.close();		
-	}else if(rslstr->ident == TEX_IDENT){
-		txd = (RslTexList*)rslstr->data;
+	}else if(header.ident == TEX_IDENT){
+		txd = (RslTexList*)data;
 	writeTxd:
 		if(extract)
 			RslTexListForAllTextures(txd, dumpTextureCB, NULL);
@@ -856,8 +1009,8 @@ main(int argc, char *argv[])
 			panic("couldn't open file %s", argc > 1 ? argv[1] : "out.txd");
 		rwtxd->streamWrite(&stream);
 		stream.close();
-	}else if(rslstr->ident == GTAG_IDENT){
-		gamedata = (ResourceImage*)rslstr->data;
+	}else if(header.ident == GTAG_IDENT){
+		gamedata = (ResourceImage*)data;
 #ifdef VCS
 		if(missing)
 			dumpVCSObjects();
@@ -865,7 +1018,7 @@ main(int argc, char *argv[])
 #endif
 			extractResource();
 	}else
-		printf("unknown file type %X\n", rslstr->ident);
+		printf("unknown file type %X\n", header.ident);
 
 	return 0;
 }

@@ -12,8 +12,8 @@ CGame::InitialiseRW(void)
 	rw::Engine::start(&engineStartParams);
 	plAttachInput();
 
+	rw::Texture::setLoadTextures(1);
 	rw::d3d::isP8supported = 0;
-	rw::engine->loadTextures = 1;
 	//rw::engine->makeDummies = 1;
 
 	rw::Image::setSearchPath("D:\\rockstargames\\ps2\\gta3\\MODELS\\gta3_archive\\txd_extracted\\;");

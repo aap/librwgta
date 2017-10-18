@@ -34,19 +34,6 @@ struct CVector4d	// or VuVector?
 	float x, y, z, w;
 };
 
-struct sChunkHeader
-{
-	uint32   ident;
-	bool32   type;
-	uint32   fileSize;
-	uint32   dataSize;
-	uint32   relocTab;
-	uint32   numRelocs;
-	uint32   globalTab;
-	uint16   numClasses;
-	uint16   numFuncs;
-};
-
 struct TexListDef
 {
 	RslTexList *texlist;
@@ -179,7 +166,7 @@ static_assert(sizeof(CPedModelInfo) == 0xFC, "ResourceImage: error");
 struct CVehicleModelInfo__inst
 {
 	void *unused;	// probably ms_pEnvironmentMaps
-	RGBA m_vehicleColourTable[256];
+	rw::RGBA m_vehicleColourTable[256];
 	char m_compsUsed[2];
 	char ms_compsToUse[2];
 };
@@ -264,6 +251,64 @@ static_assert(offsetof(CVehicleModelInfo, m_gameName)-sizeof(CElementGroupModelI
 static_assert(sizeof(CVehicleModelInfo) == 0x2a0, "CVehicleModelInfo: error");
 #endif
 
+// This is all very, very strange
+
+struct CMatrix
+{
+	RslMatrix matrix;
+	RslMatrix *pMatrix;
+#ifdef VCS
+	int32 firstRef;
+#endif
+	// this is weird....
+	uint8 flagsA;
+	uint8 flagsB;
+	uint8 flagsC;
+	uint8 flagsD;
+	uint8 flagsE;
+	uint8 flagsF;
+	uint8 flagsG;
+	uint8 flagsH;
+};
+
+struct CPlaceable
+{
+	CMatrix matrix;
+};
+
+struct CEntity
+{
+	CPlaceable placeable;
+#ifdef LCS
+	int32 firstRef; // pad in CMatrix?
+	int32 rslObject;
+	int16 scanCode;
+	int16 random;
+	int16 modelIndex;
+#else
+	// quite possibly completely wrong for VCS
+	int32 rslObject;
+	int16 scanCode;
+	int16 modelIndex;
+	int16 unknown;
+#endif
+	uint8 level;
+	uint8 interior;	// seems uninitialized in VCS o_O
+	void *vtable;
+};
+static_assert(sizeof(CEntity) == 0x60, "CEntity: error");
+
+struct CBuilding : public CEntity
+{
+};
+
+struct CTreadable : public CBuilding
+{
+};
+
+struct CDummy : public CEntity
+{
+};
 
 // might be nicer to have this as proper templates
 struct CPool_generic

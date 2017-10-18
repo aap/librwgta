@@ -13,7 +13,12 @@
 
 using namespace std;
 using namespace rw;
+
 #include "rsl.h"
+
+#include "relocchunk.h"
+
+void panic(const char *fmt, ...);
 
 extern int32 atmOffset;
 extern bool32 unswizzle;

@@ -375,7 +375,7 @@ convertAtomic(RslElement *atomic)
 
 	rwg->matList.numMaterials = g->matList.numMaterials;
 	rwg->matList.space = rwg->matList.numMaterials;
-	rwg->matList.materials = new Material*[rwg->matList.numMaterials];
+	rwg->matList.materials = rwMallocT(Material*, rwg->matList.numMaterials, MEMDUR_EVENT | ID_MATERIAL);
 	for(int32 i = 0; i < rwg->matList.numMaterials; i++)
 		rwg->matList.materials[i] = convertMaterial(g->matList.materials[i]);
 
@@ -385,7 +385,7 @@ convertAtomic(RslElement *atomic)
 
 	// allocate empty meshes
 	rwg->allocateMeshes(rwg->matList.numMaterials, 0, 1);
-	rwg->meshHeader->flags = PRIMTYPETRISTRIP;
+	rwg->meshHeader->flags = MeshHeader::TRISTRIP;
 	Mesh *meshes = rwg->meshHeader->getMeshes();
 
 	for(int32 i = 0; i < numInst; i++){
@@ -413,12 +413,13 @@ convertAtomic(RslElement *atomic)
 	rwg->numTriangles = rwg->meshHeader->guessNumTriangles();
 	rwg->allocateData();
 	rwg->allocateMeshes(rwg->meshHeader->numMeshes, rwg->meshHeader->totalIndices, 0);
+	meshes = rwg->meshHeader->getMeshes();
 
 	Skin *skin = NULL;
 	if(resHeader->flags & 0x10)
 		assert(g->skin);
 	if(g->skin){
-		skin = new Skin;
+		skin = rwNewT(Skin, 1, MEMDUR_EVENT | ID_SKIN);
 		*PLUGINOFFSET(Skin*, rwg, skinGlobals.geoOffset) = skin;
 		skin->init(g->skin->numBones, g->skin->numBones, rwg->numVertices);
 		memcpy(skin->inverseMatrices, g->skin->invMatrices, skin->numBones*64);
@@ -717,6 +718,97 @@ RslTexture *dumpTextureCB(RslTexture *texture, void*)
 	img->destroy();
 	delete[] name;
 	return texture;
+}
+
+int numInvalidTextures = 0;
+
+rw::Raster*
+convertRasterPS2(RslRasterPS2 *ras)
+{
+	uint32 f = ras->flags;
+	uint32 logw = f & 0x3F;
+	uint32 logh = f>>6 & 0x3F;
+	uint32 w = 1 << logw;
+	uint32 h = 1 << logh;
+	uint32 d = f>>12 & 0x3F;
+	//uint32 mip = f>>20 & 0xF;
+	uint32 swizmask = f>>24;
+
+	if(ras->data == (uint8*)0xcccccccc){
+		numInvalidTextures++;
+		return nil;
+	}
+
+	// some textures seem to be invalid (in VCS)
+//	if(logw > 0xF || logh > 0xF ||
+//	   logw == 0 || logh == 0)	// 0 is valid on PS2 but it probably indicates an invalid texture anyway
+//		return nil;
+
+	assert(ras->data != (uint8*)0xcccccccc);
+	uint8 *palette = getPalettePS2((RslRaster*)ras);
+	uint8 *texels = getTexelPS2((RslRaster*)ras, 0);
+
+
+	int32 hasAlpha = 0;
+	uint8 *convtex = NULL;
+	if(d == 4){
+		convtex = rwNewT(uint8, w*h, 0);
+		for(uint32 i = 0; i < w*h/2; i++){
+			int32 a = texels[i] & 0xF;
+			int32 b = texels[i] >> 4;
+			convtex[i*2+0] = a;
+			convtex[i*2+1] = b;
+		}
+		if(swizmask & 1 && unswizzle){
+			uint8 *tmp = rwNewT(uint8, w*h, 0);
+			unswizzle8(tmp, convtex, w, h);
+			rwFree(convtex);
+			convtex = tmp;
+		}
+	}else if(d == 8){
+		convtex = rwNewT(uint8, w*h, 0);
+		if(swizmask & 1 && unswizzle)
+			unswizzle8(convtex, texels, w, h);
+		else
+			memcpy(convtex, texels, w*h);
+		convertCLUT(convtex, w, h);
+	}
+
+	rw::Image *img = rw::Image::create(w, h, d);
+	img->allocate();
+	int32 pallen = d == 4 ? 16 :
+	               d == 8 ? 256 : 0;
+	if(pallen){
+		uint8 *p = img->palette;
+		for(int32 i = 0; i < pallen; i++){
+			p[i*4+0] = palette[i*4+0];
+			p[i*4+1] = palette[i*4+1];
+			p[i*4+2] = palette[i*4+2];
+			p[i*4+3] = palette[i*4+3]*255/128;
+		}
+		memcpy(img->pixels, convtex, w*h);
+	}else
+		memcpy(img->pixels, texels, w*h*d/8);
+
+	if(d == 32){
+		// texture is fucked, but pretend it isn't
+		uint8 *p = img->pixels;
+		uint8 c[3];
+		for(uint32 i = 0; i < w*h; i++){
+			c[0] = p[i*4+0];
+			c[1] = p[i*4+1];
+			c[2] = p[i*4+2];
+			p[i*4+2] = c[0];
+			p[i*4+1] = c[1];
+			p[i*4+0] = c[2];
+			p[i*4+3] = p[i*4+3]*255/128;
+		}
+	}
+	img->unindex();
+	rw::Raster *rwras = rw::Raster::createFromImage(img);
+	img->destroy();
+	rwFree(convtex);
+	return rwras;
 }
 
 RslTexture*

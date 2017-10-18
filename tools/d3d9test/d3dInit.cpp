@@ -17,7 +17,7 @@ Init()
 	gta::attachPlugins();
 	rw::Engine::open();
 	rw::Engine::start(&engineStartParams);
-	rw::engine->loadTextures = 1;
+	rw::Texture::setLoadTextures(1);
 
 	rw::TexDictionary::setCurrent(rw::TexDictionary::create());
 	rw::Image::setSearchPath("Y:\\ps2\\gta3\\MODELS\\gta3_archive\\txd_extracted\\;"

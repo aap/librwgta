@@ -5,20 +5,9 @@ enum {
 	GTAG_IDENT = 0x47544147,
 };
 
-struct RslStream {
-	uint32   ident;
-	bool32   type;
-	uint32   fileSize;
-	uint32   dataSize;
-	uint32   relocTab;
-	uint32   numRelocs;
-	uint32   globalTab;
-	uint16   numClasses;
-	uint16   numFuncs;
+typedef uint16 float16;
 
-	uint8 *data;
-	void relocate(void);
-};
+float halfFloatToFloat(float16 half);
 
 struct RslObject;
 struct RslObjectHasNode;
@@ -51,13 +40,13 @@ struct RslV3
 struct RslMatrix
 {
 	RslV3 right;
-	uint32 flags;
+	float rightw;
 	RslV3 up;
-	uint32 pad1;
+	float upw;
 	RslV3 at;
-	uint32 pad2;
+	float atw;
 	RslV3 pos;
-	uint32 pad3;
+	float posw;
 };
 
 void RslMatrixSetIdentity(RslMatrix *matrix);
@@ -173,7 +162,7 @@ struct RslTexList {
 	RslLLLink   lInInstance;
 };
 
-RslTexList *RslTexListStreamRead(Stream *stream);
+RslTexList *RslTexListStreamRead(rw::Stream *stream);
 RslTexList *RslTexListCreate(void);
 RslTexture *RslTexListAddTexture(RslTexList *dict, RslTexture *tex);
 RslTexList *RslTexListForAllTextures(RslTexList *dict, RslTextureCallBack fpCallBack, void *pData);
@@ -188,8 +177,8 @@ struct RslTexture {
 
 RslTexture *RslTextureCreate(RslRaster *raster);
 void RslTextureDestroy(RslTexture *texture);
-RslTexture *RslTextureStreamRead(Stream *stream);
-RslTexture *RslReadNativeTexturePS2(Stream *stream);
+RslTexture *RslTextureStreamRead(rw::Stream *stream);
+RslTexture *RslReadNativeTexturePS2(rw::Stream *stream);
 
 struct RslNode {
 	RslObject         object;
@@ -227,7 +216,7 @@ struct rslNodeList
 	int32 numNodes;
 };
 
-void rslNodeListStreamRead(Stream *stream, rslNodeList *framelist);
+void rslNodeListStreamRead(rw::Stream *stream, rslNodeList *framelist);
 void rslNodeListInitialize(rslNodeList *frameList, RslNode *root);
 
 struct RslElementGroup {
@@ -243,7 +232,7 @@ struct RslElementGroup {
      (_clump))
 
 RslElementGroup *RslElementGroupCreate(void);
-RslElementGroup *RslElementGroupStreamRead(Stream *stream);
+RslElementGroup *RslElementGroupStreamRead(rw::Stream *stream);
 RslElementGroup *RslElementGroupAddElement(RslElementGroup *clump, RslElement *a);
 int32 RslElementGroupGetNumElements(RslElementGroup *clump);
 RslElementGroup *RslElementGroupForAllElements(RslElementGroup *clump, RslElementCallBack callback, void *pData);
@@ -269,7 +258,7 @@ struct RslElement {
 
 RslElement *RslElementCreate(void);
 RslElement *RslElementSetNode(RslElement *atomic, RslNode *frame);
-RslElement *RslElementStreamRead(Stream *stream, rslNodeList *framelist);
+RslElement *RslElementStreamRead(rw::Stream *stream, rslNodeList *framelist);
 
 struct RslMaterialList {
 	RslMaterial **materials;
@@ -277,7 +266,7 @@ struct RslMaterialList {
 	int32         space;
 };
 
-void rslMaterialListStreamRead(Stream *stream, RslMaterialList *matlist);
+void rslMaterialListStreamRead(rw::Stream *stream, RslMaterialList *matlist);
 
 struct RslGeometry {
 	RslObject       object;
@@ -314,13 +303,13 @@ struct RslMaterial {
 		char       *texname;
 		RslTexture *texture;
 	};
-	RGBA        color;
+	rw::RGBA    color;
 	uint32      refCount;
 	RslMatFX   *matfx;
 };
 
 RslMaterial *RslMaterialCreate(void);
-RslMaterial *RslMaterialStreamRead(Stream *stream);
+RslMaterial *RslMaterialStreamRead(rw::Stream *stream);
 
 struct RslTAnimNodeInfo {
 	int8      id;
@@ -373,7 +362,7 @@ struct RslSkin {
 	void    *data;          // NULL
 };
 
-RslSkin *RslSkinStreamRead(Stream *stream, RslGeometry *g);
+RslSkin *RslSkinStreamRead(rw::Stream *stream, RslGeometry *g);
 
  // sPspGeometry but should be sPs2Geometry obviously...
 struct sPs2Geometry {
@@ -395,105 +384,6 @@ struct sPs2GeometryMesh {
 	uint32   dmaPacket;
 	uint16   numTriangles;
 	int16    matID;
-	int16    min[3];          // bounding box
-	int16    max[3];
+	float16  min[3];          // bounding box
+	float16  max[3];
 };
-
-#if 0
-
-struct RslStreamHeader {
-	uint32   ident;
-	uint32   unk;
-	uint32   fileEnd;      //
-	uint32   dataEnd;      // relative to beginning of header
-	uint32   reloc;	       //
-	uint32   relocSize;
-	uint32   root;        // absolute
-	uint16   zero;
-	uint16   numElements;
-};
-
-struct RslWorldGeometry {
-	uint16 numMeshes;
-	uint16 size;
-	// array of numMeshes RslWorldMesh
-	// dma data
-};
-
-struct RslWorldMesh {
-	uint16 texID;           // index into resource table
-	uint16 dmaSize;
-	uint16 uvScale[2];	// half precision float
-	uint16 unk1;
-	int16  min[3];          // bounding box
-	int16  max[3];
-};
-
-struct Resource {
-	union {
-		RslRaster        *raster;
-		RslWorldGeometry *geometry;
-		uint8            *raw;
-	};
-	uint32 *dma;
-};
-
-struct OverlayResource {
-	int32 id;
-	union {
-		RslRaster        *raster;
-		RslWorldGeometry *geometry;
-		uint8            *raw;
-	};
-};
-
-struct Placement {
-	uint16 id;
-	uint16 resId;
-	int16 bound[4];
-	int32 pad;
-	float matrix[16];
-};
-
-struct Sector {
-	OverlayResource *resources;
-	uint16           numResources;
-	uint16           unk1;
-	Placement       *sectionA;
-	Placement       *sectionB;
-	Placement       *sectionC;
-	Placement       *sectionD;
-	Placement       *sectionE;
-	Placement       *sectionF;
-	Placement       *sectionG;
-	Placement       *sectionEnd;
-	uint16           unk2;
-	uint16           unk3;
-	uint32           unk4;
-};
-
-struct SectorEntry {
-	RslStreamHeader *sector;
-	uint32           num;
-};
-
-struct World {
-	Resource    *resources;
-	SectorEntry  sectors[47];
-	uint32       numResources;
-	uint8        pad[0x180];
-
-	uint32 numX;
-	void *tabX;	// size 0x4
-
-	uint32 numY;
-	void *tabY;	// size 0x30
-
-	uint32 numZ;
-	void *tabZ;	// size 0x6
-
-	uint32           numTextures;
-	RslStreamHeader *textures; // stream headers
-};
-
-#endif

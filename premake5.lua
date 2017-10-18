@@ -1,6 +1,7 @@
 Librw = os.getenv("LIBRW")
 GLEWdir = "C:/Users/aap/src/glew-2.1.0"
 GLFW64dir = "C:/Users/aap/src/glfw-3.2.1.bin.WIN64"
+Zlibdir = "C:/Users/aap/src/zlib-1.2.11"
 
 workspace "librwgta"
 	location "build"
@@ -92,6 +93,27 @@ function findlibs()
 	filter {}
 end
 
+function skeleton()
+	files { path.join(Librw, "skeleton/*.cpp"), path.join(Librw, "skeleton/*.h") }
+	includedirs { path.join(Librw, "skeleton") }
+end
+
+function skeltool(dir)
+	targetdir (Bindir)
+	files { path.join("tools", dir, "*.cpp"),
+	        path.join("tools", dir, "*.h") }
+	vpaths {
+		{["src"] = { path.join("tools", dir, "*") }},
+		{["skeleton"] = { "skeleton/*" }},
+	}
+	skeleton()
+	debugdir ( path.join("tools", dir) )
+	includedirs { "." }
+	libdirs { Libdir }
+	links { "rw", "librwgta" }
+	findlibs()
+end
+
 project "convdff"
 	tool("convdff")
 	kind "ConsoleApp"
@@ -113,6 +135,43 @@ project "vcsconv"
 	kind "ConsoleApp"
 	removeplatforms { "*gl3", "*d3d9" }
 	defines { "VCS" }
+
+project "lcsview"
+	kind "WindowedApp"
+	characterset ("MBCS")
+	flags { "WinMain" }
+	skeltool("storiesview")
+	includedirs { "tools/storiesconv" }
+	files { "tools/storiesconv/relocchunk.cpp" }
+	files { "tools/storiesconv/rsl.cpp" }
+	files { "tools/storiesconv/rslconv.cpp" }
+	includedirs { Zlibdir }
+	libdirs { Zlibdir }
+	links { "zlib" }
+	removeplatforms { "*null" }
+	removeplatforms { "*amd64*" }
+	removeplatforms { "ps2" } -- for now
+	defines { "LCS" }
+	debugdir "X:\\"
+
+project "vcsview"
+	kind "WindowedApp"
+	characterset ("MBCS")
+	flags { "WinMain" }
+	skeltool("storiesview")
+	includedirs { "tools/storiesconv" }
+	files { "tools/storiesconv/relocchunk.cpp" }
+	files { "tools/storiesconv/rsl.cpp" }
+	files { "tools/storiesconv/rslconv.cpp" }
+	includedirs { Zlibdir }
+	libdirs { Zlibdir }
+	links { "zlib" }
+	removeplatforms { "*null" }
+	removeplatforms { "*amd64*" }
+	removeplatforms { "ps2" } -- for now
+	defines { "VCS" }
+	debugdir "G:\\"
+
 
 project "coltest"
 	tool("coltest")
