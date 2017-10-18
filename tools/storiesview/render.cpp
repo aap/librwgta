@@ -1,5 +1,49 @@
 #include "storiesview.h"
 
+namespace Renderer
+{
+
+int numOpaqueAtomics;
+int numTransparentAtomics;
+rw::Atomic *opaqueRenderList[0x8000];
+rw::Atomic *transparentRenderList[0x8000];
+
+void
+reset(void)
+{
+	numOpaqueAtomics = 0;
+	numTransparentAtomics = 0;
+}
+
+void
+addToOpaqueRenderList(rw::Atomic *a)
+{
+	opaqueRenderList[numOpaqueAtomics++] = a;
+}
+
+void
+addToTransparentRenderList(rw::Atomic *a)
+{
+	// TODO: sort
+	transparentRenderList[numTransparentAtomics++] = a;
+}
+
+void
+renderOpaque(void)
+{
+	int i;
+	for(i = 0; i < numOpaqueAtomics; i++)
+		opaqueRenderList[i]->render();
+}
+
+void
+renderTransparent(void)
+{
+	int i;
+	for(i = 0; i < numTransparentAtomics; i++)
+		transparentRenderList[i]->render();
+}
+
 void
 drawEntity(CEntity *e)
 {
@@ -42,4 +86,6 @@ renderCubesIPL(void)
 			continue;
 		drawEntity(b);
 	}
+}
+
 }

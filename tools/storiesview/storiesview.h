@@ -62,7 +62,6 @@ extern int drawLOD;
 extern rw::Geometry *cubeGeo;
 extern rw::Material *cubeMat;
 extern rw::Light *pAmbient;
-void renderCubesIPL(void);
 
 bool GetIsTimeInRange(uint8 h1, uint8 h2);
 
@@ -71,8 +70,7 @@ enum SectorType
 	SECTOR_NA,
 	SECTOR_WORLD,
 	SECTOR_INTERIOR,
-	// probably not complete
-	SECTOR_DATA,	// only resources
+	SECTOR_TRIG,	// only resources
 };
 
 // streamed world
@@ -81,6 +79,7 @@ struct BuildingExt
 	bool isTimed;
 	uint8 timeOn, timeOff;
 	bool hidden;
+	bool isTransparent;
 	int lastFrame;
 };
 struct SectorExt
@@ -89,10 +88,18 @@ struct SectorExt
 	rw::V3d origin;
 	SectorType type;
 	int secx, secy;	// world sector indices
+	// for triggered sectors
+	bool isTimed;
+	uint8 timeOn, timeOff;
+	bool hidden;
 
 	int numInstances;
 	rw::Atomic **instances;
 	rw::Atomic **dummies;
+};
+struct ResourceExt
+{
+	SectorExt *sector;
 };
 struct LevelExt
 {
@@ -105,6 +112,7 @@ struct LevelExt
 	Area **areas;
 #endif
 	BuildingExt *buildings[0x8000];
+	ResourceExt *res;
 };
 extern LevelExt *gLevel;
 extern SectorExt *worldSectors[NUMSECTORSX][NUMSECTORSY];
@@ -113,6 +121,16 @@ void LoadSector(int n);
 void LoadArea(int n);
 void renderCubesSector(SectorExt*);
 void renderSector(SectorExt*);
+
+namespace Renderer
+{
+void renderCubesIPL(void);
+void reset(void);
+void addToOpaqueRenderList(rw::Atomic *a);
+void addToTransparentRenderList(rw::Atomic *a);
+void renderOpaque(void);
+void renderTransparent(void);
+};
 
 typedef CPool<TexListDef, TexListDef> TexlistPool;
 typedef CPool<CBuilding, CBuilding> BuildingPool;

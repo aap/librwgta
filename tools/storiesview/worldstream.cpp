@@ -109,8 +109,11 @@ LoadLevel(eLevel lev)
 
 //	printf("%d %d\n", gLevel->numStreamingSectors, gLevel->numSectors);
 
+	// Allocate extension data
 	gLevel->sectors = (SectorExt*)malloc(gLevel->numSectors*sizeof(SectorExt));
+	gLevel->res = (ResourceExt*)malloc(gLevel->chunk->numResources*sizeof(ResourceExt));
 	memset(gLevel->sectors, 0, gLevel->numSectors*sizeof(SectorExt));
+	memset(gLevel->res, 0, gLevel->chunk->numResources*sizeof(ResourceExt));
 
 	SectorExt *se = gLevel->sectors;
 
@@ -137,17 +140,17 @@ LoadLevel(eLevel lev)
 	}
 
 	// Set up timed objects and hide building swaps, whatever that is exactly
-	TimeInfo *time = gLevel->chunk->timeObjects;
-	for(i = 0; i < gLevel->chunk->numTimeObjects; i++){
-		BuildingExt *be = GetBuildingExt(time->id);
-		if(time->timeOff & 0x80){
+	TriggerInfo *trig = gLevel->chunk->triggeredObjects;
+	for(i = 0; i < gLevel->chunk->numTriggeredObjects; i++){
+		BuildingExt *be = GetBuildingExt(trig->id);
+		if(trig->timeOff & 0x80){
 			be->isTimed = true;
-			be->timeOff = time->timeOff & 0x7F;
-			be->timeOn = time->timeOn;
+			be->timeOff = trig->timeOff & 0x7F;
+			be->timeOn = trig->timeOn;
 		}else
 			be->hidden = true;
 //		printf("%d %d %d\t%d\n", time->timeOff & 0x80, time->timeOn, time->timeOff & 0x7F, time->id);
-		time++;
+		trig++;
 	}
 
 	// Set up interior sectors
@@ -199,6 +202,15 @@ LoadSector(int n)
 //		se->sect->sectionA, se->sect->sectionB, se->sect->sectionC, se->sect->sectionD,
 //		se->sect->sectionE, se->sect->sectionF, se->sect->sectionG, se->sect->sectionEnd);
 
+	// Add new resources to global resource table
+	for(i = 0; i < se->sect->numResources; i++){
+		OverlayResource *or = &se->sect->resources[i];
+		Resource *res = &gLevel->chunk->resourceTable[or->id];
+		ResourceExt *re = &gLevel->res[or->id];
+		res->raw = or->raw;
+		re->sector = se;
+	}
+
 	// Make some room for our RW data
 	if(se->type == SECTOR_WORLD || se->type == SECTOR_INTERIOR){
 		sGeomInstance *inst;
@@ -208,15 +220,23 @@ LoadSector(int n)
 		memset(se->instances, 0, se->numInstances*sizeof(void*));
 		se->dummies = (rw::Atomic**)malloc(se->numInstances*sizeof(void*));
 		memset(se->dummies, 0, se->numInstances*sizeof(void*));
-	}
 
-	// Add new resources to global resource table
-	for(i = 0; i < se->sect->numResources; i++){
-		OverlayResource *or = &se->sect->resources[i];
-		Resource *res = &gLevel->chunk->resourceTable[or->id];
-//{ printf("%d %x\n", n, or->id); fflush(stdout); }
-//		assert(res->raw == nil);
-		res->raw = or->raw;
+		TriggerInfo *trig = se->sect->triggeredObjects;
+		for(i = 0; i < se->sect->numTriggeredObjects; i++){
+			SectorExt *se = &gLevel->sectors[trig->id];
+
+			if(trig->timeOff & 0x80){
+				se->isTimed = true;
+				se->timeOff = trig->timeOff & 0x7F;
+				se->timeOn = trig->timeOn;
+			}else
+				se->hidden = true;
+			LoadSector(trig->id);
+
+//			printf("%d %d %d\t%d\n", trig->timeOff & 0x80, trig->timeOn, trig->timeOff & 0x7F, trig->id);
+			trig++;
+		}
+
 	}
 }
 
@@ -411,6 +431,25 @@ convertBuildingMesh(rw::Geometry *geo, rw::Mesh *m, sClippableBuildingMesh *mesh
 	}
 }
 
+bool
+isTextureTransparent(rw::Texture *tex)
+{
+	if(tex == nil)
+		return false;
+	return (tex->raster->format & 0xF00) == rw::Raster::C8888 ||
+		(tex->raster->format & 0xF00) == rw::Raster::C1555;
+}
+
+bool isGeoTransparent(rw::Geometry *geo)
+{
+	int i;
+	rw::MaterialList *mlist = &geo->matList;
+	for(i = 0; i < mlist->numMaterials; i++)
+		if(isTextureTransparent(mlist->materials[i]->texture))
+			return true;
+	return false;
+}
+
 int
 lookupint(int *haystack, int n, int needle)
 {
@@ -555,17 +594,19 @@ renderSector(SectorExt *se)
 	for(i = 0; i < se->numInstances; i++){
 		sGeomInstance *inst = &se->sect->sectionA[i];
 		BuildingExt *be = GetBuildingExt(inst->GetId());
-/*
-		float x = halfFloatToFloat(inst->bound[0]);
-		float y = halfFloatToFloat(inst->bound[1]);
-		float z = halfFloatToFloat(inst->bound[2]);
-		rw::V3d pos = { x, y, z };
-//		if(TheCamera.distanceTo(pos) >= 500.0f)
-//			continue;
-*/
+
 		if(be->lastFrame == frameCounter)
 			continue;
 		be->lastFrame = frameCounter;
+
+		float x = halfFloatToFloat(inst->bound[0]);
+		float y = halfFloatToFloat(inst->bound[1]);
+		float z = halfFloatToFloat(inst->bound[2]);
+		float r = halfFloatToFloat(inst->bound[3]);
+		rw::Sphere sph = { { x, y, z }, r };
+		if(TheCamera.m_rwcam->frustumTestSphere(&sph) == rw::Camera::SPHEREOUTSIDE)
+			continue;
+
 //		if(!be->hidden)
 //			continue;
 		if(be->isTimed && !GetIsTimeInRange(be->timeOn, be->timeOff))
@@ -573,8 +614,13 @@ renderSector(SectorExt *se)
 		if(inst->IsLOD() != drawLOD)
 			continue;
 
+		ResourceExt *re = &gLevel->res[inst->resId];
+		if(re->sector && re->sector->isTimed && !GetIsTimeInRange(re->sector->timeOn, re->sector->timeOff))
+			continue;
+
 		if(se->instances[i] == nil){
 			Resource *res = GetResource(inst->resId);
+
 			rw::Geometry *geo = nil;
 			rw::Matrix m = *(rw::Matrix*)&inst->matrix;
 			if(res->raw == nil){
@@ -590,6 +636,7 @@ printf("missing 0x%X %x\n", inst->resId, inst->GetId());
 				geo = makeWorldGeometry(res->geometry);
 				res->dmaChain = geo;
 			}
+			be->isTransparent = isGeoTransparent(geo);
 
 			rw::Atomic *a = rw::Atomic::create();
 			rw::Frame *f = rw::Frame::create();
@@ -601,8 +648,12 @@ printf("missing 0x%X %x\n", inst->resId, inst->GetId());
 			f->transform(&m, rw::COMBINEREPLACE);
 			se->instances[i] = a;
 		}
-		if(se->instances[i] != (void*)1)
-			se->instances[i]->render();
+
+
+		if(be->isTransparent)
+			Renderer::addToTransparentRenderList(se->instances[i]);
+		else
+			Renderer::addToOpaqueRenderList(se->instances[i]);
 	}
 }
 

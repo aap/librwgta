@@ -75,12 +75,15 @@ struct SectorRow
 			// (startOff sectors in the world will be considered empty)
 };
 
-struct TimeInfo
+struct TriggerInfo
 {
-	// if bit 0x80 is set, this is not really a time object...
+	// There are three cases:
+	// timeOff == 0xFF -> unconditional swap
+	// timeOff &  0x80 -> timed object with timeOff&0x7F
+	// otherwise -> conditioned by cWorldStream data
 	uint8 timeOff;
 	uint8 timeOn;
-	int16 id;
+	int16 id;	// instance ID for level, sector ID for sector
 };
 
 struct AreaResource
@@ -158,9 +161,9 @@ struct Sector
 	sGeomInstance   *sectionH;
 #endif
 	sGeomInstance   *sectionEnd;
-	uint16           unk2;
+	int16            numTriggeredObjects;
 	uint16           unk3;
-	uint32           unk4;
+	TriggerInfo     *triggeredObjects;
 };
 
 struct sLevelChunk	// leeds name
@@ -169,14 +172,15 @@ struct sLevelChunk	// leeds name
 	SectorRow sectorRows[NUMSECTORSY];
 	SectorRow sectorEnd;
 	int32 numResources;
-	CVector positions[32];	// there's some data there, but the game treats them as CVectors
+	// Positions for the first 32 building instances...what's so special about them?
+	CVector positions[32];
 
 #ifdef VCS
 	int32 numX;
 	void *xs;	// 28 bytess
 #endif
-	int32 numTimeObjects;
-	TimeInfo *timeObjects;
+	int32 numTriggeredObjects;
+	TriggerInfo *triggeredObjects;
 #ifdef LCS
 	// 2dfx according to gtamodding.ru
 	int32 numY;

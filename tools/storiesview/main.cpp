@@ -26,7 +26,7 @@ rw::EngineStartParams engineStartParams;
 rw::Material *cubeMat;
 rw::Geometry *cubeGeo;
 rw::Light *pAmbient;
-int drawCubes = 1;
+int drawCubes = 0;
 int drawLOD = 1;
 int frameCounter = -1;
 
@@ -197,7 +197,7 @@ makeCube(void)
 
 	// right
 	tri[10].v[0] = 3; tri[10].v[1] = 7; tri[10].v[2] = 6; tri[10].matId = 0;
-	tri[12].v[0] = 3; tri[11].v[1] = 6; tri[11].v[2] = 2; tri[11].matId = 0;
+	tri[11].v[0] = 3; tri[11].v[1] = 6; tri[11].v[2] = 2; tri[11].matId = 0;
 
 	cubeGeo->buildMeshes();
 	cubeGeo->calculateBoundingSphere();
@@ -230,10 +230,15 @@ InitRW(void)
 	Scene.camera->setNearPlane(0.9f);
 	TheCamera.m_rwcam = Scene.camera;
 	TheCamera.m_aspectRatio = 640.0f/480.0f;
-//	TheCamera.m_target.set(0.0f, 0.0f, 0.0f);
-//	TheCamera.m_position.set(-100.0f, -100.0f, 50.0f);
-	TheCamera.m_target.set(1155.0f, -190.0f, -18.0f);
-	TheCamera.m_position.set(1286.0f, -211.0f, 50.0f);
+
+#ifdef LCS
+	TheCamera.m_position.set(1356.0f, -1107.0f, 96.0f);
+	TheCamera.m_target.set(1276.0f, -984.0f, 68.0f);
+#endif
+#ifdef VCS
+	TheCamera.m_position.set(292.0f, -1402.0f, 71.0f);
+	TheCamera.m_target.set(223.0f, -1268.0f, 41.0f);
+#endif
 
 
 	Scene.world->addCamera(Scene.camera);
@@ -245,7 +250,7 @@ InitRW(void)
 
 int curSectX = 28;
 int curSectY = 4;
-int curIntr = 0;
+int curIntr = -1;
 int curHour = 12;
 
 bool
@@ -312,13 +317,16 @@ found:
 
 	LoadLevel(levelToLoad);
 	int i;
-	for(i = 0; i < gLevel->numSectors; i++)
+//	for(i = 0; i < gLevel->numSectors; i++)
+
+	for(i = 0; i < gLevel->numWorldSectors; i++)
 		LoadSector(i);
+	for(i = 0; i < gLevel->chunk->numInteriors; i++)
+		LoadSector(gLevel->chunk->interiors[i].sectorId);
+
 #ifdef VCS
 	for(i = 0; i < gLevel->chunk->numAreas; i++)
 		LoadArea(i);
-//		LoadArea(0);
-//	exit(0);
 #endif
 }
 
@@ -351,11 +359,13 @@ Draw(void)
 	}
 	if(CPad::IsKeyJustDown('I')){
 		curIntr++;
-		if(curIntr >= gLevel->chunk->numInteriors) curIntr = 0;
+		if(curIntr >= gLevel->chunk->numInteriors) curIntr = -1;
+		debug("interior: %d\n", curIntr);
 	}
 	if(CPad::IsKeyJustDown('U')){
 		curIntr--;
-		if(curIntr < 0) curIntr = gLevel->chunk->numInteriors-1;
+		if(curIntr < -1) curIntr = gLevel->chunk->numInteriors-1;
+		debug("interior: %d\n", curIntr);
 	}
 	if(CPad::IsKeyJustDown('T')){
 		curHour--;
@@ -380,14 +390,20 @@ Draw(void)
 	TheCamera.m_rwcam->beginUpdate();
 
 	if(drawCubes)
-		renderCubesIPL();
+		Renderer::renderCubesIPL();
 //	renderCubesSector(curSectX, curSectY);
 
-//	renderSector(worldSectors[curSectX][curSectY]);
 	int i;
-	for(i = 0; i < gLevel->numWorldSectors; i++)
-		renderSector(&gLevel->sectors[i]);
-//	renderSector(&gLevel->sectors[gLevel->chunk->interiors[curIntr].sectorId]);
+	Renderer::reset();
+//	renderSector(worldSectors[curSectX][curSectY]);
+	if(curIntr >= 0)
+		renderSector(&gLevel->sectors[gLevel->chunk->interiors[curIntr].sectorId]);
+	else
+		for(i = 0; i < gLevel->numWorldSectors; i++)
+			renderSector(&gLevel->sectors[i]);
+
+	Renderer::renderOpaque();
+	Renderer::renderTransparent();
 
 	TheCamera.m_rwcam->endUpdate();
 	TheCamera.m_rwcam->showRaster();
@@ -417,12 +433,14 @@ sk::EventStatus
 AppEventHandler(sk::Event e, void *param)
 {
 	using namespace sk;
+	Rect *r;
 	switch(e){
 	case INITIALIZE:
-		AllocConsole();
-		freopen("CONIN$", "r", stdin);
-		freopen("CONOUT$", "w", stdout);
-		freopen("CONOUT$", "w", stderr);
+//		AllocConsole();
+//		freopen("CONIN$", "r", stdin);
+//		freopen("CONOUT$", "w", stdout);
+//		freopen("CONOUT$", "w", stderr);
+
 		Init();
 		plAttachInput();
 		return EVENTPROCESSED;
@@ -436,6 +454,15 @@ AppEventHandler(sk::Event e, void *param)
 	case KEYUP:
 		CPad::tempKeystates[*(int*)param] = 0;
 		return EVENTPROCESSED;
+	case RESIZE:
+		r = (Rect*)param;
+		sk::globals.width = r->w;
+		sk::globals.height = r->h;
+		if(Scene.camera){
+			sk::CameraSize(Scene.camera, r);
+			TheCamera.m_aspectRatio = (float)r->w/r->h;
+		}
+		break;
 	case IDLE:
 		Idle();
 		return EVENTPROCESSED;
