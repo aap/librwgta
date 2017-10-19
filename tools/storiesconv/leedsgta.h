@@ -331,6 +331,143 @@ struct CPool_txd
 
 #include "animation.h"
 
+#define NUMWEATHERS
+
+struct CTimeCycle
+{
+	CVector4d m_VectorToSun[16];
+	float m_fShadowFrontX[16];
+	float m_fShadowFrontY[16];
+	float m_fShadowSideX[16];
+	float m_fShadowSideY[16];
+	float m_fShadowDisplacementX[16];
+	float m_fShadowDisplacementY[16];
+
+	// TODO: check this against LCS
+	uint8 m_nAmbientRed[24][8];
+	uint8 m_nAmbientGreen[24][8];
+	uint8 m_nAmbientBlue[24][8];
+	uint8 m_nAmbientRed_Obj[24][8];
+	uint8 m_nAmbientGreen_Obj[24][8];
+	uint8 m_nAmbientBlue_Obj[24][8];
+	uint8 m_nAmbientRed_Bl[24][8];
+	uint8 m_nAmbientGreen_Bl[24][8];
+	uint8 m_nAmbientBlue_Bl[24][8];
+	uint8 m_nAmbientRed_Obj_Bl[24][8];
+	uint8 m_nAmbientGreen_Obj_Bl[24][8];
+	uint8 m_nAmbientBlue_Obj_Bl[24][8];
+	uint8 m_nDirectionalRed[24][8];
+	uint8 m_nDirectionalGreen[24][8];
+	uint8 m_nDirectionalBlue[24][8];
+	uint8 m_nSkyTopRed[24][8];
+	uint8 m_nSkyTopGreen[24][8];
+	uint8 m_nSkyTopBlue[24][8];
+	uint8 m_nSkyBottomRed[24][8];
+	uint8 m_nSkyBottomGreen[24][8];
+	uint8 m_nSkyBottomBlue[24][8];
+	uint8 m_nSunCoreRed[24][8];
+	uint8 m_nSunCoreGreen[24][8];
+	uint8 m_nSunCoreBlue[24][8];
+	uint8 m_nSunCoronaRed[24][8];
+	uint8 m_nSunCoronaGreen[24][8];
+	uint8 m_nSunCoronaBlue[24][8];
+	uint8 m_fSunSize[24][8];
+	uint8 m_fSpriteSize[24][8];
+	uint8 m_fSpriteBrightness[24][8];
+	uint8 m_nShadowStrength[24][8];
+	uint8 m_nLightShadowStrength[24][8];
+	uint8 m_nPoleShadowStrength[24][8];
+	int16 m_fFarClip[24][8];
+	int16 m_fFogStart[24][8];
+	uint8 m_nRadiosityIntensity[24][8];
+	uint8 m_nRadiosityLimit[24][8];
+	uint8 m_fLightsOnGroundBrightness[24][8];
+	uint8 m_nLowCloudsRed[24][8];
+	uint8 m_nLowCloudsGreen[24][8];
+	uint8 m_nLowCloudsBlue[24][8];
+	uint8 m_nFluffyCloudsTopRed[24][8];
+	uint8 m_nFluffyCloudsTopGreen[24][8];
+	uint8 m_nFluffyCloudsTopBlue[24][8];
+	uint8 m_nFluffyCloudsBottomRed[24][8];
+	uint8 m_nFluffyCloudsBottomGreen[24][8];
+	uint8 m_nFluffyCloudsBottomBlue[24][8];
+	uint8 m_fBlurRed[24][8];
+	uint8 m_fBlurGreen[24][8];
+	uint8 m_fBlurBlue[24][8];
+	uint8 m_fWaterRed[24][8];
+	uint8 m_fWaterGreen[24][8];
+	uint8 m_fWaterBlue[24][8];
+	uint8 m_fWaterAlpha[24][8];
+	float m_fBlurAlpha[24][8];
+	float m_fBlurOffset[24][8];
+
+	int32 m_fCurrentAmbientRed;
+	int32 m_fCurrentAmbientGreen;
+	int32 m_fCurrentAmbientBlue;
+	int32 m_fCurrentAmbientRed_Obj;
+	int32 m_fCurrentAmbientGreen_Obj;
+	int32 m_fCurrentAmbientBlue_Obj;
+	int32 m_fCurrentAmbientRed_Bl;
+	int32 m_fCurrentAmbientGreen_Bl;
+	int32 m_fCurrentAmbientBlue_Bl;
+	int32 m_fCurrentAmbientRed_Obj_Bl;
+	int32 m_fCurrentAmbientGreen_Obj_Bl;
+	int32 m_fCurrentAmbientBlue_Obj_Bl;
+	int32 m_fCurrentDirectionalRed;
+	int32 m_fCurrentDirectionalGreen;
+	int32 m_fCurrentDirectionalBlue;
+	int32 m_nCurrentSkyTopRed;
+	int32 m_nCurrentSkyTopGreen;
+	int32 m_nCurrentSkyTopBlue;
+	int32 m_nCurrentSkyBottomRed;
+	int32 m_nCurrentSkyBottomGreen;
+	int32 m_nCurrentSkyBottomBlue;
+	int32 m_nCurrentFogColourRed;
+	int32 m_nCurrentFogColourGreen;
+	int32 m_nCurrentFogColourBlue;
+	int32 m_nCurrentSunCoreRed;
+	int32 m_nCurrentSunCoreGreen;
+	int32 m_nCurrentSunCoreBlue;
+	int32 m_nCurrentSunCoronaRed;
+	int32 m_nCurrentSunCoronaGreen;
+	int32 m_nCurrentSunCoronaBlue;
+	int32 m_fCurrentSunSize;
+	int32 m_fCurrentSpriteSize;
+	int32 m_fCurrentSpriteBrightness;
+	int16 m_nCurrentShadowStrength;
+	int16 m_nCurrentLightShadowStrength;
+	int16 m_nCurrentPoleShadowStrength;
+	int32 m_fCurrentFarClip;
+	int32 m_fCurrentFogStart;
+	int32 m_nCurrentRadiosityIntensity;
+	int32 m_nCurrentRadiosityLimit;
+	int32 m_fCurrentLightsOnGroundBrightness;
+	int32 m_nCurrentLowCloudsRed;
+	int32 m_nCurrentLowCloudsGreen;
+	int32 m_nCurrentLowCloudsBlue;
+	int32 m_nCurrentFluffyCloudsTopRed;
+	int32 m_nCurrentFluffyCloudsTopGreen;
+	int32 m_nCurrentFluffyCloudsTopBlue;
+	int32 m_nCurrentFluffyCloudsBottomRed;
+	int32 m_nCurrentFluffyCloudsBottomGreen;
+	int32 m_nCurrentFluffyCloudsBottomBlue;
+	int32 m_fCurrentBlurRed;
+	int32 m_fCurrentBlurGreen;
+	int32 m_fCurrentBlurBlue;
+	int32 m_fCurrentWaterRed;
+	int32 m_fCurrentWaterGreen;
+	int32 m_fCurrentWaterBlue;
+	int32 m_fCurrentWaterAlpha;
+	int32 m_fCurrentBlurAlpha;
+	int32 m_fCurrentBlurOffset;
+	int32 m_CurrentStoredValue;
+	int32 m_FogReduction;
+	int32 m_ExtraColour;
+	int32 m_bExtraColourOn;
+	int32 m_ExtraColourInter;
+	int32 field_337C;	// just alignment?
+};
+
 struct ResourceImage {
 	void *paths;
 	CPool_generic *buildingPool;
@@ -386,7 +523,7 @@ struct ResourceImage {
 	void *weatherTypeList;
 #endif
 	void *adhesiveLimitTable;		// surface.dat
-	void *timecycle;			// timecyc.dat
+	CTimeCycle *timecycle;			// timecyc.dat
 	void *pedGroups;			// pedgrp.dat
 	void *particleSystemManager;	// particle.dat
 	void *weaponTables;		// weapon.dat

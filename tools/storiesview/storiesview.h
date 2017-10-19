@@ -80,7 +80,15 @@ struct BuildingExt
 	uint8 timeOn, timeOff;
 	bool hidden;
 	bool isTransparent;
-	int lastFrame;
+
+	struct Model {
+		int lastFrame;
+		int resId;
+		Model *next;
+	};
+	Model *resources;
+
+	Model *GetResourceInfo(int id);
 };
 struct SectorExt
 {
@@ -124,6 +132,7 @@ void renderSector(SectorExt*);
 
 namespace Renderer
 {
+extern rw::ObjPipeline *buildingPipe;
 void renderCubesIPL(void);
 void reset(void);
 void addToOpaqueRenderList(rw::Atomic *a);
@@ -131,6 +140,7 @@ void addToTransparentRenderList(rw::Atomic *a);
 void renderOpaque(void);
 void renderTransparent(void);
 };
+rw::ObjPipeline *makeBuildingPipe(void);
 
 typedef CPool<TexListDef, TexListDef> TexlistPool;
 typedef CPool<CBuilding, CBuilding> BuildingPool;
@@ -140,7 +150,9 @@ extern TexlistPool *pTexStorePool;
 extern BuildingPool *pBuildingPool;
 extern TreadablePool *pTreadablePool;
 extern DummyPool *pDummyPool;
-
+extern CTimeCycle *pTimecycle;
+extern rw::RGBA currentAmbient;
+extern rw::RGBA currentEmissive;
 
 struct CModelInfo
 {

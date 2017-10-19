@@ -440,7 +440,8 @@ isTextureTransparent(rw::Texture *tex)
 		(tex->raster->format & 0xF00) == rw::Raster::C1555;
 }
 
-bool isGeoTransparent(rw::Geometry *geo)
+bool
+isGeoTransparent(rw::Geometry *geo)
 {
 	int i;
 	rw::MaterialList *mlist = &geo->matList;
@@ -448,6 +449,15 @@ bool isGeoTransparent(rw::Geometry *geo)
 		if(isTextureTransparent(mlist->materials[i]->texture))
 			return true;
 	return false;
+}
+
+void
+setGeoMaterialColor(rw::Geometry *geo, rw::RGBA col)
+{
+	int i;
+	rw::MaterialList *mlist = &geo->matList;
+	for(i = 0; i < mlist->numMaterials; i++)
+		mlist->materials[i]->color = col;
 }
 
 int
@@ -576,6 +586,21 @@ makeWorldGeometry(sBuildingGeometry *bgeom)
 	return geo;
 };
 
+BuildingExt::Model*
+BuildingExt::GetResourceInfo(int id)
+{
+	Model *m;
+	for(m = this->resources; m; m = m->next)
+		if(m->resId == id)
+			return m;
+	m = (Model*)malloc(sizeof(Model));
+	m->next = this->resources;
+	this->resources = m;
+	m->resId = id;
+	m->lastFrame = 0;
+	return m;
+}
+
 void
 renderSector(SectorExt *se)
 {
@@ -586,18 +611,17 @@ renderSector(SectorExt *se)
 	cubeMat->color.blue = 0;
 //	pAmbient->setColor(1.0f, 1.0f, 1.0f);
 
-	pAmbient->setColor(0.5f, 0.5f, 0.5f);
-
 	if(se == nil)
 		return;
 
 	for(i = 0; i < se->numInstances; i++){
 		sGeomInstance *inst = &se->sect->sectionA[i];
 		BuildingExt *be = GetBuildingExt(inst->GetId());
+		BuildingExt::Model *m = be->GetResourceInfo(inst->resId);
 
-		if(be->lastFrame == frameCounter)
+		if(m->lastFrame == frameCounter)
 			continue;
-		be->lastFrame = frameCounter;
+		m->lastFrame = frameCounter;
 
 		float x = halfFloatToFloat(inst->bound[0]);
 		float y = halfFloatToFloat(inst->bound[1]);
@@ -642,6 +666,7 @@ printf("missing 0x%X %x\n", inst->resId, inst->GetId());
 			rw::Frame *f = rw::Frame::create();
 			a->setGeometry(geo, 0);
 			a->setFrame(f);
+			a->pipeline = Renderer::buildingPipe;
 			m.pos = add(m.pos, se->origin);
 
 			m.optimize();
@@ -649,6 +674,9 @@ printf("missing 0x%X %x\n", inst->resId, inst->GetId());
 			se->instances[i] = a;
 		}
 
+		rw::RGBA col = currentAmbient;
+		col.alpha = 0xFF;
+		setGeoMaterialColor(se->instances[i]->geometry, col);
 
 		if(be->isTransparent)
 			Renderer::addToTransparentRenderList(se->instances[i]);

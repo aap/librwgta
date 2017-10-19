@@ -30,6 +30,11 @@ int drawCubes = 0;
 int drawLOD = 1;
 int frameCounter = -1;
 
+CTimeCycle *pTimecycle;
+rw::RGBA currentAmbient;
+rw::RGBA currentEmissive;
+
+
 void
 panic(const char *fmt, ...)
 {
@@ -209,7 +214,6 @@ InitRW(void)
 //	rw::platform = rw::PLATFORM_D3D8;
 	if(!sk::InitRW())
 		return false;
-
 	Scene.world = rw::World::create();
 
 	pAmbient = rw::Light::create(rw::Light::AMBIENT);
@@ -245,6 +249,8 @@ InitRW(void)
 
 	makeCube();
 
+	Renderer::buildingPipe = makeBuildingPipe();
+
 	return true;
 }
 
@@ -252,6 +258,7 @@ int curSectX = 28;
 int curSectY = 4;
 int curIntr = -1;
 int curHour = 12;
+int curWeather = 0;
 
 bool
 GetIsTimeInRange(uint8 h1, uint8 h2)
@@ -314,6 +321,7 @@ found:
 	pDummyPool = (DummyPool*)resimg->dummyPool;
 	pTexStorePool = (TexlistPool*)resimg->texlistPool;
 	CModelInfo::Load(resimg->numModelInfos, resimg->modelInfoPtrs);
+	pTimecycle = resimg->timecycle;
 
 	LoadLevel(levelToLoad);
 	int i;
@@ -377,6 +385,16 @@ Draw(void)
 		if(curHour >= 24) curHour = 0;
 		debug("hour: %d\n", curHour);
 	}
+	if(CPad::IsKeyJustDown('Z')){
+		curWeather--;
+		if(curWeather < -1) curWeather = 7;
+		debug("weather: %d\n", curWeather);
+	}
+	if(CPad::IsKeyJustDown('X')){
+		curWeather++;
+		if(curWeather >= 8) curWeather = -1;
+		debug("weather: %d\n", curWeather);
+	}
 	if(CPad::IsKeyJustDown('C'))
 		drawCubes = !drawCubes;
 	if(CPad::IsKeyJustDown('B'))
@@ -388,6 +406,24 @@ Draw(void)
 	TheCamera.m_rwcam->clear(&clearcol, rw::Camera::CLEARIMAGE|rw::Camera::CLEARZ);
 	TheCamera.update();
 	TheCamera.m_rwcam->beginUpdate();
+
+	if(curWeather >= 0){
+		currentAmbient.red = pTimecycle->m_nAmbientRed[curHour][curWeather];
+		currentAmbient.green = pTimecycle->m_nAmbientGreen[curHour][curWeather];
+		currentAmbient.blue = pTimecycle->m_nAmbientBlue[curHour][curWeather];
+		currentEmissive.red = pTimecycle->m_nAmbientRed_Bl[curHour][curWeather];
+		currentEmissive.green = pTimecycle->m_nAmbientGreen_Bl[curHour][curWeather];
+		currentEmissive.blue = pTimecycle->m_nAmbientBlue_Bl[curHour][curWeather];
+	}else{
+		currentAmbient.red = 255;
+		currentAmbient.green = 255;
+		currentAmbient.blue = 255;
+		currentEmissive.red = 25;
+		currentEmissive.green = 25;
+		currentEmissive.blue = 25;
+	}
+
+	pAmbient->setColor(currentEmissive.red/255.0f, currentEmissive.green/255.0f, currentEmissive.blue/255.0f);
 
 	if(drawCubes)
 		Renderer::renderCubesIPL();
@@ -436,10 +472,10 @@ AppEventHandler(sk::Event e, void *param)
 	Rect *r;
 	switch(e){
 	case INITIALIZE:
-//		AllocConsole();
-//		freopen("CONIN$", "r", stdin);
-//		freopen("CONOUT$", "w", stdout);
-//		freopen("CONOUT$", "w", stderr);
+		AllocConsole();
+		freopen("CONIN$", "r", stdin);
+		freopen("CONOUT$", "w", stdout);
+		freopen("CONOUT$", "w", stderr);
 
 		Init();
 		plAttachInput();

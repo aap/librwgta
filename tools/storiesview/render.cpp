@@ -3,6 +3,8 @@
 namespace Renderer
 {
 
+rw::ObjPipeline *buildingPipe;
+
 int numOpaqueAtomics;
 int numTransparentAtomics;
 rw::Atomic *opaqueRenderList[0x8000];
