@@ -25,11 +25,11 @@ struct CAnimBlendTree
 	int unknown;
 #endif
 };
-#ifdef LCS
-static_assert(sizeof(CAnimBlendTree) == 0x24, "CAnimBlendTree: error");
-#else
-static_assert(sizeof(CAnimBlendTree) == 0x28, "CAnimBlendTree: error");
-#endif
+//#ifdef LCS
+//static_assert(sizeof(CAnimBlendTree) == 0x24, "CAnimBlendTree: error");
+//#else
+//static_assert(sizeof(CAnimBlendTree) == 0x28, "CAnimBlendTree: error");
+//#endif
 
 // A block is a collection of blend trees
 struct CAnimBlock
@@ -52,11 +52,11 @@ struct CAnimBlock
 	int32 unk1;
 #endif
 };
-#ifdef LCS
-static_assert(sizeof(CAnimBlock) == 0x28, "CAnimBlock: error");
-#else
-static_assert(sizeof(CAnimBlock) == 0x30, "CAnimBlock: error");
-#endif
+//#ifdef LCS
+//static_assert(sizeof(CAnimBlock) == 0x28, "CAnimBlock: error");
+//#else
+//static_assert(sizeof(CAnimBlock) == 0x30, "CAnimBlock: error");
+//#endif
 
 // A blend node holds the interpolation state for one node
 struct CAnimBlendNode
@@ -69,7 +69,7 @@ struct CAnimBlendNode
 	CAnimBlendSequence *sequence;
 	CAnimBlendAssociation *blendAssoc;
 };
-static_assert(sizeof(CAnimBlendNode) == 0x1C, "CAnimBlendNode: error");
+//static_assert(sizeof(CAnimBlendNode) == 0x1C, "CAnimBlendNode: error");
 
 // A blend association holds the interpolation state for a tree
 // only confirmed for mobile LCS
@@ -94,7 +94,7 @@ struct CAnimBlendAssociation
 	int32 callbackArg;
 	int8 field_40;
 };
-static_assert(sizeof(CAnimBlendAssociation) == 0x44, "CAnimBlendAssociation: error");
+//static_assert(sizeof(CAnimBlendAssociation) == 0x44, "CAnimBlendAssociation: error");
 
 struct CAnimBlendAssocGroup
 {
@@ -104,7 +104,7 @@ struct CAnimBlendAssocGroup
 	int32 baseIndex;	// index of first assoc in assocList
 	int32 groupId;		// index in CAnimManager::m_aAnimAssocGroups
 };
-static_assert(sizeof(CAnimBlendAssocGroup) == 0x14, "CAnimBlendAssocGroup: error");
+//static_assert(sizeof(CAnimBlendAssocGroup) == 0x14, "CAnimBlendAssocGroup: error");
 
 // CAnimManager::ms_aAnimAssocDefinitions[84] at 0x399c68 in LCS SLES_541.35
 
@@ -135,7 +135,7 @@ struct CAnimAssoc_vcs
 	int16 unk2;
 	int16 unk3;
 };
-static_assert(sizeof(CAnimAssoc_vcs) == 0x38, "CAnimAssoc_vcs: error");
+//static_assert(sizeof(CAnimAssoc_vcs) == 0x38, "CAnimAssoc_vcs: error");
 
 struct CAnimAssocGroup_vcs
 {
@@ -144,7 +144,7 @@ struct CAnimAssocGroup_vcs
 	int32 animBase;	// first ID, index into CAnimManager_vcs::associations
 	int32 numAnims;
 };
-static_assert(sizeof(CAnimAssocGroup_vcs) == 0x34, "CAnimAssocGroup_vcs: error");
+//static_assert(sizeof(CAnimAssocGroup_vcs) == 0x34, "CAnimAssocGroup_vcs: error");
 
 struct CAnimManager
 {

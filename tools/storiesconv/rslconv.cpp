@@ -749,7 +749,6 @@ convertRasterPS2(RslRasterPS2 *ras)
 	uint8 *texels = getTexelPS2((RslRaster*)ras, 0);
 
 
-	int32 hasAlpha = 0;
 	uint8 *convtex = NULL;
 	if(d == 4){
 		convtex = rwNewT(uint8, w*h, 0);

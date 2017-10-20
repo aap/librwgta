@@ -203,12 +203,12 @@ struct sLevelChunk	// leeds name
 	AreaInfo *areas;
 #endif
 };
-#ifdef VCS
-static_assert(offsetof(sLevelChunk, numResources)+0x20 == 0x14c, "sLevelChunk: error");
-//static_assert(offsetof(sLevelChunk, numTimeObjects)+0x20 == 0x2d0, "sLevelChunk: error");
-#endif
-
-#ifdef LCS
-static_assert(offsetof(sLevelChunk, numResources)+0x20 == 0x19c, "sLevelChunk: error");
-//static_assert(offsetof(sLevelChunk, numTimeObjects)+0x20 == 0x320, "sLevelChunk: error");
-#endif
+//#ifdef VCS
+//static_assert(offsetof(sLevelChunk, numResources)+0x20 == 0x14c, "sLevelChunk: error");
+////static_assert(offsetof(sLevelChunk, numTimeObjects)+0x20 == 0x2d0, "sLevelChunk: error");
+//#endif
+//
+//#ifdef LCS
+//static_assert(offsetof(sLevelChunk, numResources)+0x20 == 0x19c, "sLevelChunk: error");
+////static_assert(offsetof(sLevelChunk, numTimeObjects)+0x20 == 0x320, "sLevelChunk: error");
+//#endif

@@ -91,11 +91,11 @@ struct CBaseModelInfo
 #endif
 	void	*vtable;
 };
-#ifdef LCS
-static_assert(sizeof(CBaseModelInfo) == 0x24, "CBaseModelInfo: error");
-#else
-static_assert(sizeof(CBaseModelInfo) == 0x28, "CBaseModelInfo: error");
-#endif
+//#ifdef LCS
+//static_assert(sizeof(CBaseModelInfo) == 0x24, "CBaseModelInfo: error");
+//#else
+//static_assert(sizeof(CBaseModelInfo) == 0x28, "CBaseModelInfo: error");
+//#endif
 
 
 struct CSimpleModelInfo : public CBaseModelInfo
@@ -157,11 +157,11 @@ struct CPedModelInfo : CElementGroupModelInfo
 	uint32 unknown2;	// awlays 0
 #endif
 };
-#ifdef LCS
-static_assert(sizeof(CPedModelInfo) == 0x44, "ResourceImage: error");
-#else
-static_assert(sizeof(CPedModelInfo) == 0xFC, "ResourceImage: error");
-#endif
+//#ifdef LCS
+//static_assert(sizeof(CPedModelInfo) == 0x44, "ResourceImage: error");
+//#else
+//static_assert(sizeof(CPedModelInfo) == 0xFC, "ResourceImage: error");
+//#endif
 
 struct CVehicleModelInfo__inst
 {
@@ -243,13 +243,13 @@ struct CVehicleModelInfo : CElementGroupModelInfo
 	char unk5[0x29];
 #endif
 };
-#ifdef LCS
-static_assert(sizeof(CVehicleModelInfo) == 0x190, "CVehicleModelInfo: error");
-#else
-static_assert(offsetof(CVehicleModelInfo, m_dummyPos)-sizeof(CElementGroupModelInfo) == 0x30, "CVehicleModelInfo: error");
-static_assert(offsetof(CVehicleModelInfo, m_gameName)-sizeof(CElementGroupModelInfo) == 0x128, "CVehicleModelInfo: error");
-static_assert(sizeof(CVehicleModelInfo) == 0x2a0, "CVehicleModelInfo: error");
-#endif
+//#ifdef LCS
+//static_assert(sizeof(CVehicleModelInfo) == 0x190, "CVehicleModelInfo: error");
+//#else
+//static_assert(offsetof(CVehicleModelInfo, m_dummyPos)-sizeof(CElementGroupModelInfo) == 0x30, "CVehicleModelInfo: error");
+//static_assert(offsetof(CVehicleModelInfo, m_gameName)-sizeof(CElementGroupModelInfo) == 0x128, "CVehicleModelInfo: error");
+//static_assert(sizeof(CVehicleModelInfo) == 0x2a0, "CVehicleModelInfo: error");
+//#endif
 
 // This is all very, very strange
 
@@ -296,7 +296,7 @@ struct CEntity
 	uint8 interior;	// seems uninitialized in VCS o_O
 	void *vtable;
 };
-static_assert(sizeof(CEntity) == 0x60, "CEntity: error");
+//static_assert(sizeof(CEntity) == 0x60, "CEntity: error");
 
 struct CBuilding : public CEntity
 {
@@ -560,16 +560,16 @@ struct ResourceImage {
 	// some more
 #endif
 };
-#ifdef VCS
-static_assert(offsetof(ResourceImage, animManagerInst)+0x20 == 0x80, "ResourceImage: error");
-static_assert(offsetof(ResourceImage, weatherTypeList) == 0x8C, "ResourceImage: error");
-static_assert(offsetof(ResourceImage, timecycle) == 0x94, "ResourceImage: error");
-static_assert(offsetof(ResourceImage, markers)+0x20 == 0xC8, "ResourceImage: error");
-static_assert(offsetof(ResourceImage, menuCompressedTextures)+0x20 == 0xE0, "ResourceImage: error");
-static_assert(offsetof(ResourceImage, fontTexListSize)+0x20 == 0xF8, "ResourceImage: error");
-#endif
-#ifdef LCS
-static_assert(offsetof(ResourceImage, animManagerInst)+0x20 == 0x80, "ResourceImage: error");
-static_assert(offsetof(ResourceImage, markers)+0x20 == 0xC0, "ResourceImage: error");
-static_assert(offsetof(ResourceImage, ferryInst)+0x20 == 0xC8, "ResourceImage: error");
-#endif
+//#ifdef VCS
+//static_assert(offsetof(ResourceImage, animManagerInst)+0x20 == 0x80, "ResourceImage: error");
+//static_assert(offsetof(ResourceImage, weatherTypeList) == 0x8C, "ResourceImage: error");
+//static_assert(offsetof(ResourceImage, timecycle) == 0x94, "ResourceImage: error");
+//static_assert(offsetof(ResourceImage, markers)+0x20 == 0xC8, "ResourceImage: error");
+//static_assert(offsetof(ResourceImage, menuCompressedTextures)+0x20 == 0xE0, "ResourceImage: error");
+//static_assert(offsetof(ResourceImage, fontTexListSize)+0x20 == 0xF8, "ResourceImage: error");
+//#endif
+//#ifdef LCS
+//static_assert(offsetof(ResourceImage, animManagerInst)+0x20 == 0x80, "ResourceImage: error");
+//static_assert(offsetof(ResourceImage, markers)+0x20 == 0xC0, "ResourceImage: error");
+//static_assert(offsetof(ResourceImage, ferryInst)+0x20 == 0xC8, "ResourceImage: error");
+//#endif

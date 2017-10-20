@@ -33,7 +33,16 @@ int frameCounter = -1;
 CTimeCycle *pTimecycle;
 rw::RGBA currentAmbient;
 rw::RGBA currentEmissive;
+rw::RGBA currentSkyTop;
+rw::RGBA currentSkyBot;
+rw::RGBA currentFog;
 
+
+int curSectX = 28;
+int curSectY = 4;
+int curIntr = -1;
+int curHour = 12;
+int curWeather = 0;
 
 void
 panic(const char *fmt, ...)
@@ -156,6 +165,73 @@ attachPlugins(void)
 }
 
 void
+updateTimecycle(void)
+{
+	if(curWeather >= 0){
+		currentAmbient.red = pTimecycle->m_nAmbientRed[curHour][curWeather];
+		currentAmbient.green = pTimecycle->m_nAmbientGreen[curHour][curWeather];
+		currentAmbient.blue = pTimecycle->m_nAmbientBlue[curHour][curWeather];
+		currentEmissive.red = pTimecycle->m_nAmbientRed_Bl[curHour][curWeather];
+		currentEmissive.green = pTimecycle->m_nAmbientGreen_Bl[curHour][curWeather];
+		currentEmissive.blue = pTimecycle->m_nAmbientBlue_Bl[curHour][curWeather];
+		currentSkyTop.red = pTimecycle->m_nSkyTopRed[curHour][curWeather];
+		currentSkyTop.green = pTimecycle->m_nSkyTopGreen[curHour][curWeather];
+		currentSkyTop.blue = pTimecycle->m_nSkyTopBlue[curHour][curWeather];
+		currentSkyTop.alpha = 255;
+		currentSkyBot.red = pTimecycle->m_nSkyBottomRed[curHour][curWeather];
+		currentSkyBot.green = pTimecycle->m_nSkyBottomGreen[curHour][curWeather];
+		currentSkyBot.blue = pTimecycle->m_nSkyBottomBlue[curHour][curWeather];
+		currentSkyBot.alpha = 255;
+		TheCamera.m_rwcam->setFarPlane(pTimecycle->m_fFarClip[curHour][curWeather]);
+		TheCamera.m_rwcam->fogPlane = pTimecycle->m_fFogStart[curHour][curWeather];
+	}else{
+		currentAmbient.red = 255;
+		currentAmbient.green = 255;
+		currentAmbient.blue = 255;
+
+#ifdef LCS
+		currentEmissive.red = 100;
+		currentEmissive.green = 100;
+		currentEmissive.blue = 100;
+#else
+		currentEmissive.red = 25;
+		currentEmissive.green = 25;
+		currentEmissive.blue = 25;
+#endif
+
+		currentSkyTop.red = 128;
+		currentSkyTop.green = 128;
+		currentSkyTop.blue = 128;
+		currentSkyTop.alpha = 255;
+		currentSkyBot.red = 128;
+		currentSkyBot.green = 128;
+		currentSkyBot.blue = 128;
+		currentSkyBot.alpha = 255;
+		TheCamera.m_rwcam->setFarPlane(5000.0f);
+		TheCamera.m_rwcam->fogPlane = 5000.0f;
+	}
+	currentFog.red = (currentSkyTop.red + 2*currentSkyBot.red)/3.0f;
+	currentFog.green = (currentSkyTop.green + 2*currentSkyBot.green)/3.0f;
+	currentFog.blue = (currentSkyTop.blue + 2*currentSkyBot.blue)/3.0f;
+	currentFog.alpha = 255;
+
+}
+
+void
+DefinedState(void)
+{
+	SetRenderState(rw::ZTESTENABLE, 1);
+	SetRenderState(rw::ZWRITEENABLE, 1);
+	SetRenderState(rw::VERTEXALPHA, 0);
+	SetRenderState(rw::SRCBLEND, rw::BLENDSRCALPHA);
+	SetRenderState(rw::DESTBLEND, rw::BLENDINVSRCALPHA);
+	SetRenderState(rw::FOGENABLE, 0);
+	SetRenderState(rw::ALPHATESTREF, 10);
+	SetRenderState(rw::ALPHATESTFUNC, rw::ALPHAGREATEREQUAL);
+	SetRenderState(rw::FOGCOLOR, *(uint32*)&currentFog);
+}
+
+void
 makeCube(void)
 {
 	using namespace rw;
@@ -240,8 +316,10 @@ InitRW(void)
 	TheCamera.m_target.set(1276.0f, -984.0f, 68.0f);
 #endif
 #ifdef VCS
-	TheCamera.m_position.set(292.0f, -1402.0f, 71.0f);
-	TheCamera.m_target.set(223.0f, -1268.0f, 41.0f);
+//	TheCamera.m_position.set(292.0f, -1402.0f, 71.0f);
+	TheCamera.m_position.set(292.0f, -1402.0f, 0.0f);
+//	TheCamera.m_target.set(223.0f, -1268.0f, 41.0f);
+	TheCamera.m_target.set(223.0f, -1268.0f, 0.0f);
 #endif
 
 
@@ -253,12 +331,6 @@ InitRW(void)
 
 	return true;
 }
-
-int curSectX = 28;
-int curSectY = 4;
-int curIntr = -1;
-int curHour = 12;
-int curWeather = 0;
 
 bool
 GetIsTimeInRange(uint8 h1, uint8 h2)
@@ -338,6 +410,214 @@ found:
 #endif
 }
 
+// Arguments:
+// 0---1
+// |   |
+// 2---3
+rw::RWDEVICE::Im2DVertex quadverts[4];
+static short quadindices[] = {
+	0, 1, 2,
+	0, 2, 3
+};
+void
+setQuadVertices(float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3,
+	rw::RGBA c0, rw::RGBA c1, rw::RGBA c2, rw::RGBA c3)
+{
+	// This is what we draw:
+	// 3---2
+	// | / |
+	// 0---1
+	quadverts[0].setScreenX(x2);
+	quadverts[0].setScreenY(y2);
+	quadverts[0].setScreenZ(rw::im2d::GetNearZ());
+	quadverts[0].setCameraZ(Scene.camera->nearPlane);
+	quadverts[0].setRecipCameraZ(1.0f/Scene.camera->nearPlane);
+	quadverts[0].setColor(c2.red, c2.green, c2.blue, c2.alpha);
+	quadverts[0].setU(0.0f);
+	quadverts[0].setV(0.0f);
+
+	quadverts[1].setScreenX(x3);
+	quadverts[1].setScreenY(y3);
+	quadverts[1].setScreenZ(rw::im2d::GetNearZ());
+	quadverts[1].setCameraZ(Scene.camera->nearPlane);
+	quadverts[1].setRecipCameraZ(1.0f/Scene.camera->nearPlane);
+	quadverts[1].setColor(c3.red, c3.green, c3.blue, c3.alpha);
+	quadverts[1].setU(1.0f);
+	quadverts[1].setV(0.0f);
+
+	quadverts[2].setScreenX(x1);
+	quadverts[2].setScreenY(y1);
+	quadverts[2].setScreenZ(rw::im2d::GetNearZ());
+	quadverts[2].setCameraZ(Scene.camera->nearPlane);
+	quadverts[2].setRecipCameraZ(1.0f/Scene.camera->nearPlane);
+	quadverts[2].setColor(c1.red, c1.green, c1.blue, c1.alpha);
+	quadverts[2].setU(1.0f);
+	quadverts[2].setV(1.0f);
+
+	quadverts[3].setScreenX(x0);
+	quadverts[3].setScreenY(y0);
+	quadverts[3].setScreenZ(rw::im2d::GetNearZ());
+	quadverts[3].setCameraZ(Scene.camera->nearPlane);
+	quadverts[3].setRecipCameraZ(1.0f/Scene.camera->nearPlane);
+	quadverts[3].setColor(c0.red, c0.green, c0.blue, c0.alpha);
+	quadverts[3].setU(0.0f);
+	quadverts[3].setV(1.0f);
+}
+void
+renderQuad(float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3,
+	rw::RGBA c0, rw::RGBA c1, rw::RGBA c2, rw::RGBA c3)
+{
+	rw::SetRenderState(rw::VERTEXALPHA, c0.alpha != 255 || c1.alpha != 255 || c2.alpha != 255 || c3.alpha != 255);
+	rw::SetRenderState(rw::ZTESTENABLE, 0);
+	rw::SetRenderState(rw::ZWRITEENABLE, 0);
+	rw::engine->imtexture = nil;
+	setQuadVertices(x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3);
+	rw::im2d::RenderIndexedPrimitive(rw::PRIMTYPETRILIST,
+		&quadverts, 4, &quadindices, 6);
+	rw::SetRenderState(rw::ZTESTENABLE, 1);
+	rw::SetRenderState(rw::ZWRITEENABLE, 1);
+}
+
+float
+calcHorizonCoords(void)
+{
+	rw::Matrix *mat = TheCamera.m_rwcam->getFrame()->getLTM();
+	rw::Matrix view;
+
+	rw::V3d pos = mat->pos;
+	pos.z = 0.0f;
+	pos.x += 3000.0f * mat->at.x;
+	pos.y += 3000.0f * mat->at.y;
+	rw::Matrix::invert(&view, mat);
+	rw::V3d::transformPoints(&pos, &pos, 1, &TheCamera.m_rwcam->viewMatrix);
+	return pos.y * sk::globals.height / pos.z;
+}
+
+float horizonz;
+rw::RGBA skyTop;
+rw::RGBA skyBot;
+rw::RGBA bgcolor;
+
+#define SMALLSTRIPHEIGHT 4.0f
+#define HORIZSTRIPHEIGHT 32.0f
+
+void
+drawBackground(void)
+{
+	rw::Matrix *mat = TheCamera.m_rwcam->getFrame()->getLTM();
+//	float l = sqrt(mat->right.x * mat->right.x +
+//		mat->right.y * mat->right.y);
+//	if(l > 1.0f)
+//		l = 1.0f;
+//	float camroll = acos(l);
+//	if(mat->right.z < 0.0f)
+//		camroll = -camroll;
+
+	skyTop = currentSkyTop;
+	skyBot = currentSkyBot;
+
+	if(mat->up.z < -0.9f){
+		skyTop = { 50, 50, 50, 255 };
+		skyBot = { 50, 50, 50, 255 };
+		renderQuad(0.0f, 0.0f,
+				sk::globals.width, 0.0f,
+				0.0f, sk::globals.height,
+				sk::globals.width, sk::globals.height,
+				skyTop, skyTop, skyBot, skyBot);
+	}else{
+		horizonz = calcHorizonCoords();
+		float gradheight = sk::globals.height/2.0f;
+		float topedge = horizonz - gradheight;
+		float toppos, botpos;
+		rw::RGBA gradtop = skyTop;
+		rw::RGBA gradbot = skyBot;
+		// The gradient
+		if(horizonz > 0.0f && topedge < sk::globals.height){
+			if(horizonz < sk::globals.height)
+				botpos = horizonz;
+			else{
+				float f = (horizonz - sk::globals.height)/gradheight;
+				gradbot.red = skyTop.red*f + (1.0f-f)*skyBot.red;
+				gradbot.green = skyTop.green*f + (1.0f-f)*skyBot.green;
+				gradbot.blue = skyTop.blue*f + (1.0f-f)*skyBot.blue;
+				botpos = sk::globals.height;
+			}
+			if(topedge >= 0.0f)
+				toppos = topedge;
+			else{
+				float f = (0.0f - topedge)/gradheight;
+				gradtop.red = skyBot.red*f + (1.0f-f)*skyTop.red;
+				gradtop.green = skyBot.green*f + (1.0f-f)*skyTop.green;
+				gradtop.blue = skyBot.blue*f + (1.0f-f)*skyTop.blue;
+				toppos = 0.0f;
+			}
+			renderQuad(0.0f, toppos,
+				sk::globals.width, toppos,
+				0.0f, botpos,
+				sk::globals.width, botpos,
+				gradtop, gradtop, gradbot, gradbot);
+		}
+		renderQuad(0.0f, horizonz,
+			sk::globals.width, horizonz,
+			0.0f, horizonz+SMALLSTRIPHEIGHT,
+			sk::globals.width, horizonz+SMALLSTRIPHEIGHT,
+			currentFog, currentFog, currentFog, currentFog);
+		// Only top
+		if(topedge > 0.0f){
+			if(topedge > sk::globals.height)
+				botpos = sk::globals.height;
+			else
+				botpos = topedge;
+			renderQuad(0.0f, 0.0f,
+				sk::globals.width, 0.0f,
+				0.0f, botpos,
+				sk::globals.width, botpos,
+				skyTop, skyTop, skyTop, skyTop);
+		}
+
+//		renderQuad(0.0f, 0.0f,
+//			sk::globals.width, 0.0f,
+//			0.0f, sk::globals.height,
+//			sk::globals.width, sk::globals.height,
+//			top, top, bot, bot);
+	}
+}
+
+void
+drawHorizon(void)
+{
+	float gradheight = sk::globals.height/448.0f * HORIZSTRIPHEIGHT;
+	skyBot.alpha = 230;
+	skyTop.alpha = 80;
+
+	bgcolor.red = 100;
+	bgcolor.green = 100;
+	bgcolor.blue = 100;
+	bgcolor.alpha = 255;
+
+	const float z1 = horizonz;
+	const float z2 = z1 + SMALLSTRIPHEIGHT;
+	const float z3 = z2 + gradheight;
+
+	renderQuad(0.0f, z1,
+		sk::globals.width, z1,
+		0.0f, z2,
+		sk::globals.width, z2,
+		currentFog, currentFog, currentFog, currentFog);
+
+	renderQuad(0.0f, z2,
+		sk::globals.width, z2,
+		0.0f, z3,
+		sk::globals.width, z3,
+		currentFog, currentFog, bgcolor, bgcolor);
+
+	renderQuad(0.0f, z3,
+		sk::globals.width, z3,
+		0.0f, sk::globals.height,
+		sk::globals.width, sk::globals.height,
+		bgcolor, bgcolor, bgcolor, bgcolor);
+}
+
 void
 Draw(void)
 {
@@ -400,6 +680,8 @@ Draw(void)
 	if(CPad::IsKeyJustDown('B'))
 		drawLOD = !drawLOD;
 
+	updateTimecycle();
+
 	CPad::UpdatePads();
 	TheCamera.Process();
 
@@ -407,27 +689,19 @@ Draw(void)
 	TheCamera.update();
 	TheCamera.m_rwcam->beginUpdate();
 
-	if(curWeather >= 0){
-		currentAmbient.red = pTimecycle->m_nAmbientRed[curHour][curWeather];
-		currentAmbient.green = pTimecycle->m_nAmbientGreen[curHour][curWeather];
-		currentAmbient.blue = pTimecycle->m_nAmbientBlue[curHour][curWeather];
-		currentEmissive.red = pTimecycle->m_nAmbientRed_Bl[curHour][curWeather];
-		currentEmissive.green = pTimecycle->m_nAmbientGreen_Bl[curHour][curWeather];
-		currentEmissive.blue = pTimecycle->m_nAmbientBlue_Bl[curHour][curWeather];
-	}else{
-		currentAmbient.red = 255;
-		currentAmbient.green = 255;
-		currentAmbient.blue = 255;
-		currentEmissive.red = 25;
-		currentEmissive.green = 25;
-		currentEmissive.blue = 25;
-	}
-
 	pAmbient->setColor(currentEmissive.red/255.0f, currentEmissive.green/255.0f, currentEmissive.blue/255.0f);
+
+	DefinedState();
+	rw::SetRenderState(rw::FOGENABLE, 0);
+
+	drawBackground();
+	drawHorizon();
 
 	if(drawCubes)
 		Renderer::renderCubesIPL();
 //	renderCubesSector(curSectX, curSectY);
+
+	rw::SetRenderState(rw::FOGENABLE, 1);
 
 	int i;
 	Renderer::reset();
