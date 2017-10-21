@@ -37,7 +37,7 @@ struct CRect
 	float bottom;
 };
 
-struct CVector4d	// or VuVector?
+struct CVuVector
 {
 	float x, y, z, w;
 };
@@ -204,7 +204,7 @@ struct CVehicleModelInfo : CElementGroupModelInfo
 	uint8 m_numExtras;
 	uint16 m_frequency;
 	int32 unk0;	// probably pad for CVector4d
-	CVector4d m_dummyPos[5];
+	CVuVector m_dummyPos[5];
 	uint32 m_compRules;
 	float m_bikeSteerAngle;
 	RslMaterial *m_materialsPrimary[NUMPRIM];
@@ -228,7 +228,7 @@ struct CVehicleModelInfo : CElementGroupModelInfo
 	uint32 m_vehicleType;
 	float m_wheelScale;
 	float m_wheelScaleRear;
-	CVector4d m_dummyPos[15];
+	CVuVector m_dummyPos[15];
 	uint32 m_compRules;
 	float m_bikeSteerAngle;
 	char m_gameName[8];
@@ -343,7 +343,7 @@ struct CPool_txd
 
 struct CTimeCycle
 {
-	CVector4d m_VectorToSun[16];
+	CVuVector m_VectorToSun[16];
 	float m_fShadowFrontX[16];
 	float m_fShadowFrontY[16];
 	float m_fShadowSideX[16];
@@ -494,6 +494,55 @@ struct CWaterLevel
 	RslElement *pWaterAtomicSandy;
 };
 
+struct C2dEffect
+{
+	// type 0
+	struct Light {
+		float dist;
+		float outerRange;
+		float size;
+		float innerRange;
+		uint8 flash;
+		uint8 wet;
+		uint8 flare;
+		uint8 shadowIntens;
+		uint8 flag;
+		RslTexture *corona;
+		RslTexture *shadow;
+	};
+	// type 1
+	struct Particle {
+		int32 subtype;	// particle type
+		CVector direction;
+		float scale;
+	};
+	// type 2
+	struct Attractor {
+		CVector direction;
+		uint8 subtype;	// unknown
+		uint8 probability;
+	};
+	// type 3
+	struct PedBehaviour {
+		CVector direction;
+		CVector rotation;
+		uint8 subtype;	// behaviour
+	};
+
+	CVuVector pos;
+	rw::RGBA colour;
+	uint8 type;
+	union {
+		Light light;
+		Particle particle;
+		Attractor attractor;
+		PedBehaviour pedbehaviour;
+	};
+
+	int pad1, pad2;	// align the CVuVector
+};
+static_assert(sizeof(C2dEffect) == 0x40, "C2dEffect: error");
+
 struct ResourceImage {
 	void *paths;
 	CPool_generic *buildingPool;
@@ -508,8 +557,8 @@ struct ResourceImage {
 	void *theZones;	// gta3.zon
 	void *sectors;
 	void *bigBuildingList;
-	void *_2deffectStore;
-	void *_2deffects;
+	int32 num2deffects;
+	C2dEffect *_2deffects;
 	int16 *modelIndices;
 	CPool_txd *texlistPool;
 	RslTexList *storedTexList;

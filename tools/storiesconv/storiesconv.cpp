@@ -421,19 +421,19 @@ writeAllModelInfo(void)
 			printf(",\t%s", vehicleClasses[vmi->m_vehicleClass]);
 			printf(",\t%d,\t%d,\t%x", vmi->m_frequency, vmi->m_level, vmi->m_compRules);
 			if(vmi->m_vehicleType == VEHICLETYPE_CAR){
-				printf(",\t%d,\t%.3f", vmi->m_wheelId, vmi->m_wheelScale);
+				printf(",\t%d,\t%gf", vmi->m_wheelId, vmi->m_wheelScale);
 #ifdef VCS
-				printf(",%.3f", vmi->m_wheelScaleRear);
+				printf(",%gf", vmi->m_wheelScaleRear);
 #endif
 			}else if(vmi->m_vehicleType == VEHICLETYPE_BIKE){
-				printf(",\t%d,\t%.3f", (int)vmi->m_bikeSteerAngle, vmi->m_wheelScale);
+				printf(",\t%d,\t%gf", (int)vmi->m_bikeSteerAngle, vmi->m_wheelScale);
 #ifdef VCS
-				printf(",%.3f", vmi->m_wheelScaleRear);
+				printf(",%gf", vmi->m_wheelScaleRear);
 #endif
 			}else if(vmi->m_vehicleType == VEHICLETYPE_PLANE){
 				printf(",\t%d", vmi->m_wheelId);
 			}
-			printf(", %.2f", vmi->m_normalSplay);
+			printf(", %gf", vmi->m_normalSplay);
 		}
 
 		if(mi->type == MODELINFO_WEAPON)
@@ -442,6 +442,70 @@ writeAllModelInfo(void)
 		printf("\n");
 	}
 	if(currentSection != SECTION_NONE) printf("end\n");
+}
+
+CVector RoundVector(CVector &vec)
+{
+	const float epsilon = 0.0009f;
+	CVector v;
+	v.x = vec.x;
+	if(abs(v.x) < epsilon) v.x = 0.0f;
+	v.y = vec.y;
+	if(abs(v.y) < epsilon) v.y = 0.0f;
+	v.z = vec.z;
+	if(abs(v.z) < epsilon) v.z = 0.0f;
+	return v;
+}
+
+void
+dump2dfx(void)
+{
+	int i, j;
+	CBaseModelInfo *mi;
+	C2dEffect *eff;
+	CVector v;
+	printf("2dfx\n");
+	for(i = 0; i < gamedata->numModelInfos; i++){
+		mi = gamedata->modelInfoPtrs[i];
+		if(mi == nil || mi->_2dfxIndex < 0)
+			continue;
+		eff = &gamedata->_2deffects[mi->_2dfxIndex];
+		for(j = 0; j < mi->num2dFx; j++){
+			v = RoundVector(*(CVector*)&eff->pos);
+			printf("%d, %.4g, %.4g, %.4g, %d, %d, %d, %d, %d", i, v.x, v.y, v.z,
+				eff->colour.red, eff->colour.green, eff->colour.blue, eff->colour.alpha,
+				eff->type);
+			switch(eff->type){
+			case 0:	// light
+				printf(", \"%s\", \"%s\"", eff->light.corona->name, eff->light.shadow->name);
+				printf(", %g, %g, %g, %g, %d, %d, %d, %d, %d",
+					eff->light.dist, eff->light.outerRange, eff->light.size, eff->light.innerRange,
+					eff->light.shadowIntens, eff->light.flash, eff->light.wet,
+					eff->light.flare, eff->light.flag);
+				break;
+			case 1:	// particle spray
+				v = RoundVector(eff->particle.direction);
+				printf(", %d, %.3g, %.3g, %.3g, %g", eff->particle.subtype, v.x, v.y, v.z,
+					eff->particle.scale);
+				break;
+			case 2: // ped attractor
+				v = RoundVector(eff->attractor.direction);
+				printf(", %d, %.3g, %.3g, %.3g, %d", eff->attractor.subtype, v.x, v.y, v.z,
+					eff->attractor.probability);
+				break;
+			case 3: // ped behaviour
+				v = RoundVector(eff->pedbehaviour.direction);
+				printf(", %d, %.3g, %.3g, %.3g", eff->attractor.subtype, v.x, v.y, v.z);
+				// This is pretty much the same....
+				v = RoundVector(eff->pedbehaviour.rotation);
+				printf(", %.3g, %.3g, %.3g", v.x, v.y, v.z);
+				break;
+			}
+			printf("\n");
+			eff++;
+		}
+	}
+	printf("end\n");
 }
 
 void
@@ -644,6 +708,7 @@ extractResource(void)
 #endif
 //	dumpPedStats();
 //	writeAllModelInfo();
+//	dump2dfx();
 //	dumpVehicleData();
 //	extractMarkers();
 //	writeWaterpro();
