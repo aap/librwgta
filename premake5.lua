@@ -152,7 +152,7 @@ project "lcsview"
 	removeplatforms { "*amd64*" }
 	removeplatforms { "ps2" } -- for now
 	defines { "LCS" }
-	debugdir "X:\\"
+	debugdir "L:/"
 
 project "vcsview"
 	kind "WindowedApp"
@@ -170,7 +170,7 @@ project "vcsview"
 	removeplatforms { "*amd64*" }
 	removeplatforms { "ps2" } -- for now
 	defines { "VCS" }
-	debugdir "G:\\"
+	debugdir "V:/"
 
 
 project "coltest"

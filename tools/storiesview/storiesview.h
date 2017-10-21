@@ -27,6 +27,7 @@ typedef uint16 float16;
 
 #include "Pad.h"
 #include "Camera.h"
+#include "TexListStore.h"
 
 void panic(const char *fmt, ...);
 void debug(const char *fmt, ...);
@@ -39,6 +40,12 @@ Zfile *zopen(const char *path, const char *mode);
 void zclose(Zfile *zf);
 int zread(Zfile *zf, void *dst, int n);
 int ztell(Zfile *zf);
+
+struct SceneGlobals {
+	rw::World *world;
+	rw::Camera *camera;
+};
+extern SceneGlobals Scene;
 
 enum eLevel
 {
@@ -64,6 +71,9 @@ extern rw::Material *cubeMat;
 extern rw::Light *pAmbient;
 
 bool GetIsTimeInRange(uint8 h1, uint8 h2);
+
+rw::Raster *convertRasterPS2(RslRasterPS2 *ras);
+
 
 enum SectorType
 {
@@ -142,11 +152,9 @@ void renderTransparent(void);
 };
 rw::ObjPipeline *makeBuildingPipe(void);
 
-typedef CPool<TexListDef, TexListDef> TexlistPool;
 typedef CPool<CBuilding, CBuilding> BuildingPool;
 typedef CPool<CTreadable, CTreadable> TreadablePool;
 typedef CPool<CDummy, CDummy> DummyPool;
-extern TexlistPool *pTexStorePool;
 extern BuildingPool *pBuildingPool;
 extern TreadablePool *pTreadablePool;
 extern DummyPool *pDummyPool;
@@ -162,23 +170,12 @@ struct CModelInfo
 	static CBaseModelInfo *Get(int n);
 };
 
-#if 0
-
-extern int32 atmOffset;
-extern bool32 unswizzle;
-TexDictionary *convertTXD(RslTexList *txd);
-RslElement *makeTextures(RslElement *atomic, void*);
-RslTexture *dumpTextureCB(RslTexture *texture, void*);
-Atomic *convertAtomic(RslElement *atomic);
-Frame *convertFrame(RslNode *f);
-Clump *convertClump(RslElementGroup *c);
-
-void moveAtomics(Frame *f);
-
-const char *lookupHashKey(uint32 key);
-uint32 GetKey(const char *str, int len);
-uint32 GetUppercaseKey(const char *str, int len);
-uint32 CalcHashKey(const char *str, int len);
-uint32 CalcHashKey(const char *str);
-
-#endif
+struct CWaterLevel_ : CWaterLevel
+{
+	static CWaterLevel_ *mspInst;
+	static void Initialize(CWaterLevel *wl);
+	static void RenderAndEmptyRenderBuffer(void);
+	void RenderWater(void);
+	static void RenderOneFlatSmallWaterPoly(float x, float y, float z, rw::RGBA const &color);
+	static void RenderOneFlatLargeWaterPoly(float x, float y, float z, rw::RGBA const &color);
+};

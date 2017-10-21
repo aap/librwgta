@@ -1,10 +1,11 @@
 #include "III.h"
 #include <cstdarg>
 
+Globals globals;
+
 CEntity *debugent;
 
-rw::Camera *rwCamera;
-rw::World  *rwWorld;
+GlobalScene Scene;
 rw::Light  *pAmbient;
 rw::Light  *pDirect;
 rw::Light  *pExtraDirectionals[4];
@@ -64,7 +65,7 @@ d3dToGl3(rw::Raster *raster)
 		return raster;
 	rw::d3d::D3dRaster *natras = PLUGINOFFSET(rw::d3d::D3dRaster,
 	                                      raster, rw::d3d::nativeRasterOffset);
-	if(natras->format)
+	if(natras->customFormat)
 		assert(0 && "no custom d3d formats");
 
 	rw::Image *image = raster->toImage();
@@ -148,6 +149,41 @@ LightsCreate(rw::World *world)
 	}
 }
 
+rw::Camera*
+CameraCreate(int width, int height, int z)
+{
+	rw::Camera *cam;
+	cam = rw::Camera::create();
+	cam->setFrame(rw::Frame::create());
+	cam->frameBuffer = rw::Raster::create(width, height, 0, rw::Raster::CAMERA);
+	cam->zBuffer = rw::Raster::create(width, height, 0, rw::Raster::ZBUFFER);
+	return cam;
+}
+
+void
+WindowResize(rw::Rect *r)
+{
+	using namespace rw;
+
+	globals.width = r->w;
+	globals.height = r->h;
+
+	rw::Camera *cam = Scene.camera;
+	if(cam){
+		TheCamera.m_aspectRatio = (float)globals.width/globals.height;
+		if(cam->frameBuffer){
+			cam->frameBuffer->destroy();
+			cam->frameBuffer = nil;
+		}
+		if(cam->zBuffer){
+			cam->zBuffer->destroy();
+			cam->zBuffer = nil;
+		}
+		cam->frameBuffer = Raster::create(r->w, r->h, 0, Raster::CAMERA);
+		cam->zBuffer = Raster::create(r->w, r->h, 0, Raster::ZBUFFER);
+	}
+}
+
 void
 DeActivateDirectional(void)
 {
@@ -192,10 +228,38 @@ debug(const char *fmt, ...)
 }
 
 void
+RenderScene(void)
+{
+	CClouds::RenderHorizon();
+	CRenderer::RenderRoads();
+	SetRenderState(rw::FOGENABLE, 1);
+	CRenderer::RenderEverythingBarRoads();
+	DefinedState();
+	CWaterLevel::RenderWater();
+	CRenderer::RenderFadingInEntities();
+}
+
+void
+RenderDebugShit(void)
+{
+	DrawDebugFrustum();
+}
+
+void
+DoRWStuffStartOfFrame_Horizon(int16 topred, int16 topgreen, int16 topblue,
+	int16 botred, int16 botgreen, int16 botblue, int16 alpha)
+{
+	// TODO: more stuff
+	static rw::RGBA clearcol = { 0x40, 0x40, 0x40, 0xFF };
+	Scene.camera->clear(&clearcol, rw::Camera::CLEARIMAGE|rw::Camera::CLEARZ);
+	Scene.camera->beginUpdate();
+	CClouds::RenderBackground(topred, topgreen, topblue, botred, botgreen, botblue, alpha);
+}
+
+void
 TheGame(void)
 {
 	int lasttick, tick, acc, nframes;
-	static rw::RGBA clearcol = { 0x40, 0x40, 0x40, 0xFF };
 
 	debug("Into TheGame!!!\n");
 
@@ -213,30 +277,28 @@ TheGame(void)
 		CTimer::Update();
 		CGame::Process();
 
-		SetLightsWithTimeOfDayColour(rwWorld);
-		clearcol.red = CTimeCycle::m_nCurrentSkyTopRed;
-		clearcol.green = CTimeCycle::m_nCurrentSkyTopGreen;
-		clearcol.blue = CTimeCycle::m_nCurrentSkyTopBlue;
+		SetLightsWithTimeOfDayColour(Scene.world);
+//		clearcol.red = CTimeCycle::m_nCurrentSkyTopRed;
+//		clearcol.green = CTimeCycle::m_nCurrentSkyTopGreen;
+//		clearcol.blue = CTimeCycle::m_nCurrentSkyTopBlue;
 
 		CRenderer::ConstructRenderList();
 
-		TheCamera.m_rwcam->clear(&clearcol,
-		                         rw::Camera::CLEARIMAGE|rw::Camera::CLEARZ);
-		DefinedState();
-		rwCamera->setFarPlane(CTimeCycle::m_fCurrentFarClip);
-		rwCamera->fogPlane = CTimeCycle::m_fCurrentFogStart;
 		TheCamera.update();
-		TheCamera.m_rwcam->beginUpdate();
 
+		// Set the planes before updating the RW cam. GTA (wrongly) does it afterwards.
+		Scene.camera->setFarPlane(CTimeCycle::m_fCurrentFarClip);
+		Scene.camera->fogPlane = CTimeCycle::m_fCurrentFogStart;
+		DoRWStuffStartOfFrame_Horizon(CTimeCycle::m_nCurrentSkyTopRed, CTimeCycle::m_nCurrentSkyTopGreen, CTimeCycle::m_nCurrentSkyTopBlue,
+			CTimeCycle::m_nCurrentSkyBottomRed, CTimeCycle::m_nCurrentSkyBottomGreen, CTimeCycle::m_nCurrentSkyBottomBlue, 255);
+
+		DefinedState();
 //		debug("visible entities, alpha list: %d %d\n",
 //			CRenderer::ms_nNoOfVisibleEntities,
 //			CVisibilityPlugins::m_alphaEntityList.Count());
 
-		CRenderer::RenderRoads();
-		SetRenderState(rw::FOGENABLE, 1);
-		CRenderer::RenderEverythingBarRoads();
-		DefinedState();
-		CRenderer::RenderFadingInEntities();
+		RenderScene();
+		RenderDebugShit();
 
 		TheCamera.m_rwcam->endUpdate();
 		TheCamera.m_rwcam->showRaster();

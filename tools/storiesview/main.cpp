@@ -18,10 +18,7 @@ const char *levelNames[] = {
 int32 atmOffset;	// UNUSED, just for rslconv.cpp
 
 rw::V3d zero = { 0.0f, 0.0f, 0.0f };
-struct SceneGlobals {
-	rw::World *world;
-	rw::Camera *camera;
-} Scene;
+SceneGlobals Scene;
 rw::EngineStartParams engineStartParams;
 rw::Material *cubeMat;
 rw::Geometry *cubeGeo;
@@ -182,6 +179,11 @@ updateTimecycle(void)
 		currentSkyBot.green = pTimecycle->m_nSkyBottomGreen[curHour][curWeather];
 		currentSkyBot.blue = pTimecycle->m_nSkyBottomBlue[curHour][curWeather];
 		currentSkyBot.alpha = 255;
+
+		pTimecycle->m_fCurrentWaterRed = pTimecycle->m_fWaterRed[curHour][curWeather];
+		pTimecycle->m_fCurrentWaterGreen = pTimecycle->m_fWaterGreen[curHour][curWeather];
+		pTimecycle->m_fCurrentWaterBlue = pTimecycle->m_fWaterBlue[curHour][curWeather];
+		pTimecycle->m_fCurrentWaterAlpha = pTimecycle->m_fWaterAlpha[curHour][curWeather];
 		TheCamera.m_rwcam->setFarPlane(pTimecycle->m_fFarClip[curHour][curWeather]);
 		TheCamera.m_rwcam->fogPlane = pTimecycle->m_fFogStart[curHour][curWeather];
 	}else{
@@ -207,6 +209,10 @@ updateTimecycle(void)
 		currentSkyBot.green = 128;
 		currentSkyBot.blue = 128;
 		currentSkyBot.alpha = 255;
+		pTimecycle->m_fCurrentWaterRed = 255;
+		pTimecycle->m_fCurrentWaterGreen = 255;
+		pTimecycle->m_fCurrentWaterBlue = 255;
+		pTimecycle->m_fCurrentWaterAlpha = 255;
 		TheCamera.m_rwcam->setFarPlane(5000.0f);
 		TheCamera.m_rwcam->fogPlane = 5000.0f;
 	}
@@ -304,8 +310,7 @@ InitRW(void)
 	direct->getFrame()->rotate(&xaxis, 180.0f, rw::COMBINEREPLACE);
 	Scene.world->addLight(direct);
 
-	Scene.camera = rw::Camera::create();
-	Scene.camera->setFrame(rw::Frame::create());
+	Scene.camera = sk::CameraCreate(sk::globals.width, sk::globals.height, 1);
 	Scene.camera->setFarPlane(5000.0f);
 	Scene.camera->setNearPlane(0.9f);
 	TheCamera.m_rwcam = Scene.camera;
@@ -341,6 +346,12 @@ GetIsTimeInRange(uint8 h1, uint8 h2)
 		return curHour >= h1 && curHour < h2;
 }
 
+RslTexture*
+dumpTexNames(RslTexture *texture, void *pData)
+{
+	printf("%s\n", texture->name);
+	return texture;
+}
 
 void
 InitGame(void)
@@ -391,14 +402,13 @@ found:
 	pBuildingPool = (BuildingPool*)resimg->buildingPool;
 	pTreadablePool = (TreadablePool*)resimg->treadablePool;
 	pDummyPool = (DummyPool*)resimg->dummyPool;
-	pTexStorePool = (TexlistPool*)resimg->texlistPool;
+	CTexListStore::Initialize((TexListPool*)resimg->texlistPool);
 	CModelInfo::Load(resimg->numModelInfos, resimg->modelInfoPtrs);
 	pTimecycle = resimg->timecycle;
+	CWaterLevel_::Initialize(resimg->waterLevelInst);
 
 	LoadLevel(levelToLoad);
 	int i;
-//	for(i = 0; i < gLevel->numSectors; i++)
-
 	for(i = 0; i < gLevel->numWorldSectors; i++)
 		LoadSector(i);
 	for(i = 0; i < gLevel->chunk->numInteriors; i++)
@@ -715,6 +725,8 @@ Draw(void)
 	Renderer::renderOpaque();
 	Renderer::renderTransparent();
 
+	CWaterLevel_::mspInst->RenderWater();
+
 	TheCamera.m_rwcam->endUpdate();
 	TheCamera.m_rwcam->showRaster();
 
@@ -746,10 +758,10 @@ AppEventHandler(sk::Event e, void *param)
 	Rect *r;
 	switch(e){
 	case INITIALIZE:
-		AllocConsole();
-		freopen("CONIN$", "r", stdin);
-		freopen("CONOUT$", "w", stdout);
-		freopen("CONOUT$", "w", stderr);
+//		AllocConsole();
+//		freopen("CONIN$", "r", stdin);
+//		freopen("CONOUT$", "w", stdout);
+//		freopen("CONOUT$", "w", stderr);
 
 		Init();
 		plAttachInput();

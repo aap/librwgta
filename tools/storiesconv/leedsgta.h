@@ -29,6 +29,14 @@ struct CVector
 	float x, y, z;
 };
 
+struct CRect
+{
+	float left;
+	float top;
+	float right;
+	float bottom;
+};
+
 struct CVector4d	// or VuVector?
 {
 	float x, y, z, w;
@@ -343,7 +351,6 @@ struct CTimeCycle
 	float m_fShadowDisplacementX[16];
 	float m_fShadowDisplacementY[16];
 
-	// TODO: check this against LCS
 	uint8 m_nAmbientRed[24][8];
 	uint8 m_nAmbientGreen[24][8];
 	uint8 m_nAmbientBlue[24][8];
@@ -379,8 +386,10 @@ struct CTimeCycle
 	uint8 m_nPoleShadowStrength[24][8];
 	int16 m_fFarClip[24][8];
 	int16 m_fFogStart[24][8];
+#ifdef VCS
 	uint8 m_nRadiosityIntensity[24][8];
 	uint8 m_nRadiosityLimit[24][8];
+#endif
 	uint8 m_fLightsOnGroundBrightness[24][8];
 	uint8 m_nLowCloudsRed[24][8];
 	uint8 m_nLowCloudsGreen[24][8];
@@ -398,8 +407,10 @@ struct CTimeCycle
 	uint8 m_fWaterGreen[24][8];
 	uint8 m_fWaterBlue[24][8];
 	uint8 m_fWaterAlpha[24][8];
+#ifdef VCS
 	float m_fBlurAlpha[24][8];
 	float m_fBlurOffset[24][8];
+#endif
 
 	int32 m_fCurrentAmbientRed;
 	int32 m_fCurrentAmbientGreen;
@@ -439,8 +450,10 @@ struct CTimeCycle
 	int16 m_nCurrentPoleShadowStrength;
 	int32 m_fCurrentFarClip;
 	int32 m_fCurrentFogStart;
+#ifdef VCS
 	int32 m_nCurrentRadiosityIntensity;
 	int32 m_nCurrentRadiosityLimit;
+#endif
 	int32 m_fCurrentLightsOnGroundBrightness;
 	int32 m_nCurrentLowCloudsRed;
 	int32 m_nCurrentLowCloudsGreen;
@@ -458,14 +471,27 @@ struct CTimeCycle
 	int32 m_fCurrentWaterGreen;
 	int32 m_fCurrentWaterBlue;
 	int32 m_fCurrentWaterAlpha;
+#ifdef VCS
 	int32 m_fCurrentBlurAlpha;
 	int32 m_fCurrentBlurOffset;
+#endif
 	int32 m_CurrentStoredValue;
 	int32 m_FogReduction;
 	int32 m_ExtraColour;
 	int32 m_bExtraColourOn;
 	int32 m_ExtraColourInter;
 	int32 field_337C;	// just alignment?
+};
+
+struct CWaterLevel
+{
+	int ms_nNoOfWaterLevels;
+	float *ms_aWaterZs;
+	CRect *ms_aWaterRects;
+	uint8 aWaterBlockList[64][64];
+	uint8 aWaterFineBlockList[128][128];
+	RslElement *pWaterAtomicClear;
+	RslElement *pWaterAtomicSandy;
 };
 
 struct ResourceImage {
@@ -516,7 +542,7 @@ struct ResourceImage {
 	void *attributeZones;		// cull.ipl
 	int32 numOccludersOnMap;
 	void *occluders;
-	void *waterLevelInst;		// waterpro.dat
+	CWaterLevel *waterLevelInst;		// waterpro.dat
 #ifdef LCS
 	void *handlingManager;		// handling.dat
 #else

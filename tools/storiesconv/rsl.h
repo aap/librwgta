@@ -128,6 +128,10 @@ struct RslObjectHasNode {
 void rslObjectHasNodeSetNode(RslObjectHasNode *object, RslNode *f);
 
 struct RslRasterPS2 {
+#ifdef VCS
+	uint32 unk1;
+	uint32 unk2;
+#endif
 	uint8 *data;
 	uint32 flags;
 };

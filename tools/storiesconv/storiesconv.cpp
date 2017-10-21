@@ -618,6 +618,23 @@ dumpVCSanimData(CAnimManager *mgr)
 #endif
 
 void
+writeWaterpro(void)
+{
+	FILE *f = fopen("waterpro.dat", "wb");
+	if(f == nil)
+		panic("can't open waterpro.dat");
+	CWaterLevel *wl = gamedata->waterLevelInst;
+
+	fwrite(&wl->ms_nNoOfWaterLevels, 1, sizeof(wl->ms_nNoOfWaterLevels), f);
+	fwrite(wl->ms_aWaterZs, 1, sizeof(float)*48, f);
+	fwrite(wl->ms_aWaterRects, 1, sizeof(CRect)*48, f);
+	fwrite(&wl->aWaterBlockList, 1, sizeof(wl->aWaterBlockList), f);
+	fwrite(&wl->aWaterFineBlockList, 1, sizeof(wl->aWaterFineBlockList), f);
+
+	fclose(f);
+}
+
+void
 extractResource(void)
 {
 #ifdef VCS
@@ -626,9 +643,10 @@ extractResource(void)
 //	dumpAnimations();
 #endif
 //	dumpPedStats();
-	writeAllModelInfo();
+//	writeAllModelInfo();
 //	dumpVehicleData();
 //	extractMarkers();
+//	writeWaterpro();
 }
 
 char *arg1;

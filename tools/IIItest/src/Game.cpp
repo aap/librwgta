@@ -20,21 +20,23 @@ CGame::InitialiseRW(void)
 
 	CTxdStore::Initialize();
 	CVisibilityPlugins::Initialise();
-	rwCamera = rw::Camera::create();
-	rwCamera->setFrame(rw::Frame::create());
-	rwCamera->setFarPlane(4000.0f);
-	rwCamera->setNearPlane(0.9f);
-	TheCamera.m_rwcam = rwCamera;
-	TheCamera.m_aspectRatio = 640.0f/480.0f;
+	Scene.camera = CameraCreate(640, 480, 1);
+	Scene.camera->setFarPlane(2000.0f);
+	Scene.camera->setNearPlane(0.9f);
+	TheCamera.m_rwcam = Scene.camera;
+	TheCamera.m_aspectRatio = (float)globals.width/globals.height;
 //	TheCamera.m_target.set(0.0f, 0.0f, 0.0f);
 //	TheCamera.m_position.set(-100.0f, -100.0f, 50.0f);
 	TheCamera.m_target.set(1155.0f, -190.0f, -18.0f);
 	TheCamera.m_position.set(1286.0f, -211.0f, 50.0f);
 
-	rwWorld  = rw::World::create();
-	rwWorld->addCamera(rwCamera);
+	Scene.world = rw::World::create();
+	Scene.world->addCamera(Scene.camera);
 
-	LightsCreate(rwWorld);
+	// DEBUG
+	debugCamState = *Scene.camera;
+
+	LightsCreate(Scene.world);
 }
 
 void
@@ -78,6 +80,9 @@ CGame::Initialise(void)
 	CFileLoader::LoadLevel("DATA\\DEFAULT.DAT");
 	CFileLoader::LoadLevel("DATA\\GTA3.DAT");
 	CTheZones::PostZoneCreation();
+
+	printf("--Setup water\n");
+	CWaterLevel::Initialise("DATA\\WATER.DAT");	// file is unused
 
 	printf("--Setup Streaming\n");
 	CStreaming::Init();

@@ -193,6 +193,15 @@ WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			CPad::tempKeystates[keymap[wParam]] = 0;
 		break;
 
+	case WM_SIZE:
+		rw::Rect r;
+		r.x = 0;
+		r.y = 0;
+		r.w = LOWORD(lParam);
+		r.h = HIWORD(lParam);
+		WindowResize(&r);
+		break;
+
 	case WM_CLOSE:
 		printf("CLOSE\n");
 		DestroyWindow(hwnd);
@@ -202,7 +211,7 @@ WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 }
 
 HWND
-MakeWindow(HINSTANCE instance, int width, int height)
+MakeWindow(HINSTANCE instance, int width, int height, const char *title)
 {
 	WNDCLASS wc;
 	wc.style         = CS_HREDRAW | CS_VREDRAW;
@@ -220,11 +229,20 @@ MakeWindow(HINSTANCE instance, int width, int height)
 		return 0;
 	}
 
+	int offx = 100;
+	int offy = 100;
+	RECT rect;
+	rect.left = 0;
+	rect.top = 0;
+	rect.right = width;
+	rect.bottom = height;
+	DWORD style = WS_OVERLAPPEDWINDOW;
+	AdjustWindowRect(&rect, style, FALSE);
+	rect.right += -rect.left;
+	rect.bottom += -rect.top;
 	HWND win;
-	win = CreateWindow("librwD3D9", "III test",
-		WS_BORDER | WS_CAPTION | WS_SYSMENU |
-		            WS_MINIMIZEBOX | WS_MAXIMIZEBOX,
-		0, 0, width, height, 0, 0, instance, 0);
+	win = CreateWindow("librwD3D9", title, style,
+		offx, offy, rect.right, rect.bottom, 0, 0, instance, 0);
 	if(!win){
 		MessageBox(0, "CreateWindow() - FAILED", 0, 0);
 		return 0;
@@ -243,7 +261,12 @@ WinMain(HINSTANCE instance, HINSTANCE,
 	freopen("CONOUT$", "w", stdout);
 	freopen("CONOUT$", "w", stderr);
 
-	HWND win = MakeWindow(instance, 640, 480);
+	globals.width = 640;
+	globals.height = 480;
+	globals.windowtitle = "III test";
+	globals.quit = 0;
+
+	HWND win = MakeWindow(instance, globals.width, globals.height, globals.windowtitle);
 	if(win == 0){
 		MessageBox(0, "MakeWindow() - FAILED", 0, 0);
 		return 0;

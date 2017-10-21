@@ -720,8 +720,6 @@ RslTexture *dumpTextureCB(RslTexture *texture, void*)
 	return texture;
 }
 
-int numInvalidTextures = 0;
-
 rw::Raster*
 convertRasterPS2(RslRasterPS2 *ras)
 {
@@ -734,17 +732,6 @@ convertRasterPS2(RslRasterPS2 *ras)
 	//uint32 mip = f>>20 & 0xF;
 	uint32 swizmask = f>>24;
 
-	if(ras->data == (uint8*)0xcccccccc){
-		numInvalidTextures++;
-		return nil;
-	}
-
-	// some textures seem to be invalid (in VCS)
-//	if(logw > 0xF || logh > 0xF ||
-//	   logw == 0 || logh == 0)	// 0 is valid on PS2 but it probably indicates an invalid texture anyway
-//		return nil;
-
-	assert(ras->data != (uint8*)0xcccccccc);
 	uint8 *palette = getPalettePS2((RslRaster*)ras);
 	uint8 *texels = getTexelPS2((RslRaster*)ras, 0);
 
@@ -810,6 +797,9 @@ convertRasterPS2(RslRasterPS2 *ras)
 	return rwras;
 }
 
+// This function is VERY BAD
+// it was written when librw was younger. It should be
+// replaced by something similar to the above.
 RslTexture*
 convertTexturePS2(RslTexture *texture, void *pData)
 {

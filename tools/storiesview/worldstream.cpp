@@ -1,8 +1,5 @@
 #include "storiesview.h"
 
-// TODO: move the rslconv declarations somewhere else:
-rw::Raster *convertRasterPS2(RslRasterPS2 *ras);
-
 // sectors in III: -2000 - 2000: 100 sectors of size 40 in both directions
 // sectors in VC: x: -2400 - 1600: 80 sectors of size 50
 //                y: -2000 - 2000: 80 sectors of size 50
@@ -513,14 +510,6 @@ makeWorldGeometry(sBuildingGeometry *bgeom)
 			continue;
 		if(texres->dmaChain == nil){
 			RslRaster *ras = texres->raster;
-#ifdef VCS
-			struct VCSras {
-				int unk1, unk2;
-				RslRaster raster;
-			} *vcsras;
-			vcsras = (VCSras*)texres->raster;
-			ras = &vcsras->raster;
-#endif
 			rw::Raster *raster = convertRasterPS2(&ras->ps2);
 			if(raster == nil)
 				continue;
@@ -623,14 +612,6 @@ renderSector(SectorExt *se)
 			continue;
 		m->lastFrame = frameCounter;
 
-		float x = halfFloatToFloat(inst->bound[0]);
-		float y = halfFloatToFloat(inst->bound[1]);
-		float z = halfFloatToFloat(inst->bound[2]);
-		float r = halfFloatToFloat(inst->bound[3]);
-		rw::Sphere sph = { { x, y, z }, r };
-		if(TheCamera.m_rwcam->frustumTestSphere(&sph) == rw::Camera::SPHEREOUTSIDE)
-			continue;
-
 //		if(!be->hidden)
 //			continue;
 		if(be->isTimed && !GetIsTimeInRange(be->timeOn, be->timeOff))
@@ -674,9 +655,13 @@ printf("missing 0x%X %x\n", inst->resId, inst->GetId());
 			se->instances[i] = a;
 		}
 
-		rw::RGBA col = currentAmbient;
-		col.alpha = 0xFF;
-		setGeoMaterialColor(se->instances[i]->geometry, col);
+		float x = halfFloatToFloat(inst->bound[0]);
+		float y = halfFloatToFloat(inst->bound[1]);
+		float z = halfFloatToFloat(inst->bound[2]);
+		float r = halfFloatToFloat(inst->bound[3]);
+		rw::Sphere sph = { { x, y, z }, r };
+		if(TheCamera.m_rwcam->frustumTestSphere(&sph) == rw::Camera::SPHEREOUTSIDE)
+			continue;
 
 		if(be->isTransparent)
 			Renderer::addToTransparentRenderList(se->instances[i]);

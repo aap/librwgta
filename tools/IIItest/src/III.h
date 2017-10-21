@@ -7,6 +7,12 @@
 #include <rw.h>
 #include "rwgta.h"
 
+// Get rid of bullshit windows definitions, we're not running on an 8086
+#ifdef far
+#undef far
+#undef near
+#endif
+
 using namespace gta;
 
 using rw::uint8;
@@ -15,9 +21,20 @@ using rw::uint16;
 using rw::int16;
 using rw::uint32;
 using rw::int32;
+using rw::bool32;
 typedef unsigned int uint;
 typedef unsigned char uchar;
 typedef unsigned short ushort;
+
+// taken from skeleton
+struct Globals
+{
+	const char *windowtitle;
+	int32 width;
+	int32 height;
+	bool32 quit;
+};
+extern Globals globals;
 
 extern  uchar work_buff[55000];
 void debug(const char *fmt, ...);
@@ -27,6 +44,14 @@ void debug(const char *fmt, ...);
 #include "config.h"
 #include "math/Vector.h"
 #include "math/Matrix.h"
+
+class CRGBA
+{
+public:
+	uint8 r, g, b, a;
+	CRGBA(void) { }
+	CRGBA(uint8 r, uint8 g, uint8 b, uint8 a) : r(r), g(g), b(b), a(a) { }
+};
 
 class C2dEffect
 {
@@ -91,6 +116,9 @@ public:
 #include "ObjectData.h"
 #include "Collision.h"
 
+#include "WaterLevel.h"
+#include "Sprite.h"
+#include "Clouds.h"
 #include "TxdStore.h"
 #include "TimeCycle.h"
 #include "VisibilityPlugins.h"
@@ -109,16 +137,22 @@ void convertTxd(rw::TexDictionary *txd);
 
 
 // misc
-extern CCamera TheCamera;
-extern rw::Camera *rwCamera;
-extern rw::World  *rwWorld;
+struct GlobalScene
+{
+	rw::Camera *camera;
+	rw::World  *world;
+};
+extern GlobalScene Scene;
 extern rw::Light  *pAmbient;
 extern rw::Light  *pDirect;
 extern rw::Light  *pExtraDirectionals[4];
 extern bool isRunning;
+extern CCamera TheCamera;
 CVector FindPlayerCoors(void);
 void SetLightsWithTimeOfDayColour(rw::World*);
 void LightsCreate(rw::World*);
+rw::Camera *CameraCreate(int width, int height, int z);
+void WindowResize(rw::Rect *r);
 void DeActivateDirectional(void);
 void SetAmbientColours(void);
 void DefinedState(void);
@@ -290,3 +324,7 @@ public:
 	static void LoadHandlingData(void);
 	static int  GetHandlingData(const char *ident);
 };
+
+// Debug things
+extern rw::Camera debugCamState;	// copy of the camera state at some point in time
+void DrawDebugFrustum(void);

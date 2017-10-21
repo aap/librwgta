@@ -1,0 +1,14 @@
+
+class CClouds
+{
+public:
+	static void RenderBackground(int16 topred, int16 topgreen, int16 topblue,
+		int16 botred, int16 botgreen, int16 botblue, int16 alpha);
+	static void RenderHorizon(void);
+
+	static float ms_cameraRoll;
+	static float ms_horizonZ;
+	static CRGBA ms_colourTop;
+	static CRGBA ms_colourBottom;
+	static CRGBA ms_colourBkGrd;
+};
