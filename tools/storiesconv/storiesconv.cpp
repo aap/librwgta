@@ -310,6 +310,29 @@ getAnimGroupName(int32 id)
 }
 
 void
+assignModelNames(void)
+{
+	int i;
+	const char *name;
+	char tmpname[50];
+	CBaseModelInfo *mi;
+	for(i = 0; i < gamedata->numModelInfos; i++){
+		mi = gamedata->modelInfoPtrs[i];
+		if(mi == nil)
+			continue;
+
+		name = lookupHashKey(mi->hashKey);
+		if(mi->hashKey == 0)
+			name = "null";
+		else if(name == nil){
+			snprintf(tmpname, 50, "hash:%x", mi->hashKey);
+			name = strdup(tmpname);
+		}
+		mi->name = name;
+	}
+}
+
+void
 writeAllModelInfo(void)
 {
 	int i, j;
@@ -374,6 +397,7 @@ writeAllModelInfo(void)
 
 		printf("%d", i);
 
+/*
 		name = lookupHashKey(mi->hashKey);
 		if(mi->hashKey == 0)
 			name = "null";
@@ -381,7 +405,8 @@ writeAllModelInfo(void)
 			snprintf(tmpname, 50, "hash:%x", mi->hashKey);
 			name = tmpname;
 		}
-		printf(", %s", name);
+*/
+		printf(", %s", mi->name);
 
 		if(mi->txdSlot >= 0)
 			name = gamedata->texlistPool->items[mi->txdSlot].name;
@@ -457,6 +482,21 @@ CVector RoundVector(CVector &vec)
 	return v;
 }
 
+Quat RoundQuat(Quat &quat)
+{
+	const float epsilon = 0.0009f;
+	Quat q;
+	q.w = quat.w;
+	if(abs(q.w) < epsilon) q.w = 0.0f;
+	q.x = quat.x;
+	if(abs(q.x) < epsilon) q.x = 0.0f;
+	q.y = quat.y;
+	if(abs(q.y) < epsilon) q.y = 0.0f;
+	q.z = quat.z;
+	if(abs(q.z) < epsilon) q.z = 0.0f;
+	return normalize(q);
+}
+
 void
 dump2dfx(void)
 {
@@ -506,6 +546,65 @@ dump2dfx(void)
 		}
 	}
 	printf("end\n");
+}
+
+void
+dumpInstances(CPool_entity *pool)
+{
+	int i;
+	CEntity *e;
+	CBaseModelInfo *mi;
+	for(i = 0; i < pool->size; i++){
+		if(pool->flags[i] & 0x80)
+			continue;
+		e = &pool->items[i];
+
+		mi = gamedata->modelInfoPtrs[e->modelIndex];
+		rw::Matrix m = *(rw::Matrix*)&e->placeable.matrix.matrix;
+		// Scale should be 1, 1, 1 as IPL doesn't support scaling
+		float sx = length(m.right);
+		float sy = length(m.up);
+		float sz = length(m.at);
+		Quat q = RoundQuat(conj(m.getRotation()));
+		printf("%d %s %d, %g %g %g, %g %g %g, %g %g %g %g\n", e->modelIndex, mi->name, e->area,
+			m.pos.x, m.pos.y, m.pos.z,
+			sx, sy, sz,
+			q.x, q.y, q.z, q.w);
+	}
+}
+
+void
+dumpZones(void)
+{
+	int i;
+	CTheZones *zones = gamedata->theZones;
+	CZone *z;
+
+	for(i = 1; i < zones->TotalNumberOfNavigationZones; i++){
+		z = &zones->NavigationZoneArray[i];
+		printf("%s, %d, %g %g %g, %g %g %g, %d\n",
+			z->name, z->type,
+			z->min.x, z->min.y, z->min.z,
+			z->max.x, z->max.y, z->max.z,
+			z->level);
+	}
+	for(i = 1; i < zones->TotalNumberOfInfoZones; i++){
+		z = &zones->InfoZoneArray[i];
+		printf("%s, %d, %g %g %g, %g %g %g, %d\n",
+			z->name, z->type,
+			z->min.x, z->min.y, z->min.z,
+			z->max.x, z->max.y, z->max.z,
+			z->level);
+		z++;
+	}
+	for(i = 1; i < zones->TotalNumberOfMapZones; i++){
+		z = &zones->MapZoneArray[i];
+		printf("%s, %d, %g %g %g, %g %g %g, %d\n",
+			z->name, z->type,
+			z->min.x, z->min.y, z->min.z,
+			z->max.x, z->max.y, z->max.z,
+			z->level);
+	}
 }
 
 void
@@ -701,6 +800,7 @@ writeWaterpro(void)
 void
 extractResource(void)
 {
+	assignModelNames();
 #ifdef VCS
 //	dumpVCSanimData();
 #else
@@ -712,6 +812,14 @@ extractResource(void)
 //	dumpVehicleData();
 //	extractMarkers();
 //	writeWaterpro();
+
+//	printf("inst\n");
+//	dumpInstances(gamedata->buildingPool);
+//	dumpInstances(gamedata->treadablePool);
+//	dumpInstances(gamedata->dummyPool);
+//	printf("end\n");
+
+	dumpZones();
 }
 
 char *arg1;

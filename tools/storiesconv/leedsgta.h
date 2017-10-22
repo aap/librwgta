@@ -298,10 +298,10 @@ struct CEntity
 	int32 rslObject;
 	int16 scanCode;
 	int16 modelIndex;
-	int16 unknown;
+	int16 modelIndex2;	// seems to be the same
 #endif
 	uint8 level;
-	uint8 interior;	// seems uninitialized in VCS o_O
+	uint8 area;	// seems uninitialized in VCS o_O
 	void *vtable;
 };
 //static_assert(sizeof(CEntity) == 0x60, "CEntity: error");
@@ -322,7 +322,16 @@ struct CDummy : public CEntity
 struct CPool_generic
 {
 	void *items;
-	void *flags;
+	uint8 *flags;
+	int  size;
+	int  allocPtr;
+	char name[16];
+};
+
+struct CPool_entity
+{
+	CEntity *items;
+	uint8 *flags;
 	int  size;
 	int  allocPtr;
 	char name[16];
@@ -331,7 +340,7 @@ struct CPool_generic
 struct CPool_txd
 {
 	TexListDef *items;
-	void *flags;
+	uint8 *flags;
 	int  size;
 	int  allocPtr;
 	char name[16];
@@ -494,6 +503,39 @@ struct CWaterLevel
 	RslElement *pWaterAtomicSandy;
 };
 
+struct CZone
+{
+	char name[8];
+	CVector min, max;
+	int32 type;
+	int32 level;
+	int16 zoneinfoDay;
+	int16 zoneinfoNight;
+	CZone *child;
+	CZone *parent;
+	CZone *next;
+};
+
+struct CTheZones
+{
+	int32 m_CurrLevel;
+#ifdef LCS
+	int32 FindIndex;
+#else
+	int32 unk[2];	// first two bytes looks like TotalNumberOfInfoZones
+#endif
+	CZone *NavigationZoneArray;
+	CZone *InfoZoneArray;
+	void *ZoneInfoArray;	// size 0x44
+	int16 TotalNumberOfNavigationZones;
+	int16 TotalNumberOfInfoZones;
+	int16 TotalNumberOfZoneInfos;
+	CZone *MapZoneArray;
+	int16 AudioZoneArray[36];
+	int16 TotalNumberOfMapZones;
+	int16 NumberOfAudioZones;
+};
+
 struct C2dEffect
 {
 	// type 0
@@ -545,16 +587,16 @@ static_assert(sizeof(C2dEffect) == 0x40, "C2dEffect: error");
 
 struct ResourceImage {
 	void *paths;
-	CPool_generic *buildingPool;
-	CPool_generic *treadablePool;
-	CPool_generic *dummyPool;
+	CPool_entity *buildingPool;
+	CPool_entity *treadablePool;
+	CPool_entity *dummyPool;
 	CPool_generic *entryInfoNodePool;
 	CPool_generic *ptrNodePool;
 	int32 numModelInfos;
 	CBaseModelInfo **modelInfoPtrs;
 	void *carArrays;
 	void *totalNumOfCarsOfRating;
-	void *theZones;	// gta3.zon
+	CTheZones *theZones;	// gta3.zon
 	void *sectors;
 	void *bigBuildingList;
 	int32 num2deffects;
@@ -589,7 +631,7 @@ struct ResourceImage {
 
 	int32 numAttributeZones;	// cull.ipl
 	void *attributeZones;		// cull.ipl
-	int32 numOccludersOnMap;
+	int32 numOccludersOnMap;	// empty
 	void *occluders;
 	CWaterLevel *waterLevelInst;		// waterpro.dat
 #ifdef LCS
