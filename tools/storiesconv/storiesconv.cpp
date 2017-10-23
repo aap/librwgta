@@ -566,7 +566,7 @@ dumpInstances(CPool_entity *pool)
 		float sy = length(m.up);
 		float sz = length(m.at);
 		Quat q = RoundQuat(conj(m.getRotation()));
-		printf("%d %s %d, %g %g %g, %g %g %g, %g %g %g %g\n", e->modelIndex, mi->name, e->area,
+		printf("%d %s %d, %f %f %f, %g %g %g, %g %g %g %g\n", e->modelIndex, mi->name, e->area,
 			m.pos.x, m.pos.y, m.pos.z,
 			sx, sy, sz,
 			q.x, q.y, q.z, q.w);
@@ -604,6 +604,26 @@ dumpZones(void)
 			z->min.x, z->min.y, z->min.z,
 			z->max.x, z->max.y, z->max.z,
 			z->level);
+	}
+}
+
+void
+dumpCullZones(void)
+{
+	int i, n;
+	CAttributeZone *zones;
+	CVector c;
+	n = gamedata->numAttributeZones;
+	zones = gamedata->attributeZones;
+	for(i = 0; i < n; i++){
+		c.x = (zones[i].x1 + zones[i].x2)/2.0f;
+		c.y = (zones[i].y1 + zones[i].y2)/2.0f;
+		c.z = (zones[i].z1 + zones[i].z2)/2.0f;
+		printf("%g %g %G, %d %d %d, %d %d %d, %d, %d\n",
+			c.x, c.y, c.z,
+			zones[i].x1, zones[i].y1, zones[i].z1,
+			zones[i].x2, zones[i].y2, zones[i].z2,
+			zones[i].attribute, zones[i].wantedLevelDrop);
 	}
 }
 
@@ -807,8 +827,8 @@ extractResource(void)
 //	dumpAnimations();
 #endif
 //	dumpPedStats();
-//	writeAllModelInfo();
-//	dump2dfx();
+	writeAllModelInfo();
+	dump2dfx();
 //	dumpVehicleData();
 //	extractMarkers();
 //	writeWaterpro();
@@ -819,7 +839,13 @@ extractResource(void)
 //	dumpInstances(gamedata->dummyPool);
 //	printf("end\n");
 
-	dumpZones();
+//	printf("zone\n");
+//	dumpZones();
+//	printf("end\n");
+
+//	printf("cull\n");
+//	dumpCullZones();
+//	printf("end\n");
 }
 
 char *arg1;

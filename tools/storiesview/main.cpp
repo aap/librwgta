@@ -184,6 +184,8 @@ updateTimecycle(void)
 		pTimecycle->m_fCurrentWaterGreen = pTimecycle->m_fWaterGreen[curHour][curWeather];
 		pTimecycle->m_fCurrentWaterBlue = pTimecycle->m_fWaterBlue[curHour][curWeather];
 		pTimecycle->m_fCurrentWaterAlpha = pTimecycle->m_fWaterAlpha[curHour][curWeather];
+		if(pTimecycle->m_fCurrentWaterAlpha < 200)	// not 100% sure this is right
+			pTimecycle->m_fCurrentWaterAlpha = 200;
 		TheCamera.m_rwcam->setFarPlane(pTimecycle->m_fFarClip[curHour][curWeather]);
 		TheCamera.m_rwcam->fogPlane = pTimecycle->m_fFogStart[curHour][curWeather];
 	}else{

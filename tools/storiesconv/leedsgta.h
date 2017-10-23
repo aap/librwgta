@@ -499,8 +499,8 @@ struct CWaterLevel
 	CRect *ms_aWaterRects;
 	uint8 aWaterBlockList[64][64];
 	uint8 aWaterFineBlockList[128][128];
-	RslElement *pWaterAtomicClear;
-	RslElement *pWaterAtomicSandy;
+	RslElement *ms_pWavyAtomic;
+	RslElement *ms_pMaskAtomic;
 };
 
 struct CZone
@@ -534,6 +534,18 @@ struct CTheZones
 	int16 AudioZoneArray[36];
 	int16 TotalNumberOfMapZones;
 	int16 NumberOfAudioZones;
+};
+
+struct CAttributeZone
+{
+	int16 x1;
+	int16 x2;
+	int16 y1;
+	int16 y2;
+	int16 z1;
+	int16 z2;
+	int16 attribute;
+	int16 wantedLevelDrop;
 };
 
 struct C2dEffect
@@ -630,7 +642,7 @@ struct ResourceImage {
 #endif
 
 	int32 numAttributeZones;	// cull.ipl
-	void *attributeZones;		// cull.ipl
+	CAttributeZone *attributeZones;		// cull.ipl
 	int32 numOccludersOnMap;	// empty
 	void *occluders;
 	CWaterLevel *waterLevelInst;		// waterpro.dat
