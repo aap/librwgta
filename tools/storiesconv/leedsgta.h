@@ -595,7 +595,7 @@ struct C2dEffect
 
 	int pad1, pad2;	// align the CVuVector
 };
-static_assert(sizeof(C2dEffect) == 0x40, "C2dEffect: error");
+//static_assert(sizeof(C2dEffect) == 0x40, "C2dEffect: error");
 
 struct ResourceImage {
 	void *paths;

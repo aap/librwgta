@@ -160,7 +160,7 @@ convertTexture(RslTexture *t)
 {
 	Texture *tex = Texture::read(t->name, t->mask);
 	//tex->refCount++;	// ??
-	if(tex->refCount == 1)
+	if(tex && tex->refCount == 1)
 		tex->filterAddressing = (Texture::WRAP << 12) | (Texture::WRAP << 8) | Texture::LINEAR;
 	return tex;
 }

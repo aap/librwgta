@@ -1092,6 +1092,7 @@ main(int argc, char *argv[])
 	gta::attachPlugins();
 	rw::Engine::open();
 	rw::Engine::start(nil);
+	rw::Texture::setCreateDummies(1);
 
 	atmOffset = Atomic::registerPlugin(sizeof(void*), 0x1000000, NULL, NULL, NULL);
 	rw::version = 0x34003;
