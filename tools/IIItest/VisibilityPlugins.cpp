@@ -49,13 +49,13 @@ CVisibilityPlugins::RenderFadingAtomic(rw::Atomic *atm, float camdist)
 	float fadefactor;
 	uchar alpha;
 	CSimpleModelInfo *mi = GetAtomicModelInfo(atm);
-	distatm = mi->GetAtomicFromDistance(camdist - 20.0f);
+	distatm = mi->GetAtomicFromDistance(camdist - FADE_DISTANCE);
 	if(mi->m_additive){
 		SetRenderState(rw::DESTBLEND, rw::BLENDONE);
 		rw::Atomic::defaultRenderCB(atm);
 		SetRenderState(rw::DESTBLEND, rw::BLENDINVSRCALPHA);
 	}else{
-		fadefactor = (mi->GetLargestLodDistance() - (camdist - 20.0f))/20.0f;
+		fadefactor = (mi->GetLargestLodDistance() - (camdist - FADE_DISTANCE))/FADE_DISTANCE;
 		if(fadefactor > 1.0f)
 			fadefactor = 1.0f;
 		alpha = mi->m_alpha * fadefactor;

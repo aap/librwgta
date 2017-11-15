@@ -73,9 +73,36 @@ CEntity::SetupBigBuilding(void)
 bool
 CEntity::IsVisible(void)
 {
-	return m_rwObject && m_isVisible;
-	// TODO: GetIsOnScreen
+	return (m_rwObject && m_isVisible) ? GetIsOnScreen() : false;
 }
+
+bool
+CEntity::GetIsOnScreen(void)
+{
+	CVector center;
+	float radius;
+	GetBoundCenter(center);
+	radius = GetBoundRadius();
+	// TODO: implement whatever GTA actually does
+	return TheCamera.isSphereVisible(center, radius);
+}
+
+bool
+CEntity::GetIsOnScreenComplex(void)
+{
+	// TODO:
+	// this shouldn't be the same as GetIsOnScreen...
+	return true;
+}
+
+void
+CEntity::GetBoundCenter(CVector &out)
+{
+	rw::V3d::transformPoints((rw::V3d*)&out,
+		&CModelInfo::GetModelInfo(m_modelIndex)->GetColModel()->boundingSphere.center,
+		1, &m_matrix.m_matrix);
+};
+
 
 /* Adds an entity into all sectors of its type it belongs to */
 void
@@ -87,12 +114,12 @@ CEntity::Add(void)
 	CPtrList *list;
 
 	CRect bounds = GetBoundRect();
-	xstart = CWorld::GetSectorIndex(bounds.left);
-	xend   = CWorld::GetSectorIndex(bounds.right);
-	xmid   = CWorld::GetSectorIndex((bounds.left + bounds.right)/2.0f);
-	ystart = CWorld::GetSectorIndex(bounds.bottom);
-	yend   = CWorld::GetSectorIndex(bounds.top);
-	ymid   = CWorld::GetSectorIndex((bounds.bottom + bounds.top)/2.0f);
+	xstart = CWorld::GetSectorIndexX(bounds.left);
+	xend   = CWorld::GetSectorIndexX(bounds.right);
+	xmid   = CWorld::GetSectorIndexX((bounds.left + bounds.right)/2.0f);
+	ystart = CWorld::GetSectorIndexY(bounds.bottom);
+	yend   = CWorld::GetSectorIndexY(bounds.top);
+	ymid   = CWorld::GetSectorIndexY((bounds.bottom + bounds.top)/2.0f);
 	assert(xstart >= 0);
 	assert(xend < 100);
 	assert(ystart >= 0);

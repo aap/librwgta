@@ -597,8 +597,65 @@ struct C2dEffect
 };
 //static_assert(sizeof(C2dEffect) == 0x40, "C2dEffect: error");
 
+struct CPathNode
+{
+#ifdef LCS
+	// from VC, but seems to work for LCS too
+	uint32 Flags;
+	int16 x;
+	int16 y;
+	int16 z;
+	int16 unknown;
+	int16 linkId;
+	uint8 width;
+	uint8 NodeType;
+	uint8 flagsA_numLinks;
+	uint8 flagsB;
+	uint8 flagsC;
+#else
+	// this is just guessing...
+	int16 x;
+	int16 y;
+	int16 z;
+	int16 blah[2];
+#endif
+};
+
+struct CNaviNode	// not original name
+{
+	char data[12];
+};
+
+struct CPathFind
+{
+#ifdef LCS
+	CPathNode *pathNodes;
+	CNaviNode *naviNodes;
+	uint16 *linksTo;     // numLinks
+	uint8 *distanceTo;   // numLinks
+	uint16 *data1;
+
+	int32 numPathNodes;
+	int32 numCarNodes;
+	int32 numPedNodes;
+	int16 count2;
+	int16 numLinks;
+	int16 count3;	// numData1?
+	int16 pad;
+	int32 numNaviNodes;
+#else
+	CPathNode *pathNodes;
+	void *data1;
+	uint16 *linksTo;     // numLinks
+
+	int32 numPathNodes;
+	int32 numCarNodes;
+	int32 numPedNodes;
+#endif
+};
+
 struct ResourceImage {
-	void *paths;
+	CPathFind *paths;
 	CPool_entity *buildingPool;
 	CPool_entity *treadablePool;
 	CPool_entity *dummyPool;

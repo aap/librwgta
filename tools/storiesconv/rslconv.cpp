@@ -697,6 +697,25 @@ convertTo32(uint8 *out, uint8 *pal, uint8 *tex,
 	}
 }
 
+static void
+dumpLevels(RslTexture *texture)
+{
+	uint32 f = texture->raster->ps2.flags;
+	uint32 w = 1 << (f & 0x3F);
+	uint32 h = 1 << (f>>6 & 0x3F);
+	uint32 d = f>>12 & 0x3F;
+	uint32 mip = f>>20 & 0xF;
+	uint32 swizmask = f>>24;
+	int i;
+
+	for(i = 0; i < mip; i++){
+		printf("%d %d %d %d %d\n", d, w, h, i, swizmask&1);
+		swizmask >>= 1;
+		w /= 2;
+		h /= 2;
+	}
+}
+
 RslTexture *dumpTextureCB(RslTexture *texture, void*)
 {
 	uint32 f = texture->raster->ps2.flags;
@@ -707,6 +726,13 @@ RslTexture *dumpTextureCB(RslTexture *texture, void*)
 	uint32 swizmask = f>>24;
 	uint8 *palette = getPalettePS2(texture->raster);
 	uint8 *texels = getTexelPS2(texture->raster, 0);
+
+//	dumpLevels(texture);
+//	return texture;
+//	uint32 myswiz = guessSwizzling__(w, h, d, mip);
+//	if(myswiz == swizmask)
+//		return texture;
+
 	printf(" %x %x %x %x %x %s\n", w, h, d, mip, swizmask, texture->name);
 	Image *img = Image::create(w, h, 32);
 	img->allocate();

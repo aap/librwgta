@@ -172,6 +172,24 @@ project "vcsview"
 	defines { "VCS" }
 	debugdir "V:/"
 
+project "euryopa"
+	kind "WindowedApp"
+	characterset ("MBCS")
+	flags { "WinMain" }
+	skeltool("euryopa")
+	includedirs { "tools/euryopa" }
+	removeplatforms { "*null" }
+	removeplatforms { "ps2" } -- for now
+
+project "gtaclumpview"
+	kind "WindowedApp"
+	characterset ("MBCS")
+	flags { "WinMain" }
+	skeltool("gtaclumpview")
+	includedirs { "tools/gtaclumpview" }
+	removeplatforms { "*null" }
+	removeplatforms { "ps2" } -- for now
+
 
 project "coltest"
 	tool("coltest")
@@ -192,6 +210,6 @@ project "IIItest"
 	characterset ("MBCS")
 	flags { "WinMain" }
 	removeplatforms { "*null" }
-	files { path.join("tools/IIItest/src/*") }
+	files { path.join("tools/IIItest/*") }
 	debugdir "C:/Users/aap/games/gta3"
 

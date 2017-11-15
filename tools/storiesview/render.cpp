@@ -90,4 +90,38 @@ renderCubesIPL(void)
 	}
 }
 
+void
+renderPathNodes(void)
+{
+	int i;
+	static rw::Atomic *atomic;
+	if(atomic == nil){
+		atomic = rw::Atomic::create();
+		atomic->setGeometry(cubeGeo, 0);
+		rw::Frame *f = rw::Frame::create();
+		atomic->setFrame(f);
+	}
+
+	cubeMat->color.red = 255;
+	cubeMat->color.green = 0;
+	cubeMat->color.blue = 0;
+
+	rw::Frame *f = atomic->getFrame();
+	for(i = 0; i < gpThePaths->numPathNodes; i++){
+		CPathNode *pn = &gpThePaths->pathNodes[i];
+//		if(i >= 0 && i < gpThePaths->numCarNodes)
+//			continue;
+
+		rw::V3d pos;
+		pos.x = pn->x/8.0f;
+		pos.y = pn->y/8.0f;
+		pos.z = pn->z;
+#ifdef LCS
+		pos.z /= 8.0f;
+#endif
+		f->translate(&pos, rw::COMBINEREPLACE);
+		atomic->render();
+	}
+}
+
 }

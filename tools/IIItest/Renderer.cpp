@@ -5,6 +5,14 @@ int CRenderer::ms_nNoOfInVisibleEntities;
 CEntity *CRenderer::ms_aVisibleEntityPtrs[2000];
 CVector CRenderer::ms_vecCameraPosition;
 
+enum Visbility
+{
+	VIS_INVISIBLE,
+	VIS_VISIBLE,
+	VIS_CULLED,
+	VIS_STREAMME
+};
+
 void
 CRenderer::ConstructRenderList(void)
 {
@@ -15,8 +23,67 @@ CRenderer::ConstructRenderList(void)
 }
 
 void
+CRenderer::ScanSectorPoly(rw::V2d *poly, int numVerts, void (*f)(CSector*))
+{
+	// TODO: actually scan the *polygon*
+	// to simplify things we calculate the bounding rectangle
+	// and just scan that instead
+	int x, xmin = 100, xmax = 0;
+	int y, ymin = 100, ymax = 0;
+	int i;
+	for(i = 0; i < numVerts; i++){
+		if(poly[i].x < xmin) xmin = poly[i].x;
+		if(poly[i].y < ymin) ymin = poly[i].y;
+		if(poly[i].x > xmax) xmax = poly[i].x;
+		if(poly[i].y > ymax) ymax = poly[i].y;
+	}
+	if(xmin < 0) xmin = 0;
+	if(ymin < 0) ymin = 0;
+	if(xmax >= NUMSECTORS_X) xmax = NUMSECTORS_X-1;
+	if(ymax >= NUMSECTORS_Y) ymax = NUMSECTORS_Y-1;
+	for(x = xmin; x <= xmax; x++)
+		for(y = ymin; y <= ymax; y++)
+			f(CWorld::GetSector(x, y));
+}
+
+enum Corners
+{
+	CORNER_CAM = 0,
+	CORNER_FAR_TOPLEFT,
+	CORNER_FAR_TOPRIGHT,
+	CORNER_FAR_BOTRIGHT,
+	CORNER_FAR_BOTLEFT,
+	CORNER_LOD_LEFT,
+	CORNER_LOD_RIGHT,
+	CORNER_PRIO_LEFT,
+	CORNER_PRIO_RIGHT,
+};
+
+void
 CRenderer::ScanWorld(void)
 {
+	float far = TheCamera.m_rwcam->farPlane;
+	rw::V2d vw = TheCamera.m_rwcam->viewWindow;
+	rw::V3d vectors[9];
+	rw::Matrix *cammatrix;
+	rw::V2d poly[3];
+
+	memset(vectors, 0, sizeof(vectors));
+	vectors[CORNER_FAR_TOPLEFT].x = -vw.x * far;
+	vectors[CORNER_FAR_TOPLEFT].y = vw.y * far;
+	vectors[CORNER_FAR_TOPLEFT].z = far;
+	vectors[CORNER_FAR_TOPRIGHT].x = vw.x * far;
+	vectors[CORNER_FAR_TOPRIGHT].y = vw.y * far;
+	vectors[CORNER_FAR_TOPRIGHT].z = far;
+	vectors[CORNER_FAR_BOTRIGHT].x = vw.x * far;
+	vectors[CORNER_FAR_BOTRIGHT].y = -vw.y * far;
+	vectors[CORNER_FAR_BOTRIGHT].z = far;
+	vectors[CORNER_FAR_BOTLEFT].x = -vw.x * far;
+	vectors[CORNER_FAR_BOTLEFT].y = -vw.y * far;
+	vectors[CORNER_FAR_BOTLEFT].z = far;
+
+	cammatrix = &TheCamera.m_rwcam->getFrame()->matrix;
+
 	CVisibilityPlugins::InitAlphaEntityList();
 
 	if(++CWorld::ms_nCurrentScanCode == 0){
@@ -24,13 +91,50 @@ CRenderer::ScanWorld(void)
 		CWorld::ms_nCurrentScanCode = 1;
 	}
 
-	for(int i = 0; i < 100; i++)
-	for(int j = 0; j < 100; j++){
-		CSector *s = CWorld::GetSector(i, j);
-		ScanSectorList(&s->m_buildings);
-		ScanSectorList(&s->m_objects);
-		ScanSectorList(&s->m_dummies);
+	if(cammatrix->at.z > 0.0f){
+		// looking up, bottom corners are further away
+		vectors[CORNER_LOD_LEFT] = scale(vectors[CORNER_FAR_BOTLEFT], LOD_DISTANCE/far);
+		vectors[CORNER_LOD_RIGHT] = scale(vectors[CORNER_FAR_BOTRIGHT], LOD_DISTANCE/far);
+	}else{
+		// looking down, top corners are further away
+		vectors[CORNER_LOD_LEFT] = scale(vectors[CORNER_FAR_TOPLEFT], LOD_DISTANCE/far);
+		vectors[CORNER_LOD_RIGHT] = scale(vectors[CORNER_FAR_TOPRIGHT], LOD_DISTANCE/far);
 	}
+	vectors[CORNER_PRIO_LEFT].x = vectors[CORNER_LOD_LEFT].x * 0.2f;
+	vectors[CORNER_PRIO_LEFT].y = vectors[CORNER_LOD_LEFT].y * 0.2f;
+	vectors[CORNER_PRIO_LEFT].z = vectors[CORNER_LOD_LEFT].z;
+	vectors[CORNER_PRIO_RIGHT].x = vectors[CORNER_LOD_RIGHT].x * 0.2f;
+	vectors[CORNER_PRIO_RIGHT].y = vectors[CORNER_LOD_RIGHT].y * 0.2f;
+	vectors[CORNER_PRIO_RIGHT].z = vectors[CORNER_LOD_RIGHT].z;
+
+	rw::V3d::transformPoints(vectors, vectors, 9, cammatrix);
+
+	if(far <= LOD_DISTANCE){
+		poly[0].x = CWorld::GetSectorIndexX(vectors[CORNER_CAM].x);
+		poly[0].y = CWorld::GetSectorIndexY(vectors[CORNER_CAM].y);
+		poly[1].x = CWorld::GetSectorIndexX(vectors[CORNER_FAR_TOPLEFT].x);
+		poly[1].y = CWorld::GetSectorIndexY(vectors[CORNER_FAR_TOPLEFT].y);
+		poly[2].x = CWorld::GetSectorIndexX(vectors[CORNER_FAR_TOPRIGHT].x);
+		poly[2].y = CWorld::GetSectorIndexY(vectors[CORNER_FAR_TOPRIGHT].y);
+	}else{
+		// priority
+		poly[0].x = CWorld::GetSectorIndexX(vectors[CORNER_CAM].x);
+		poly[0].y = CWorld::GetSectorIndexY(vectors[CORNER_CAM].y);
+		poly[1].x = CWorld::GetSectorIndexX(vectors[CORNER_PRIO_LEFT].x);
+		poly[1].y = CWorld::GetSectorIndexY(vectors[CORNER_PRIO_LEFT].y);
+		poly[2].x = CWorld::GetSectorIndexX(vectors[CORNER_PRIO_RIGHT].x);
+		poly[2].y = CWorld::GetSectorIndexY(vectors[CORNER_PRIO_RIGHT].y);
+		ScanSectorPoly(poly, 3, ScanSectorList);	// TODO: different function
+
+		// below LOD
+		poly[0].x = CWorld::GetSectorIndexX(vectors[CORNER_CAM].x);
+		poly[0].y = CWorld::GetSectorIndexY(vectors[CORNER_CAM].y);
+		poly[1].x = CWorld::GetSectorIndexX(vectors[CORNER_LOD_LEFT].x);
+		poly[1].y = CWorld::GetSectorIndexY(vectors[CORNER_LOD_LEFT].y);
+		poly[2].x = CWorld::GetSectorIndexX(vectors[CORNER_LOD_RIGHT].x);
+		poly[2].y = CWorld::GetSectorIndexY(vectors[CORNER_LOD_RIGHT].y);
+	}
+	ScanSectorPoly(poly, 3, ScanSectorList);
 
 	ScanBigBuildingList(&CWorld::GetBigBuildingList(CCollision::ms_collisionInMemory));
 	ScanBigBuildingList(&CWorld::GetBigBuildingList(LEVEL_NONE));
@@ -49,32 +153,34 @@ CRenderer::ScanBigBuildingList(CPtrList *list)
 }
 
 void
-CRenderer::ScanSectorList(CPtrList *list)
+CRenderer::ScanSectorList(CSector *sect)
 {
+	CPtrList *lists;
 	CPtrNode *node;
 	CEntity *e;
-	for(node = list->first; node; node = node->next){
-		e = (CEntity*)node->item;
-		if(e->m_scanCode == CWorld::ms_nCurrentScanCode)
-			continue;
-		e->m_scanCode = CWorld::ms_nCurrentScanCode;
-		switch(SetupEntityVisibility(e)){
-		case 0:		// invisible
-			break;
-		case 1:		// visible
-			ms_aVisibleEntityPtrs[ms_nNoOfVisibleEntities++] = e;
-			break;
-		case 2:		// kinda invisible?
-			break;
-		case 3:		// request
-			CStreaming::RequestModel(e->m_modelIndex, 0);
-			break;
-		}
-	}
-}
+	int i;
 
-// TODO: figure out magic values subtracted from distances
-//       implement GetIsOnScreen etc.
+	lists = &sect->m_buildings;
+	for(i = 0; i < 10; i++)
+		for(node = lists[i].first; node; node = node->next){
+			e = (CEntity*)node->item;
+			if(e->m_scanCode == CWorld::ms_nCurrentScanCode)
+				continue;
+			e->m_scanCode = CWorld::ms_nCurrentScanCode;
+			switch(SetupEntityVisibility(e)){
+			case VIS_INVISIBLE:
+				break;
+			case VIS_VISIBLE:
+				ms_aVisibleEntityPtrs[ms_nNoOfVisibleEntities++] = e;
+				break;
+			case VIS_CULLED:
+				break;
+			case VIS_STREAMME:
+				CStreaming::RequestModel(e->m_modelIndex, 0);
+				break;
+			}
+		}
+}
 
 bool
 CRenderer::SetupBigBuildingVisibility(CEntity *ent)
@@ -104,10 +210,10 @@ CRenderer::SetupBigBuildingVisibility(CEntity *ent)
 	// Find out whether to draw below near distance.
 	// This is only the case if there is a non-LOD which is either not
 	// loaded or not completely faded in yet.
-	if(dist < mi->GetNearDistance() && dist < 330.0f){
+	if(dist < mi->GetNearDistance() && dist < LOD_DISTANCE + STREAM_DISTANCE){
 		// No non-LOD or non-LOD is completely visible.
 		if(nonLOD == nil ||
-		   nonLOD->GetRwObject() && nonLOD->m_alpha == 0xFF)
+		   nonLOD->GetRwObject() && nonLOD->m_alpha == 255)
 			return false;
 
 		// But if it is a time object, we'd rather draw the wrong
@@ -130,8 +236,7 @@ CRenderer::SetupBigBuildingVisibility(CEntity *ent)
 		// that of an atomic for another draw distance.
 		if(a->geometry != rwobj->geometry)
 			rwobj->setGeometry(a->geometry, 0);
-		// TODO: GetIsOnScreenComplex
-		if(!ent->IsVisible())
+		if(!ent->IsVisible() || !ent->GetIsOnScreenComplex())
 			return false;
 		if(mi->m_drawLast){
 			CVisibilityPlugins::InsertEntityIntoSortedList(ent, dist);
@@ -148,7 +253,7 @@ CRenderer::SetupBigBuildingVisibility(CEntity *ent)
 
 
 	// get faded atomic
-	a = mi->GetAtomicFromDistance(dist-20.0f);
+	a = mi->GetAtomicFromDistance(dist - FADE_DISTANCE);
 	if(a == nil){
 		ent->DeleteRwObject();
 		return false;
@@ -161,8 +266,7 @@ CRenderer::SetupBigBuildingVisibility(CEntity *ent)
 	rw::Atomic *rwobj = (rw::Atomic*)ent->m_rwObject;
 	if(a->geometry != rwobj->geometry)
 		rwobj->setGeometry(a->geometry, 0);
-	// TODO: GetIsOnScreenComplex
-	if(ent->IsVisible())
+	if(ent->IsVisible() && ent->GetIsOnScreenComplex())
 		CVisibilityPlugins::InsertEntityIntoSortedList(ent, dist);
 	return false;
 }
@@ -180,30 +284,33 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 			// don't fade in, or between time objects
 			if(ti->m_otherTimeModelID == -1 ||
 			   ti->GetOtherModel()->GetRwObject())
-				ti->m_alpha = 0xFF;
+				ti->m_alpha = 255;
 		}else{
 			// If we're out of range, this object is invisible
 			// if there is no other object or
 			//    the other object can be drawn
 			if(ti->m_otherTimeModelID == -1 ||
 			   ti->GetOtherModel()->GetRwObject())
-				return 0;
+				return VIS_INVISIBLE;
 			// ...so we'll try to draw this one, but don't request
 			// it since what we really want is the other one.
 			request = false;
 		}
 	}else if(mi->m_type != SIMPLEMODELINFO){
 		// TODO: vehicles and peds and shit
-		return 0;
+		return VIS_INVISIBLE;
 	}else if(ent->m_type == ENTITY_TYPE_OBJECT){
 		// TODO
-		return 0;
+		return VIS_INVISIBLE;
 	}
 
 	float dist = (*ent->GetPosition() - ms_vecCameraPosition).Magnitude();
-	// uhm...what? when is 330.0f < GetLargestLodDistance even true?
-	if(330.0f < dist && dist < mi->GetLargestLodDistance())
+
+	// This can only happen with multi-atomic models (e.g. railtracks)
+	// but why do we bump up the distance? can only be fading...
+	if(LOD_DISTANCE + STREAM_DISTANCE < dist && dist < mi->GetLargestLodDistance())
 		dist = mi->GetLargestLodDistance();
+
 	if(ent->m_type == ENTITY_TYPE_OBJECT && ent->m_drawDamaged)
 		mi->m_isDamaged = 1;
 
@@ -219,39 +326,47 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 		if(a->geometry != rwobj->geometry)
 			rwobj->setGeometry(a->geometry, 0);
 		mi->IncreaseAlpha();
+		if(ent->m_rwObject == nil || !ent->m_isVisible)
+			return VIS_INVISIBLE;
 
-		if(!(ent->m_rwObject && ent->m_isVisible))
-			return 0;
-		// TODO: GetIsOnScreen
-		if(mi->m_alpha == 255){
-			if(mi->m_drawLast || ent->m_flagD20){
-				CVisibilityPlugins::InsertEntityIntoSortedList(ent, dist);
-				ent->m_isFading = 0;
-				return 0;
-			}
-			return 1;
+		if(!ent->GetIsOnScreen()){
+			mi->m_alpha = 255;
+			return VIS_CULLED;
 		}
-		CVisibilityPlugins::InsertEntityIntoSortedList(ent, dist);
-		ent->m_isFading = 1;
-		return 0;
+
+		if(mi->m_alpha != 255){
+			CVisibilityPlugins::InsertEntityIntoSortedList(ent, dist);
+			ent->m_isFading = 1;
+			return VIS_INVISIBLE;
+		}
+
+		if(mi->m_drawLast || ent->m_flagD20){
+			CVisibilityPlugins::InsertEntityIntoSortedList(ent, dist);
+			ent->m_isFading = 0;
+			return VIS_INVISIBLE;
+		}
+		return VIS_VISIBLE;
 	}
+
+	// Object is not loaded, figure out what to do
 
 	if(mi->m_noFade){
 		mi->m_isDamaged = 0;
 		// request model
-		if(dist-30.0f < mi->GetLargestLodDistance() && request)
-			return 3;
-		return 0;
+		if(dist - STREAM_DISTANCE < mi->GetLargestLodDistance() && request)
+			return VIS_STREAMME;
+		return VIS_INVISIBLE;
 	}
 
-	// get faded atomic
-	a = mi->GetAtomicFromDistance(dist-20.0f);
+	// We might be fading
+
+	a = mi->GetAtomicFromDistance(dist - FADE_DISTANCE);
 	mi->m_isDamaged = 0;
 	if(a == nil){
 		// request model
-		if(dist-50.0f < mi->GetLargestLodDistance() && request)
-			return 3;
-		return 0;
+		if(dist - FADE_DISTANCE - STREAM_DISTANCE < mi->GetLargestLodDistance() && request)
+			return VIS_STREAMME;
+		return VIS_INVISIBLE;
 	}
 
 	if(ent->m_rwObject == nil)
@@ -261,13 +376,16 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 	if(a->geometry != rwobj->geometry)
 		rwobj->setGeometry(a->geometry, 0);
 	mi->IncreaseAlpha();
+	if(ent->m_rwObject == nil || !ent->m_isVisible)
+		return VIS_INVISIBLE;
 
-	if(!(ent->m_rwObject && ent->m_isVisible))
-		return 0;
-	// TODO: GetIsOnScreen
-	CVisibilityPlugins::InsertEntityIntoSortedList(ent, dist);
-	ent->m_isFading = 1;
-	return 2;
+	if(!ent->GetIsOnScreen())
+		mi->m_alpha = 255;
+	else{
+		CVisibilityPlugins::InsertEntityIntoSortedList(ent, dist);
+		ent->m_isFading = 1;
+	}
+	return VIS_CULLED;
 }
 
 void

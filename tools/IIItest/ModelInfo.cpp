@@ -185,7 +185,7 @@ void
 CSimpleModelInfo::SetupBigBuilding(void)
 {
 	CSimpleModelInfo *related;
-	if(m_lodDistances[0] > 300.0f && m_atomics[2] == nil){
+	if(m_lodDistances[0] > LOD_DISTANCE && m_atomics[2] == nil){
 		m_isBigBuilding = 1;
 		FindRelatedModel();
 		related = GetRelatedModel();
@@ -354,7 +354,7 @@ CModelInfo::GetModelInfo(const char *name, int *id)
 	CBaseModelInfo *modelinfo;
 	for(int i = 0; i < MODELINFOSIZE; i++){
 		modelinfo = CModelInfo::ms_modelInfoPtrs[i];
-	 	if(modelinfo && strcmp(modelinfo->GetName(), name) == 0){
+	 	if(modelinfo && rw::strncmp_ci(modelinfo->GetName(), name, 24) == 0){
 			if(id)
 				*id = i;
 			return modelinfo;

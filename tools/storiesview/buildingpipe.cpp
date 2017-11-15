@@ -9,10 +9,12 @@ buildingRenderCB(Atomic *atomic, d3d9::InstanceDataHeader *header)
 {
 	RawMatrix world;
 
-	d3d::lightingCB();
-
 	Geometry *geo = atomic->geometry;
-	d3d::setRenderState(D3DRS_LIGHTING, !!(geo->flags & rw::Geometry::LIGHT));
+	int lighting = !!(geo->flags & rw::Geometry::LIGHT);
+	if(lighting)
+		d3d::lightingCB();
+
+	d3d::setRenderState(D3DRS_LIGHTING, lighting);
 
 	Frame *f = atomic->getFrame();
 	convMatrix(&world, f->getLTM());
@@ -33,8 +35,7 @@ buildingRenderCB(Atomic *atomic, d3d9::InstanceDataHeader *header)
 	d3dmat.Emissive.b = currentEmissive.blue * 0.5f / 255.0f;
 	d3dmat.Emissive.a = 0;
 	d3dmat.Specular = black;
-	// TODO: cache!
-	d3ddevice->SetMaterial(&d3dmat);
+	d3d::setD3dMaterial(&d3dmat);
 	d3d::setRenderState(D3DRS_AMBIENT, D3DCOLOR_RGBA(currentAmbient.red, currentAmbient.green, currentAmbient.blue, 0));
 
 	d3d::setRenderState(D3DRS_AMBIENTMATERIALSOURCE, D3DMCS_COLOR1);

@@ -1,4 +1,4 @@
-#include "III.h"
+#include "euryopa.h"
 
 #define PI 3.14159265359f
 
@@ -10,24 +10,27 @@ using rw::V3d;
 void
 CCamera::Process(void)
 {
+	float scale = timeStep*60.0f;
+//	scale = 1.0f;
+
 	// Keyboard
-	float sensitivity = 1.0;
+	float sensitivity = 1.0f;
 	if(CPad::IsKeyDown(KEY_LSHIFT) || CPad::IsKeyDown(KEY_RSHIFT))
 		sensitivity *= 2.0f;
-	if(CPad::IsKeyDown('W')) TheCamera.orbit(0.0f, 0.05f);
-	if(CPad::IsKeyDown('S')) TheCamera.orbit(0.0f, -0.05f);
-	if(CPad::IsKeyDown('A')) TheCamera.orbit(-0.05f, 0.0f);
-	if(CPad::IsKeyDown('D')) TheCamera.orbit(0.05f, 0.0f);
-	if(CPad::IsKeyDown(KEY_UP)) TheCamera.turn(0.0f, 0.05f);
-	if(CPad::IsKeyDown(KEY_DOWN)) TheCamera.turn(0.0f, -0.05f);
-	if(CPad::IsKeyDown(KEY_LEFT)) TheCamera.turn(0.05f, 0.0f);
-	if(CPad::IsKeyDown(KEY_RIGHT)) TheCamera.turn(-0.05f, 0.0f);
+	if(CPad::IsKeyDown('W')) TheCamera.orbit(0.0f, 0.05f*scale);
+	if(CPad::IsKeyDown('S')) TheCamera.orbit(0.0f, -0.05f*scale);
+	if(CPad::IsKeyDown('A')) TheCamera.orbit(-0.05f*scale, 0.0f);
+	if(CPad::IsKeyDown('D')) TheCamera.orbit(0.05f*scale, 0.0f);
+	if(CPad::IsKeyDown(KEY_UP)) TheCamera.turn(0.0f, 0.05f*scale);
+	if(CPad::IsKeyDown(KEY_DOWN)) TheCamera.turn(0.0f, -0.05f*scale);
+	if(CPad::IsKeyDown(KEY_LEFT)) TheCamera.turn(0.05f*scale, 0.0f);
+	if(CPad::IsKeyDown(KEY_RIGHT)) TheCamera.turn(-0.05f*scale, 0.0f);
 	if(CPad::IsKeyDown(KEY_LALT) || CPad::IsKeyDown(KEY_RALT)){
-		if(CPad::IsKeyDown('R')) TheCamera.dolly(5.0f*sensitivity);
-		if(CPad::IsKeyDown('F')) TheCamera.dolly(-5.0f*sensitivity);
+		if(CPad::IsKeyDown('R')) TheCamera.dolly(5.0f*sensitivity*scale);
+		if(CPad::IsKeyDown('F')) TheCamera.dolly(-5.0f*sensitivity*scale);
 	}else{
-		if(CPad::IsKeyDown('R')) TheCamera.zoom(5.0f*sensitivity);
-		if(CPad::IsKeyDown('F')) TheCamera.zoom(-5.0f*sensitivity);
+		if(CPad::IsKeyDown('R')) TheCamera.zoom(5.0f*sensitivity*scale);
+		if(CPad::IsKeyDown('F')) TheCamera.zoom(-5.0f*sensitivity*scale);
 	}
 
 	// Pad
@@ -39,16 +42,16 @@ CCamera::Process(void)
 			sensitivity = 4.0f;
 	}else if(pad->NewState.l2)
 		sensitivity = 0.5f;
-	if(pad->NewState.square) TheCamera.zoom(0.4f*sensitivity);
-	if(pad->NewState.cross) TheCamera.zoom(-0.4f*sensitivity);
-	TheCamera.orbit(pad->NewState.getLeftX()/30.0f*sensitivity,
-	                -pad->NewState.getLeftY()/30.0f*sensitivity);
-	TheCamera.turn(-pad->NewState.getRightX()/30.0f*sensitivity,
-	               pad->NewState.getRightY()/30.0f*sensitivity);
+	if(pad->NewState.square) TheCamera.zoom(0.4f*sensitivity*scale);
+	if(pad->NewState.cross) TheCamera.zoom(-0.4f*sensitivity*scale);
+	TheCamera.orbit(pad->NewState.getLeftX()/25.0f*sensitivity*scale,
+	                -pad->NewState.getLeftY()/25.0f*sensitivity*scale);
+	TheCamera.turn(-pad->NewState.getRightX()/25.0f*sensitivity*scale,
+	               pad->NewState.getRightY()/25.0f*sensitivity*scale);
 	if(pad->NewState.up)
-		TheCamera.dolly(2.0f*sensitivity);
+		TheCamera.dolly(2.0f*sensitivity*scale);
 	if(pad->NewState.down)
-		TheCamera.dolly(-2.0f*sensitivity);
+		TheCamera.dolly(-2.0f*sensitivity*scale);
 
 	if(IsButtonJustDown(pad, start)){
 		printf("cam.position: %f, %f, %f\n", m_position.x, m_position.y, m_position.z);
@@ -174,3 +177,11 @@ CCamera::CCamera()
 	m_LODmult = 1.0f;
 }
 
+
+bool
+CCamera::IsSphereVisible(rw::Sphere *sph, rw::Matrix *xform)
+{
+	rw::Sphere sphere = *sph;
+	rw::V3d::transformPoints(&sphere.center, &sphere.center, 1, xform);
+	return m_rwcam->frustumTestSphere(&sphere) != rw::Camera::SPHEREOUTSIDE;
+}

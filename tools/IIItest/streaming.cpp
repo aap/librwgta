@@ -403,9 +403,12 @@ CStreaming::LoadAllRequestedModels(void)
 		if(id < 0)
 			break;
 		CStreamingInfo *strinfo = &CStreaming::ms_aInfoForModel[id];
-		strinfo->GetCdPosnAndSize(&pos, &size);
-		CdStream::read(ms_pStreamingBuffer, pos, size);
-		ConvertBufferToObject(ms_pStreamingBuffer, id);
+		if(!strinfo->GetCdPosnAndSize(&pos, &size))
+			printf("streaming object %d has no streaming info\n", id);
+		else{
+			CdStream::read(ms_pStreamingBuffer, pos, size);
+			ConvertBufferToObject(ms_pStreamingBuffer, id);
+		}
 	}
 }
 

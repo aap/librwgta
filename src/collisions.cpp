@@ -79,7 +79,7 @@ readColModel(CColModel *colmodel, rw::uint8 *buf)
 	colmodel->boundingBox.max.y = *fp++;
 	colmodel->boundingBox.max.z = *fp++;
 	buf = (rw::uint8*)fp;
-	colmodel->numSpheres = *(rw::int32*)buf;
+	colmodel->numSpheres = *(rw::int16*)buf;
 	buf += 4;
 	if(colmodel->numSpheres){
 		colmodel->spheres = new CColSphere[colmodel->numSpheres];
@@ -89,7 +89,7 @@ readColModel(CColModel *colmodel, rw::uint8 *buf)
 		}
 	}
 
-	colmodel->numLines = *(rw::int32*)buf;
+	colmodel->numLines = *(rw::int16*)buf;
 	buf += 4;
 	if(colmodel->numLines){
 		colmodel->lines = new CColLine[colmodel->numLines];
@@ -99,7 +99,7 @@ readColModel(CColModel *colmodel, rw::uint8 *buf)
 		}
 	}
 
-	colmodel->numBoxes = *(rw::int32*)buf;
+	colmodel->numBoxes = *(rw::int16*)buf;
 	buf += 4;
 	if(colmodel->numBoxes){
 		colmodel->boxes = new CColBox[colmodel->numBoxes];
@@ -109,7 +109,7 @@ readColModel(CColModel *colmodel, rw::uint8 *buf)
 		}
 	}
 
-	rw::int32 numVertices = *(rw::int32*)buf;
+	rw::int32 numVertices = *(rw::int16*)buf;
 	buf += 4;
 	if(numVertices){
 		colmodel->vertices = new rw::V3d[numVertices];
@@ -119,7 +119,7 @@ readColModel(CColModel *colmodel, rw::uint8 *buf)
 		}
 	}
 
-	colmodel->numTriangles = *(rw::int32*)buf;
+	colmodel->numTriangles = *(rw::int16*)buf;
 	buf += 4;
 	if(colmodel->numTriangles){
 		colmodel->triangles = new CColTriangle[colmodel->numTriangles];

@@ -33,6 +33,7 @@ rw::RGBA currentEmissive;
 rw::RGBA currentSkyTop;
 rw::RGBA currentSkyBot;
 rw::RGBA currentFog;
+CPathFind *gpThePaths;
 
 
 int curSectX = 28;
@@ -246,7 +247,7 @@ makeCube(void)
 
 	cubeMat = Material::create();
 
-	cubeGeo = Geometry::create(8, 12, Geometry::MODULATE | Geometry::LIGHT);
+	cubeGeo = Geometry::create(8, 12, Geometry::MODULATE);
 	cubeGeo->matList.appendMaterial(cubeMat);
 
 	MorphTarget *mt = &cubeGeo->morphTargets[0];
@@ -408,6 +409,7 @@ found:
 	CModelInfo::Load(resimg->numModelInfos, resimg->modelInfoPtrs);
 	pTimecycle = resimg->timecycle;
 	CWaterLevel_::Initialize(resimg->waterLevelInst);
+	gpThePaths = resimg->paths;
 
 	LoadLevel(levelToLoad);
 	int i;
@@ -710,7 +712,8 @@ Draw(void)
 	drawHorizon();
 
 	if(drawCubes)
-		Renderer::renderCubesIPL();
+//		Renderer::renderCubesIPL();
+		Renderer::renderPathNodes();
 //	renderCubesSector(curSectX, curSectY);
 
 	rw::SetRenderState(rw::FOGENABLE, 1);

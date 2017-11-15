@@ -69,18 +69,20 @@ dumpFrameHier(Frame *frame, int ind = 0)
 			name = h->nodeInfo[i].frame ? gta::getNodeName(h->nodeInfo[i].frame) : "";
 			printf("\t\t%d %d\t%p %s\n", h->nodeInfo[i].id, h->nodeInfo[i].flags, h->nodeInfo[i].frame, name);
 
-			/*{
-			h->nodeInfo[i].frame->getLTM();
-			float *mat = (float*)&h->nodeInfo[i].frame->ltm;
+			if(0){
+			rw::Matrix *mat = h->nodeInfo[i].frame->getLTM();
+		//	rw::Matrix *mat = &h->nodeInfo[i].frame->matrix;
 			printf("[ [ %8.4f, %8.4f, %8.4f, %8.4f ]\n"
 			       "  [ %8.4f, %8.4f, %8.4f, %8.4f ]\n"
 			       "  [ %8.4f, %8.4f, %8.4f, %8.4f ]\n"
-			       "  [ %8.4f, %8.4f, %8.4f, %8.4f ] ]\n",
-				mat[0], mat[4], mat[8], mat[12],
-				mat[1], mat[5], mat[9], mat[13],
-				mat[2], mat[6], mat[10], mat[14],
-				mat[3], mat[7], mat[11], mat[15]);
-			}*/
+			       "  [ %8.4f, %8.4f, %8.4f, %8.4f ] ]\n"
+				"  %08x == flags\n",
+				mat->right.x, mat->up.x, mat->at.x, mat->pos.x,
+				mat->right.y, mat->up.y, mat->at.y, mat->pos.y,
+				mat->right.z, mat->up.z, mat->at.z, mat->pos.z,
+				0.0f, 0.0f, 0.0f, 1.0f,
+				mat->flags);
+			}
 		}
 	}
 	for(Frame *child = frame->child;
@@ -238,6 +240,40 @@ removeEffects(Atomic *atomic)
 	}
 }
 
+void
+extractmultiple(StreamFile &in)
+{
+	ChunkHeaderInfo header;
+	char filename[100];
+	StreamFile out;
+	for(;readChunkHeaderInfo(&in, &header);){
+		if(rw::version == 0){
+			rw::version = header.version;
+			rw::build = header.build;
+		}
+
+		if(header.type != ID_CLUMP){
+			in.close();
+			return;
+		}
+		rw::Clump *clump = rw::Clump::streamRead(&in);
+		if(clump == nil){
+			printf("error: couldn't read clump\n");
+			return;
+		}
+		printf("%s\n", gta::getNodeName(clump->getFrame()));
+		strcpy(filename, gta::getNodeName(clump->getFrame()));
+		strcat(filename, ".dff");
+
+		if(!out.open(filename, "wb")){
+			fprintf(stderr, "Error: couldn't open %s\n", filename);
+			return;
+		}
+		clump->streamWrite(&out);
+		out.close();
+	}
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -264,6 +300,7 @@ main(int argc, char *argv[])
 	int removebody = 0;
 	int outplatform = rw::PLATFORM_D3D8;
 	int correctWinding = 0;
+	int multiclump = 0;
 
 	char *s;
 	//char *seconddff = NULL;
@@ -294,6 +331,9 @@ main(int argc, char *argv[])
 //		break;
 	case 'w':
 		correctWinding++;
+		break;
+	case 'm':
+		multiclump++;
 		break;
 	case 'o':
 		s = EARGF(usage());
@@ -330,6 +370,12 @@ main(int argc, char *argv[])
 		fprintf(stderr, "Error: couldn't open %s\n", argv[0]);
 		return 1;
 	}
+
+	if(multiclump){
+		extractmultiple(in);
+		return 0;
+	}
+
 	currentUVAnimDictionary = NULL;
 	ChunkHeaderInfo header;
 	readChunkHeaderInfo(&in, &header);

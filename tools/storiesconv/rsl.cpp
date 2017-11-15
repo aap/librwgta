@@ -613,26 +613,57 @@ RslTextureStreamRead(Stream *stream)
 	return tex;
 }
 
-static uint32
+static bool
+guessSwizzlingLevel(uint32 w, uint32 h, uint32 d)
+{
+#ifdef VCS
+	return false;
+#endif
+	// unsure, used on loadscreens
+	if(w > 256 || h > 256)
+		return false;
+
+	switch(d){
+	case 4:
+		if(w < 32 || h < 16)
+			return false;
+		if(w > h*2)	// to catch 64x16
+			return false;
+		return true;
+	case 8:
+		if(w < 16 || h < 16)
+			return false;
+		if(w < 128 && h > w)
+			return false;
+		return true;
+	case 16:
+		// not encountered
+		return false;
+	case 32:
+		// very unsure. We only have square textures
+		// and how does the swizzling even work for 32 bit?
+		if(w < 32)
+			return false;
+		return true;
+	default:
+		return false;
+	}
+}
+
+uint32
 guessSwizzling(uint32 w, uint32 h, uint32 d, uint32 mipmaps)
 {
 	uint32 swiz = 0;
 	for(uint32 i = 0; i < mipmaps; i++){
-		switch(d){
-		case 4:
-			if(w >= 32 && h >= 16)
-				swiz |= 1<<i;
-			break;
-		case 8:
-			if(w >= 16 && h >= 4)
-				swiz |= 1<<i;
-			break;
-		}
+		if(guessSwizzlingLevel(w, h, d))
+			swiz |= 1<<i;
 		w /= 2;
 		h /= 2;
 	}
 	return swiz;
 }
+
+
 
 RslRaster*
 RslCreateRasterPS2(uint32 w, uint32 h, uint32 d, uint32 mipmaps)

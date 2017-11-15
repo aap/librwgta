@@ -7,9 +7,10 @@ public:
 	static CVector ms_vecCameraPosition;
 public:
 	static void ConstructRenderList(void);
+	static void ScanSectorPoly(rw::V2d *poly, int numVerts, void (*f)(CSector*));
 	static void ScanWorld(void);
 	static void ScanBigBuildingList(CPtrList *list);
-	static void ScanSectorList(CPtrList *list);
+	static void ScanSectorList(CSector *sec);
 	static bool SetupBigBuildingVisibility(CEntity *ent);
 	static int  SetupEntityVisibility(CEntity *ent);
 

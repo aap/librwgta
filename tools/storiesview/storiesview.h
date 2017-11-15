@@ -144,6 +144,7 @@ namespace Renderer
 {
 extern rw::ObjPipeline *buildingPipe;
 void renderCubesIPL(void);
+void renderPathNodes(void);
 void reset(void);
 void addToOpaqueRenderList(rw::Atomic *a);
 void addToTransparentRenderList(rw::Atomic *a);
@@ -161,6 +162,7 @@ extern DummyPool *pDummyPool;
 extern CTimeCycle *pTimecycle;
 extern rw::RGBA currentAmbient;
 extern rw::RGBA currentEmissive;
+extern CPathFind *gpThePaths;
 
 struct CModelInfo
 {

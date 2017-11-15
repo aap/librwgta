@@ -24,5 +24,7 @@ public:
 
 	void update(void);
 	float distanceTo(rw::V3d v);
+	bool isSphereVisible(CVector &center, float radius);
+
 	CCamera(void);
 };

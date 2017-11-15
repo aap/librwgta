@@ -82,6 +82,10 @@ public:
 	CEntity(void);
 	void SetupBigBuilding(void);
 	bool IsVisible(void);
+	bool GetIsOnScreen(void);
+	bool GetIsOnScreenComplex(void);
+	void GetBoundCenter(CVector &out);
+	float GetBoundRadius(void) { return CModelInfo::GetModelInfo(m_modelIndex)->GetColModel()->boundingSphere.radius; }
 
 	// from CPlaceable
 	~CEntity(void);

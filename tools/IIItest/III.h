@@ -90,6 +90,10 @@ public:
 	};
 };
 
+#define LOD_DISTANCE 300.0f
+#define FADE_DISTANCE 20.0f
+#define STREAM_DISTANCE 30.0f
+
 #include "Timer.h"
 #include "Clock.h"
 #include "Weather.h"
