@@ -10,10 +10,13 @@ using rw::V3d;
 void
 CCamera::Process(void)
 {
-	float scale = timeStep*60.0f;
+	float scale = timeStep*30.0f;
 //	scale = 1.0f;
 
+	float sensitivity = 1.0f;
+
 	// Keyboard
+/*	// this is crap
 	float sensitivity = 1.0f;
 	if(CPad::IsKeyDown(KEY_LSHIFT) || CPad::IsKeyDown(KEY_RSHIFT))
 		sensitivity *= 2.0f;
@@ -32,6 +35,30 @@ CCamera::Process(void)
 		if(CPad::IsKeyDown('R')) TheCamera.zoom(5.0f*sensitivity*scale);
 		if(CPad::IsKeyDown('F')) TheCamera.zoom(-5.0f*sensitivity*scale);
 	}
+*/
+
+	// Mouse
+	if(CPad::IsMButtonDown(1)){
+		float dx = (CPad::oldMouseState.x - CPad::newMouseState.x);
+		float dy = (CPad::oldMouseState.y - CPad::newMouseState.y);
+		TheCamera.turn(DEGTORAD(dx)/2.0f*scale, DEGTORAD(dy)/2.0f*scale);
+
+		// this is a bit ugly :/
+//		sk::SetMousePosition(CPad::oldMouseState.x, CPad::oldMouseState.y);
+//		CPad::newMouseState = CPad::oldMouseState;
+	}
+
+	// Keyboard
+	static float speed = 0.0f;
+	if(CPad::IsKeyDown('W'))
+		speed += 0.1f;
+	else if(CPad::IsKeyDown('S'))
+		speed -= 0.1f;
+	else
+		speed = 0.0f;
+	if(speed > 70.0f) speed = 70.0f;
+	if(speed < -70.0f) speed = -70.0f;
+	TheCamera.dolly(speed*scale);
 
 	// Pad
 	CPad *pad = CPad::GetPad(0);

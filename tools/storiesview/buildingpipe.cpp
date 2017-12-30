@@ -33,6 +33,7 @@ buildingRenderCB(Atomic *atomic, d3d9::InstanceDataHeader *header)
 	d3dmat.Emissive.r = currentEmissive.red * 0.5f / 255.0f;
 	d3dmat.Emissive.g = currentEmissive.green * 0.5f / 255.0f;
 	d3dmat.Emissive.b = currentEmissive.blue * 0.5f / 255.0f;
+//d3dmat.Emissive = black;
 	d3dmat.Emissive.a = 0;
 	d3dmat.Specular = black;
 	d3d::setD3dMaterial(&d3dmat);
@@ -45,7 +46,7 @@ buildingRenderCB(Atomic *atomic, d3d9::InstanceDataHeader *header)
 
 	InstanceData *inst = header->inst;
 	for(uint32 i = 0; i < header->numMeshes; i++){
-//		d3d::setTexture(0, nil);
+//d3d::setTexture(0, nil);
 		d3d::setTexture(0, inst->material->texture);
 
 		d3d::flushCache();

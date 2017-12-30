@@ -1,5 +1,9 @@
+#include <Windows.h>	// necessary for the moment
+
 #include <rw.h>
 #include <skeleton.h>
+#include <string.h>
+#include <ctype.h>
 #include <assert.h>
 
 #include <rwgta.h>
@@ -34,6 +38,14 @@ void plUpdatePad(CControllerState *state);
 void ConvertTxd(rw::TexDictionary *txd);
 
 extern float timeStep;
+
+#define DEGTORAD(d) (d/180.0f*PI)
+
+//
+// Options
+//
+
+extern bool gRenderCollision;
 
 
 // These don't necessarily match the game's values, roughly double of SA PC
@@ -74,7 +86,7 @@ extern int currentArea;
 bool IsHourInRange(int h1, int h2);
 void FindVersion(void);
 void LoadGame(void);
-void Idle(void);
+void Idle(float timeDelta);
 void DefinedState(void);
 
 // Game Data structures
@@ -222,6 +234,8 @@ struct ObjectInst
 	bool m_isBigBuilding;
 	uint16 m_scanCode;
 
+	int32 m_id;	// to identify when picking
+
 	// SA only
 	int m_lodId;
 	int m_iplSlot;
@@ -242,6 +256,7 @@ struct ObjectInst
 	bool IsOnScreen(void);
 };
 extern CPtrList instances;
+ObjectInst *GetInstanceByID(int32 id);
 ObjectInst *AddInstance(void);
 
 // World/sectors
@@ -304,9 +319,21 @@ extern rw::Light *pAmbient, *pDirect;
 extern SceneGlobals Scene;
 extern CCamera TheCamera;
 
+extern bool renderColourCoded;
+extern uint32 colourCode;
+rw::ObjPipeline *makeColourCodePipeline(void);
+int32 GetColourCode(int x, int y);
+
+void RenderInit(void);
 void BuildRenderList(void);
 void RenderEverything(void);
 
 void RenderColModelWire(CColModel *col, rw::Matrix *xform, bool onlyBounds);
 void RenderEverythingCollisions(void);
 void RenderDebugLines(void);
+
+//
+// GUI
+//
+
+void gui(float timeDelta);

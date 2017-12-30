@@ -24,6 +24,7 @@ static struct {
 };
 
 char *argv0;
+char *inputfilename;
 
 void
 usage(void)
@@ -34,6 +35,7 @@ usage(void)
 	fprintf(stderr, "\t-f don't flip frame hierarchy\n");
 	fprintf(stderr, "\t-d dump frame and hanim hierarchy\n");
 	fprintf(stderr, "\t-w correct face winding of tristrips\n");
+	fprintf(stderr, "\t-m extract multiclump dff\n");
 	fprintf(stderr, "\t-v RW version, e.g. 33004 for 3.3.0.4\n");
 	fprintf(stderr, "\t-o output platform. ps2, xbox, mobile, d3d8, d3d9\n");
 	exit(1);
@@ -103,11 +105,11 @@ dumpMatFXData(Material *m)
 		printf("%-32s ", env->tex->name);
 	printf("\n");
 
-	if(env->coefficient){
-		env->coefficient = 1.0f;
-		m->surfaceProps.specular = 0.5f;
-	}else
-		m->surfaceProps.specular = 0.0f;
+//	if(env->coefficient){
+//		env->coefficient = 1.0f;
+//		m->surfaceProps.specular = 0.5f;
+//	}else
+//		m->surfaceProps.specular = 0.0f;
 }
 
 void
@@ -124,7 +126,8 @@ dumpMat(Material *m)
 //		m->color.green = 255;
 //		m->color.blue = 255;
 //	}
-	printf("%3d %3d %3d %3d %-32s\n", m->color.red, m->color.green, m->color.blue, m->color.alpha, m->texture ? m->texture->name : "");
+
+	printf("%s %3d %3d %3d %3d %-32s %f\n", inputfilename, m->color.red, m->color.green, m->color.blue, m->color.alpha, m->texture ? m->texture->name : "NULL", m->surfaceProps.specular);
 	dumpMatFXData(m);
 }
 
@@ -301,6 +304,7 @@ main(int argc, char *argv[])
 	int outplatform = rw::PLATFORM_D3D8;
 	int correctWinding = 0;
 	int multiclump = 0;
+	int setwhite = 0;
 
 	char *s;
 	//char *seconddff = NULL;
@@ -326,14 +330,17 @@ main(int argc, char *argv[])
 	case 'r':
 		surfprops++;
 		break;
-//	case 'b':
-//		removebody++;
-//		break;
+	case 'b':
+		removebody++;
+		break;
 	case 'w':
 		correctWinding++;
 		break;
 	case 'm':
 		multiclump++;
+		break;
+	case 'W':
+		setwhite++;
 		break;
 	case 'o':
 		s = EARGF(usage());
@@ -365,6 +372,8 @@ main(int argc, char *argv[])
 	//assert(data != NULL);
 	//StreamMemory in;
 	//in.open(data, len);
+
+	inputfilename = argv[0];
 	StreamFile in;
 	if(!in.open(argv[0], "rb")){
 		fprintf(stderr, "Error: couldn't open %s\n", argv[0]);
@@ -437,6 +446,7 @@ main(int argc, char *argv[])
 	//	printf("%d %f %f %f\n", l->getType(), l->color.red, l->color.green, l->color.blue);
 	//}
 
+
 	if(dump){
 		HAnimHierarchy *hier = HAnimHierarchy::find(c->getFrame());
 		if(hier)
@@ -459,22 +469,28 @@ main(int argc, char *argv[])
 	//		removeEffects(atomic);
 	//}
 
+	if(setwhite)
+		FORLIST(lnk, c->atomics){
+			Geometry *g = Atomic::fromClump(lnk)->geometry;
+			for(int i = 0; i < g->matList.numMaterials; i++){
+				Material *m = g->matList.materials[i];
+				m->color.red = 0xFF;
+				m->color.green = 0xFF;
+				m->color.blue = 0xFF;
+//				setSpecMap(m, "cabbiespeca");
+			}
+		}
+
+/*
 	FORLIST(lnk, c->atomics){
 		Geometry *g = Atomic::fromClump(lnk)->geometry;
 		for(int i = 0; i < g->matList.numMaterials; i++){
 			Material *m = g->matList.materials[i];
-			setSpecMap(m, "cabbiespeca");
+			dumpMat(m);
+	//		dumpReflData(m);
 		}
 	}
-
-//	FORLIST(lnk, c->atomics){
-//		Geometry *g = Atomic::fromClump(lnk)->geometry;
-//		for(int i = 0; i < g->matList.numMaterials; i++){
-//			Material *m = g->matList.materials[i];
-//			dumpMat(m);
-//	//		dumpReflData(m);
-//		}
-//	}
+*/
 
 	int32 platform = findPlatform(c);
 	if(platform){
@@ -506,7 +522,7 @@ main(int argc, char *argv[])
 		rw::build = header.build;
 	}
 
-	removeUnusedMaterials(c);
+//	removeUnusedMaterials(c);
 
 	if(correctWinding)
 		FORLIST(lnk, c->atomics){

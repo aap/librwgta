@@ -95,12 +95,24 @@ ObjectInst::IsOnScreen(void)
 	return TheCamera.IsSphereVisible(&sph, &m_matrix);
 }
 
+ObjectInst*
+GetInstanceByID(int32 id)
+{
+	CPtrNode *p;
+	for(p = instances.first; p; p = p->next)
+		if(((ObjectInst*)p->item)->m_id == id)
+			return (ObjectInst*)p->item;
+	return nil;
+}
 
 ObjectInst*
 AddInstance(void)
 {
+	static int32 id = 1;
+
 	ObjectInst *inst = new ObjectInst;
 	memset(inst, 0, sizeof(ObjectInst));
+	inst->m_id = id++;
 	instances.InsertItem(inst);
 	return inst;
 }

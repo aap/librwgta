@@ -4,6 +4,7 @@
 #include "streamworld.h"
 
 char *argv0;
+char *arg1;
 int32 atmOffset;
 
 ResourceImage *gamedata;
@@ -38,11 +39,15 @@ const char *vehicleTypes[] = {
 #ifdef VCS
 	"jetski",
 #endif
-	"train",
+	"train",	// unused in VCS
 	"heli",
 	"plane",
 	"bike",
-	"ferry",
+	"ferry",	// unused in VCS
+#ifdef VCS
+	"bmx",
+	"quad",
+#endif
 };
 
 // from mobile LCS
@@ -102,20 +107,22 @@ RslNode *dumpNodeCB(RslNode *frame, void *data)
 
 RslMaterial *dumpMaterialCB(RslMaterial *material, void*)
 {
-	printf("  mat: %d %d %d %d %s %x\n", material->color.red, material->color.green, material->color.blue, material->color.alpha,
-		material->texname, material->refCount);
+	printf("%s", arg1);
+	printf("  mat: %d %d %d %d %s", material->color.red, material->color.green, material->color.blue, material->color.alpha,
+		material->texture ? material->texture->name : "NULL");
 	if(material->matfx){
 		RslMatFX *fx = material->matfx;
-		printf("   matfx: %d", fx->effectType);
+		printf("   matfx: %d ", fx->effectType);
 		if(fx->effectType == 2)
-			printf("env[%s %f] ", fx->env.texname, fx->env.intensity);
-		printf("\n");
+			printf("env[%s %f] ", fx->env.texture ? fx->env.texture->name : "NULL", fx->env.intensity);
 	}
+	printf("\n");
 	return material;
 }
 
 RslElement *dumpElementCB(RslElement *atomic, void*)
 {
+	printf("%s", arg1);
 	printf(" atm: %x %x %x %p\n", atomic->renderCallBack, atomic->modelInfoId, atomic->visIdFlag, atomic->hier);
 	RslGeometry *g = atomic->geometry;
 	RslGeometryForAllMaterials(g, dumpMaterialCB, NULL);
@@ -162,6 +169,7 @@ LoadElementGroup(uint8 *data)
 	if(eg->object.type != 2)
 		return nil;
 	RslElementGroupForAllElements(eg, makeTextures, NULL);
+RslElementGroupForAllElements(eg, dumpElementCB, nil);
 //	dumpNodeCB((RslNode*)eg->object.parent, NULL);
 	return convertClump(eg);
 }
@@ -204,6 +212,157 @@ LoadVehicle(uint8 *data)
 		a->setFrame(f);
 		rwc->getFrame()->addChild(f);
 		rwc->addAtomic(a);
+	}
+
+	if(gamedata){
+		static char *dummynamesCar[] = {
+			"headlights",
+			"taillights",
+#ifdef VCS
+			"",
+			"",
+#endif
+			"ped_frontseat",
+			"ped_backseat",
+			"exhaust"
+		};
+		static char *dummynamesBoat[] = {
+			"ped_frontseat",
+		};
+		static char *dummynamesJetski[] = {
+			"ped_frontseat",
+		};
+		static char *dummynamesTrain[] = {
+			"light_front",
+			"light_rear",
+			"ped_left_entry",
+			"ped_mid_entry",
+			"ped_right_entry",
+		};
+		static char *dummynamesPlane[] = {
+#ifdef LCS
+			"light_left",
+			"light_right",
+			"light_tailplan",
+#else
+			"headlights",
+			"taillights",
+			"headlights2",
+			"taillights2",
+			"ped_frontseat",
+			"ped_backseat",
+			"exhaust",
+			"engine",
+			"petrolcap",
+			"aileron_pos",
+			"elevator_pos",
+			"rudder_pos",
+			"wingtip_pos",
+			"miscpos_a",
+			"miscpos_b",
+#endif
+		};
+		static char *dummynamesBike[] = {
+			"headlights",
+			"taillights",
+#ifdef VCS
+			"",
+			"",
+#endif
+			"ped_frontseat",
+			"ped_backseat",
+			"exhaust"
+		};
+		static char *dummynamesFerry[] = {
+			"light_front",
+			"light_read",
+			"chim_left",
+			"ped_point",
+			"car1_dummy"
+			// these wouldn't fit into the array in LCS....
+			"car2_dummy"
+			"car3_dummy"
+			"car4_dummy"
+		};
+		static char *dummynamesBmx[] = {
+			"headlights",
+			"taillights",
+			"headlights2",
+			"taillights2",
+			"ped_frontseat",
+			"ped_backseat",
+			"exhaust",
+			"engine",
+			"petrolcap",
+			"hookup",
+			"bargrip",
+			"miscpos_a",
+			"miscpos_b",
+		};
+		static char *dummynamesQuad[] = {
+			"headlights",
+			"taillights",
+			"headlights2",
+			"taillights2",
+			"ped_frontseat",
+			"ped_backseat",
+			"exhaust",
+			"engine",
+			"petrolcap",
+			"hookup",
+			"ped_arm",
+			"miscpos_c",
+			"miscpos_d",
+			"miscpos_a",
+			"miscpos_b",
+		};
+		static char **dummyNamesLists[] = {
+			dummynamesCar,
+			dummynamesBoat,
+#ifdef VCS
+			dummynamesJetski,
+#endif
+			dummynamesTrain,
+			nil,	// no heli dummies
+			dummynamesPlane,
+			dummynamesBike,
+			dummynamesFerry,
+#ifdef VCS
+			dummynamesBmx,
+			dummynamesQuad,
+#endif
+		};
+
+// VCS:
+// car:
+//	0	headlights
+//	1	taillights
+//	4	ped_frontseat
+//	5	ped_backseat
+//	6	exhaust
+		CVehicleModelInfo *vmi;
+		char *name = gta::getNodeName(rwc->getFrame());
+		uint32 hash = GetUppercaseKey(name, strlen(name));
+		int j;
+		for(i = 0; i < gamedata->numModelInfos; i++){
+			vmi = (CVehicleModelInfo*)gamedata->modelInfoPtrs[i];
+			if(vmi == nil || vmi->type != MODELINFO_VEHICLE ||
+			   vmi->hashKey != hash)
+				continue;
+
+			char **dummynames = dummyNamesLists[vmi->m_vehicleType];
+			for(j = 0; j < NUM_VEHICLE_DUMMIES; j++){
+				CVuVector *v = &vmi->m_dummyPos[j];
+				if(v->x == 0.0f && v->y == 0.0f && v->z == 0.0f)
+					continue;
+
+				Frame *f = rw::Frame::create();
+				strncpy(gta::getNodeName(f), dummynames[j], 24);
+				rwc->getFrame()->addChild(f);
+				f->translate((V3d*)v, COMBINEREPLACE);
+			}
+			break;
+		}
 	}
 	return rwc;
 }
@@ -343,7 +502,7 @@ writeAllModelInfo(void)
 	CWeaponModelInfo *wmi;
 	CPedModelInfo *pmi;
 	CVehicleModelInfo *vmi;
-	char tmpname[50];
+//	char tmpname[50];
 	const char *name;
 	enum SectionType {
 		SECTION_NONE,
@@ -392,8 +551,8 @@ writeAllModelInfo(void)
 			printf("weap\n");
 		}
 
-	//if(mi->type != MODELINFO_VEHICLE)
-	//	continue;
+//	if(mi->type != MODELINFO_VEHICLE)
+//		continue;
 
 		printf("%d", i);
 
@@ -818,6 +977,32 @@ writeWaterpro(void)
 }
 
 void
+dumpTxdStore(void)
+{
+	int i;
+	CPool_txd *pool = gamedata->texlistPool;
+	RslTexList *txd;
+	char name[24];
+	for(i = 0; i < pool->size; i++){
+		if(pool->flags[i] & 0x80)
+			continue;
+		TexListDef *tld = &pool->items[i];
+		if(tld->texlist == nil)
+			continue;
+		txd = tld->texlist;
+
+		TexDictionary *rwtxd = convertTXD(txd);
+		StreamFile stream;
+		strncpy(name, tld->name, 20);
+		strcat(name, ".txd");
+		if(stream.open(name, "wb") == nil)
+			panic("couldn't open file %s", name);
+		rwtxd->streamWrite(&stream);
+		stream.close();
+	}
+}
+
+void
 extractResource(void)
 {
 	assignModelNames();
@@ -827,8 +1012,12 @@ extractResource(void)
 //	dumpAnimations();
 #endif
 //	dumpPedStats();
-	writeAllModelInfo();
-	dump2dfx();
+
+//	writeAllModelInfo();
+//	dump2dfx();
+
+	dumpTxdStore();
+
 //	dumpVehicleData();
 //	extractMarkers();
 //	writeWaterpro();
@@ -847,8 +1036,6 @@ extractResource(void)
 //	dumpCullZones();
 //	printf("end\n");
 }
-
-char *arg1;
 
 void
 dumpLevel(sLevelChunk *level)
@@ -1074,6 +1261,7 @@ usage(void)
 	fprintf(stderr, "\t-x extract textures to tga\n");
 	fprintf(stderr, "\t-s don't unswizzle textures\n");
 	fprintf(stderr, "\t-m dump data to find missing names in VCS\n");
+	fprintf(stderr, "\t-g path to game.dat (uncompressed dtz) needed for correct model conversion\n");
 	exit(1);
 }
 
@@ -1104,6 +1292,7 @@ main(int argc, char *argv[])
 
 	int mdltype = MDL_ANY;
 
+	char *gamename = nil;
 	ARGBEGIN{
 	case 'v':
 		sscanf(EARGF(usage()), "%x", &rw::version);
@@ -1116,6 +1305,9 @@ main(int argc, char *argv[])
 		break;
 	case 'm':
 		missing++;
+		break;
+	case 'g':
+		gamename = EARGF(usage());
 		break;
 	default:
 		usage();
@@ -1154,6 +1346,27 @@ main(int argc, char *argv[])
 	}
 
 	assert(sizeof(sChunkHeader) == 0x20);
+
+	if(gamename){
+		StreamFile stream;
+		if(stream.open(gamename, "rb") == nil)
+			panic("couldn't open %s", argv[0]);
+
+		uint32 ident = stream.readU32();
+		stream.seek(0, 0);
+
+		sChunkHeader header;
+		stream.read(&header, sizeof(sChunkHeader));
+		uint8 *data = (uint8*)malloc(header.fileSize-sizeof(sChunkHeader));
+		stream.read(data, header.fileSize-sizeof(sChunkHeader));
+		stream.close();
+		cReloctableChunk(header.ident, header.shrink).Fixup(header, data);
+
+		if(header.ident == GTAG_IDENT)
+			gamedata = (ResourceImage*)data;
+		else
+			fprintf(stderr, "couldn't load GTAG");
+	}
 
 	sChunkHeader header;
 	stream.read(&header, sizeof(sChunkHeader));

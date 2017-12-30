@@ -44,13 +44,13 @@ xboxToD3d8(Raster *raster)
 		                        format | raster->type | 0x80, PLATFORM_D3D8);
 		int32 dxt = 0;
 		switch(ras->format){
-		case D3DFMT_DXT1:
+		case xbox::D3DFMT_DXT1:
 			dxt = 1;
 			break;
-		case D3DFMT_DXT3:
+		case xbox::D3DFMT_DXT3:
 			dxt = 3;
 			break;
-		case D3DFMT_DXT5:
+		case xbox::D3DFMT_DXT5:
 			dxt = 5;
 			break;
 		}
@@ -77,6 +77,181 @@ xboxToD3d8(Raster *raster)
 
 	raster->destroy();
 	return newras;
+}
+
+float gGamma = 1.0f;
+float changeGamma(float f)
+{
+	return pow(f, gGamma);
+}
+float gAdd = 0.0f;
+float gMult = 1.0f;
+float changeLinearMap(float f)
+{
+	f = f*gMult + gAdd;
+	if(f < 0.0f) f = 0.0f;
+	if(f >= 1.0f) f = 1.0f;
+	return f;
+}
+float gammaAndMap(float f)
+{
+	return changeLinearMap(changeGamma(f));
+}
+
+void
+colmod(uint8 *col, float (*f)(float))
+{
+	int i;
+	for(i = 0; i < 3; i++)
+		col[i] = f(col[i]/255.0f)*255;
+}
+
+void
+colmod1555(uint8 *col, float (*f)(float))
+{
+	uint16 c = *(uint16*)col;
+	int r, g, b;
+	r = c>>10 & 0x1F;
+	g = c>>5 & 0x1F;
+	b = c & 0x1F;
+	c &= 0x8000;
+	r = f(r/31.0f)*31;
+	g = f(g/31.0f)*31;
+	b = f(b/31.0f)*31;
+	c |= r<<10 | g<<5 | b;
+	*(uint16*)col = c;
+}
+
+void
+colmod565(uint8 *col, float (*f)(float))
+{
+	int r, g, b;
+	uint16 c;
+
+	c = *(uint16*)col;
+	r = c>>11 & 0x1F;
+	g = c>>5 & 0x3F;
+	b = c & 0x1F;
+	r = f(r/31.0f)*31;
+	g = f(g/63.0f)*63;
+	b = f(b/31.0f)*31;
+	c = r<<11 | g<<5 | b;
+	*(uint16*)col = c;
+}
+
+#define MAKEFOURCC(ch0, ch1, ch2, ch3)                              \
+            ((uint32)(uint8)(ch0) | ((uint32)(uint8)(ch1) << 8) |       \
+            ((uint32)(uint8)(ch2) << 16) | ((uint32)(uint8)(ch3) << 24 ))
+enum {
+	D3DFMT_DXT1                 = MAKEFOURCC('D', 'X', 'T', '1'),
+	D3DFMT_DXT2                 = MAKEFOURCC('D', 'X', 'T', '2'),
+	D3DFMT_DXT3                 = MAKEFOURCC('D', 'X', 'T', '3'),
+	D3DFMT_DXT4                 = MAKEFOURCC('D', 'X', 'T', '4'),
+	D3DFMT_DXT5                 = MAKEFOURCC('D', 'X', 'T', '5'),
+};
+
+void
+rastermodcustom(Raster *ras, float (*f)(float))
+{
+	using namespace d3d;
+	D3dRaster *natras = PLUGINOFFSET(D3dRaster, ras, nativeRasterOffset);
+
+	uint8 *cols;
+	int w, h;
+
+	int levels = ras->getNumLevels();
+	int n;
+	w = ras->width;
+	h = ras->height;
+	for(n = 0; n < levels; n++){
+		cols = ras->lock(n);
+
+		switch(natras->format){
+		case D3DFMT_DXT1:
+			for(int32 j = 0; j < w*h/2; j += 8){
+				colmod565(&cols[j+0], f);
+				colmod565(&cols[j+2], f);
+			}
+			break;
+		case D3DFMT_DXT3:
+			for(int32 j = 0; j < w*h; j += 16){
+				colmod565(&cols[j+8], f);
+				colmod565(&cols[j+10], f);
+			}
+			break;
+		case D3DFMT_DXT5:
+			for(int32 j = 0; j < w*h; j += 16){
+				colmod565(&cols[j+8], f);
+				colmod565(&cols[j+10], f);
+			}
+			break;
+		default:
+			printf("unknown custom format %x\n", natras->format);
+			break;
+		}
+
+		w /= 2;
+		h /= 2;
+		ras->unlock(n);
+	}
+}
+
+void
+rastermod(Raster *ras, float (*f)(float))
+{
+	using namespace d3d;
+	if(ras->platform != PLATFORM_D3D8)
+		return;
+	D3dRaster *natras = PLUGINOFFSET(D3dRaster, ras, nativeRasterOffset);
+
+	if(natras->customFormat){
+		rastermodcustom(ras, f);
+		return;
+	}
+
+	uint8 *cols;
+	int len;
+	if(ras->format & (Raster::PAL4 | Raster::PAL8)){
+		cols = (uint8*)natras->palette;
+		if(ras->format & Raster::PAL4)
+			len = 16;
+		else
+			len = 256;
+		while(len--){
+			colmod(cols, f);
+			cols += 4;
+		}
+	}else if((ras->format & 0xF00) == Raster::C888 ||
+		(ras->format & 0xF00) == Raster::C8888){
+		int levels = ras->getNumLevels();
+		int n;
+		len = ras->width * ras->height;
+		for(n = 0; n < levels; n++){
+			cols = ras->lock(n);
+			int origlen = len;
+			while(len--){
+				colmod(cols, f);
+				cols += 4;
+			}
+			len = origlen/4;
+			ras->unlock(n);
+		}
+	}else if((ras->format & 0xF00) == Raster::C1555){
+		int levels = ras->getNumLevels();
+		int n;
+		len = ras->width * ras->height;
+		for(n = 0; n < levels; n++){
+			cols = ras->lock(n);
+			int origlen = len;
+			while(len--){
+				colmod1555(cols, f);
+				cols += 2;
+			}
+			len = origlen/4;
+			ras->unlock(n);
+		}
+	}else
+		fprintf(stderr, "cannot convert\n");
 }
 
 struct StrAssoc {
@@ -303,6 +478,27 @@ main(int argc, char *argv[])
 		rw::version = header.version;
 		rw::build = header.build;
 	}
+
+/*
+	FORLIST(lnk, txd->textures){
+		Texture *tex = Texture::fromDict(lnk);
+		Raster *ras = tex->raster;
+
+		// LCS gamma
+		gGamma = 1.5f;
+		rastermod(ras, changeGamma);
+
+		// brighten vehicle body
+//		gGamma = 1/2.0f;
+//		gAdd = 0.1f;
+//		gMult = 1.0f - gAdd;
+//		if(strstr(tex->name, "body"))
+//			rastermod(ras, gammaAndMap);
+
+		if((ras->format & 0xF00) == Raster::C1555)
+			printf("%s %s\n", argv[0], tex->name);
+	}
+*/
 
 	if(outplatform == PLATFORM_D3D8)
 		FORLIST(lnk, txd->textures){

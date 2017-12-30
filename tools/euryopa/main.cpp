@@ -134,8 +134,8 @@ void
 Init(void)
 {
 	sk::globals.windowtitle = "Euryopa";
-	sk::globals.width = 640;
-	sk::globals.height = 480;
+	sk::globals.width = 1280;
+	sk::globals.height = 800;
 	sk::globals.quit = 0;
 }
 
@@ -206,6 +206,11 @@ InitRW(void)
 
 	Scene.world->addCamera(Scene.camera);
 
+	ImGui_ImplRW_Init();
+	ImGui::StyleColorsClassic();
+
+	RenderInit();
+
 	return true;
 }
 
@@ -215,6 +220,14 @@ AppEventHandler(sk::Event e, void *param)
 {
 	using namespace sk;
 	Rect *r;
+	MouseState *ms;
+
+	ImGuiEventHandler(e, param);
+
+	ImGuiIO &io = ImGui::GetIO();
+	if(io.WantCaptureMouse)
+		CPad::tempMouseState.btns = 0;
+
 	switch(e){
 	case INITIALIZE:
 		AllocConsole();
@@ -230,10 +243,24 @@ AppEventHandler(sk::Event e, void *param)
 	case PLUGINATTACH:
 		return attachPlugins() ? EVENTPROCESSED : EVENTERROR;
 	case KEYDOWN:
-		CPad::tempKeystates[*(int*)param] = 1;
+		if(io.WantCaptureKeyboard)
+			CPad::tempKeystates[*(int*)param] = 0;
+		else
+			CPad::tempKeystates[*(int*)param] = 1;
 		return EVENTPROCESSED;
 	case KEYUP:
 		CPad::tempKeystates[*(int*)param] = 0;
+		return EVENTPROCESSED;
+	case MOUSEBTN:
+		if(!io.WantCaptureMouse){
+			ms = (MouseState*)param;
+			CPad::tempMouseState.btns = ms->buttons;
+		}
+		return EVENTPROCESSED;
+	case MOUSEMOVE:
+		ms = (MouseState*)param;
+		CPad::tempMouseState.x = ms->posx;
+		CPad::tempMouseState.y = ms->posy;
 		return EVENTPROCESSED;
 	case RESIZE:
 		r = (Rect*)param;
@@ -246,7 +273,7 @@ AppEventHandler(sk::Event e, void *param)
 		break;
 	case IDLE:
 		timeStep = *(float*)param;
-		Idle();
+		Idle(timeStep);
 		return EVENTPROCESSED;
 	}
 	return sk::EVENTNOTPROCESSED;

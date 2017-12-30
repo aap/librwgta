@@ -8,6 +8,10 @@ int currentHour = 12;
 int currentWeather;
 int currentArea;
 
+// Options
+
+bool gRenderCollision;
+
 bool
 IsHourInRange(int h1, int h2)
 {
@@ -58,13 +62,31 @@ test(void)
 }
 
 void
+handleTool(void)
+{
+	if(CPad::IsMButtonClicked(1)){
+		static rw::RGBA black = { 0, 0, 0, 0xFF };
+		TheCamera.m_rwcam->clear(&black, rw::Camera::CLEARIMAGE|rw::Camera::CLEARZ);
+		renderColourCoded = 1;
+		RenderEverything();
+		renderColourCoded = 0;
+		int32 c = GetColourCode(CPad::newMouseState.x, CPad::newMouseState.y);
+		ObjectInst *inst = GetInstanceByID(c);
+		if(inst){
+			ObjectDef *obj = GetObjectDef(inst->m_objectId);
+			printf("inst: %s\n", obj->m_name);
+		}
+	}
+}
+
+void
 LoadGame(void)
 {
-//	SetCurrentDirectory("C:/Users/aap/games/gta3");
+	SetCurrentDirectory("C:/Users/aap/games/gta3");
 //	SetCurrentDirectory("C:/Users/aap/games/gtavc");
 //	SetCurrentDirectory("C:/Users/aap/games/gtasa");
 //	SetCurrentDirectory("F://gtasa");
-	SetCurrentDirectory("C:\\Users\\aap\\games\\gta3d_latest");
+//	SetCurrentDirectory("C:\\Users\\aap\\games\\gta3d_latest");
 
 	FindVersion();
 	switch(gameversion){
@@ -134,12 +156,12 @@ LoadGame(void)
 }
 
 void
-Draw(void)
+Draw(float timeDelta)
 {
 	static rw::RGBA clearcol = { 0x80, 0x80, 0x80, 0xFF };
 
 	CPad *pad = CPad::GetPad(0);
-	if(CPad::IsKeyDown('Q') || CPad::IsKeyDown(KEY_ESC) ||
+	if(/*CPad::IsKeyDown('Q') || CPad::IsKeyDown(KEY_ESC) ||*/
 	   pad->NewState.start && pad->NewState.select){
 		sk::globals.quit = 1;
 		return;
@@ -148,27 +170,37 @@ Draw(void)
 	CPad::UpdatePads();
 	TheCamera.Process();
 
-	TheCamera.m_rwcam->clear(&clearcol, rw::Camera::CLEARIMAGE|rw::Camera::CLEARZ);
 	TheCamera.update();
 	TheCamera.m_rwcam->beginUpdate();
 
 	LoadAllRequestedObjects();
 
 	BuildRenderList();
+
+	DefinedState();
+
+	handleTool();
+
+	TheCamera.m_rwcam->clear(&clearcol, rw::Camera::CLEARIMAGE|rw::Camera::CLEARZ);
 	RenderEverything();
 
 	DefinedState();
 	rw::SetRenderState(rw::FOGENABLE, 0);
 
-//	RenderEverythingCollisions();
-//	RenderDebugLines();
+	if(gRenderCollision)
+		RenderEverythingCollisions();
+
+	RenderDebugLines();
+
+	// ImGUI
+	gui(timeDelta);
 
 	TheCamera.m_rwcam->endUpdate();
 	TheCamera.m_rwcam->showRaster();
 }
 
 void
-Idle(void)
+Idle(float timeDelta)
 {
 	static int state = 0;
 	switch(state){
@@ -177,7 +209,7 @@ Idle(void)
 		state = 1;
 		break;
 	case 1:
-		Draw();
+		Draw(timeDelta);
 		break;
 	}
 }

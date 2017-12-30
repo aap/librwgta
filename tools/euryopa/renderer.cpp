@@ -17,6 +17,8 @@ static int numLods;
 
 static uint16 currentScanCode;
 
+static rw::ObjPipeline *colourCodePipe;
+
 enum Visibility
 {
 	VIS_INVISIBLE,
@@ -255,6 +257,8 @@ ProcessLodList(void)
 	}
 }
 
+bool renderColourCoded;
+
 void
 RenderInst(ObjectInst *inst)
 {
@@ -262,10 +266,19 @@ RenderInst(ObjectInst *inst)
 
 	pDirect->setFlags(0);
 	obj = GetObjectDef(inst->m_objectId);
-	if(obj->m_type == ObjectDef::ATOMIC)
-		((rw::Atomic*)inst->m_rwObject)->render();
-	else if(obj->m_type == ObjectDef::CLUMP)
-		((rw::Clump*)inst->m_rwObject)->render();
+	if(renderColourCoded){
+		colourCode = inst->m_id;
+		if(obj->m_type == ObjectDef::ATOMIC)
+			colourCodePipe->render((rw::Atomic*)inst->m_rwObject);
+		else if(obj->m_type == ObjectDef::CLUMP)
+			FORLIST(lnk, ((rw::Clump*)inst->m_rwObject)->atomics)
+				colourCodePipe->render(rw::Atomic::fromClump(lnk));
+	}else{
+		if(obj->m_type == ObjectDef::ATOMIC)
+			((rw::Atomic*)inst->m_rwObject)->render();
+		else if(obj->m_type == ObjectDef::CLUMP)
+			((rw::Clump*)inst->m_rwObject)->render();
+	}
 	pDirect->setFlags(rw::Light::LIGHTATOMICS);
 }
 
@@ -414,4 +427,10 @@ RenderEverythingCollisions(void)
 		ObjectInst *inst = node->item.inst;
 		RenderCollision(inst);
 	}
+}
+
+void
+RenderInit(void)
+{
+	colourCodePipe = makeColourCodePipeline();
 }

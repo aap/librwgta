@@ -189,6 +189,11 @@ struct CVehicleModelInfo__inst
 
 
 // hash: 51964ff
+#ifdef LCS
+#define NUM_VEHICLE_DUMMIES 5
+#else
+#define NUM_VEHICLE_DUMMIES 15
+#endif
 struct CVehicleModelInfo : CElementGroupModelInfo
 {
 #ifdef LCS
@@ -204,7 +209,7 @@ struct CVehicleModelInfo : CElementGroupModelInfo
 	uint8 m_numExtras;
 	uint16 m_frequency;
 	int32 unk0;	// probably pad for CVector4d
-	CVuVector m_dummyPos[5];
+	CVuVector m_dummyPos[NUM_VEHICLE_DUMMIES];
 	uint32 m_compRules;
 	float m_bikeSteerAngle;
 	RslMaterial *m_materialsPrimary[NUMPRIM];
@@ -228,7 +233,7 @@ struct CVehicleModelInfo : CElementGroupModelInfo
 	uint32 m_vehicleType;
 	float m_wheelScale;
 	float m_wheelScaleRear;
-	CVuVector m_dummyPos[15];
+	CVuVector m_dummyPos[NUM_VEHICLE_DUMMIES];
 	uint32 m_compRules;
 	float m_bikeSteerAngle;
 	char m_gameName[8];

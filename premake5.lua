@@ -95,6 +95,7 @@ end
 
 function skeleton()
 	files { path.join(Librw, "skeleton/*.cpp"), path.join(Librw, "skeleton/*.h") }
+	files { path.join(Librw, "skeleton/imgui/*.cpp"), path.join(Librw, "skeleton/imgui/*.h") }
 	includedirs { path.join(Librw, "skeleton") }
 end
 

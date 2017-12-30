@@ -410,7 +410,7 @@ static void
 AddTexDictionaries(rw::TexDictionary *dst, rw::TexDictionary *src)
 {
 	FORLIST(lnk, src->textures)
-		dst->add(rw::Texture::fromDict(lnk));
+		dst->addFront(rw::Texture::fromDict(lnk));
 }
 
 static void

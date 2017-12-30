@@ -296,9 +296,9 @@ convertMesh(Geometry *rwg, RslGeometry *g, int32 ii)
 
 		/* Insert Data */
 		for(int32 i = 0; i < nvert; i++){
-			v.p.x = vuVerts[0]/32768.0f*resHeader->scale[0] + resHeader->pos[0];
-			v.p.y = vuVerts[1]/32768.0f*resHeader->scale[1] + resHeader->pos[1];
-			v.p.z = vuVerts[2]/32768.0f*resHeader->scale[2] + resHeader->pos[2];
+			v.p.x = vuVerts[0]/32767.0f*resHeader->scale[0] + resHeader->pos[0];
+			v.p.y = vuVerts[1]/32767.0f*resHeader->scale[1] + resHeader->pos[1];
+			v.p.z = vuVerts[2]/32767.0f*resHeader->scale[2] + resHeader->pos[2];
 			v.t.u = vuTex[0]/128.0f*inst->uvScale[0];
 			v.t.v = vuTex[1]/128.0f*inst->uvScale[1];
 			if(mask & 0x10){

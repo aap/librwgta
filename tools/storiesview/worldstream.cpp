@@ -391,9 +391,9 @@ convertBuildingMesh(rw::Geometry *geo, rw::Mesh *m, sClippableBuildingMesh *mesh
 
 		/* Insert Data */
 		for(uint32 i = 0; i < nvert; i++){
-			v.p.x = vuVerts[0]/32768.0f;
-			v.p.y = vuVerts[1]/32768.0f;
-			v.p.z = vuVerts[2]/32768.0f;
+			v.p.x = vuVerts[0]/32767.0f;
+			v.p.y = vuVerts[1]/32767.0f;
+			v.p.z = vuVerts[2]/32767.0f;
 			v.t.u = vuTex[0]/128.0f*uvscale[0];
 			v.t.v = vuTex[1]/128.0f*uvscale[1];
 			v.c.red   = (vuCols[0] & 0x1f) * 255 / 0x1F;
