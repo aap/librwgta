@@ -2,6 +2,7 @@
 
 #include <rw.h>
 #include <skeleton.h>
+#include "imgui/ImGuizmo.h"
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
@@ -46,6 +47,8 @@ extern float timeStep;
 //
 
 extern bool gRenderCollision;
+extern bool gRenderOnlyLod;
+extern bool gRenderOnlyHD;
 
 
 // These don't necessarily match the game's values, roughly double of SA PC
@@ -103,7 +106,7 @@ struct TxdDef
 	char name[MODELNAMELEN];
 	rw::TexDictionary *txd;
 	int parentId;
-	int imageIndex;
+	int32 imageIndex;
 };
 extern rw::TexDictionary *defaultTxd;
 void RegisterTexStorePlugin(void);
@@ -126,7 +129,7 @@ struct ColFileHeader
 struct ColDef
 {
 	char name[MODELNAMELEN];
-	int imageIndex;
+	int32 imageIndex;
 };
 ColDef *GetColDef(int i);
 int AddColSlot(const char *name);
@@ -188,7 +191,7 @@ struct ObjectDef
 	char m_animname[MODELNAMELEN];
 
 	bool m_cantLoad;
-	int m_imageIndex;
+	int32 m_imageIndex;
 	float m_minDrawDist;
 	bool m_isBigBuilding;
 	bool m_isHidden;
@@ -234,8 +237,6 @@ struct ObjectInst
 	bool m_isBigBuilding;
 	uint16 m_scanCode;
 
-	int32 m_id;	// to identify when picking
-
 	// SA only
 	int m_lodId;
 	int m_iplSlot;
@@ -248,16 +249,28 @@ struct ObjectInst
 	bool m_isTunnel;
 	bool m_isTunnelTransition;
 
+	// additional stuff
+	int32 m_id;	// to identify when picking
+	int m_selected;
+	int m_highlight;	// various ways to highlight this object
+
 	void UpdateMatrix(void);
 	void *CreateRwObject(void);
 	void Init(FileObjectInstance *fi);
 	void SetupBigBuilding(void);
 	CRect GetBoundRect(void);
 	bool IsOnScreen(void);
+
+	void JumpTo(void);
+	void Select(void);
+	void Deselect(void);
 };
 extern CPtrList instances;
+extern CPtrList selection;
 ObjectInst *GetInstanceByID(int32 id);
 ObjectInst *AddInstance(void);
+void ClearSelection(void);
+
 
 // World/sectors
 
@@ -286,7 +299,7 @@ struct IplDef
 	char name[MODELNAMELEN];
 	int instArraySlot;
 
-	int imageIndex;
+	int32 imageIndex;
 };
 int AddInstArraySlot(int n);
 ObjectInst **GetInstArray(int i);
@@ -311,6 +324,14 @@ void LoadLevel(const char *filename);
 
 // Rendering
 
+enum HighlightStyle
+{
+	HIGHLIGHT_NONE,
+	HIGHLIGHT_FILTER,
+	HIGHLIGHT_SELECTION,
+	HIGHLIGHT_HOVER,
+};
+
 struct SceneGlobals {
 	rw::World *world;
 	rw::Camera *camera;
@@ -319,8 +340,10 @@ extern rw::Light *pAmbient, *pDirect;
 extern SceneGlobals Scene;
 extern CCamera TheCamera;
 
+void myRenderCB(rw::Atomic *atomic);
+
 extern bool renderColourCoded;
-extern uint32 colourCode;
+extern rw::RGBA colourCode;
 rw::ObjPipeline *makeColourCodePipeline(void);
 int32 GetColourCode(int x, int y);
 
@@ -329,6 +352,7 @@ void BuildRenderList(void);
 void RenderEverything(void);
 
 void RenderColModelWire(CColModel *col, rw::Matrix *xform, bool onlyBounds);
+void RenderAxesWidget(rw::V3d pos, rw::V3d x, rw::V3d y, rw::V3d z);
 void RenderEverythingCollisions(void);
 void RenderDebugLines(void);
 
@@ -337,3 +361,4 @@ void RenderDebugLines(void);
 //
 
 void gui(float timeDelta);
+void uiShowCdImages(void);

@@ -80,6 +80,8 @@ SetupAtomic(rw::Atomic *atm)
 	if(g->flags & rw::Geometry::NATIVE)
 		atm->uninstance();
 	atm->pipeline = nil;
+//	atm->pipeline = (rw::ObjPipeline*)1;
+	atm->setRenderCB(myRenderCB);
 }
 
 void

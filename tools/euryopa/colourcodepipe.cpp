@@ -1,12 +1,13 @@
 #include "euryopa.h"
 
 using namespace rw;
-using namespace d3d;
-using namespace d3d9;
+
+rw::RGBA colourCode;
 
 #ifdef RW_D3D9
 
-uint32 colourCode;
+using namespace d3d;
+using namespace d3d9;
 
 void
 colourCodeRenderCB(Atomic *atomic, d3d9::InstanceDataHeader *header)
@@ -29,15 +30,18 @@ colourCodeRenderCB(Atomic *atomic, d3d9::InstanceDataHeader *header)
 	uint32 blend;
 	for(uint32 i = 0; i < header->numMeshes; i++){
 		d3d::setTexture(0, inst->material->texture);
+		SetRenderState(VERTEXALPHA, inst->vertexAlpha || colourCode.alpha != 255);
 
 		d3d::getRenderState(D3DRS_ALPHABLENDENABLE, &blend);
-		d3d::setRenderState(D3DRS_ALPHABLENDENABLE, 0);
+		if(renderColourCoded)
+			d3d::setRenderState(D3DRS_ALPHABLENDENABLE, 0);
 
-		d3d::setRenderState(D3DRS_TEXTUREFACTOR, D3DCOLOR_RGBA(colourCode&0xFF, colourCode>>8 & 0xFF, colourCode>> 16 & 0xFF, 255));
+		d3d::setRenderState(D3DRS_TEXTUREFACTOR, D3DCOLOR_RGBA(colourCode.red, colourCode.green, colourCode.blue, colourCode.alpha));
 		d3d::setTextureStageState(0, D3DTSS_COLOROP, D3DTOP_SELECTARG1);
 		d3d::setTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TFACTOR);
-		d3d::setTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
+		d3d::setTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
 		d3d::setTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
+		d3d::setTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_TFACTOR);
 
 		d3d::flushCache();
 		d3ddevice->DrawIndexedPrimitive((D3DPRIMITIVETYPE)header->primType, inst->baseIndex,
@@ -74,6 +78,7 @@ GetColourCode(int x, int y)
 	d3ddevice->GetRenderTargetData(backbuffer, surf);
 
 	surf->LockRect(&d3dlr, nil, D3DLOCK_NO_DIRTY_UPDATE|D3DLOCK_READONLY);
+	// TODO: check format and dimensions properly
 	if(desc.Format == D3DFMT_A8R8G8B8){
 		uint8 *col = (uint8*)d3dlr.pBits + d3dlr.Pitch*y + x*4;
 		res = col[0]<<16 | col[1]<<8 | col[2];
@@ -86,4 +91,79 @@ GetColourCode(int x, int y)
 }
 
 
+#endif
+
+#ifdef RW_GL3
+
+using namespace gl3;
+
+Shader *colourCodeShader;
+
+#define U(i) currentShader->uniformLocations[i]
+
+void
+colourCodeRenderCB(Atomic *atomic, gl3::InstanceDataHeader *header)
+{
+	Material *m;
+	RGBAf col;
+
+	setWorldMatrix(atomic->getFrame()->getLTM());
+	lightingCB();
+
+	glBindBuffer(GL_ARRAY_BUFFER, header->vbo);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, header->ibo);
+	setAttribPointers(header->attribDesc, header->numAttribs);
+
+	InstanceData *inst = header->inst;
+	int32 n = header->numMeshes;
+
+	colourCodeShader->use();
+
+	while(n--){
+		m = inst->material;
+
+		convColor(&col, &colourCode);
+		glUniform4fv(U(u_matColor), 1, (GLfloat*)&col);
+
+		setTexture(0, m->texture);
+		rw::SetRenderState(VERTEXALPHA, inst->vertexAlpha || colourCode.alpha != 0xFF);
+
+		GLboolean blend;
+		glGetBooleanv(GL_BLEND, &blend);
+		if(renderColourCoded)
+			glDisable(GL_BLEND);
+
+		flushCache();
+		glDrawElements(header->primType, inst->numIndex,
+		               GL_UNSIGNED_SHORT, (void*)(uintptr)inst->offset);
+
+		(blend ? glEnable : glDisable)(GL_BLEND);
+
+		inst++;
+	}
+	disableAttribPointers(header->attribDesc, header->numAttribs);
+}
+
+rw::ObjPipeline*
+makeColourCodePipeline(void)
+{
+#include "gl_shaders/colcode_vs_gl3.inc"
+#include "gl_shaders/colcode_fs_gl3.inc"
+	colourCodeShader = Shader::fromStrings(colcode_vert_src, colcode_frag_src);
+
+	gl3::ObjPipeline *pipe = new gl3::ObjPipeline(PLATFORM_GL3);
+	pipe->instanceCB = defaultInstanceCB;
+	pipe->uninstanceCB = defaultUninstanceCB;
+	pipe->renderCB = colourCodeRenderCB;
+	return pipe;
+}
+
+int32
+GetColourCode(int x, int y)
+{
+	rw::RGBA col;
+	// TODO: check format and dimensions properly
+	glReadPixels(x, sk::globals.height-y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, &col);
+	return col.blue<<16 | col.green<<8 | col.red;
+}
 #endif

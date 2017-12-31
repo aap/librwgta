@@ -1,4 +1,5 @@
 #include "euryopa.h"
+#include <vector>
 
 /*
  * Streaming limits:
@@ -34,27 +35,67 @@ enum
 
 struct DirEntry
 {
+	// directly from directory file
 	uint32 position;
 	uint32 size;
 	char name[24];
 
-	int imgindex;
+	// additional data
 	int filetype;
+	int overridden;
 };
 
-static FILE *imgfiles[NUMCDIMAGES];
-static int numImages;
+struct CdImage
+{
+	char *name;
+	int index;
 
-static DirEntry *directory;
-static int directorySize;
-static int directoryLimit = 8000;
+	DirEntry *directory;
+	int directorySize;
+	int directoryLimit;
+
+	FILE *file;
+};
+static CdImage cdImages[NUMCDIMAGES];
+static int numCdImages;
+
 static uint32 maxFileSize;
 static uint8 *streamingBuffer;
 
 static CPtrList requestList;
 
+
+void
+uiShowCdImages(void)
+{
+	static const char *types[] = {
+		"-", "DFF", "TXD", "COL", "IPL"
+	};
+	int i, j;
+	CdImage *cdimg;
+	DirEntry *de;
+
+	for(i = 0; i < numCdImages; i++){
+		cdimg = &cdImages[i];
+		if(ImGui::TreeNode(cdimg->name)){
+			for(j = 0; j < cdimg->directorySize; j++){
+				de = &cdimg->directory[j];
+
+				if(de->overridden)
+					ImGui::PushStyleColor(ImGuiCol_Text, (ImVec4)ImColor(255, 0, 0));
+
+				ImGui::Text("%-20s %s", de->name, types[de->filetype]);
+
+				if(de->overridden)
+					ImGui::PopStyleColor();
+			}
+			ImGui::TreePop();
+		}
+	}
+}
+
 static void
-AddDirEntry(DirEntry *de)
+AddDirEntry(CdImage *cdimg, DirEntry *de)
 {
 	char *ext;
 	ext = strrchr(de->name, '.');
@@ -79,25 +120,28 @@ AddDirEntry(DirEntry *de)
 	}
 	if(de->size > maxFileSize)
 		maxFileSize = de->size;
-	directory[directorySize++] = *de;
+	cdimg->directory[cdimg->directorySize++] = *de;
 }
 
 static void
-ReadDirectory(FILE *dir, int n, int imgindex)
+ReadDirectory(CdImage *cdimg, FILE *f, int n)
 {
 	DirEntry de;
 	int i;
 
-	if(directory == nil)
-		directory = rwNewT(DirEntry, directoryLimit, 0);
-	while(directorySize + n > directoryLimit){
-		directoryLimit *= 2;
-		directory = rwResizeT(DirEntry, directory, directoryLimit, 0);
+	if(cdimg->directory == nil){
+		cdimg->directoryLimit = 8000;
+		cdimg->directory = rwNewT(DirEntry, cdimg->directoryLimit, 0);
+	}
+	while(cdimg->directorySize + n > cdimg->directoryLimit){
+		cdimg->directoryLimit *= 2;
+		cdimg->directory = rwResizeT(DirEntry, cdimg->directory, cdimg->directoryLimit, 0);
 	}
 	for(i = 0 ; i < n; i++){
-		fread(&de, 1, 32, dir);
-		de.imgindex = imgindex;
-		AddDirEntry(&de);
+		fread(&de, 1, 32, f);
+		de.filetype = 0;
+		de.overridden = 0;
+		AddDirEntry(cdimg, &de);
 	}
 }
 
@@ -108,19 +152,31 @@ AddCdImage(const char *path)
 	char *dirpath, *p;
 	int fourcc, n;
 	int imgindex;
+	CdImage *cdimg;
+
+	if(numCdImages < NUMCDIMAGES){
+		imgindex = numCdImages++;
+		cdimg = &cdImages[imgindex];
+	}else{
+		log("warning: no room for more than %d cdimages\n", NUMCDIMAGES);
+		return;
+	}
 
 	img = fopen_ci(path, "rb");
 	if(img == nil){
 		log("warning: cdimage %s couldn't be opened\n", path);
+		numCdImages--;
 		return;
 	}
-	imgindex = numImages++;
-	imgfiles[imgindex] = img;
+	cdimg->name = strdup(path);
+	cdimg->file = img;
+	cdimg->index = imgindex;
+
 	fread(&fourcc, 1, 4, img);
 	if(fourcc == 0x32524556){	// VER2
 		// Found a VER2 image, read its directory
 		fread(&n, 1, 4, img);
-		ReadDirectory(img, n, imgindex);
+		ReadDirectory(cdimg, img, n);
 	}else{
 		dirpath = strdup(path);
 		p = strrchr(dirpath, '.');
@@ -128,7 +184,8 @@ AddCdImage(const char *path)
 		dir = fopen_ci(dirpath, "rb");
 		if(dir == nil){
 			log("warning: directory %s couldn't be opened\n", dirpath);
-			numImages--;
+			numCdImages--;
+			free(cdimg->name);
 			fclose(img);
 			return;
 		}
@@ -136,66 +193,92 @@ AddCdImage(const char *path)
 		n = ftell(dir);
 		fseek(dir, 0, SEEK_SET);
 		n /= 32;
-		ReadDirectory(dir, n, imgindex);
+		ReadDirectory(cdimg, dir, n);
 	}
 }
 
-void
-InitCdImages(void)
+static void
+InitCdImage(CdImage *cdimg)
 {
 	int i, slot;
+	int32 idx;
 	ObjectDef *obj;
 	TxdDef *txd;
 	ColDef *col;
 	IplDef *ipl;
 
-	for(i = 0; i < directorySize; i++){
-		DirEntry *de = &directory[i];
+	for(i = 0; i < cdimg->directorySize; i++){
+		DirEntry *de = &cdimg->directory[i];
+		idx = i | cdimg->index<<24;
 		switch(de->filetype){
 		case FILE_MODEL:
 			obj = GetObjectDef(de->name, nil);
 			if(obj){
-				if(obj->m_imageIndex >= 0)
+				if(obj->m_imageIndex >= 0){
 					log("warning: model %s appears multiple times\n", obj->m_name);
-				obj->m_imageIndex = i;
+					de->overridden = 1;
+				}else
+					obj->m_imageIndex = idx;
 			}
 			break;
 
 		case FILE_TXD:
 			slot = AddTxdSlot(de->name);
 			txd = GetTxdDef(slot);
-			if(txd->imageIndex >= 0)
+			if(txd->imageIndex >= 0){
 				log("warning: txd %s appears multiple times\n", txd->name);
-			txd->imageIndex = i;
+				de->overridden = 1;
+			}else
+				txd->imageIndex = idx;
 			break;
 
 		case FILE_COL:
 			slot = AddColSlot(de->name);
 			col = GetColDef(slot);
-			if(col->imageIndex >= 0)
+			if(col->imageIndex >= 0){
 				log("warning: col %s appears multiple times\n", col->name);
-			col->imageIndex = i;
+				de->overridden = 1;
+			}else
+				col->imageIndex = idx;
 			break;
 
 		case FILE_IPL:
 			slot = AddIplSlot(de->name);
 			ipl = GetIplDef(slot);
-			if(ipl->imageIndex >= 0)
+			if(ipl->imageIndex >= 0){
 				log("warning: ipl %s appears multiple times\n", ipl->name);
-			ipl->imageIndex = i;
+				de->overridden = 1;
+			}else
+				ipl->imageIndex = idx;
 			break;
 		}
 	}
+}
 
+void
+InitCdImages(void)
+{
+	int i;
+	if(isSA())
+		for(i = 0; i < numCdImages; i++)
+			InitCdImage(&cdImages[i]);
+	else
+		for(i = numCdImages-1; i >= 0; i--)
+			InitCdImage(&cdImages[i]);
 	streamingBuffer = (uint8*)malloc(maxFileSize*2048);
 }
 
 uint8*
 ReadFileFromImage(int i, int *size)
 {
-	DirEntry *de = &directory[i];
-	fseek(imgfiles[de->imgindex], de->position*2048, SEEK_SET);
-	fread(streamingBuffer, 1, de->size*2048, imgfiles[de->imgindex]);
+	int img;
+	CdImage *cdimg;
+	img = i>>24 & 0xFF;
+	i = i & 0xFFFFFF;
+	cdimg = &cdImages[img];
+	DirEntry *de = &cdimg->directory[i];
+	fseek(cdimg->file, de->position*2048, SEEK_SET);
+	fread(streamingBuffer, 1, de->size*2048, cdimg->file);
 	if(size)
 		*size = de->size*2048;
 	return streamingBuffer;

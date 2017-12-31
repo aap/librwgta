@@ -11,6 +11,8 @@ int currentArea;
 // Options
 
 bool gRenderCollision;
+bool gRenderOnlyLod;
+bool gRenderOnlyHD;
 
 bool
 IsHourInRange(int h1, int h2)
@@ -64,6 +66,7 @@ test(void)
 void
 handleTool(void)
 {
+	// select
 	if(CPad::IsMButtonClicked(1)){
 		static rw::RGBA black = { 0, 0, 0, 0xFF };
 		TheCamera.m_rwcam->clear(&black, rw::Camera::CLEARIMAGE|rw::Camera::CLEARZ);
@@ -73,9 +76,19 @@ handleTool(void)
 		int32 c = GetColourCode(CPad::newMouseState.x, CPad::newMouseState.y);
 		ObjectInst *inst = GetInstanceByID(c);
 		if(inst){
-			ObjectDef *obj = GetObjectDef(inst->m_objectId);
-			printf("inst: %s\n", obj->m_name);
-		}
+			if(CPad::IsShiftDown())
+				inst->Select();
+			else if(CPad::IsAltDown())
+				inst->Deselect();
+			else if(CPad::IsCtrlDown()){
+				if(inst->m_selected) inst->Deselect();
+				else inst->Select();
+			}else{
+				ClearSelection();
+				inst->Select();
+			}
+		}else
+			ClearSelection();
 	}
 }
 
@@ -105,7 +118,7 @@ LoadGame(void)
 	AddColSlot("generic");
 	AddIplSlot("generic");
 
-	AddCdImage("models/gta3.img");
+	AddCdImage("MODELS\\GTA3.IMG");
 
 	FileLoader::LoadLevel("data/default.dat");
 	switch(gameversion){
@@ -156,6 +169,36 @@ LoadGame(void)
 }
 
 void
+dogizmo(void)
+{
+	rw::Camera *cam;
+	rw::Matrix tmp, view;
+	rw::RawMatrix gizview;
+	float *fview, *fproj, *fobj;
+	static rw::RawMatrix gizobj;
+	static bool first = true;
+	if(first){
+		tmp.setIdentity();
+		convMatrix(&gizobj, &tmp);
+		gizobj.pos = TheCamera.m_target;
+		first = false;
+	}
+
+	cam = (rw::Camera*)rw::engine->currentCamera;
+	rw::Matrix::invert(&view, cam->getFrame()->getLTM());
+	rw::convMatrix(&gizview, &view);
+	fview = (float*)&cam->devView;
+	fproj = (float*)&cam->devProj;
+	fobj = (float*)&gizobj;
+
+	ImGuiIO &io = ImGui::GetIO();
+	ImGuizmo::SetRect(0, 0, io.DisplaySize.x, io.DisplaySize.y);
+	ImGuizmo::Manipulate(fview, fproj, ImGuizmo::TRANSLATE, ImGuizmo::LOCAL, fobj, nil, nil);
+//	ImGuizmo::DrawCube(fview, fproj, fobj);
+//	ImGuizmo::DrawCube((float*)&gizview, (float*)&cam->devProj, (float*)&gizobj);
+}
+
+void
 Draw(float timeDelta)
 {
 	static rw::RGBA clearcol = { 0x80, 0x80, 0x80, 0xFF };
@@ -167,17 +210,21 @@ Draw(float timeDelta)
 		return;
 	}
 
+	ImGui_ImplRW_NewFrame(timeDelta);
+	ImGuizmo::BeginFrame();
+
 	CPad::UpdatePads();
 	TheCamera.Process();
-
 	TheCamera.update();
 	TheCamera.m_rwcam->beginUpdate();
 
-	LoadAllRequestedObjects();
+	DefinedState();
 
+	LoadAllRequestedObjects();
 	BuildRenderList();
 
-	DefinedState();
+	gui(timeDelta);
+	dogizmo();
 
 	handleTool();
 
@@ -187,13 +234,14 @@ Draw(float timeDelta)
 	DefinedState();
 	rw::SetRenderState(rw::FOGENABLE, 0);
 
+	TheCamera.DrawTarget();
 	if(gRenderCollision)
 		RenderEverythingCollisions();
 
 	RenderDebugLines();
 
-	// ImGUI
-	gui(timeDelta);
+	ImGui::EndFrame();
+	ImGui::Render();
 
 	TheCamera.m_rwcam->endUpdate();
 	TheCamera.m_rwcam->showRaster();

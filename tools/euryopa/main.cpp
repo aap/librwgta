@@ -61,7 +61,7 @@ fopen_ci(const char *path, const char *mode)
 }
 
 
-#define XINPUT
+//#define XINPUT
 #ifdef XINPUT
 int pads[4];
 int numPads;
@@ -128,6 +128,19 @@ plUpdatePad(CControllerState *state)
 	state->left = !!(xstate.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT);
 
 }
+#else
+void
+plAttachInput(void)
+{
+}
+void
+plCapturePad(int arg)
+{
+}
+void
+plUpdatePad(CControllerState *state)
+{
+}
 #endif
 
 void
@@ -161,6 +174,18 @@ DefinedState(void)
 //	SetRenderState(rw::FOGCOLOR, *(uint32*)&currentFog);
 }
 
+// Simple function to convert a raster to the current platform.
+// TODO: convert custom formats (DXT) properly.
+rw::Raster*
+ConvertTexRaster(rw::Raster *ras)
+{
+	using namespace rw;
+	Image *img = ras->toImage();
+	ras = Raster::createFromImage(img);
+	img->destroy();
+	return ras;
+}
+
 void
 ConvertTxd(rw::TexDictionary *txd)
 {
@@ -168,6 +193,11 @@ ConvertTxd(rw::TexDictionary *txd)
 	rw::Texture *tex;
 	FORLIST(lnk, txd->textures){
 		tex = rw::Texture::fromDict(lnk);
+		rw::Raster *ras = tex->raster;
+		if(ras && ras->platform != rw::platform){
+			tex->raster = ConvertTexRaster(ras);
+			ras->destroy();
+		}
 		tex->setFilter(rw::Texture::LINEAR);
 	}
 }
@@ -196,7 +226,7 @@ InitRW(void)
 
 	Scene.camera = sk::CameraCreate(sk::globals.width, sk::globals.height, 1);
 	Scene.camera->setFarPlane(5000.0f);
-	Scene.camera->setNearPlane(0.9f);
+	Scene.camera->setNearPlane(0.1f);
 	TheCamera.m_rwcam = Scene.camera;
 	TheCamera.m_aspectRatio = 640.0f/480.0f;
 
@@ -225,8 +255,8 @@ AppEventHandler(sk::Event e, void *param)
 	ImGuiEventHandler(e, param);
 
 	ImGuiIO &io = ImGui::GetIO();
-	if(io.WantCaptureMouse)
-		CPad::tempMouseState.btns = 0;
+//	if(io.WantCaptureMouse || ImGuizmo::IsOver())
+//		CPad::tempMouseState.btns = 0;
 
 	switch(e){
 	case INITIALIZE:
@@ -243,19 +273,18 @@ AppEventHandler(sk::Event e, void *param)
 	case PLUGINATTACH:
 		return attachPlugins() ? EVENTPROCESSED : EVENTERROR;
 	case KEYDOWN:
-		if(io.WantCaptureKeyboard)
-			CPad::tempKeystates[*(int*)param] = 0;
-		else
+		if(!io.WantCaptureKeyboard || !ImGuizmo::IsOver())
 			CPad::tempKeystates[*(int*)param] = 1;
 		return EVENTPROCESSED;
 	case KEYUP:
 		CPad::tempKeystates[*(int*)param] = 0;
 		return EVENTPROCESSED;
 	case MOUSEBTN:
-		if(!io.WantCaptureMouse){
+		if(!io.WantCaptureMouse && !ImGuizmo::IsOver()){
 			ms = (MouseState*)param;
 			CPad::tempMouseState.btns = ms->buttons;
-		}
+		}else
+			CPad::tempMouseState.btns = 0;
 		return EVENTPROCESSED;
 	case MOUSEMOVE:
 		ms = (MouseState*)param;

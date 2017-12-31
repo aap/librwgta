@@ -1,9 +1,11 @@
 #include "euryopa.h"
 
-static bool show_demo_window;
+static bool showDemoWindow;
+static bool showEditorWindow;
+static bool showHelpWindow;
 
 static void
-mainmenu(void)
+uiMainmenu(void)
 {
 	if(ImGui::BeginMainMenuBar()){
 		if(ImGui::BeginMenu("File")){
@@ -11,25 +13,125 @@ mainmenu(void)
 			ImGui::EndMenu();
 		}
 		if(ImGui::BeginMenu("View")){
-			if(ImGui::MenuItem("Draw Collisions", NULL, gRenderCollision)) { gRenderCollision ^= 1; }
-/*
-			if(ImGui::MenuItem("Undo", "CTRL+Z")) {}
-			if(ImGui::MenuItem("Redo", "CTRL+Y", false, false)) {}  // Disabled item
+			if(ImGui::MenuItem("Draw Collisions", nil, gRenderCollision)) { gRenderCollision ^= 1; }
 			ImGui::Separator();
-			if(ImGui::MenuItem("Cut", "CTRL+X")) {}
-			if(ImGui::MenuItem("Copy", "CTRL+C")) {}
-			if(ImGui::MenuItem("Paste", "CTRL+V")) {}
-*/
+			static int render = 0;
+			ImGui::RadioButton("Render Normal", &render, 0);
+			ImGui::RadioButton("Render only HD", &render, 1);
+			ImGui::RadioButton("Render only LOD", &render, 2);
+			gRenderOnlyHD = !!(render&1);
+			gRenderOnlyLod = !!(render&2);
 			ImGui::EndMenu();
 		}
 		if(ImGui::BeginMenu("Misc")){
-			if(ImGui::MenuItem("Show Demo Window", NULL, show_demo_window)) { show_demo_window ^= 1; }
+			if(ImGui::MenuItem("Show Demo Window", nil, showDemoWindow)) { showDemoWindow ^= 1; }
+			if(ImGui::MenuItem("Show Editor Window", nil, showEditorWindow)) { showEditorWindow ^= 1; }
+			if(ImGui::MenuItem("Help", nil, showHelpWindow)) { showHelpWindow ^= 1; }
 			ImGui::EndMenu();
 		}
+
 		ImGui::Separator();
 		ImGui::Text("%.3f ms/frame %.1f FPS", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 		ImGui::EndMainMenuBar();
 	}
+}
+
+static void
+uiHelpWindow(void)
+{
+	ImGui::Begin("Help", &showHelpWindow);
+
+	ImGui::BulletText("Camera controls:\n"
+		"LMB: first person look around\n"
+		"Ctrl+Alt+LMB; W/S: move forward/backward\n"
+		"MMB: pan\n"
+		"Alt+MMB: arc rotate around target\n"
+		"Ctrl+Alt+MMB: zoom into target"
+		);
+	ImGui::Separator();
+	ImGui::BulletText("Selection: click on an object to select it,\n"
+		"Shift+click to add to the selection,\n"
+		"Alt+click to remove from the selection,\n"
+		"Ctrl+click to toggle selection.");
+	ImGui::BulletText("In the editor window, double click an instance to jump there,\n"
+		"Right click a selection to deselect it.");
+	ImGui::BulletText("Use the filter in the instance list to find instances by name.");
+
+	if(ImGui::CollapsingHeader("Dear ImGUI help")){
+		ImGui::ShowUserGuide();
+		ImGui::TreePop();
+	}
+
+	ImGui::End();
+}
+
+static void
+uiEditorWindow(void)
+{
+	CPtrNode *p;
+	ObjectInst *inst;
+	ObjectDef *obj;
+
+	ImGui::Begin("Editor Window", &showEditorWindow);
+
+	if(ImGui::TreeNode("CD images")){
+		uiShowCdImages();
+		ImGui::TreePop();
+	}
+
+	if(ImGui::TreeNode("Selection")){
+		for(p = selection.first; p; p = p->next){
+			inst = (ObjectInst*)p->item;
+			obj = GetObjectDef(inst->m_objectId);
+			ImGui::PushID(inst);
+			ImGui::Selectable(obj->m_name);
+			ImGui::PopID();
+			if(ImGui::IsItemHovered()){
+				inst->m_highlight = HIGHLIGHT_HOVER;
+				if(ImGui::IsMouseClicked(1))
+					inst->Deselect();
+				if(ImGui::IsMouseDoubleClicked(0))
+					inst->JumpTo();
+			}
+		}
+		ImGui::TreePop();
+	}
+
+	if(ImGui::TreeNode("Instances")){
+		static ImGuiTextFilter filter;
+		filter.Draw();
+		static bool highlight;
+		ImGui::Checkbox("Highlight matches", &highlight);
+		for(p = instances.first; p; p = p->next){
+			inst = (ObjectInst*)p->item;
+			obj = GetObjectDef(inst->m_objectId);
+			if(filter.PassFilter(obj->m_name)){
+				bool pop = false;
+				if(inst->m_selected){
+					ImGui::PushStyleColor(ImGuiCol_Text, (ImVec4)ImColor(255, 0, 0));
+					pop = true;
+				}
+				ImGui::PushID(inst);
+				ImGui::Selectable(obj->m_name);
+				ImGui::PopID();
+				if(ImGui::IsItemHovered()){
+					if(ImGui::IsMouseClicked(1))
+						inst->Select();
+					if(ImGui::IsMouseDoubleClicked(0))
+						inst->JumpTo();
+				}
+				if(pop)
+					ImGui::PopStyleColor();
+				if(highlight)
+					inst->m_highlight = HIGHLIGHT_FILTER;
+				if(ImGui::IsItemHovered())
+					inst->m_highlight = HIGHLIGHT_HOVER;
+			}
+		}
+		ImGui::TreePop();
+	}
+
+	ImGui::End();
 }
 
 void
@@ -38,39 +140,16 @@ gui(float timeDelta)
 	static bool show_another_window = false;
 	static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-	ImGui_ImplRW_NewFrame(timeDelta);
+	uiMainmenu();
 
-	mainmenu();
+	if(showEditorWindow)
+		uiEditorWindow();
 
-/*
-	// 1. Show a simple window.
-	// Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets automatically appears in a window called "Debug".
-	{
-		static float f = 0.0f;
-		ImGui::Text("Hello, world!");                           // Some text (you can use a format string too)
-		ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float as a slider from 0.0f to 1.0f
-		ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats as a color
-		if(ImGui::Button("Demo Window"))                       // Use buttons to toggle our bools. We could use Checkbox() as well.
-			show_demo_window ^= 1;
-		if(ImGui::Button("Another Window"))
-			show_another_window ^= 1;
-		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+	if(showHelpWindow)
+		uiHelpWindow();
+
+	if(showDemoWindow){
+		ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiCond_FirstUseEver);
+		ImGui::ShowDemoWindow(&showDemoWindow);
 	}
-
-        // 2. Show another simple window. In most cases you will use an explicit Begin/End pair to name the window.
-	if(show_another_window){
-		ImGui::Begin("Another Window", &show_another_window);
-		ImGui::Text("Hello from another window!");
-		ImGui::End();
-	}
-*/
-
-        // 3. Show the ImGui demo window. Most of the sample code is in ImGui::ShowDemoWindow().
-	if(show_demo_window){
-		ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiCond_FirstUseEver); // Normally user code doesn't need/want to call this because positions are saved in .ini file anyway. Here we just want to make the demo initial state a bit more friendly!
-		ImGui::ShowDemoWindow(&show_demo_window);
-	}
-
-	ImGui::EndFrame();
-	ImGui::Render();
 }

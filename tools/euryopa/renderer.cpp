@@ -50,6 +50,53 @@ AddToLodRenderList(ObjectInst *inst, float dist)
 	lodList[i].dist = dist;
 }
 
+// Don't assume there are LODs, just draw if below draw distance
+static int
+SetupVisibilitySimple(ObjectInst *inst, float *distout)
+{
+	ObjectDef *obj, *hdobj;
+	float camdist;
+	rw::Atomic *atm, *instatm;
+	rw::Clump *instclump;
+
+	if(inst->m_area != currentArea && inst->m_area != 13)
+		return VIS_INVISIBLE;
+
+	obj = GetObjectDef(inst->m_objectId);
+	hdobj = inst->m_isBigBuilding ? obj->m_relatedModel : nil;
+
+	if(obj->m_isHidden)
+		return VIS_INVISIBLE;
+
+	camdist = TheCamera.distanceTo(inst->m_translation);
+	if(camdist >= obj->GetLargestDrawDist()*TheCamera.m_LODmult)
+		return VIS_INVISIBLE;
+
+	if(obj->m_isTimed && !IsHourInRange(obj->m_timeOn, obj->m_timeOff))
+		return VIS_INVISIBLE;
+
+	if(!obj->IsLoaded())
+		return VIS_STREAMME;
+
+	if(!inst->IsOnScreen())
+		return VIS_CULLED;
+
+	instatm = nil;
+	instclump = nil;
+	if(inst->m_rwObject == nil)
+		if(inst->CreateRwObject() == nil)
+			return VIS_INVISIBLE;	// this shouldn't happen
+
+	if(obj->m_type == ObjectDef::ATOMIC){
+		atm = obj->GetAtomicForDist(camdist);
+		instatm = (rw::Atomic*)inst->m_rwObject;
+		if(instatm->geometry != atm->geometry)
+			instatm->setGeometry(atm->geometry, 0);
+	}
+
+	return VIS_VISIBLE;
+}
+
 static int
 SetupVisibilityIII(ObjectInst *inst, float *distout)
 {
@@ -72,7 +119,7 @@ SetupVisibilityIII(ObjectInst *inst, float *distout)
 		return VIS_INVISIBLE;
 	if(camdist < obj->m_minDrawDist*TheCamera.m_LODmult)
 		if(hdobj == nil || hdobj->IsLoaded())
-			return 0;
+			return VIS_INVISIBLE;
 
 	if(obj->m_isTimed && !IsHourInRange(obj->m_timeOn, obj->m_timeOff))
 		return VIS_INVISIBLE;
@@ -179,7 +226,7 @@ SetupBigBuildingVisibilitySA(ObjectInst *inst, float *distout)
 		else
 			// otherwise...???
 			inst->m_numChildrenRendered = 0;
-		return 0;
+		return VIS_INVISIBLE;
 	}else{
 		// No child wants to be rendered (yet?)
 		// but maybe this LOD...
@@ -190,7 +237,7 @@ SetupBigBuildingVisibilitySA(ObjectInst *inst, float *distout)
 			// we're visible AND have multiple children,
 			// so we might have to render
 			AddToLodRenderList(inst, camdist);
-			return 0;
+			return VIS_INVISIBLE;
 		}
 		// But what if we're a super LOD and our child
 		// just hasn't been visited yet?
@@ -258,27 +305,55 @@ ProcessLodList(void)
 }
 
 bool renderColourCoded;
+static rw::RGBA highlightColor;
+
+void
+myRenderCB(rw::Atomic *atomic)
+{
+	if(renderColourCoded)
+		colourCodePipe->render(atomic);
+	else if(highlightColor.red || highlightColor.green || highlightColor.blue){
+		atomic->getPipeline()->render(atomic);
+		colourCode = highlightColor;
+		colourCode.alpha = 128;
+		colourCodePipe->render(atomic);
+	}else
+		atomic->getPipeline()->render(atomic);
+}
 
 void
 RenderInst(ObjectInst *inst)
 {
+	static rw::RGBA black = { 0, 0, 0, 255 };
+	static rw::RGBA red = { 255, 0, 0, 255 };
+	static rw::RGBA green = { 0, 255, 0, 255 };
+	static rw::RGBA blue = { 0, 0, 255, 255 };
+	static rw::RGBA highlightCols[] = { black, green, red, blue };
 	ObjectDef *obj;
 
 	pDirect->setFlags(0);
 	obj = GetObjectDef(inst->m_objectId);
-	if(renderColourCoded){
-		colourCode = inst->m_id;
-		if(obj->m_type == ObjectDef::ATOMIC)
-			colourCodePipe->render((rw::Atomic*)inst->m_rwObject);
-		else if(obj->m_type == ObjectDef::CLUMP)
-			FORLIST(lnk, ((rw::Clump*)inst->m_rwObject)->atomics)
-				colourCodePipe->render(rw::Atomic::fromClump(lnk));
-	}else{
-		if(obj->m_type == ObjectDef::ATOMIC)
-			((rw::Atomic*)inst->m_rwObject)->render();
-		else if(obj->m_type == ObjectDef::CLUMP)
-			((rw::Clump*)inst->m_rwObject)->render();
-	}
+	colourCode.red = inst->m_id & 0xFF;
+	colourCode.green = inst->m_id>>8 & 0xFF;
+	colourCode.blue = inst->m_id>>16 & 0xFF;
+	colourCode.alpha = 255;
+
+	if(inst->m_selected && inst->m_highlight < HIGHLIGHT_SELECTION)
+		inst->m_highlight = HIGHLIGHT_SELECTION;
+	highlightColor = highlightCols[inst->m_highlight];
+
+	if(obj->m_noZwrite)
+		rw::SetRenderState(rw::ZWRITEENABLE, 0);
+
+	if(obj->m_type == ObjectDef::ATOMIC)
+		((rw::Atomic*)inst->m_rwObject)->render();
+	else if(obj->m_type == ObjectDef::CLUMP)
+		((rw::Clump*)inst->m_rwObject)->render();
+
+	highlightColor = black;
+	if(obj->m_noZwrite)
+		rw::SetRenderState(rw::ZWRITEENABLE, 1);
+
 	pDirect->setFlags(rw::Light::LIGHTATOMICS);
 }
 
@@ -289,9 +364,13 @@ ProcessBuilding(ObjectInst *inst)
 	if(inst->m_isBigBuilding || inst->m_scanCode == currentScanCode)
 		return;
 	inst->m_scanCode = currentScanCode;
-	int v = isSA() ? 
-		SetupHdVisibilitySA(inst, &dist) :
-		SetupVisibilityIII(inst, &dist);
+	int v;
+	if(gRenderOnlyHD)
+		v = SetupVisibilitySimple(inst, &dist);
+	else
+		v = isSA() ? 
+			SetupHdVisibilitySA(inst, &dist) :
+			SetupVisibilityIII(inst, &dist);
 	if(v == VIS_VISIBLE)
 		AddToRenderList(inst, dist);
 	else if(v == VIS_STREAMME)
@@ -305,9 +384,13 @@ ProcessBigBuilding(ObjectInst *inst)
 	if(!inst->m_isBigBuilding || inst->m_scanCode == currentScanCode)
 		return;
 	inst->m_scanCode = currentScanCode;
-	int v = isSA() ? 
-		SetupBigBuildingVisibilitySA(inst, &dist) :
-		SetupVisibilityIII(inst, &dist);
+	int v;
+	if(gRenderOnlyLod)
+		v = SetupVisibilitySimple(inst, &dist);
+	else
+		v = isSA() ? 
+			SetupBigBuildingVisibilitySA(inst, &dist) :
+			SetupVisibilityIII(inst, &dist);
 	if(v == VIS_VISIBLE)
 		AddToRenderList(inst, dist);
 	else if(v == VIS_STREAMME)
@@ -358,29 +441,35 @@ BuildRenderList(void)
 	yend   = GetSectorIndexY(frustBox.sup.y);
 //	log("x: %d - %d; y: %d - %d\n", xstart, xend, ystart, yend);
 
-	for(x = xstart; x <= xend; x++)
-		for(y = ystart; y <= yend; y++){
-			Sector *s = GetSector(x, y);
-			ScanInstList(&s->buildings, ProcessBuilding);
-			ScanInstList(&s->buildings_overlap, ProcessBuilding);
-		}
-	ScanInstList(&outOfBoundsSector.buildings, ProcessBigBuilding);
-	for(x = xstart; x <= xend; x++)
-		for(y = ystart; y <= yend; y++){
-			Sector *s = GetSector(x, y);
-			ScanInstList(&s->bigbuildings, ProcessBigBuilding);
-			ScanInstList(&s->bigbuildings_overlap, ProcessBigBuilding);
-		}
-	ScanInstList(&outOfBoundsSector.bigbuildings, ProcessBigBuilding);
+	if(!gRenderOnlyLod){
+		for(x = xstart; x <= xend; x++)
+			for(y = ystart; y <= yend; y++){
+				Sector *s = GetSector(x, y);
+				ScanInstList(&s->buildings, ProcessBuilding);
+				ScanInstList(&s->buildings_overlap, ProcessBuilding);
+			}
+		ScanInstList(&outOfBoundsSector.buildings, ProcessBigBuilding);
+	}
+	if(!gRenderOnlyHD){
+		for(x = xstart; x <= xend; x++)
+			for(y = ystart; y <= yend; y++){
+				Sector *s = GetSector(x, y);
+				ScanInstList(&s->bigbuildings, ProcessBigBuilding);
+				ScanInstList(&s->bigbuildings_overlap, ProcessBigBuilding);
+			}
+		ScanInstList(&outOfBoundsSector.bigbuildings, ProcessBigBuilding);
+	}
+
 //	ScanInstList(&instances, ProcessBuilding);
 //	ScanInstList(&instances, ProcessBigBuilding);
 
 	ProcessLodList();
 
-	/* TMP */
+	// Reset instances
 	for(p = instances.first; p; p = p->next){
 		inst = (ObjectInst*)p->item;
 		inst->m_numChildrenRendered = 0;
+		inst->m_highlight = HIGHLIGHT_NONE;
 	}
 
 //	log("%d visible instances\n", numVisibleInsts);

@@ -70,7 +70,7 @@ bool
 CPad::IsMButtonJustDown(int btn)
 {
 	uint32 btnsjd = newMouseState.btns & (newMouseState.btns ^ oldMouseState.btns);
-	if(btn > 0 && btn < 3)
+	if(btn > 0 && btn <= 3)
 		return btnsjd & 1<<(btn-1);
 	return 0;
 }
@@ -79,7 +79,7 @@ bool
 CPad::IsMButtonJustUp(int btn)
 {
 	uint32 btnsju = ~newMouseState.btns & (newMouseState.btns ^ oldMouseState.btns);
-	if(btn > 0 && btn < 3)
+	if(btn > 0 && btn <= 3)
 		return btnsju & 1<<(btn-1);
 	return 0;
 }
@@ -93,7 +93,7 @@ CPad::IsMButtonClicked(int btn)
 bool
 CPad::IsMButtonDown(int btn)
 {
-	if(btn > 0 && btn < 3)
+	if(btn > 0 && btn <= 3)
 		return newMouseState.btns & 1<<(btn-1);
 	return 0;
 }

@@ -1,6 +1,7 @@
 #include "euryopa.h"
 
 CPtrList instances;
+CPtrList selection;
 
 void
 ObjectInst::UpdateMatrix(void)
@@ -94,6 +95,50 @@ ObjectInst::IsOnScreen(void)
 	sph.radius = col->boundingSphere.radius;
 	return TheCamera.IsSphereVisible(&sph, &m_matrix);
 }
+
+void
+ObjectInst::JumpTo(void)
+{
+	rw::V3d center;
+	ObjectDef *obj = GetObjectDef(m_objectId);
+	CSphere *sph = &obj->m_colModel->boundingSphere;
+	rw::V3d::transformPoints(&center, &sph->center, 1, &m_matrix);
+	TheCamera.setTarget(center);
+	TheCamera.setDistanceFromTarget(TheCamera.minDistToSphere(sph->radius));
+}
+
+void
+ObjectInst::Select(void)
+{
+	if(m_selected) return;
+	m_selected = true;
+	selection.InsertItem(this);
+}
+
+void
+ObjectInst::Deselect(void)
+{
+	CPtrNode *p;
+	if(!m_selected) return;
+	m_selected = false;
+	for(p = selection.first; p; p = p->next)
+		if(p->item == this){
+			selection.RemoveNode(p);
+			return;
+		}
+}
+
+void
+ClearSelection(void)
+{
+	CPtrNode *p, *next;
+	for(p = selection.first; p; p = next){
+		next = p->next;
+		((ObjectInst*)p->item)->m_selected = false;
+		selection.RemoveNode(p);
+	}
+}
+
 
 ObjectInst*
 GetInstanceByID(int32 id)

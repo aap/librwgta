@@ -205,3 +205,13 @@ RenderColModelWire(CColModel *col, rw::Matrix *xform, bool onlyBounds)
 	}
 }
 
+void
+RenderAxesWidget(rw::V3d pos, rw::V3d x, rw::V3d y, rw::V3d z)
+{
+	rw::RGBA red = { 255, 0, 0, 255 };
+	rw::RGBA green = { 0, 255, 0, 255 };
+	rw::RGBA blue = { 0, 0, 255, 255 };
+	AddDebugLine(pos, add(pos, x), red, red);
+	AddDebugLine(pos, add(pos, y), green, green);
+	AddDebugLine(pos, add(pos, z), blue, blue);
+}

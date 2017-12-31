@@ -38,14 +38,32 @@ CCamera::Process(void)
 */
 
 	// Mouse
+	// first person
 	if(CPad::IsMButtonDown(1)){
-		float dx = (CPad::oldMouseState.x - CPad::newMouseState.x);
-		float dy = (CPad::oldMouseState.y - CPad::newMouseState.y);
-		TheCamera.turn(DEGTORAD(dx)/2.0f*scale, DEGTORAD(dy)/2.0f*scale);
-
-		// this is a bit ugly :/
-//		sk::SetMousePosition(CPad::oldMouseState.x, CPad::oldMouseState.y);
-//		CPad::newMouseState = CPad::oldMouseState;
+		if(CPad::IsAltDown() && CPad::IsCtrlDown()){
+			float dy = (CPad::oldMouseState.y - CPad::newMouseState.y);
+			TheCamera.dolly(dy*scale);
+		}else{
+			float dx = (CPad::oldMouseState.x - CPad::newMouseState.x);
+			float dy = (CPad::oldMouseState.y - CPad::newMouseState.y);
+			TheCamera.turn(DEGTORAD(dx)/2.0f*scale, DEGTORAD(dy)/2.0f*scale);
+		}
+	}
+	// roughly 3ds max controls
+	if(CPad::IsMButtonDown(2)){
+		if(CPad::IsAltDown() && CPad::IsCtrlDown()){
+			float dy = (CPad::oldMouseState.y - CPad::newMouseState.y);
+			TheCamera.zoom(dy*scale);
+		}else if(CPad::IsAltDown()){
+			float dx = (CPad::oldMouseState.x - CPad::newMouseState.x);
+			float dy = (CPad::oldMouseState.y - CPad::newMouseState.y);
+			TheCamera.orbit(DEGTORAD(dx)/2.0f*scale, -DEGTORAD(dy)/2.0f*scale);
+		}else{
+			float dx = (CPad::oldMouseState.x - CPad::newMouseState.x);
+			float dy = (CPad::oldMouseState.y - CPad::newMouseState.y);
+			float dist = distanceToTarget();
+			TheCamera.pan(dx*scale*dist/100.0f, -dy*scale*dist/100.0f);
+		}
 	}
 
 	// Keyboard
@@ -84,6 +102,16 @@ CCamera::Process(void)
 		printf("cam.position: %f, %f, %f\n", m_position.x, m_position.y, m_position.z);
 		printf("cam.target: %f, %f, %f\n", m_target.x, m_target.y, m_target.z);
 	}
+}
+
+void
+CCamera::DrawTarget(void)
+{
+	float dist = distanceToTarget()/20.0f;
+	rw::V3d x = { dist, 0.0f, 0.0f };
+	rw::V3d y = { 0.0f, dist, 0.0f };
+	rw::V3d z = { 0.0f, 0.0f, dist };
+	RenderAxesWidget(this->m_target, x, y, z);
 }
 
 void
@@ -169,7 +197,7 @@ CCamera::zoom(float dist)
 	V3d dir = sub(m_target, m_position);
 	float curdist = length(dir);
 	if(dist >= curdist)
-		dist = curdist-0.01f;
+		dist = curdist-0.3f;
 	dir = setlength(dir, dist);
 	m_position = add(m_position, dir);
 }
@@ -185,10 +213,34 @@ CCamera::pan(float x, float y)
 	m_target = add(m_target, dir);
 }
 
+void
+CCamera::setDistanceFromTarget(float dist)
+{
+	V3d dir = sub(m_position, m_target);
+	dir = scale(normalize(dir), dist);
+	m_position = add(m_target, dir);
+}
+
 float
 CCamera::distanceTo(V3d v)
 {
 	return length(sub(m_position, v));
+}
+
+float
+CCamera::distanceToTarget(void)
+{
+	return length(sub(m_position, m_target));
+}
+
+// calculate minimum distance to a sphere at the target
+// so the whole sphere is visible
+float
+CCamera::minDistToSphere(float r)
+{
+	float t = min(m_rwcam->viewWindow.x, m_rwcam->viewWindow.y);
+	float a = atan(t);	// half FOV angle
+	return r/sin(a);
 }
 
 CCamera::CCamera()

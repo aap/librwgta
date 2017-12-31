@@ -1,0 +1,27 @@
+Rendering:
+ - timecycle
+ - water
+ - 2dfx
+ - paths
+ - car spawns
+ - zones
+
+Design:
+ - feature matrix
+ - Scenes
+ - Selection types
+
+Interface:
+ - keep mouse in window
+ - tools
+  - select
+  - move
+  - rotate
+  - snap?
+ - instance dialog
+ - object dialog
+ - other dialogs
+ - params:
+  - time
+  - weather
+  - LOD distance

@@ -12,6 +12,7 @@ public:
 	float m_LODmult;
 
 	void Process(void);
+	void DrawTarget(void);
 
 	void setTarget(rw::V3d target);
 	float getHeading(void);
@@ -21,9 +22,12 @@ public:
 	void dolly(float dist);
 	void zoom(float dist);
 	void pan(float x, float y);
+	void setDistanceFromTarget(float dist);
 
 	void update(void);
 	float distanceTo(rw::V3d v);
+	float distanceToTarget(void);
+	float minDistToSphere(float r);
 	CCamera(void);
 
 	bool IsSphereVisible(rw::Sphere *sph, rw::Matrix *xform);
