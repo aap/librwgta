@@ -84,9 +84,20 @@ GetNameAndDamage(char *nodename, char *name, int *n)
 static void
 SetupAtomic(rw::Atomic *atm)
 {
-	rw::Geometry *g = atm->geometry;
-	if(g->flags & rw::Geometry::NATIVE)
+	// TODO: actually attach the SA xbox pipelines so uninstance can work
+	// Make sure we are not pre-instanced
+	int32 driver = rw::platform;
+	int32 platform = rw::findPlatform(atm);
+	if(platform){
+		rw::platform = platform;
+		rw::switchPipes(atm, rw::platform);
+	}
+	if(atm->geometry->flags & rw::Geometry::NATIVE)
 		atm->uninstance();
+	rw::ps2::unconvertADC(atm->geometry);
+	rw::platform = driver;
+	// no need to switch back pipes because we reset it anyway
+
 	if(params.daynightPipe && IsBuildingPipeAttached(atm))
 		SetupBuildingPipe(atm);
 	else

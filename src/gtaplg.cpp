@@ -12,6 +12,15 @@ using namespace std;
 namespace rw {
 
 int32
+findPlatform(Atomic *a)
+{
+	Geometry *g = a->geometry;
+	if(g->instData)
+		return g->instData->platform;
+	return 0;
+}
+
+int32
 findPlatform(Clump *c)
 {
 	FORLIST(lnk, c->atomics){
@@ -23,21 +32,28 @@ findPlatform(Clump *c)
 }
 
 void
+switchPipes(Atomic *a, int32 platform)
+{
+	if(a->pipeline && a->pipeline->platform != platform){
+		uint32 plgid = a->pipeline->pluginID;
+		switch(plgid){
+		// assume default pipe won't be attached explicitly
+		case ID_SKIN:
+			a->pipeline = skinGlobals.pipelines[platform];
+			break;
+		case ID_MATFX:
+			a->pipeline = matFXGlobals.pipelines[platform];
+			break;
+		}
+	}
+}
+
+void
 switchPipes(Clump *c, int32 platform)
 {
 	FORLIST(lnk, c->atomics){
 		Atomic *a = Atomic::fromClump(lnk);
-		if(a->pipeline && a->pipeline->platform != platform){
-			uint32 plgid = a->pipeline->pluginID;
-			switch(plgid){
-			case ID_SKIN:
-				a->pipeline = skinGlobals.pipelines[platform];
-				break;
-			case ID_MATFX:
-				a->pipeline = matFXGlobals.pipelines[platform];
-				break;
-			}
-		}
+		switchPipes(a, platform);
 	}
 }
 

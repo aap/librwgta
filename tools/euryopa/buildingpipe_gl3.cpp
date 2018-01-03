@@ -130,9 +130,9 @@ buildingInstanceCB(Geometry *geo, gl3::InstanceDataHeader *header)
 			;
 		int n = header->numMeshes;
 		InstanceData *inst = header->inst;
-		rw::RGBA *dayColors = extracols->dayColors;
+		rw::RGBA *dayColors = geo->colors; //extracols->dayColors;
 		rw::RGBA *nightColors = extracols->nightColors;
-		if(dayColors == nil) dayColors = geo->colors;
+//		if(dayColors == nil) dayColors = geo->colors;
 		if(nightColors == nil) nightColors = dayColors;
 		while(n--){
 			inst->vertexAlpha = instColor(VERT_RGBA,

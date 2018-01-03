@@ -195,6 +195,7 @@ ConvertTexRaster(rw::Raster *ras)
 // TEMP
 //return nil;
 	Image *img = ras->toImage();
+	img->unindex();
 	ras = Raster::createFromImage(img);
 	img->destroy();
 	return ras;

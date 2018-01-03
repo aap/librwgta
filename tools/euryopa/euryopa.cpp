@@ -197,7 +197,7 @@ LoadGame(void)
 //	SetCurrentDirectory("C:/Users/aap/games/gtavc");
 //	SetCurrentDirectory("C:/Users/aap/games/gtasa");
 //	SetCurrentDirectory("F://gtasa");
-//	SetCurrentDirectory("H://");
+//	SetCurrentDirectory("G://");
 //	SetCurrentDirectory("C:\\Users\\aap\\games\\gta3d_latest");
 
 	FindVersion();

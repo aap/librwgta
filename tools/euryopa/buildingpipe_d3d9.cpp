@@ -216,9 +216,9 @@ buildingInstanceCB(Geometry *geo, d3d9::InstanceDataHeader *header)
 
 		InstanceData *inst = header->inst;
 		uint32 n = header->numMeshes;
-		rw::RGBA *dayColors = extracols->dayColors;
+		rw::RGBA *dayColors = geo->colors;//extracols->dayColors;
 		rw::RGBA *nightColors = extracols->nightColors;
-		if(dayColors == nil) dayColors = geo->colors;
+//		if(dayColors == nil) dayColors = geo->colors;
 		if(nightColors == nil) nightColors = dayColors;
 		while(n--){
 			uint32 stride = header->vertexStream[dcl[i].stream].stride;

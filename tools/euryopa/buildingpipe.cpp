@@ -31,16 +31,34 @@ UpdateDayNightBalance(void)
 bool
 IsBuildingPipeAttached(rw::Atomic *atm)
 {
-	uint32 id = gta::getPipelineID(atm);
-	// PC logic:
-	if(id == gta::RSPIPE_PC_CustomBuilding_PipeID || id == gta::RSPIPE_PC_CustomBuildingDN_PipeID)
-		return true;
-	if(gta::getExtraVertColors(atm) && atm->geometry->colors)
+	uint32 id;
+
+	// PS2 logic:
+	if(atm->pipeline && atm->pipeline->pluginID == ID_PDS){
+		id = atm->pipeline->pluginData;
+		if(id == gta::PDS_PS2_CustomBuilding_AtmPipeID ||
+		   id == gta::PDS_PS2_CustomBuildingDN_AtmPipeID ||
+		   id == gta::PDS_PS2_CustomBuildingEnvMap_AtmPipeID ||
+		   id == gta::PDS_PS2_CustomBuildingDNEnvMap_AtmPipeID ||
+		   id == gta::PDS_PS2_CustomBuildingUVA_AtmPipeID ||
+		   // this one is not checked by the game for some reason:
+		   id == gta::PDS_PS2_CustomBuildingDNUVA_AtmPipeID)
+			return true;
+	}
+
+	id = gta::getPipelineID(atm);
+	// Xbox logic:
+	if(id == gta::RSPIPE_XBOX_CustomBuilding_PipeID ||
+	   id == gta::RSPIPE_XBOX_CustomBuildingDN_PipeID ||
+	   id == gta::RSPIPE_XBOX_CustomBuildingEnvMap_PipeID ||
+	   id == gta::RSPIPE_XBOX_CustomBuildingDNEnvMap_PipeID)
 		return true;
 
-	// Xbox logic:
-	if(id == gta::RSPIPE_XBOX_CustomBuilding_PipeID || id == gta::RSPIPE_XBOX_CustomBuildingDN_PipeID ||
-	   id == gta::RSPIPE_XBOX_CustomBuildingEnvMap_PipeID || id == gta::RSPIPE_XBOX_CustomBuildingDNEnvMap_PipeID)
+	// PC logic:
+	if(id == gta::RSPIPE_PC_CustomBuilding_PipeID ||
+	   id == gta::RSPIPE_PC_CustomBuildingDN_PipeID)
+		return true;
+	if(gta::getExtraVertColors(atm) && atm->geometry->colors)
 		return true;
 
 	return false;
@@ -49,14 +67,22 @@ IsBuildingPipeAttached(rw::Atomic *atm)
 void
 SetupBuildingPipe(rw::Atomic *atm)
 {
+	// ps2:
+	//  obj: if has extra colors -> DN pipe else -> regular
+	//  mat: if UV transform -> UVA pipe
+	//       else if Env map && has env map && has normals -> envmap pipe
+	//       else -> regular pipe
+	// xbox: use pipeline ID but fall back to non-DN if no normals flag
 	// pc: if two sets -> DN, else -> regular
-	// xbox: fall back to non -DN if no normal flags
 
-	// Just only do the PC thing for now
-	if(gta::getExtraVertColors(atm) && atm->geometry->colors)
+	// Just do the PC thing for now
+	if(gta::getExtraVertColors(atm) && atm->geometry->colors){
 		atm->pipeline = buildingDNPipe;
-	else
+		gta::setPipelineID(atm, gta::RSPIPE_PC_CustomBuildingDN_PipeID);
+	}else{
 		atm->pipeline = buildingPipe;
+		gta::setPipelineID(atm, gta::RSPIPE_PC_CustomBuilding_PipeID);
+	}
 }
 
 bool32
