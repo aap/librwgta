@@ -3,10 +3,11 @@
 static TxdDef txdlist[NUMTEXDICTS];
 static int numTxds;
 static int32 txdStoreOffset;	// RW plugin
+static rw::TexDictionary *pushedTxd;
 
 rw::TexDictionary *defaultTxd;
 
-static int
+int
 FindTxdSlot(const char *name)
 {
 	int i;
@@ -92,11 +93,33 @@ LoadTxd(int i)
 }
 
 void
+LoadTxd(int i, const char *path)
+{
+	TxdDef *td = GetTxdDef(i);
+	if(td->txd)
+		return;
+	td->txd = FileLoader::LoadTexDictionary(path);
+}
+
+void
 TxdMakeCurrent(int i)
 {
 	TxdDef *td = GetTxdDef(i);
 	if(td)
 		rw::TexDictionary::setCurrent(td->txd);
+}
+
+void
+TxdPush(void)
+{
+	pushedTxd = rw::TexDictionary::getCurrent();
+}
+
+void
+TxdPop(void)
+{
+	rw::TexDictionary::setCurrent(pushedTxd);
+	pushedTxd = nil;
 }
 
 void

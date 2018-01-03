@@ -53,21 +53,23 @@ rw::ps2::PipeAttribute saWeights = {
 
 static bool hasTex2(rw::uint32 id)
 {
-	return id == 0x53f2008b;
+	return id == PDS_PS2_CustomCarEnvMapUV2_MatPipeID;
 }
 static bool hasNormals(rw::uint32 id)
 {
-	return id == 0x53f20085 || id == 0x53f20087 || id == 0x53f20089 ||
-		id == 0x53f2008b || id == 0x53f2008d || id == 0x53f2008f;
+	return id == PDS_PS2_CustomCar_MatPipeID || id == PDS_PS2_CustomCarEnvMap_MatPipeID || id == PDS_PS2_CustomCarEnvMapUV2_MatPipeID ||
+		id == PDS_PS2_CustomSkinPed_MatPipeID ||
+		id == PDS_PS2_CustomBuildingEnvMap_MatPipeID || id == PDS_PS2_CustomBuildingDNEnvMap_MatPipeID;
 }
 static bool hasColors(rw::uint32 id)
 {
-	return id == 0x53f20081 || id == 0x53f20083 || id == 0x53f2008d ||
-	       id == 0x53f2008f || id == 0x53f20091 || id == 0x53f20093;
+	return id == PDS_PS2_CustomBuilding_MatPipeID || id == PDS_PS2_CustomBuildingDN_MatPipeID ||
+		id == PDS_PS2_CustomBuildingEnvMap_MatPipeID || id == PDS_PS2_CustomBuildingDNEnvMap_MatPipeID ||
+		id == PDS_PS2_CustomBuildingUVA_MatPipeID || id == PDS_PS2_CustomBuildingDNUVA_MatPipeID;
 }
 static bool hasColors2(rw::uint32 id)
 {
-	return id == 0x53f20083 || id == 0x53f2008f || id == 0x53f20093;
+	return id == PDS_PS2_CustomBuildingDN_MatPipeID || id == PDS_PS2_CustomBuildingDNEnvMap_MatPipeID || id == PDS_PS2_CustomBuildingDNUVA_MatPipeID;
 }
 
 static void
@@ -76,7 +78,7 @@ saPreCB(rw::ps2::MatPipeline *p, rw::Geometry *geo)
 	rw::ps2::allocateADC(geo);
 	if(hasColors2(p->pluginData) && extraVertColorOffset)
 		allocateExtraVertColors(geo);
-	if(p->pluginData == 0x53f20089)
+	if(p->pluginData == PDS_PS2_CustomSkinPed_MatPipeID)
 		skinPreCB(p, geo);
 }
 
@@ -162,11 +164,12 @@ saUninstanceCB(rw::ps2::MatPipeline *pipe, rw::Geometry *geo, uint32 flags[], rw
 	int16 *verts       = (int16*)data[0];
 	int16 *texcoords   = (int16*)data[1];
 	uint8 *colors      = (uint8*)data[2];
-	int8 *norms        = (int8*)data[id == 0x53f20089 ? 2 : 3];
+	int8 *norms        = (int8*)data[id == PDS_PS2_CustomSkinPed_MatPipeID ? 2 : 3];
 	uint32 *wghts      = (uint32*)data[3];
 	float vertScale = 1.0f/128.0f;
-	if(id == 0x53f20085 || id == 0x53f20087 ||
-	   id == 0x53f20089 || id == 0x53f2008b)
+	if(id == PDS_PS2_CustomCar_MatPipeID || id == PDS_PS2_CustomCarEnvMap_MatPipeID ||
+	   id == PDS_PS2_CustomCarEnvMapUV2_MatPipeID ||
+	   id == PDS_PS2_CustomSkinPed_MatPipeID)
 		vertScale = 1.0f/1024.0f;
 	uint32 mask = 0x1;	// vertices
 	int cinc = 4;
@@ -185,7 +188,7 @@ saUninstanceCB(rw::ps2::MatPipeline *pipe, rw::Geometry *geo, uint32 flags[], rw
 		mask |= 0x2000;
 		tinc *= 2;
 	}
-	if(id == 0x53f20089)
+	if(id == PDS_PS2_CustomSkinPed_MatPipeID)
 		mask |= 0x10000;
 	SaVert v;
 	int32 idxstart = 0;
@@ -380,8 +383,9 @@ saInstanceCB(rw::ps2::MatPipeline *pipe, rw::Geometry *g, rw::Mesh *m, uint8 **d
 {
 	uint32 id = pipe->pluginData;
 	float vertScale = 128.0f;
-	if(id == 0x53f20085 || id == 0x53f20087 ||
-	   id == 0x53f20089 || id == 0x53f2008b)
+	if(id == PDS_PS2_CustomCar_MatPipeID || id == PDS_PS2_CustomCarEnvMap_MatPipeID ||
+	   id == PDS_PS2_CustomCarEnvMapUV2_MatPipeID ||
+	   id == PDS_PS2_CustomSkinPed_MatPipeID)
 		vertScale = 1024.0f;
 	rw::ps2::ADCData *adc = PLUGINOFFSET(rw::ps2::ADCData, g, rw::ps2::adcOffset);
 
@@ -416,12 +420,12 @@ registerPS2BuildingPipes(void)
 
 	pipe = new rw::ps2::ObjPipeline(rw::PLATFORM_PS2);
 	pipe->pluginID = rw::ID_PDS;
-	pipe->pluginData = 0x53f20080;
+	pipe->pluginData = PDS_PS2_CustomBuilding_AtmPipeID;
 	rw::ps2::registerPDSPipe(pipe);
 
 	mpipe = new rw::ps2::MatPipeline(rw::PLATFORM_PS2);
 	mpipe->pluginID = rw::ID_PDS;
-	mpipe->pluginData = 0x53f20081;
+	mpipe->pluginData = PDS_PS2_CustomBuilding_MatPipeID;
 	mpipe->attribs[0] = &saXYZADC;
 	mpipe->attribs[1] = &saUV;
 	mpipe->attribs[2] = &saRGBA;
@@ -435,12 +439,12 @@ registerPS2BuildingPipes(void)
 
 	pipe = new rw::ps2::ObjPipeline(rw::PLATFORM_PS2);
 	pipe->pluginID = rw::ID_PDS;
-	pipe->pluginData = 0x53f20082;
+	pipe->pluginData = PDS_PS2_CustomBuildingDN_AtmPipeID;
 	rw::ps2::registerPDSPipe(pipe);
 
 	mpipe = new rw::ps2::MatPipeline(rw::PLATFORM_PS2);
 	mpipe->pluginID = rw::ID_PDS;
-	mpipe->pluginData = 0x53f20083;
+	mpipe->pluginData = PDS_PS2_CustomBuildingDN_MatPipeID;
 	mpipe->attribs[0] = &saXYZADC;
 	mpipe->attribs[1] = &saUV;
 	mpipe->attribs[2] = &saRGBA2;
@@ -454,12 +458,12 @@ registerPS2BuildingPipes(void)
 
 	pipe = new rw::ps2::ObjPipeline(rw::PLATFORM_PS2); //unused in DFFs
 	pipe->pluginID = rw::ID_PDS;
-	pipe->pluginData = 0x53f2008C;
+	pipe->pluginData = PDS_PS2_CustomBuildingEnvMap_AtmPipeID;
 	rw::ps2::registerPDSPipe(pipe);
 
 	mpipe = new rw::ps2::MatPipeline(rw::PLATFORM_PS2);	// use with 0x53f20080
 	mpipe->pluginID = rw::ID_PDS;
-	mpipe->pluginData = 0x53f2008D;
+	mpipe->pluginData = PDS_PS2_CustomBuildingEnvMap_MatPipeID;
 	mpipe->attribs[0] = &saXYZADC;
 	mpipe->attribs[1] = &saUV;
 	mpipe->attribs[2] = &saRGBA;
@@ -474,12 +478,12 @@ registerPS2BuildingPipes(void)
 
 	pipe = new rw::ps2::ObjPipeline(rw::PLATFORM_PS2); //unused in DFFs
 	pipe->pluginID = rw::ID_PDS;
-	pipe->pluginData = 0x53f2008E;
+	pipe->pluginData = PDS_PS2_CustomBuildingDNEnvMap_AtmPipeID;
 	rw::ps2::registerPDSPipe(pipe);
 
 	mpipe = new rw::ps2::MatPipeline(rw::PLATFORM_PS2);	// use with 0x53f20082
 	mpipe->pluginID = rw::ID_PDS;
-	mpipe->pluginData = 0x53f2008F;
+	mpipe->pluginData = PDS_PS2_CustomBuildingDNEnvMap_MatPipeID;
 	mpipe->attribs[0] = &saXYZADC;
 	mpipe->attribs[1] = &saUV;
 	mpipe->attribs[2] = &saRGBA2;
@@ -494,12 +498,12 @@ registerPS2BuildingPipes(void)
 
 	pipe = new rw::ps2::ObjPipeline(rw::PLATFORM_PS2); //unused in DFFs
 	pipe->pluginID = rw::ID_PDS;
-	pipe->pluginData = 0x53f20090;
+	pipe->pluginData = PDS_PS2_CustomBuildingUVA_AtmPipeID;
 	rw::ps2::registerPDSPipe(pipe);
 
 	mpipe = new rw::ps2::MatPipeline(rw::PLATFORM_PS2); // unused in DFFs
 	mpipe->pluginID = rw::ID_PDS;
-	mpipe->pluginData = 0x53f20091;
+	mpipe->pluginData = PDS_PS2_CustomBuildingUVA_MatPipeID;
 	mpipe->attribs[0] = &saXYZADC;
 	mpipe->attribs[1] = &saUV;
 	mpipe->attribs[2] = &saRGBA;
@@ -513,12 +517,12 @@ registerPS2BuildingPipes(void)
 
 	pipe = new rw::ps2::ObjPipeline(rw::PLATFORM_PS2); // unused in DFFs
 	pipe->pluginID = rw::ID_PDS;
-	pipe->pluginData = 0x53f20092;
+	pipe->pluginData = PDS_PS2_CustomBuildingDNUVA_AtmPipeID;
 	rw::ps2::registerPDSPipe(pipe);
 
 	mpipe = new rw::ps2::MatPipeline(rw::PLATFORM_PS2); // unused in DFFs
 	mpipe->pluginID = rw::ID_PDS;
-	mpipe->pluginData = 0x53f20093;
+	mpipe->pluginData = PDS_PS2_CustomBuildingDNUVA_MatPipeID;
 	mpipe->attribs[0] = &saXYZADC;
 	mpipe->attribs[1] = &saUV;
 	mpipe->attribs[2] = &saRGBA2;
@@ -540,13 +544,13 @@ registerPS2VehiclePipes(void)
 
 	pipe = new rw::ps2::ObjPipeline(rw::PLATFORM_PS2);
 	pipe->pluginID = rw::ID_PDS;
-	pipe->pluginData = 0x53f20084;
+	pipe->pluginData = PDS_PS2_CustomCar_AtmPipeID;
 	rw::ps2::registerPDSPipe(pipe);
 
 	// No effects whatsoever
 	mpipe = new rw::ps2::MatPipeline(rw::PLATFORM_PS2);
 	mpipe->pluginID = rw::ID_PDS;
-	mpipe->pluginData = 0x53f20085;
+	mpipe->pluginData = PDS_PS2_CustomCar_MatPipeID;
 	mpipe->attribs[0] = &saXYZADC;
 	mpipe->attribs[1] = &saUV;
 	mpipe->attribs[3] = &saNormal;
@@ -560,13 +564,13 @@ registerPS2VehiclePipes(void)
 
 	pipe = new rw::ps2::ObjPipeline(rw::PLATFORM_PS2); // unused in DFFs
 	pipe->pluginID = rw::ID_PDS;
-	pipe->pluginData = 0x53f20086;
+	pipe->pluginData = PDS_PS2_CustomCarEnvMap_AtmPipeID;
 	rw::ps2::registerPDSPipe(pipe);
 
 	// Environment map (+ Specular map)
 	mpipe = new rw::ps2::MatPipeline(rw::PLATFORM_PS2);	// use with 0x53f20084
 	mpipe->pluginID = rw::ID_PDS;
-	mpipe->pluginData = 0x53f20087;
+	mpipe->pluginData = PDS_PS2_CustomCarEnvMap_MatPipeID;
 	mpipe->attribs[0] = &saXYZADC;
 	mpipe->attribs[1] = &saUV;
 	mpipe->attribs[3] = &saNormal;
@@ -581,7 +585,7 @@ registerPS2VehiclePipes(void)
 	// x-Environment map (+ Specular map)
 	mpipe = new rw::ps2::MatPipeline(rw::PLATFORM_PS2);	// use with 0x53f20084
 	mpipe->pluginID = rw::ID_PDS;
-	mpipe->pluginData = 0x53f2008B;
+	mpipe->pluginData = PDS_PS2_CustomCarEnvMapUV2_MatPipeID;
 	mpipe->attribs[0] = &saXYZADC;
 	mpipe->attribs[1] = &saUV2;
 	mpipe->attribs[3] = &saNormal;
@@ -603,12 +607,12 @@ registerPS2SkinPipe(void)
 
 	pipe = new rw::ps2::ObjPipeline(rw::PLATFORM_PS2);
 	pipe->pluginID = rw::ID_PDS;
-	pipe->pluginData = 0x53f20088;
+	pipe->pluginData = PDS_PS2_CustomSkinPed_AtmPipeID;
 	rw::ps2::registerPDSPipe(pipe);
 
 	mpipe = new rw::ps2::MatPipeline(rw::PLATFORM_PS2);	// use with 0x53f20088
 	mpipe->pluginID = rw::ID_PDS;
-	mpipe->pluginData = 0x53f20089;
+	mpipe->pluginData = PDS_PS2_CustomSkinPed_MatPipeID;
 	mpipe->attribs[0] = &saXYZADC;
 	mpipe->attribs[1] = &saUV;
 	mpipe->attribs[2] = &saNormal;

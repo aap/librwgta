@@ -46,8 +46,11 @@ CDirectory::CDirectory(int size)
 void
 CDirectory::AddItem(DirectoryInfo *dirinfo)
 {
-	// TODO: check bounds
-	m_entries[m_numEntries++] = *dirinfo;
+	if(m_numEntries >= m_maxEntries){
+		debug("Warning: directory is full\n");
+	}else
+		// TODO: check duplicates
+		m_entries[m_numEntries++] = *dirinfo;
 }
 
 
@@ -238,8 +241,8 @@ CStreaming::LoadCdDirectory(const char *dirname, int n)
 					lastID = MODELOFFSET+modelid;
 					continue;
 				}
-			}
-			ms_pExtraObjectsDir->AddItem(&dirinfo);
+			}else
+				ms_pExtraObjectsDir->AddItem(&dirinfo);
 		}else if(rw::strncmp_ci(ext, "txd", 4) == 0){
 			txdslot = CTxdStore::FindTxdSlot(dirinfo.name);
 			if(txdslot < 0)

@@ -21,7 +21,7 @@ skipWhite(char *s)
 	return s;
 }
 
-static char*
+char*
 LoadLine(FILE *f)
 {
 	static char linebuf[1024];
@@ -130,8 +130,10 @@ LoadTimeObject(char *line)
 
 	// SA format
 	numAtomics = 1;
-	n = sscanf(line, "%d %s %s %f %d", &id, model, txd, dist, &flags);
-	if(gameversion != GAME_SA || n != 5 || dist[0] < 4){
+	timeOn = 0;
+	timeOff = 0;
+	n = sscanf(line, "%d %s %s %f %d %d %d", &id, model, txd, dist, &flags, &timeOn, &timeOff);
+	if(gameversion != GAME_SA || n != 7 || dist[0] < 4){
 		// III and VC format
 		sscanf(line, "%d %s %s %d", &id, model, txd, &numAtomics);
 		switch(numAtomics){
@@ -290,6 +292,15 @@ DatDesc iplDesc[] = {
 	{ "cull", LoadCullZone },
 	{ "pick", LoadNothing },
 	{ "path", LoadNothing },
+
+	{ "occl", LoadNothing },
+	{ "mult", LoadNothing },
+	{ "grge", LoadNothing },
+	{ "enex", LoadNothing },
+	{ "cars", LoadNothing },
+	{ "jump", LoadNothing },
+	{ "tcyc", LoadNothing },
+	{ "auzo", LoadNothing },
 	{ "", nil }
 };
 
@@ -374,10 +385,13 @@ LoadScene(const char *filename)
 	numTmpInsts = 0;
 	LoadDataFile(filename, iplDesc);
 
-	if(isSA() && numTmpInsts){
-		int i = AddInstArraySlot(numTmpInsts);
-		ObjectInst **ia = GetInstArray(i);
-		memcpy(ia, tmpInsts, numTmpInsts*sizeof(ObjectInst*));
+	if(isSA()){
+		int i = -1;
+		if(numTmpInsts){
+			i = AddInstArraySlot(numTmpInsts);
+			ObjectInst **ia = GetInstArray(i);
+			memcpy(ia, tmpInsts, numTmpInsts*sizeof(ObjectInst*));
+		}
 
 		SetupRelatedIPLs(filename, i);
 		SetupBigBuildings();
@@ -387,7 +401,7 @@ LoadScene(const char *filename)
 void LoadMapZones(const char *filename) { LoadDataFile(filename, zoneDesc); }
 
 
-static rw::TexDictionary*
+rw::TexDictionary*
 LoadTexDictionary(const char *path)
 {
 	using namespace rw;
@@ -499,11 +513,13 @@ LoadLevel(const char *filename)
 			LoadCollisionFile(line+10);
 //			CGame::currLevel = currlevel;
 		}else if(strncmp(line, "MODELFILE", 9) == 0){
+			// TODO
 //			CFileLoader::LoadModelFile(line+10);
-			debug("MODELFILE\n");
+//			debug("MODELFILE\n");
 		}else if(strncmp(line, "HIERFILE", 8) == 0){
+			// TODO
 //			CFileLoader::LoadClumpFile(line+9);
-			debug("HIERFILE\n");
+//			debug("HIERFILE\n");
 		}else if(strncmp(line, "IDE", 3) == 0){
 			currentFile = strdup(line+4);
 			LoadObjectTypes(currentFile);
@@ -517,7 +533,7 @@ LoadLevel(const char *filename)
 			currentFile = strdup(line+4);
 			LoadScene(currentFile);
 		}else if(strncmp(line, "MAPZONE", 7) == 0){
-			debug("MAPZONE\n");
+//			debug("MAPZONE\n");
 			LoadMapZones(line+8);
 		}else if(strncmp(line, "SPLASH", 6) == 0){
 //			printf("[SPLASH %s]\n", line+7);

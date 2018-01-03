@@ -45,9 +45,13 @@ AddToRenderList(ObjectInst *inst, float dist)
 static void
 AddToLodRenderList(ObjectInst *inst, float dist)
 {
-	int i = numLods++;
-	lodList[i].inst = inst;
-	lodList[i].dist = dist;
+	// Highlighted objects are always visible
+	if(!inst->m_selected && inst->m_highlight == 0){
+		int i = numLods++;
+		lodList[i].inst = inst;
+		lodList[i].dist = dist;
+	}else
+		AddToRenderList(inst, dist);
 }
 
 // Don't assume there are LODs, just draw if below draw distance
@@ -59,21 +63,26 @@ SetupVisibilitySimple(ObjectInst *inst, float *distout)
 	rw::Atomic *atm, *instatm;
 	rw::Clump *instclump;
 
-	if(inst->m_area != currentArea && inst->m_area != 13)
-		return VIS_INVISIBLE;
-
 	obj = GetObjectDef(inst->m_objectId);
-	hdobj = inst->m_isBigBuilding ? obj->m_relatedModel : nil;
 
-	if(obj->m_isHidden)
-		return VIS_INVISIBLE;
+	// Highlighted objects are always visible
+	if(!inst->m_selected && inst->m_highlight == 0){
+		if(!gNoAreaCull && inst->m_area != currentArea && inst->m_area != 13)
+			return VIS_INVISIBLE;
 
-	camdist = TheCamera.distanceTo(inst->m_translation);
-	if(camdist >= obj->GetLargestDrawDist()*TheCamera.m_LODmult)
-		return VIS_INVISIBLE;
+		hdobj = inst->m_isBigBuilding ? obj->m_relatedModel : nil;
 
-	if(obj->m_isTimed && !IsHourInRange(obj->m_timeOn, obj->m_timeOff))
-		return VIS_INVISIBLE;
+		if(obj->m_isHidden)
+			return VIS_INVISIBLE;
+
+		camdist = TheCamera.distanceTo(inst->m_translation);
+		if(camdist >= obj->GetLargestDrawDist()*TheCamera.m_LODmult)
+			return VIS_INVISIBLE;
+
+		if(!gNoTimeCull && obj->m_isTimed && !IsHourInRange(obj->m_timeOn, obj->m_timeOff))
+			return VIS_INVISIBLE;
+	}else
+		camdist = TheCamera.distanceTo(inst->m_translation);
 
 	if(!obj->IsLoaded())
 		return VIS_STREAMME;
@@ -105,24 +114,29 @@ SetupVisibilityIII(ObjectInst *inst, float *distout)
 	rw::Atomic *atm, *instatm;
 	rw::Clump *instclump;
 
-	if(inst->m_area != currentArea && inst->m_area != 13)
-		return VIS_INVISIBLE;
-
 	obj = GetObjectDef(inst->m_objectId);
-	hdobj = inst->m_isBigBuilding ? obj->m_relatedModel : nil;
 
-	if(obj->m_isHidden)
-		return VIS_INVISIBLE;
-
-	camdist = TheCamera.distanceTo(inst->m_translation);
-	if(camdist >= obj->GetLargestDrawDist()*TheCamera.m_LODmult)
-		return VIS_INVISIBLE;
-	if(camdist < obj->m_minDrawDist*TheCamera.m_LODmult)
-		if(hdobj == nil || hdobj->IsLoaded())
+	// Highlighted objects are always visible
+	if(!inst->m_selected && inst->m_highlight == 0){
+		if(!gNoAreaCull && inst->m_area != currentArea && inst->m_area != 13)
 			return VIS_INVISIBLE;
 
-	if(obj->m_isTimed && !IsHourInRange(obj->m_timeOn, obj->m_timeOff))
-		return VIS_INVISIBLE;
+		hdobj = inst->m_isBigBuilding ? obj->m_relatedModel : nil;
+
+		if(obj->m_isHidden)
+			return VIS_INVISIBLE;
+
+		camdist = TheCamera.distanceTo(inst->m_translation);
+		if(camdist >= obj->GetLargestDrawDist()*TheCamera.m_LODmult)
+			return VIS_INVISIBLE;
+		if(camdist < obj->m_minDrawDist*TheCamera.m_LODmult)
+			if(hdobj == nil || hdobj->IsLoaded())
+				return VIS_INVISIBLE;
+
+		if(!gNoTimeCull && obj->m_isTimed && !IsHourInRange(obj->m_timeOn, obj->m_timeOff))
+			return VIS_INVISIBLE;
+	}else
+		camdist = TheCamera.distanceTo(inst->m_translation);
 
 	if(!obj->IsLoaded())
 		return VIS_STREAMME;
@@ -154,20 +168,24 @@ SetupVisibilitySA(ObjectInst *inst, float camdist)
 	rw::Atomic *atm, *instatm;
 	rw::Clump *instclump;
 
-	if(inst->m_area != currentArea && inst->m_area != 13)
-		return VIS_INVISIBLE;
-
 	obj = GetObjectDef(inst->m_objectId);
 	lodinst = inst->m_lod;
 
-	if(obj->m_isHidden)
-		return VIS_INVISIBLE;
+	// Highlighted objects are always visible
+	if(!inst->m_selected && inst->m_highlight == 0){
+		if(!gNoAreaCull && inst->m_area != currentArea && inst->m_area != 13)
+			return VIS_INVISIBLE;
 
-	if(camdist >= obj->GetLargestDrawDist()*TheCamera.m_LODmult)
-		return VIS_INVISIBLE;
+		if(obj->m_isHidden)
+			return VIS_INVISIBLE;
 
-	if(obj->m_isTimed && !IsHourInRange(obj->m_timeOn, obj->m_timeOff))
-		return VIS_INVISIBLE;
+		if(camdist >= obj->GetLargestDrawDist()*TheCamera.m_LODmult)
+			return VIS_INVISIBLE;
+
+		if(!gNoTimeCull && obj->m_isTimed && !IsHourInRange(obj->m_timeOn, obj->m_timeOff))
+			return VIS_INVISIBLE;
+	}else
+		camdist = TheCamera.distanceTo(inst->m_translation);
 
 	if(!obj->IsLoaded())
 		return VIS_STREAMME;
@@ -316,12 +334,19 @@ myRenderCB(rw::Atomic *atomic)
 		atomic->getPipeline()->render(atomic);
 		colourCode = highlightColor;
 		colourCode.alpha = 128;
+		int32 zwrite, fog;
+		zwrite = rw::GetRenderState(rw::ZWRITEENABLE);
+		fog = rw::GetRenderState(rw::FOGENABLE);
+		rw::SetRenderState(rw::ZWRITEENABLE, 0);
+		rw::SetRenderState(rw::FOGENABLE, 0);
 		colourCodePipe->render(atomic);
+		rw::SetRenderState(rw::ZWRITEENABLE, zwrite);
+		rw::SetRenderState(rw::FOGENABLE, fog);
 	}else
 		atomic->getPipeline()->render(atomic);
 }
 
-void
+static void
 RenderInst(ObjectInst *inst)
 {
 	static rw::RGBA black = { 0, 0, 0, 255 };
@@ -331,8 +356,18 @@ RenderInst(ObjectInst *inst)
 	static rw::RGBA highlightCols[] = { black, green, red, blue };
 	ObjectDef *obj;
 
-	pDirect->setFlags(0);
+//	if(!inst->m_isUnimportant && !inst->m_isUnderWater && !inst->m_isTunnel && !inst->m_isTunnelTransition)
+//		return;
+
 	obj = GetObjectDef(inst->m_objectId);
+
+	uint32 cull;
+	if(obj->m_noBackfaceCulling){
+		cull = GetRenderState(rw::CULLMODE);
+		SetRenderState(rw::CULLMODE, rw::CULLNONE);
+	}
+
+	pDirect->setFlags(0);
 	colourCode.red = inst->m_id & 0xFF;
 	colourCode.green = inst->m_id>>8 & 0xFF;
 	colourCode.blue = inst->m_id>>16 & 0xFF;
@@ -342,19 +377,34 @@ RenderInst(ObjectInst *inst)
 		inst->m_highlight = HIGHLIGHT_SELECTION;
 	highlightColor = highlightCols[inst->m_highlight];
 
-	if(obj->m_noZwrite)
-		rw::SetRenderState(rw::ZWRITEENABLE, 0);
-
 	if(obj->m_type == ObjectDef::ATOMIC)
 		((rw::Atomic*)inst->m_rwObject)->render();
 	else if(obj->m_type == ObjectDef::CLUMP)
 		((rw::Clump*)inst->m_rwObject)->render();
 
 	highlightColor = black;
+	if(obj->m_noBackfaceCulling)
+		SetRenderState(rw::CULLMODE, cull);
+	pDirect->setFlags(rw::Light::LIGHTATOMICS);
+}
+
+static void
+RenderTransparentInst(ObjectInst *inst)
+{
+	ObjectDef *obj;
+	obj = GetObjectDef(inst->m_objectId);
+
+	if(obj->m_noZwrite)
+		rw::SetRenderState(rw::ZWRITEENABLE, 0);
+//	This is not handled that way by GTA, only on fading entities....
+//	if(obj->m_additive)
+//		rw::SetRenderState(rw::DESTBLEND, rw::BLENDONE);
+
+	RenderInst(inst);
+
 	if(obj->m_noZwrite)
 		rw::SetRenderState(rw::ZWRITEENABLE, 1);
-
-	pDirect->setFlags(rw::Light::LIGHTATOMICS);
+//	rw::SetRenderState(rw::DESTBLEND, rw::BLENDINVSRCALPHA);
 }
 
 static void
@@ -428,10 +478,10 @@ BuildRenderList(void)
 //		frustBox.inf.x, frustBox.inf.y, frustBox.inf.z, 
 //		frustBox.sup.x, frustBox.sup.y, frustBox.sup.z);
 	// clip to world boundaries
-	if(frustBox.inf.x < worldBounds.left) frustBox.inf.x = worldBounds.left;
-	if(frustBox.inf.y < worldBounds.bottom) frustBox.inf.y = worldBounds.bottom;
-	if(frustBox.sup.x >= worldBounds.left) frustBox.sup.x = worldBounds.right-1.0f;
-	if(frustBox.sup.y >= worldBounds.bottom) frustBox.sup.y = worldBounds.top-1.0f;
+	frustBox.inf.x = clampFloat(frustBox.inf.x, worldBounds.left, worldBounds.right-1.0f);
+	frustBox.inf.y = clampFloat(frustBox.inf.y, worldBounds.bottom, worldBounds.top-1.0f);
+	frustBox.sup.x = clampFloat(frustBox.sup.x, worldBounds.left, worldBounds.right-1.0f);
+	frustBox.sup.y = clampFloat(frustBox.sup.y, worldBounds.bottom, worldBounds.top-1.0f);
 
 	int x, xstart, xend;
 	int y, ystart, yend;
@@ -476,20 +526,32 @@ BuildRenderList(void)
 }
 
 void
-RenderEverything(void)
+RenderOpaque(void)
 {
+	SetRenderState(rw::CULLMODE, gDoBackfaceCulling ? rw::CULLBACK : rw::CULLNONE);
 	int i;
 	for(i = 0; i < numVisibleInsts; i++)
 		RenderInst(visibleInsts[i]);
+}
 
+void
+RenderTransparent(void)
+{
 	CLink<InstDist> *node;
+	SetRenderState(rw::CULLMODE, gDoBackfaceCulling ? rw::CULLBACK : rw::CULLNONE);
 	for(node = sortedInstList.tail.prev;
 	    node != &sortedInstList.head;
 	    node = node->prev){
 		ObjectInst *inst = node->item.inst;
-		RenderInst(inst);
-		i++;
+		RenderTransparentInst(inst);
 	}
+}
+
+void
+RenderEverything(void)
+{
+	RenderOpaque();
+	RenderTransparent();
 }
 
 static void
@@ -522,4 +584,5 @@ void
 RenderInit(void)
 {
 	colourCodePipe = makeColourCodePipeline();
+	MakeCustomBuildingPipelines();
 }

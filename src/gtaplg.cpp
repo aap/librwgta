@@ -447,6 +447,12 @@ registerExtraVertColorPlugin(void)
 	                               getSizeExtraVertColors);
 }
 
+rw::RGBA*
+getExtraVertColors(rw::Atomic *a)
+{
+	return PLUGINOFFSET(gta::ExtraVertColors, a->geometry, gta::extraVertColorOffset)->nightColors;
+}
+
 // Environment mat
 
 int32 envMatOffset;

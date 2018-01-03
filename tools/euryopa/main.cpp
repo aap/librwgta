@@ -26,6 +26,7 @@ debug(const char *fmt, ...)
 	va_list ap;
 	va_start(ap, fmt);
 	vfprintf(stdout, fmt, ap);
+	addToLogWindow(fmt, ap);
 	fflush(stdout);
 	va_end(ap);
 }
@@ -37,6 +38,7 @@ log(const char *fmt, ...)
 	va_list ap;
 	va_start(ap, fmt);
 	vfprintf(stdout, fmt, ap);
+	addToLogWindow(fmt, ap);
 	fflush(stdout);
 	va_end(ap);
 }
@@ -60,6 +62,13 @@ fopen_ci(const char *path, const char *mode)
 	return fopen(cipath, mode);
 }
 
+float
+clampFloat(float f, float min, float max)
+{
+	if(f < min) return min;
+	if(f > max) return max;
+	return f;
+}
 
 //#define XINPUT
 #ifdef XINPUT
@@ -171,7 +180,10 @@ DefinedState(void)
 	SetRenderState(rw::FOGENABLE, 0);
 	SetRenderState(rw::ALPHATESTREF, 10);
 	SetRenderState(rw::ALPHATESTFUNC, rw::ALPHAGREATEREQUAL);
-//	SetRenderState(rw::FOGCOLOR, *(uint32*)&currentFog);
+	rw::RGBA fog;
+	rw::convColor(&fog, &Timecycle::currentFogColour);
+	SetRenderState(rw::FOGCOLOR, *(uint32*)&fog);
+	SetRenderState(rw::CULLMODE, rw::CULLBACK);
 }
 
 // Simple function to convert a raster to the current platform.
@@ -180,6 +192,8 @@ rw::Raster*
 ConvertTexRaster(rw::Raster *ras)
 {
 	using namespace rw;
+// TEMP
+//return nil;
 	Image *img = ras->toImage();
 	ras = Raster::createFromImage(img);
 	img->destroy();
@@ -189,14 +203,16 @@ ConvertTexRaster(rw::Raster *ras)
 void
 ConvertTxd(rw::TexDictionary *txd)
 {
-	// TODO
 	rw::Texture *tex;
 	FORLIST(lnk, txd->textures){
 		tex = rw::Texture::fromDict(lnk);
 		rw::Raster *ras = tex->raster;
 		if(ras && ras->platform != rw::platform){
-			tex->raster = ConvertTexRaster(ras);
-			ras->destroy();
+			if(!(ras->platform == rw::PLATFORM_D3D8 && rw::platform == rw::PLATFORM_D3D9 ||
+			     ras->platform == rw::PLATFORM_D3D9 && rw::platform == rw::PLATFORM_D3D8)){
+				tex->raster = ConvertTexRaster(ras);
+				ras->destroy();
+			}
 		}
 		tex->setFilter(rw::Texture::LINEAR);
 	}
@@ -230,8 +246,6 @@ InitRW(void)
 	TheCamera.m_rwcam = Scene.camera;
 	TheCamera.m_aspectRatio = 640.0f/480.0f;
 
-	TheCamera.m_position.set(1356.0f, -1107.0f, 96.0f);
-	TheCamera.m_target.set(1276.0f, -984.0f, 68.0f);
 	TheCamera.m_LODmult = 1.0f;
 
 	Scene.world->addCamera(Scene.camera);
@@ -260,10 +274,12 @@ AppEventHandler(sk::Event e, void *param)
 
 	switch(e){
 	case INITIALIZE:
+/*
 		AllocConsole();
 		freopen("CONIN$", "r", stdin);
 		freopen("CONOUT$", "w", stdout);
 		freopen("CONOUT$", "w", stderr);
+*/
 
 		Init();
 		plAttachInput();

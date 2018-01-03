@@ -15,10 +15,10 @@ static int numDebugLines;
 
 #define TEMPBUFFERVERTSIZE 256
 #define TEMPBUFFERINDEXSIZE 1024
-int TempBufferIndicesStored;
-int TempBufferVerticesStored;
-rw::RWDEVICE::Im3DVertex TempVertexBuffer[TEMPBUFFERVERTSIZE];
-uint16 TempIndexBuffer[TEMPBUFFERINDEXSIZE];
+static int TempBufferIndicesStored;
+static int TempBufferVerticesStored;
+static rw::RWDEVICE::Im3DVertex TempVertexBuffer[TEMPBUFFERVERTSIZE];
+static uint16 TempIndexBuffer[TEMPBUFFERINDEXSIZE];
 
 static void
 RenderAndEmptyRenderBuffer(void)

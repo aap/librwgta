@@ -21,7 +21,15 @@ ObjectDef::GetAtomicForDist(float dist)
 	for(i = 0; i < this->m_numAtomics; i++)
 		if(dist < this->m_drawDist[i]*TheCamera.m_LODmult)
 			return this->m_atomics[i];
-	return nil;
+	// We never want to return nil, so just pick one for the largest distance
+	int n = 0;
+	float dd = 0.0f;
+	for(i = 0; i < this->m_numAtomics; i++)
+		if(this->m_drawDist[i] > dd){
+			dd = this->m_drawDist[i];
+			n = i;
+		}
+	return this->m_atomics[n];
 }
 
 bool
@@ -79,8 +87,10 @@ SetupAtomic(rw::Atomic *atm)
 	rw::Geometry *g = atm->geometry;
 	if(g->flags & rw::Geometry::NATIVE)
 		atm->uninstance();
-	atm->pipeline = nil;
-//	atm->pipeline = (rw::ObjPipeline*)1;
+	if(params.daynightPipe && IsBuildingPipeAttached(atm))
+		SetupBuildingPipe(atm);
+	else
+		atm->pipeline = nil;
 	atm->setRenderCB(myRenderCB);
 }
 
@@ -213,7 +223,7 @@ void
 ObjectDef::SetupBigBuilding(void)
 {
 	ObjectDef *hqobj;
-	if(m_drawDist[0] > 300.0f)
+	if(m_drawDist[0] > LODDISTANCE)
 		m_isBigBuilding = true;
 
 	// in SA level of detail is handled by instances
@@ -231,7 +241,7 @@ ObjectDef::SetupBigBuilding(void)
 void
 ObjectDef::SetFlags(int flags)
 {
-	switch(gameversion){
+	switch(params.objFlagset){
 	case GAME_III:
 		if(flags & 1) m_normalCull = true;
 		if(flags & 2) m_noFade = true;

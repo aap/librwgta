@@ -77,6 +77,7 @@ struct ExtraVertColors
 extern rw::int32 extraVertColorOffset;
 void allocateExtraVertColors(rw::Geometry *g);
 void registerExtraVertColorPlugin(void);
+rw::RGBA *getExtraVertColors(rw::Atomic *a);
 
 // Environment mat
 
@@ -102,51 +103,47 @@ extern rw::int32 specMatOffset;
 
 void registerEnvSpecPlugin(void);
 
+enum
+{
+	// PS2 pipes
+	// building
+	PDS_PS2_CustomBuilding_AtmPipeID = MAKEPIPEID(VEND_ROCKSTAR, 0x80),
+	PDS_PS2_CustomBuilding_MatPipeID = MAKEPIPEID(VEND_ROCKSTAR, 0x81),
+	PDS_PS2_CustomBuildingDN_AtmPipeID = MAKEPIPEID(VEND_ROCKSTAR, 0x82),
+	PDS_PS2_CustomBuildingDN_MatPipeID = MAKEPIPEID(VEND_ROCKSTAR, 0x83),
+	PDS_PS2_CustomBuildingEnvMap_AtmPipeID = MAKEPIPEID(VEND_ROCKSTAR, 0x8C),
+	PDS_PS2_CustomBuildingEnvMap_MatPipeID = MAKEPIPEID(VEND_ROCKSTAR, 0x8D),
+	PDS_PS2_CustomBuildingDNEnvMap_AtmPipeID = MAKEPIPEID(VEND_ROCKSTAR, 0x8E),
+	PDS_PS2_CustomBuildingDNEnvMap_MatPipeID = MAKEPIPEID(VEND_ROCKSTAR, 0x8F),
+	PDS_PS2_CustomBuildingUVA_AtmPipeID = MAKEPIPEID(VEND_ROCKSTAR, 0x90),
+	PDS_PS2_CustomBuildingUVA_MatPipeID = MAKEPIPEID(VEND_ROCKSTAR, 0x91),
+	PDS_PS2_CustomBuildingDNUVA_AtmPipeID = MAKEPIPEID(VEND_ROCKSTAR, 0x92),
+	PDS_PS2_CustomBuildingDNUVA_MatPipeID = MAKEPIPEID(VEND_ROCKSTAR, 0x93),
+	// car
+	PDS_PS2_CustomCar_AtmPipeID = MAKEPIPEID(VEND_ROCKSTAR, 0x84),
+	PDS_PS2_CustomCar_MatPipeID = MAKEPIPEID(VEND_ROCKSTAR, 0x85),
+	PDS_PS2_CustomCarEnvMap_AtmPipeID = MAKEPIPEID(VEND_ROCKSTAR, 0x86),
+	PDS_PS2_CustomCarEnvMap_MatPipeID = MAKEPIPEID(VEND_ROCKSTAR, 0x87),
+//	PDS_PS2_CustomCarEnvMapUV2_AtmPipeID = MAKEPIPEID(VEND_ROCKSTAR, 0x8A),	// this does not exist
+	PDS_PS2_CustomCarEnvMapUV2_MatPipeID = MAKEPIPEID(VEND_ROCKSTAR, 0x8B),
+	// skin
+	PDS_PS2_CustomSkinPed_AtmPipeID = MAKEPIPEID(VEND_ROCKSTAR, 0x88),
+	PDS_PS2_CustomSkinPed_MatPipeID = MAKEPIPEID(VEND_ROCKSTAR, 0x89),
+
+	// PC pipes
+	RSPIPE_PC_CustomBuilding_PipeID = MAKEPIPEID(VEND_ROCKSTAR, 0x9C),
+	RSPIPE_PC_CustomBuildingDN_PipeID = MAKEPIPEID(VEND_ROCKSTAR, 0x98),
+	RSPIPE_PC_CustomCarEnvMap_PipeID = MAKEPIPEID(VEND_ROCKSTAR, 0x9A),	// same as XBOX!
+
+	// Xbox pipes
+	RSPIPE_XBOX_CustomBuilding_PipeID = MAKEPIPEID(VEND_ROCKSTAR, 0x9E),
+	RSPIPE_XBOX_CustomBuildingDN_PipeID = MAKEPIPEID(VEND_ROCKSTAR, 0x96),
+	RSPIPE_XBOX_CustomBuildingEnvMap_PipeID = MAKEPIPEID(VEND_ROCKSTAR, 0xA0),
+	RSPIPE_XBOX_CustomBuildingDNEnvMap_PipeID = MAKEPIPEID(VEND_ROCKSTAR, 0xA2),
+	RSPIPE_XBOX_CustomCarEnvMap_PipeID = MAKEPIPEID(VEND_ROCKSTAR, 0x9A),	// same as PC!
+};
+
 // Pipeline
-
-// 0x53F2009A		CCustomCarEnvMapPipeline
-//
-// PC & Mobile:
-// 0x53F20098		CCustomBuildingDNPipeline
-// 0x53F2009C		CCustomBuildingPipeline
-//
-// Xbox
-// 0x53F2009E		building  !N !EN
-// 0x53F20096		building   N !EN
-// 0x53F200A0		building  !N  EN   (also env) non-DN	 custom instanceCB!
-// 0x53F200A2		building   N  EN   (also env) DN	 custom instanceCB!
-//
-// PS2 (PDS)
-//
-// 0x53F20080	world
-//  0x53F20081	world
-// 0x53F20082	world
-//  0x53F20083	world
-// 0x53F20084	vehicle
-//  0x53F20085	vehicle
-// 0x53F20086	vehicle (unused)
-//  0x53F20087	vehicle
-// 0x53F20088	skin
-//  0x53F20089	skin
-// 0x53F2008A	world (unused)
-//  0x53F2008B	vehicle
-// 0x53F2008C	world (unused)
-//  0x53F2008D	world
-// 0x53F2008E	world (unused)
-//  0x53F2008F	world (unused)
-// 0x53F20090	world (unused)
-//  0x53F20091	world (unused)
-
-// pds dffs:
-//    n   atomic   material
-//  1892  53f20080 53f20081	// ?			   no night colors
-//     1  53f20080 53f2008d	// triad_buddha01.dff	   no night colors
-// 56430  53f20082 53f20083	// world		   night colors
-//    39  53f20082 53f2008f	// reflective world	   night colors
-//  6941  53f20084 53f20085	// vehicles
-//  3423  53f20084 53f20087	// vehicles
-//  4640  53f20084 53f2008b	// vehicles
-//   418  53f20088 53f20089	// peds
 
 extern rw::int32 pipelineOffset;
 

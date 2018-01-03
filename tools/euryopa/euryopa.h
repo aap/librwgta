@@ -29,9 +29,11 @@ struct ObjectInst;
 void panic(const char *fmt, ...);
 void debug(const char *fmt, ...);
 void log(const char *fmt, ...);
+void addToLogWindow(const char *fmt, va_list args);
 
 char *getPath(const char *path);
 FILE *fopen_ci(const char *path, const char *mode);
+float clampFloat(float f, float min, float max);
 
 void plCapturePad(int arg);
 void plUpdatePad(CControllerState *state);
@@ -49,6 +51,17 @@ extern float timeStep;
 extern bool gRenderCollision;
 extern bool gRenderOnlyLod;
 extern bool gRenderOnlyHD;
+extern bool gRenderBackground;
+extern bool gRenderWater;
+extern bool gEnableFog;
+extern bool gUseBlurAmb;
+extern bool gNoTimeCull;
+extern bool gNoAreaCull;
+extern bool gDoBackfaceCulling;
+
+// SA building pipe
+extern float gDayNightBalance;
+extern float gWetRoadEffect;
 
 
 // These don't necessarily match the game's values, roughly double of SA PC
@@ -60,11 +73,25 @@ enum {
 	NUMSCENES = 80,
 	NUMIPLS = 512,
 	NUMCDIMAGES = 100,
+
+	NUMWATERVERTICES = 4000,
+	NUMWATERQUADS = 1000,
+	NUMWATERTRIS = 1000,
 };
+
+#define LODDISTANCE (300.0f)
 
 #include "Rect.h"
 #include "PtrNode.h"
 #include "PtrList.h"
+
+struct CRGBA
+{
+	uint8 r, g, b, a;
+};
+
+#include "timecycle.h"
+#include "Sprite.h"
 
 // Game
 
@@ -80,10 +107,38 @@ inline bool isIII(void) { return gameversion == GAME_III; }
 inline bool isVC(void) { return gameversion == GAME_VC; }
 inline bool isSA(void) { return gameversion == GAME_SA; }
 
+struct Params
+{
+	rw::V3d initcampos;
+	rw::V3d initcamtarg;
+	int numAreas;
+	const char **areaNames;
+
+	int objFlagset;
+
+	int timecycle;
+	int numHours;
+	int numWeathers;
+	int extraColours;	// weather ID where extra colours start
+	int numExtraColours;	// number of extra colour blocks
+	const char **weatherNames;
+	int background;
+	int daynightPipe;
+
+	int water;
+	const char *waterTex;
+	rw::V2d waterStart, waterEnd;	// waterpro
+
+	bool backfaceCull;
+};
+extern Params params;
+
 extern int gameTxdSlot;
 
-extern int currentHour;
-extern int currentWeather;
+extern int currentHour, currentMinute;
+extern int oldWeather, newWeather;
+extern float weatherInterpolation;
+extern int extraColours;
 extern int currentArea;
 
 bool IsHourInRange(int h1, int h2);
@@ -111,10 +166,14 @@ struct TxdDef
 extern rw::TexDictionary *defaultTxd;
 void RegisterTexStorePlugin(void);
 TxdDef *GetTxdDef(int i);
+int FindTxdSlot(const char *name);
 int AddTxdSlot(const char *name);
+void TxdPush(void);
+void TxdPop(void);
 bool IsTxdLoaded(int i);
 void CreateTxd(int i);
 void LoadTxd(int i);
+void LoadTxd(int i, const char *path);
 void TxdMakeCurrent(int i);
 void TxdSetParent(const char *child, const char *parent);
 
@@ -319,7 +378,9 @@ struct DatDesc
 	static void *get(DatDesc *desc, const char *name);
 };
 
+char *LoadLine(FILE *f);
 void LoadLevel(const char *filename);
+rw::TexDictionary *LoadTexDictionary(const char *path);
 }
 
 // Rendering
@@ -340,21 +401,52 @@ extern rw::Light *pAmbient, *pDirect;
 extern SceneGlobals Scene;
 extern CCamera TheCamera;
 
+bool32 instWhite(int type, uint8 *dst, uint32 numVertices, uint32 stride);
+
 void myRenderCB(rw::Atomic *atomic);
 
+// Colour code pipeline for picking and highlighting
 extern bool renderColourCoded;
 extern rw::RGBA colourCode;
 rw::ObjPipeline *makeColourCodePipeline(void);
 int32 GetColourCode(int x, int y);
 
+// SA DN building pipeline
+bool IsBuildingPipeAttached(rw::Atomic *atm);
+void SetupBuildingPipe(rw::Atomic *atm);
+void UpdateDayNightBalance(void);
+// this should perhaps not be public
+extern rw::ObjPipeline *buildingPipe;
+extern rw::ObjPipeline *buildingDNPipe;
+void MakeCustomBuildingPipelines(void);
+
 void RenderInit(void);
 void BuildRenderList(void);
+void RenderOpaque(void);
+void RenderTransparent(void);
 void RenderEverything(void);
 
 void RenderColModelWire(CColModel *col, rw::Matrix *xform, bool onlyBounds);
 void RenderAxesWidget(rw::V3d pos, rw::V3d x, rw::V3d y, rw::V3d z);
 void RenderEverythingCollisions(void);
 void RenderDebugLines(void);
+
+namespace WaterLevel
+{
+	void Initialise(void);
+	void Render(void);
+};
+
+namespace Clouds
+{
+	// III and VC
+	void RenderBackground(int16 topred, int16 topgreen, int16 topblue,
+		int16 botred, int16 botgreen, int16 botblue, int16 alpha);
+	void RenderHorizon(void);
+	// SA
+	void RenderSkyPolys(void);
+}
+
 
 //
 // GUI
