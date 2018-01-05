@@ -63,6 +63,18 @@ fopen_ci(const char *path, const char *mode)
 	return fopen(cipath, mode);
 }
 
+bool
+doesFileExist(const char *path)
+{
+	FILE *f;
+	f = fopen_ci(path, "r");
+	if(f){
+		fclose(f);
+		return true;
+	}
+	return false;
+}
+
 float
 clampFloat(float f, float min, float max)
 {

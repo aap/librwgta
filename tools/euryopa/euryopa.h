@@ -33,6 +33,7 @@ void addToLogWindow(const char *fmt, va_list args);
 
 char *getPath(const char *path);
 FILE *fopen_ci(const char *path, const char *mode);
+bool doesFileExist(const char *path);
 float clampFloat(float f, float min, float max);
 
 void plCapturePad(int arg);
@@ -103,6 +104,7 @@ enum eGame
 	GAME_SA,
 };
 extern int gameversion;
+extern int gameplatform;
 inline bool isIII(void) { return gameversion == GAME_III; }
 inline bool isVC(void) { return gameversion == GAME_VC; }
 inline bool isSA(void) { return gameversion == GAME_SA; }
@@ -130,6 +132,7 @@ struct Params
 	rw::V2d waterStart, waterEnd;	// waterpro
 
 	bool backfaceCull;
+	bool txdFallbackGeneric;
 };
 extern Params params;
 

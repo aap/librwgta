@@ -98,6 +98,8 @@ SetupVisibilitySimple(ObjectInst *inst, float *distout)
 
 	if(obj->m_type == ObjectDef::ATOMIC){
 		atm = obj->GetAtomicForDist(camdist);
+		if(atm == nil)	// this shouldn't happen but it does (in xbox III)
+			return VIS_INVISIBLE;
 		instatm = (rw::Atomic*)inst->m_rwObject;
 		if(instatm->geometry != atm->geometry)
 			instatm->setGeometry(atm->geometry, 0);
@@ -152,6 +154,8 @@ SetupVisibilityIII(ObjectInst *inst, float *distout)
 
 	if(obj->m_type == ObjectDef::ATOMIC){
 		atm = obj->GetAtomicForDist(camdist);
+		if(atm == nil)	// this shouldn't happen but it does (in xbox III)
+			return VIS_INVISIBLE;
 		instatm = (rw::Atomic*)inst->m_rwObject;
 		if(instatm->geometry != atm->geometry)
 			instatm->setGeometry(atm->geometry, 0);
@@ -198,6 +202,8 @@ SetupVisibilitySA(ObjectInst *inst, float camdist)
 
 	if(obj->m_type == ObjectDef::ATOMIC){
 		atm = obj->GetAtomicForDist(camdist);
+		if(atm == nil)	// this shouldn't happen but it does (in xbox III)
+			return VIS_INVISIBLE;
 		instatm = (rw::Atomic*)inst->m_rwObject;
 		if(instatm->geometry != atm->geometry)
 			instatm->setGeometry(atm->geometry, 0);

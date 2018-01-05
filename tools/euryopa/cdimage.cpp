@@ -1,6 +1,8 @@
 #include "euryopa.h"
 #include <vector>
 
+#include "minilzo\minilzo.h"
+
 /*
  * Streaming limits:
  *
@@ -61,6 +63,9 @@ static int numCdImages;
 
 static uint32 maxFileSize;
 static uint8 *streamingBuffer;
+// for LZO compressed files
+static uint8 *compressionBuf;
+static uint32 compressionBufSize;
 
 static CPtrList requestList;
 
@@ -253,6 +258,9 @@ InitCdImage(CdImage *cdimg)
 			break;
 		}
 	}
+
+	if(lzo_init() != LZO_E_OK)
+		panic("LZO init failed");
 }
 
 void
@@ -266,6 +274,44 @@ InitCdImages(void)
 		for(i = numCdImages-1; i >= 0; i--)
 			InitCdImage(&cdImages[i]);
 	streamingBuffer = (uint8*)malloc(maxFileSize*2048);
+	compressionBufSize = maxFileSize*2048;
+	compressionBuf = (uint8*)malloc(compressionBufSize);
+}
+
+//uint8 compressionbuf[4*1024*1024];
+
+static uint8*
+DecompressFile(uint8 *src, int *size)
+{
+	static uint8 blockbuf[128*1024];
+	int32 total = *((int32*)src+2);
+	total -= 12;
+	src += 12;
+
+	int sz = 0;
+	while(total > 0){
+		assert(*(uint32*)src == 4);
+		uint32 blocksz = *((uint32*)src+2);
+		src += 12;
+		lzo_uint out_len = 128*1024;
+		lzo_int r = lzo1x_decompress_safe(src, blocksz, blockbuf, &out_len, 0);
+		if(r != LZO_E_OK){
+			panic("LZO decompress error");
+			return nil;
+		}
+		while(sz + out_len > compressionBufSize){
+			compressionBufSize *= 2;
+			compressionBuf = (uint8*)realloc(compressionBuf, compressionBufSize);
+		}
+		memcpy(compressionBuf+sz, blockbuf, out_len);
+		sz += out_len;
+
+		src += blocksz;
+		total -= blocksz+12;
+	}
+	if(size)
+		*size = sz;
+	return compressionBuf;
 }
 
 uint8*
@@ -279,6 +325,8 @@ ReadFileFromImage(int i, int *size)
 	DirEntry *de = &cdimg->directory[i];
 	fseek(cdimg->file, de->position*2048, SEEK_SET);
 	fread(streamingBuffer, 1, de->size*2048, cdimg->file);
+	if(*(uint32*)streamingBuffer == 0x67A3A1CE)
+		return DecompressFile(streamingBuffer, size);
 	if(size)
 		*size = de->size*2048;
 	return streamingBuffer;

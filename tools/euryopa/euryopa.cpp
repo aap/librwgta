@@ -1,6 +1,7 @@
 #include "euryopa.h"
 
 int gameversion;
+int gameplatform;
 
 Params params;
 
@@ -80,6 +81,8 @@ InitParams(void)
 		params.waterStart.set(-2048.0f, -2048.0f);
 		params.waterEnd.set(2048.0f, 2048.0f);
 		params.backfaceCull = false;
+		if(gameplatform == rw::PLATFORM_XBOX)
+			params.txdFallbackGeneric = true;
 		break;
 	case GAME_VC:
 		params.initcampos.set(131.5f, -1674.2f, 59.8f);
@@ -97,6 +100,9 @@ InitParams(void)
 		params.waterTex = "waterclear256";
 		params.waterStart.set(-2048.0f - 400.0f, -2048.0f);
 		params.waterEnd.set(2048.0f - 400.0f, 2048.0f);
+		if(gameplatform == rw::PLATFORM_PS2 ||
+		   gameplatform == rw::PLATFORM_XBOX)
+			params.backfaceCull = false;
 		break;
 	case GAME_SA:
 		params.initcampos.set(1789.0f, -1667.4f, 66.4f);
@@ -134,6 +140,12 @@ FindVersion(void)
 		gameversion = GAME_NA;
 		return;
 	}
+	if(doesFileExist("SYSTEM.CNF"))
+		gameplatform = rw::PLATFORM_PS2;
+	else if(doesFileExist("default.xbe"))
+		gameplatform = rw::PLATFORM_XBOX;
+	else
+		gameplatform = 0;
 	fclose(f);
 }
 
@@ -190,6 +202,16 @@ handleTool(void)
 	}
 }
 
+rw::Texture *(*originalFindCB)(const char *name);
+rw::TexDictionary *fallbackTxd;
+static rw::Texture*
+fallbackFindCB(const char *name)
+{
+	rw::Texture *t = originalFindCB(name);
+	if(t) return t;
+	return fallbackTxd->find(name);
+}
+
 void
 LoadGame(void)
 {
@@ -197,6 +219,8 @@ LoadGame(void)
 //	SetCurrentDirectory("C:/Users/aap/games/gtavc");
 //	SetCurrentDirectory("C:/Users/aap/games/gtasa");
 //	SetCurrentDirectory("F://gtasa");
+//	SetCurrentDirectory("F://gta3_xbox");
+//	SetCurrentDirectory("F://gtavc_xbox");
 //	SetCurrentDirectory("E://");
 //	SetCurrentDirectory("C:\\Users\\aap\\games\\gta3d_latest");
 
@@ -206,6 +230,11 @@ LoadGame(void)
 	case GAME_VC: debug("found VC!\n"); break;
 	case GAME_SA: debug("found SA!\n"); break;
 	default: panic("unknown game");
+	}
+	switch(gameplatform){
+	case rw::PLATFORM_PS2: debug("assuming PS2\n"); break;
+	case rw::PLATFORM_XBOX: debug("assuming Xbox\n"); break;
+	default: debug("assuming PC\n"); break;
 	}
 	InitParams();
 
@@ -221,6 +250,11 @@ LoadGame(void)
 	gameTxdSlot = AddTxdSlot("generic");
 	CreateTxd(gameTxdSlot);
 	TxdMakeCurrent(gameTxdSlot);
+	if(params.txdFallbackGeneric){
+		fallbackTxd = rw::TexDictionary::getCurrent();
+		originalFindCB = rw::Texture::findCB;
+		rw::Texture::findCB = fallbackFindCB;
+	}
 
 	Timecycle::Initialize();
 	WaterLevel::Initialise();

@@ -179,8 +179,9 @@ project "euryopa"
 	flags { "WinMain" }
 	skeltool("euryopa")
 	includedirs { "tools/euryopa" }
+	files { "tools/euryopa/minilzo/minilzo.c" }
 	removeplatforms { "*null" }
-	removeplatforms { "ps2" } -- for now
+	removeplatforms { "ps2" }
 
 project "gtaclumpview"
 	kind "WindowedApp"

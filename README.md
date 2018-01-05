@@ -16,6 +16,11 @@ Currently it can render the map:
 
 [Click here for a video](https://www.youtube.com/watch?v=6H8YP2q_-ls)
 
+tools/storiesview is a map viewer for PS2 LCS and VCS.
+
+tools/euryopa is a map viewer for GTA III-SA that will become an editor eventually hopefully.
+Since it depends on LZO, which is GPL, consider my code in this repo dual-licenced as GPL.
+
 # Building
 
 Set the LIBRW environment variable to point to the librw directory.
