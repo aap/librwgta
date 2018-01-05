@@ -85,7 +85,9 @@ buildingRenderCB_PS2(Atomic *atomic, d3d9::InstanceDataHeader *header)
 			colorscale = 255.0f/128.0f;
 		d3ddevice->SetVertexShaderConstantF(REG_shaderParams, &colorscale, 1);
 		d3ddevice->SetPixelShaderConstantF(0, &colorscale, 1);
+// TEMP
 		d3d::setTexture(0, inst->material->texture);
+//		d3d::setTexture(0, whiteTex);
 
 		SetRenderState(VERTEXALPHA, inst->vertexAlpha || inst->material->color.alpha != 255);
 

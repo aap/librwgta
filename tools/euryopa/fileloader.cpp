@@ -376,6 +376,8 @@ SetupBigBuildings(void)
 		lodobj = GetObjectDef(lodinst->m_objectId);
 		if(lodinst->m_numChildren == 1 && obj->m_colModel)
 			lodobj->m_colModel = obj->m_colModel;
+		assert(lodobj->m_colModel);
+		assert(obj->m_colModel);
 	}
 }
 
@@ -451,6 +453,9 @@ LoadCollisionFile(const char *path)
 		case 0x334C4F43:	// COL3
 			version = 3;
 			break;
+		case 0x344C4F43:	// COL4
+			version = 4;
+			break;
 		default:
 			fclose(f);
 			return;
@@ -469,6 +474,7 @@ LoadCollisionFile(const char *path)
 			case 1: ReadColModel(col, buffer, colfile.modelsize-24); break;
 			case 2: ReadColModelVer2(col, buffer, colfile.modelsize-24); break;
 			case 3: ReadColModelVer3(col, buffer, colfile.modelsize-24); break;
+			case 4: ReadColModelVer4(col, buffer, colfile.modelsize-24); break;
 			default:
 				printf("unknown COL version %d\n", version);
 				obj->m_colModel = nil;

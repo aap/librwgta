@@ -6,6 +6,7 @@ float timeStep;
 SceneGlobals Scene;
 rw::EngineStartParams engineStartParams;
 rw::Light *pAmbient, *pDirect;
+rw::Texture *whiteTex;
 
 // TODO: print to log as well
 void
@@ -222,10 +223,15 @@ ConvertTxd(rw::TexDictionary *txd)
 bool
 InitRW(void)
 {
-//	rw::platform = rw::PLATFORM_D3D8;
 	if(!sk::InitRW())
 		return false;
 	rw::d3d::isP8supported = false;
+
+	rw::Image *img = rw::Image::create(1, 1, 32);
+	uint32 white = 0xFFFFFFFF;
+	img->pixels = (uint8*)&white;
+	whiteTex = rw::Texture::create(rw::Raster::createFromImage(img));
+	img->destroy();
 
 	Scene.world = rw::World::create();
 
@@ -281,7 +287,6 @@ AppEventHandler(sk::Event e, void *param)
 		freopen("CONOUT$", "w", stdout);
 		freopen("CONOUT$", "w", stderr);
 */
-
 		Init();
 		plAttachInput();
 		return EVENTPROCESSED;
@@ -290,7 +295,7 @@ AppEventHandler(sk::Event e, void *param)
 	case PLUGINATTACH:
 		return attachPlugins() ? EVENTPROCESSED : EVENTERROR;
 	case KEYDOWN:
-		if(!io.WantCaptureKeyboard || !ImGuizmo::IsOver())
+		if(!io.WantCaptureKeyboard && !io.WantTextInput && !ImGuizmo::IsOver())
 			CPad::tempKeystates[*(int*)param] = 1;
 		return EVENTPROCESSED;
 	case KEYUP:

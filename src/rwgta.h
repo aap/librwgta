@@ -153,6 +153,14 @@ void registerPipelinePlugin(void);
 rw::uint32 getPipelineID(rw::Atomic *atomic);
 void setPipelineID(rw::Atomic *atomic, rw::uint32 id);
 
+extern rw::ObjPipeline *XboxCustomBuildingPipe;
+extern rw::ObjPipeline *XboxCustomBuildingDNPipe;
+extern rw::ObjPipeline *XboxCustomBuildingEnvMapPipe;
+extern rw::ObjPipeline *XboxCustomBuildingDNEnvMapPipe;
+void registerXboxPipes(void);
+
+void attachCustomPipelines(rw::Atomic *atomic);
+
 // 2dEffect
 
 extern rw::int32 twodEffectOffset;

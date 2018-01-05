@@ -214,3 +214,49 @@ ReadColModelVer3(CColModel *colmodel, uint8 *buf, int32 size)
 	colmodel->flags = 0x80;	// compressed vertices
 #undef COLHEADERSIZE
 }
+
+void
+ReadColModelVer4(CColModel *colmodel, uint8 *buf, int32 size)
+{
+#define COLHEADERSIZE 0x5C
+	Col4Header *header = (Col4Header*)buf;
+	int datasize = size - COLHEADERSIZE;
+	colmodel->boundingBox = header->boundingBox;
+	colmodel->boundingSphere = header->boundingSphere;
+	// flag 2
+	colmodel->allocFlag = (colmodel->allocFlag&~1) | (header->flags>>1)&1;
+	if(datasize <= 0)
+		return;
+	colmodel->rawdata = rwNewT(uint8, datasize, 0);
+	memcpy(colmodel->rawdata, buf+COLHEADERSIZE, datasize);
+	colmodel->numSpheres = header->numSpheres;
+	colmodel->numBoxes = header->numBoxes;
+	colmodel->numLines = header->numLines;
+	colmodel->numTriangles = header->numTriangles;
+	colmodel->flags &= ~1;
+	colmodel->flags &= ~4;
+	// flag 8
+	colmodel->flags = (colmodel->flags&~2) | (header->flags>>2)&2;
+
+	colmodel->spheres = header->sphereOffset ?
+		(CColSphere*)(colmodel->rawdata + header->sphereOffset - COLHEADERSIZE - 0x1C) :
+		nil;
+	colmodel->boxes = header->boxOffset ?
+		(CColBox*)(colmodel->rawdata + header->boxOffset - COLHEADERSIZE - 0x1C) :
+		nil;
+	colmodel->lines = header->lineOffset ?
+		(CColLine*)(colmodel->rawdata + header->lineOffset - COLHEADERSIZE - 0x1C) :
+		nil;
+	colmodel->compVertices = header->vertexOffset ?
+		(CompressedVector*)(colmodel->rawdata + header->vertexOffset - COLHEADERSIZE - 0x1C) :
+		nil;
+	colmodel->triangles = header->triangleOffset ?
+		(CColTriangle*)(colmodel->rawdata + header->triangleOffset - COLHEADERSIZE - 0x1C) :
+		nil;
+	colmodel->allocFlag |= 2;
+
+	// TODO: read shadow mesh
+
+	colmodel->flags = 0x80;	// compressed vertices
+#undef COLHEADERSIZE
+}

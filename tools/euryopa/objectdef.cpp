@@ -84,8 +84,9 @@ GetNameAndDamage(char *nodename, char *name, int *n)
 static void
 SetupAtomic(rw::Atomic *atm)
 {
-	// TODO: actually attach the SA xbox pipelines so uninstance can work
+//return;
 	// Make sure we are not pre-instanced
+	gta::attachCustomPipelines(atm);	// attach xbox pipelines, which we want to uninstance
 	int32 driver = rw::platform;
 	int32 platform = rw::findPlatform(atm);
 	if(platform){

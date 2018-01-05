@@ -81,6 +81,9 @@ LoadCol(int slot)
 		case 0x334C4F43:	// COL3
 			version = 3;
 			break;
+		case 0x344C4F43:	// COL4
+			version = 4;
+			break;
 		default:
 			return;
 		}
@@ -96,6 +99,7 @@ LoadCol(int slot)
 			case 1: ReadColModel(col, buffer+offset, header->modelsize-24); break;
 			case 2: ReadColModelVer2(col, buffer+offset, header->modelsize-24); break;
 			case 3: ReadColModelVer3(col, buffer+offset, header->modelsize-24); break;
+			case 4: ReadColModelVer4(col, buffer+offset, header->modelsize-24); break;
 			default:
 				printf("unknown COL version %d\n", version);
 				obj->m_colModel = nil;

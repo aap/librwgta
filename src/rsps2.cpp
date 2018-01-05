@@ -6,13 +6,13 @@
 #include <rw.h>
 #include "rwgta.h"
 
-typedef rw::uint8 uint8;
-typedef rw::uint16 uint16;
-typedef rw::uint32 uint32;
-typedef rw::float32 float32;
-typedef rw::int8 int8;
-typedef rw::int16 int16;
-typedef rw::int32 int32;
+using rw::uint8;
+using rw::uint16;
+using rw::uint32;
+using rw::float32;
+using rw::int8;
+using rw::int16;
+using rw::int32;
 
 namespace gta {
 

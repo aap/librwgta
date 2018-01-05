@@ -28,6 +28,38 @@ UpdateDayNightBalance(void)
 		gDayNightBalance = 1.0f;
 }
 
+void
+ConvertXboxGeometry(Atomic *atm)
+{
+	Geometry *geo = atm->geometry;
+	// This shouldn't happen, but better check
+	if((geo->flags & Geometry::PRELIT) == 0)
+		return;
+
+	// Convert normals to extra colors
+	if(geo->flags & Geometry::NORMALS){
+		RGBA *daycols = geo->colors;
+		if(gta::getExtraVertColors(atm) == nil)
+			gta::allocateExtraVertColors(geo);
+		RGBA *nightcols = gta::getExtraVertColors(atm);
+		V3d *normals = geo->morphTargets[0].normals;
+
+		int32 i;
+		for(i = 0; i < geo->numVertices; i++){
+			nightcols[i].red = normals[i].x*255;
+			nightcols[i].green = normals[i].y*255;
+			nightcols[i].blue = normals[i].z*255;
+			nightcols[i].alpha = daycols[i].alpha;
+		}
+
+		geo->flags &= ~Geometry::NORMALS;
+	}
+
+	// Move extranormals to normals?
+	// But then we may have to reallocate the Geometry
+	// Better handle in the instanceCB
+}
+
 bool
 IsBuildingPipeAttached(rw::Atomic *atm)
 {
@@ -75,6 +107,12 @@ SetupBuildingPipe(rw::Atomic *atm)
 	// xbox: use pipeline ID but fall back to non-DN if no normals flag
 	// pc: if two sets -> DN, else -> regular
 
+	uint32 id = gta::getPipelineID(atm);
+	if(id == gta::RSPIPE_XBOX_CustomBuilding_PipeID ||
+	   id == gta::RSPIPE_XBOX_CustomBuildingDN_PipeID ||
+	   id == gta::RSPIPE_XBOX_CustomBuildingEnvMap_PipeID ||
+	   id == gta::RSPIPE_XBOX_CustomBuildingDNEnvMap_PipeID)
+		ConvertXboxGeometry(atm);
 	// Just do the PC thing for now
 	if(gta::getExtraVertColors(atm) && atm->geometry->colors){
 		atm->pipeline = buildingDNPipe;

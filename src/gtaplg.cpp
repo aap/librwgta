@@ -86,6 +86,8 @@ attachPlugins(void)
 	rw::ps2::registerPluginPDSPipes();
 	gta::registerPDSPipes();
 
+	gta::registerXboxPipes();
+
 	rw::registerMeshPlugin();
 	rw::registerNativeDataPlugin();
 	rw::registerAtomicRightsPlugin();
@@ -302,16 +304,16 @@ int32 extraNormalsOffset;
 static void*
 createExtraNormals(void *object, int32 offset, int32)
 {
-	*PLUGINOFFSET(float*, object, offset) = nil;
+	*PLUGINOFFSET(rw::V3d*, object, offset) = nil;
 	return object;
 }
 
 static void*
 destroyExtraNormals(void *object, int32 offset, int32)
 {
-	float *extranormals = *PLUGINOFFSET(float*, object, offset);
+	rw::V3d *extranormals = *PLUGINOFFSET(rw::V3d*, object, offset);
 	delete[] extranormals;
-	*PLUGINOFFSET(float*, object, offset) = nil;
+	*PLUGINOFFSET(rw::V3d*, object, offset) = nil;
 	return object;
 }
 
@@ -319,10 +321,10 @@ static rw::Stream*
 readExtraNormals(rw::Stream *stream, int32, void *object, int32 offset, int32)
 {
 	rw::Geometry *geo = (rw::Geometry*)object;
-	float **plgp = PLUGINOFFSET(float*, object, offset);
+	rw::V3d **plgp = PLUGINOFFSET(rw::V3d*, object, offset);
 	if(*plgp)
 		delete[] *plgp;
-	float *extranormals = *plgp = new float[geo->numVertices*3];
+	rw::V3d *extranormals = *plgp = new rw::V3d[geo->numVertices];
 	stream->read(extranormals, geo->numVertices*3*4);
 //	printf("extra normals\n");
 
@@ -340,7 +342,7 @@ static rw::Stream*
 writeExtraNormals(rw::Stream *stream, int32, void *object, int32 offset, int32)
 {
 	rw::Geometry *geo = (rw::Geometry*)object;
-	float *extranormals = *PLUGINOFFSET(float*, object, offset);
+	rw::V3d *extranormals = *PLUGINOFFSET(rw::V3d*, object, offset);
 	assert(extranormals != nil);
 	stream->write(extranormals, geo->numVertices*3*4);
 	return stream;
@@ -350,7 +352,7 @@ static int32
 getSizeExtraNormals(void *object, int32 offset, int32)
 {
 	rw::Geometry *geo = (rw::Geometry*)object;
-	if(*PLUGINOFFSET(float*, object, offset))
+	if(*PLUGINOFFSET(rw::V3d*, object, offset))
 		return geo->numVertices*3*4;
 	return 0;
 }
@@ -706,6 +708,43 @@ void
 setPipelineID(rw::Atomic *atomic, uint32 id)
 {
 	*PLUGINOFFSET(uint32, atomic, pipelineOffset) = id;
+}
+
+void
+attachCustomPipelines(rw::Atomic *atomic)
+{
+	int32 id = getPipelineID(atomic);
+	uint32 hasNormals = atomic->geometry->flags & rw::Geometry::NORMALS;
+
+	// Xbox pipes
+	switch(id){
+	case RSPIPE_XBOX_CustomBuildingDN_PipeID:
+		if(hasNormals){
+			atomic->pipeline = XboxCustomBuildingDNPipe;
+			setPipelineID(atomic, RSPIPE_XBOX_CustomBuildingDN_PipeID);
+			break;
+		}
+		// fallthrough
+	case RSPIPE_XBOX_CustomBuilding_PipeID:
+		atomic->pipeline = XboxCustomBuildingPipe;
+		setPipelineID(atomic, RSPIPE_XBOX_CustomBuilding_PipeID);
+		break;
+
+	case RSPIPE_XBOX_CustomBuildingDNEnvMap_PipeID:
+		if(hasNormals){
+			atomic->pipeline = XboxCustomBuildingDNEnvMapPipe;
+			setPipelineID(atomic, RSPIPE_XBOX_CustomBuildingDNEnvMap_PipeID);
+			break;
+		}
+		// fallthrough
+	case RSPIPE_XBOX_CustomBuildingEnvMap_PipeID:
+		atomic->pipeline = XboxCustomBuildingEnvMapPipe;
+		setPipelineID(atomic, RSPIPE_XBOX_CustomBuildingEnvMap_PipeID);
+		break;
+	}
+
+	// PS2 pipes are already attached by PDS
+	// PC pipes don't exist here because we have nothing to uninstance
 }
 
 // 2dEffect

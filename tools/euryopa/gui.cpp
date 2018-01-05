@@ -1,4 +1,5 @@
 #include "euryopa.h"
+#include "imgui/imgui_internal.h"
 
 static bool showDemoWindow;
 static bool showEditorWindow;
@@ -211,6 +212,8 @@ uiEditorWindow(void)
 	ObjectInst *inst;
 	ObjectDef *obj;
 
+	ImGui::SetNextWindowSize(ImVec2(500, 250), ImGuiCond_FirstUseEver);
+
 	ImGui::Begin("Editor Window", &showEditorWindow);
 
 	if(ImGui::TreeNode("Camera")){
@@ -355,7 +358,11 @@ uiInstInfo(ObjectInst *inst)
 {
 	ObjectDef *obj;
 	obj = GetObjectDef(inst->m_objectId);
-	ImGui::Text("Model: %s", obj->m_name);
+
+	static char buf[MODELNAMELEN];
+	strncpy(buf, obj->m_name, MODELNAMELEN);
+	ImGui::InputText("Model", buf, MODELNAMELEN);
+
 	ImGui::Text("Translation: %.3f %.3f %.3f",
 		inst->m_translation.x,
 		inst->m_translation.y,
@@ -382,10 +389,16 @@ uiObjInfo(ObjectDef *obj)
 	int i;
 	TxdDef *txd;
 
+	ImGui::SetNextWindowSize(ImVec2(500, 500), ImGuiCond_FirstUseEver);
+
 	txd = GetTxdDef(obj->m_txdSlot);
+	static char buf[MODELNAMELEN];
+
 	ImGui::Text("ID: %d\n", obj->m_id);
-	ImGui::Text("Model: %s", obj->m_name);
-	ImGui::Text("TXD: %s", txd->name);
+	strncpy(buf, obj->m_name, MODELNAMELEN);
+	ImGui::InputText("Model", buf, MODELNAMELEN);
+	strncpy(buf, txd->name, MODELNAMELEN);
+	ImGui::InputText("TXD", buf, MODELNAMELEN);
 	ImGui::Text("Draw dist:");
 	for(i = 0; i < obj->m_numAtomics; i++){
 		ImGui::SameLine();
@@ -476,6 +489,8 @@ uiObjInfo(ObjectDef *obj)
 static void
 uiInstWindow(void)
 {
+	ImGui::SetNextWindowSize(ImVec2(500, 500), ImGuiCond_FirstUseEver);
+
 	ImGui::Begin("Object Info", &showInstanceWindow);
 	if(selection.first){
 		ObjectInst *inst = (ObjectInst*)selection.first->item;

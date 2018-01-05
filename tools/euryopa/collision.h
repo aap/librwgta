@@ -126,3 +126,4 @@ struct CColModel
 void ReadColModel(CColModel *colmodel, uint8 *buf, int size);
 void ReadColModelVer2(CColModel *colmodel, uint8 *buf, int size);
 void ReadColModelVer3(CColModel *colmodel, uint8 *buf, int size);
+void ReadColModelVer4(CColModel *colmodel, uint8 *buf, int size);

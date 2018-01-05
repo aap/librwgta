@@ -398,6 +398,7 @@ struct SceneGlobals {
 	rw::Camera *camera;
 };
 extern rw::Light *pAmbient, *pDirect;
+extern rw::Texture *whiteTex;
 extern SceneGlobals Scene;
 extern CCamera TheCamera;
 

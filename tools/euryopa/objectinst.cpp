@@ -90,7 +90,8 @@ bool
 ObjectInst::IsOnScreen(void)
 {
 	rw::Sphere sph;
-	CColModel *col = GetObjectDef(m_objectId)->m_colModel;
+	ObjectDef *obj = GetObjectDef(m_objectId);
+	CColModel *col = obj->m_colModel;
 	sph.center = col->boundingSphere.center;
 	sph.radius = col->boundingSphere.radius;
 	return TheCamera.IsSphereVisible(&sph, &m_matrix);

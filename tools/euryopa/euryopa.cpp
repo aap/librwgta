@@ -197,7 +197,7 @@ LoadGame(void)
 //	SetCurrentDirectory("C:/Users/aap/games/gtavc");
 //	SetCurrentDirectory("C:/Users/aap/games/gtasa");
 //	SetCurrentDirectory("F://gtasa");
-//	SetCurrentDirectory("G://");
+//	SetCurrentDirectory("E://");
 //	SetCurrentDirectory("C:\\Users\\aap\\games\\gta3d_latest");
 
 	FindVersion();
@@ -229,6 +229,8 @@ LoadGame(void)
 	AddIplSlot("generic");
 
 	AddCdImage("MODELS\\GTA3.IMG");
+	if(isSA())
+		AddCdImage("MODELS\\GTA_INT.IMG");
 
 	FileLoader::LoadLevel("data/default.dat");
 	switch(gameversion){

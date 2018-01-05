@@ -78,6 +78,19 @@ CCamera::Process(void)
 	if(speed < -70.0f) speed = -70.0f;
 	TheCamera.dolly(speed*scale);
 
+	static float sidespeed = 0.0f;
+	if(CPad::IsKeyDown('A'))
+		sidespeed -= 0.1f;
+	else if(CPad::IsKeyDown('D'))
+		sidespeed += 0.1f;
+	else
+		sidespeed = 0.0f;
+	if(sidespeed > 70.0f) sidespeed = 70.0f;
+	if(sidespeed < -70.0f) sidespeed = -70.0f;
+	TheCamera.pan(sidespeed, 0.0f);
+
+
+
 	// Pad
 	CPad *pad = CPad::GetPad(0);
 	sensitivity = 1.0f;
