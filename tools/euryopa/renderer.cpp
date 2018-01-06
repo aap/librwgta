@@ -591,4 +591,5 @@ RenderInit(void)
 {
 	colourCodePipe = makeColourCodePipeline();
 	MakeCustomBuildingPipelines();
+	MakeNeoWorldPipe();
 }

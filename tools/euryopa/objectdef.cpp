@@ -84,7 +84,6 @@ GetNameAndDamage(char *nodename, char *name, int *n)
 static void
 SetupAtomic(rw::Atomic *atm)
 {
-//return;
 	// Make sure we are not pre-instanced
 	gta::attachCustomPipelines(atm);	// attach xbox pipelines, which we want to uninstance
 	int32 driver = rw::platform;
@@ -99,10 +98,15 @@ SetupAtomic(rw::Atomic *atm)
 	rw::platform = driver;
 	// no need to switch back pipes because we reset it anyway
 
-	if(params.daynightPipe && IsBuildingPipeAttached(atm))
+	rw::MatFX::disableEffects(atm);	// so cloning won't reattach any MatFX pipes
+
+	if(params.neoWorldPipe)
+		atm->pipeline = neoWorldPipe;
+	else if(params.daynightPipe && IsBuildingPipeAttached(atm))
 		SetupBuildingPipe(atm);
 	else
 		atm->pipeline = nil;
+assert(atm->pipeline = neoWorldPipe);
 	atm->setRenderCB(myRenderCB);
 }
 

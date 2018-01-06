@@ -31,6 +31,9 @@ bool gDoBackfaceCulling;	// init from params
 float gDayNightBalance;
 float gWetRoadEffect;
 
+// Neo stuff
+float gNeoLightMapStrength = 0.5f;
+
 bool
 IsHourInRange(int h1, int h2)
 {
@@ -81,8 +84,10 @@ InitParams(void)
 		params.waterStart.set(-2048.0f, -2048.0f);
 		params.waterEnd.set(2048.0f, 2048.0f);
 		params.backfaceCull = false;
-		if(gameplatform == rw::PLATFORM_XBOX)
+		if(gameplatform == rw::PLATFORM_XBOX){
 			params.txdFallbackGeneric = true;
+			params.neoWorldPipe = GAME_III;
+		}
 		break;
 	case GAME_VC:
 		params.initcampos.set(131.5f, -1674.2f, 59.8f);
@@ -100,9 +105,12 @@ InitParams(void)
 		params.waterTex = "waterclear256";
 		params.waterStart.set(-2048.0f - 400.0f, -2048.0f);
 		params.waterEnd.set(2048.0f - 400.0f, 2048.0f);
-		if(gameplatform == rw::PLATFORM_PS2 ||
-		   gameplatform == rw::PLATFORM_XBOX)
+		if(gameplatform == rw::PLATFORM_PS2)
 			params.backfaceCull = false;
+		if(gameplatform == rw::PLATFORM_XBOX){
+			params.neoWorldPipe = GAME_VC;
+			params.backfaceCull = false;
+		}
 		break;
 	case GAME_SA:
 		params.initcampos.set(1789.0f, -1667.4f, 66.4f);

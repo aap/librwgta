@@ -260,7 +260,8 @@ uiEditorWindow(void)
 
 		if(params.daynightPipe){
 			ImGui::SliderFloat("Day/Night Balance", &gDayNightBalance, 0.0f, 1.0f, "%.2f");
-			ImGui::SliderFloat("Wet Road Effect", &gWetRoadEffect, 0.0f, 1.0f, "%.2f");
+			if(gameplatform != rw::PLATFORM_XBOX)
+				ImGui::SliderFloat("Wet Road Effect", &gWetRoadEffect, 0.0f, 1.0f, "%.2f");
 		}
 
 
@@ -289,6 +290,9 @@ uiEditorWindow(void)
 		ImGui::PopItemWidth();
 
 		ImGui::SliderInt("Extracolour", &extraColours, -1, params.numExtraColours*params.numHours - 1);
+
+		if(params.neoWorldPipe)
+			ImGui::SliderFloat("Neo Light map", &gNeoLightMapStrength, 0.0f, 1.0f, "%.2f");
 
 		ImGui::TreePop();
 	}

@@ -64,6 +64,9 @@ extern bool gDoBackfaceCulling;
 extern float gDayNightBalance;
 extern float gWetRoadEffect;
 
+// Neo stuff
+extern float gNeoLightMapStrength;
+
 
 // These don't necessarily match the game's values, roughly double of SA PC
 enum {
@@ -133,6 +136,8 @@ struct Params
 
 	bool backfaceCull;
 	bool txdFallbackGeneric;
+
+	int neoWorldPipe;
 };
 extern Params params;
 
@@ -415,6 +420,9 @@ extern rw::RGBA colourCode;
 rw::ObjPipeline *makeColourCodePipeline(void);
 int32 GetColourCode(int x, int y);
 
+// Neo World pipeline
+extern rw::ObjPipeline *neoWorldPipe;
+void MakeNeoWorldPipe(void);
 // SA DN building pipeline
 bool IsBuildingPipeAttached(rw::Atomic *atm);
 void SetupBuildingPipe(rw::Atomic *atm);

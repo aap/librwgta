@@ -298,7 +298,6 @@ MakeCustomBuildingPipelines(void)
 	pipe->uninstanceCB = nil;
 	pipe->renderCB = buildingRenderCB_PS2;
 	buildingDNPipe = pipe;
-
 }
 
 #endif
