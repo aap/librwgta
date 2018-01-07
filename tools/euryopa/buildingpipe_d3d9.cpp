@@ -27,8 +27,8 @@ enum {
 };
 
 
-static void *ps2BuildingVS;
-static void *simplePS;
+static void *ps2BuildingVS, *ps2BuildingFxVS;
+static void *simplePS, *ps2EnvPS;
 
 void
 getComposedMatrix(Atomic *atm, RawMatrix *combined)
@@ -41,11 +41,32 @@ getComposedMatrix(Atomic *atm, RawMatrix *combined)
 	RawMatrix::transpose(combined, &compxpos);
 }
 
+// similar to GTA code, some useless stuff
+void
+getEnvMatrix(Atomic *atomic, Frame *envframe, RawMatrix *envmat)
+{
+	Matrix inv, env;
+	Clump *clump;
+	Frame *frame;
+
+	if(envframe == nil)
+		envframe = ((Camera*)engine->currentCamera)->getFrame();
+
+	clump = atomic->clump;
+
+	Matrix::invert(&inv, envframe->getLTM());
+	frame = clump ? clump->getFrame() : atomic->getFrame();
+	Matrix::mult(&env, frame->getLTM(), &inv);
+	convMatrix(envmat, &env);
+}
+
 static void
 buildingRenderCB_PS2(Atomic *atomic, d3d9::InstanceDataHeader *header)
 {
-	RawMatrix combined, texMat;
+	RawMatrix combined, ident;
+	Matrix *texmat;
 	Geometry *geo = atomic->geometry;
+	RawMatrix::setIdentity(&ident);
 
 	d3ddevice->SetStreamSource(0, (IDirect3DVertexBuffer9*)header->vertexStream[0].vertexBuffer,
 	                           0, header->vertexStream[0].stride);
@@ -58,9 +79,6 @@ buildingRenderCB_PS2(Atomic *atomic, d3d9::InstanceDataHeader *header)
 
 	getComposedMatrix(atomic, &combined);
 	d3ddevice->SetVertexShaderConstantF(REG_transform, (float*)&combined, 4);
-
-	RawMatrix::setIdentity(&texMat);
-	d3ddevice->SetVertexShaderConstantF(REG_texmat, (float*)&texMat, 4);
 
 	float dayparam[4], nightparam[4];
 	if(atomic->pipeline->pluginData == gta::RSPIPE_PC_CustomBuilding_PipeID){
@@ -78,6 +96,10 @@ buildingRenderCB_PS2(Atomic *atomic, d3d9::InstanceDataHeader *header)
 
 	d3ddevice->SetVertexShaderConstantF(REG_ambient, (float*)&pAmbient->color, 1);
 
+	RawMatrix envmat;
+	getEnvMatrix(atomic, nil, &envmat);
+	d3ddevice->SetVertexShaderConstantF(REG_envmat, (float*)&envmat, 4);
+
 	InstanceData *inst = header->inst;
 	for(uint32 i = 0; i < header->numMeshes; i++){
 		float colorscale = 1.0f;
@@ -85,9 +107,11 @@ buildingRenderCB_PS2(Atomic *atomic, d3d9::InstanceDataHeader *header)
 			colorscale = 255.0f/128.0f;
 		d3ddevice->SetVertexShaderConstantF(REG_shaderParams, &colorscale, 1);
 		d3ddevice->SetPixelShaderConstantF(0, &colorscale, 1);
-// TEMP
+
+		int hasEnv = (*(uint32*)&inst->material->surfaceProps.specular) & 1;
+		gta::EnvMat *env = gta::getEnvMat(inst->material);
+
 		d3d::setTexture(0, inst->material->texture);
-//		d3d::setTexture(0, whiteTex);
 
 		SetRenderState(VERTEXALPHA, inst->vertexAlpha || inst->material->color.alpha != 255);
 
@@ -97,10 +121,55 @@ buildingRenderCB_PS2(Atomic *atomic, d3d9::InstanceDataHeader *header)
 		d3ddevice->SetVertexShaderConstantF(REG_matCol, (float*)&col, 1);
 		d3ddevice->SetVertexShaderConstantF(REG_surfProps, (float*)&inst->material->surfaceProps, 1);
 
+		// UV animation
+		if(MatFX::getEffects(inst->material) == MatFX::UVTRANSFORM){
+			MatFX *matfx = MatFX::get(inst->material);
+			matfx->getUVTransformMatrices(&texmat, nil);
+			if(texmat)
+				d3ddevice->SetVertexShaderConstantF(REG_texmat, (float*)texmat, 4);
+			else
+				d3ddevice->SetVertexShaderConstantF(REG_texmat, (float*)&ident, 4);
+		}else
+			d3ddevice->SetVertexShaderConstantF(REG_texmat, (float*)&ident, 4);
+
+
 		d3d::flushCache();
 		d3ddevice->DrawIndexedPrimitive((D3DPRIMITIVETYPE)header->primType, inst->baseIndex,
 		                                0, inst->numVertices,
 		                                inst->startIndex, inst->numPrimitives);
+
+		if(hasEnv){
+			d3ddevice->SetVertexShader((IDirect3DVertexShader9*)ps2BuildingFxVS);
+			d3ddevice->SetPixelShader((IDirect3DPixelShader9*)ps2EnvPS);
+
+			d3d::setTexture(0, env->texture);
+
+			float envxform[4];
+			envxform[0] = envxform[1] = 0.0f;
+			envxform[2] = env->getScaleX();
+			envxform[3] = env->getScaleY();
+			d3ddevice->SetVertexShaderConstantF(REG_envXform, envxform, 1);
+
+			float fxparams[2];
+			fxparams[0] = env->getShininess();
+			fxparams[1] = 1.0f;
+			d3ddevice->SetVertexShaderConstantF(REG_fxParams, fxparams, 1);
+
+			int dst;
+			dst = GetRenderState(DESTBLEND);
+			SetRenderState(DESTBLEND, BLENDONE);
+			SetRenderState(VERTEXALPHA, 1);
+			d3d::flushCache();
+			d3ddevice->DrawIndexedPrimitive((D3DPRIMITIVETYPE)header->primType, inst->baseIndex,
+			                                0, inst->numVertices,
+			                                inst->startIndex, inst->numPrimitives);
+			SetRenderState(DESTBLEND, dst);
+
+			d3d::setTexture(0, env->texture);
+			d3ddevice->SetVertexShader((IDirect3DVertexShader9*)ps2BuildingVS);
+			d3ddevice->SetPixelShader((IDirect3DPixelShader9*)simplePS);
+		}
+
 		inst++;
 	}
 
@@ -115,6 +184,7 @@ buildingInstanceCB(Geometry *geo, d3d9::InstanceDataHeader *header)
 {
 	VertexElement dcl[12];
 	gta::ExtraVertColors *extracols = GETEXTRACOLOREXT(geo);
+	V3d *extranormals = gta::getExtraNormals(geo);
 
 	VertexStream *s = &header->vertexStream[0];
 	s->offset = 0;
@@ -182,7 +252,7 @@ buildingInstanceCB(Geometry *geo, d3d9::InstanceDataHeader *header)
 	}
 
 	bool hasNormals = (geo->flags & Geometry::NORMALS) != 0;
-	if(hasNormals){
+	if(hasNormals || extranormals){
 		dcl[i].stream = 0;
 		dcl[i].offset = stride;
 		dcl[i].type = D3DDECLTYPE_FLOAT3;
@@ -260,11 +330,11 @@ buildingInstanceCB(Geometry *geo, d3d9::InstanceDataHeader *header)
 			header->vertexStream[dcl[i].stream].stride);
 	}
 
-	if(hasNormals){
+	if(hasNormals || extranormals){
 		for(i = 0; dcl[i].usage != D3DDECLUSAGE_NORMAL || dcl[i].usageIndex != 0; i++)
 			;
 		instV3d(vertFormatMap[dcl[i].type], verts + dcl[i].offset,
-			geo->morphTargets[0].normals,
+			hasNormals ? geo->morphTargets[0].normals : extranormals,
 			header->totalNumVertex,
 			header->vertexStream[dcl[i].stream].stride);
 	}
@@ -281,6 +351,11 @@ MakeCustomBuildingPipelines(void)
 #include "d3d_shaders/simplePS.inc"
 	d3ddevice->CreateVertexShader((DWORD*)ps2BuildingVS_cso, (IDirect3DVertexShader9**)&ps2BuildingVS);
 	d3ddevice->CreatePixelShader((DWORD*)simplePS_cso, (IDirect3DPixelShader9**)&simplePS);
+
+#include "d3d_shaders/ps2BuildingFxVS.inc"
+#include "d3d_shaders/ps2EnvPS.inc"
+	d3ddevice->CreateVertexShader((DWORD*)ps2BuildingFxVS_cso, (IDirect3DVertexShader9**)&ps2BuildingFxVS);
+	d3ddevice->CreatePixelShader((DWORD*)ps2EnvPS_cso, (IDirect3DPixelShader9**)&ps2EnvPS);
 
 
 	pipe = new d3d9::ObjPipeline(PLATFORM_D3D9);

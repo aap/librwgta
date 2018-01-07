@@ -60,6 +60,18 @@ ConvertXboxGeometry(Atomic *atm)
 	// Better handle in the instanceCB
 }
 
+void
+SetupBuildingEnvMap(rw::Material *m)
+{
+	uint32 *flags = (uint32*)&m->surfaceProps.specular;
+	*flags = 0;
+	gta::EnvMat *env = gta::getEnvMat(m);
+	if(env && MatFX::getEffects(m) == MatFX::ENVMAP)
+		env->texture = MatFX::get(m)->getEnvTexture();
+	if(env && env->getShininess() != 0.0f && env->texture)
+		*flags = 1;
+}
+
 bool
 IsBuildingPipeAttached(rw::Atomic *atm)
 {
@@ -121,6 +133,9 @@ SetupBuildingPipe(rw::Atomic *atm)
 		atm->pipeline = buildingPipe;
 		gta::setPipelineID(atm, gta::RSPIPE_PC_CustomBuilding_PipeID);
 	}
+	int i;
+	for(i = 0; i < atm->geometry->matList.numMaterials; i++)
+		SetupBuildingEnvMap(atm->geometry->matList.materials[i]);
 }
 
 bool32

@@ -301,6 +301,21 @@ registerBreakableModelPlugin(void)
 
 int32 extraNormalsOffset;
 
+rw::V3d*
+allocateExtraNormals(rw::Geometry *g)
+{
+	rw::V3d **extraNormals = PLUGINOFFSET(rw::V3d*, g, extraNormalsOffset);
+	rwFree(*extraNormals);
+	*extraNormals = rwNewT(rw::V3d, g->numVertices, 0);
+	return *extraNormals;
+}
+
+rw::V3d*
+getExtraNormals(rw::Geometry *g)
+{
+	return *PLUGINOFFSET(rw::V3d*, g, extraNormalsOffset);
+}
+
 static void*
 createExtraNormals(void *object, int32 offset, int32)
 {
@@ -311,9 +326,9 @@ createExtraNormals(void *object, int32 offset, int32)
 static void*
 destroyExtraNormals(void *object, int32 offset, int32)
 {
-	rw::V3d *extranormals = *PLUGINOFFSET(rw::V3d*, object, offset);
-	delete[] extranormals;
-	*PLUGINOFFSET(rw::V3d*, object, offset) = nil;
+	rw::V3d **extranormals = PLUGINOFFSET(rw::V3d*, object, offset);
+	rwFree(*extranormals);
+	*extranormals = nil;
 	return object;
 }
 
@@ -321,20 +336,8 @@ static rw::Stream*
 readExtraNormals(rw::Stream *stream, int32, void *object, int32 offset, int32)
 {
 	rw::Geometry *geo = (rw::Geometry*)object;
-	rw::V3d **plgp = PLUGINOFFSET(rw::V3d*, object, offset);
-	if(*plgp)
-		delete[] *plgp;
-	rw::V3d *extranormals = *plgp = new rw::V3d[geo->numVertices];
+	rw::V3d *extranormals = allocateExtraNormals(geo);
 	stream->read(extranormals, geo->numVertices*3*4);
-//	printf("extra normals\n");
-
-//	for(int i = 0; i < geo->numVertices; i++){
-//		float *nx = extranormals+i*3;
-//		float *n = geo->morphTargets[0].normals;
-//		float len = n[0]*n[0] + n[1]*n[1] + n[2]*n[2];
-//		printf("%f %f %f %f\n", n[0], n[1], n[2], len);
-//		printf("%f %f %f\n", nx[0], nx[1], nx[2]);
-//	}
 	return stream;
 }
 
@@ -551,6 +554,12 @@ getSizeEnvMat(void *object, int32 offset, int32)
 {
 	EnvMat *env = *PLUGINOFFSET(EnvMat*, object, offset);
 	return env ? (int)sizeof(EnvStream) : 0;
+}
+
+EnvMat*
+getEnvMat(rw::Material *mat)
+{
+	return *PLUGINOFFSET(EnvMat*, mat, envMatOffset);
 }
 
 // Specular mat

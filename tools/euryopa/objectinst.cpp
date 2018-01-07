@@ -97,6 +97,32 @@ ObjectInst::IsOnScreen(void)
 	return TheCamera.IsSphereVisible(&sph, &m_matrix);
 }
 
+static void
+updateMatFXAnim(rw::Material *m)
+{
+	if(!rw::UVAnim::exists(m))
+		return;
+	rw::UVAnim::addTime(m, timeStep);
+	rw::UVAnim::applyUpdate(m);
+}
+
+void
+ObjectInst::PreRender(void)
+{
+	int i;
+	ObjectDef *obj = GetObjectDef(m_objectId);
+	if(obj->m_hasPreRendered)
+		return;
+	obj->m_hasPreRendered = true;
+
+	if(obj->m_type == ObjectDef::ATOMIC && gPlayAnimations){
+		rw::Atomic *atm = (rw::Atomic*)m_rwObject;
+		if(rw::MatFX::getEffects(atm))
+			for(i = 0; i < atm->geometry->matList.numMaterials; i++)
+				updateMatFXAnim(atm->geometry->matList.materials[i]);
+	}
+}
+
 void
 ObjectInst::JumpTo(void)
 {

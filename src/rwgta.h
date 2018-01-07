@@ -66,6 +66,8 @@ void registerBreakableModelPlugin(void);
 
 extern rw::int32 extraNormalsOffset;
 void registerExtraNormalsPlugin(void);
+rw::V3d *allocateExtraNormals(rw::Geometry *g);
+rw::V3d *getExtraNormals(rw::Geometry *g);
 
 // Extra vert colors (not on Xbox)
 
@@ -89,9 +91,16 @@ struct EnvMat
 	rw::int8 transScaleX, transScaleY;
 	rw::uint8 shininess;
 	rw::Texture *texture;
+
+	float getScaleX(void) { return scaleX/8.0f; }
+	float getScaleY(void) { return scaleY/8.0f; }
+	float getTransScaleX(void) { return transScaleX/8.0f; }
+	float getTransScaleY(void) { return transScaleY/8.0f; }
+	float getShininess(void) { return shininess/255.0f; }
 };
 
 extern rw::int32 envMatOffset;
+EnvMat *getEnvMat(rw::Material *mat);
 
 // Specular mat
 

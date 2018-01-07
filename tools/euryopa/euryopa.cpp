@@ -26,6 +26,7 @@ bool gUseBlurAmb;
 bool gNoTimeCull;
 bool gNoAreaCull;
 bool gDoBackfaceCulling;	// init from params
+bool gPlayAnimations = true;
 
 // SA building pipe
 float gDayNightBalance;
@@ -229,7 +230,7 @@ LoadGame(void)
 //	SetCurrentDirectory("F://gtasa");
 //	SetCurrentDirectory("F://gta3_xbox");
 //	SetCurrentDirectory("F://gtavc_xbox");
-//	SetCurrentDirectory("E://");
+//	SetCurrentDirectory("I://");
 //	SetCurrentDirectory("C:\\Users\\aap\\games\\gta3d_latest");
 
 	FindVersion();
@@ -353,7 +354,7 @@ dogizmo(void)
 }
 
 void
-Draw(float timeDelta)
+Draw(void)
 {
 	static rw::RGBA clearcol = { 0x80, 0x80, 0x80, 0xFF };
 
@@ -364,7 +365,7 @@ Draw(float timeDelta)
 		return;
 	}
 
-	ImGui_ImplRW_NewFrame(timeDelta);
+	ImGui_ImplRW_NewFrame(timeStep);
 	ImGuizmo::BeginFrame();
 
 	Timecycle::Update();
@@ -385,7 +386,7 @@ Draw(float timeDelta)
 	LoadAllRequestedObjects();
 	BuildRenderList();
 
-	gui(timeDelta);
+	gui();
 //	dogizmo();
 
 	handleTool();
@@ -430,7 +431,7 @@ Draw(float timeDelta)
 }
 
 void
-Idle(float timeDelta)
+Idle(void)
 {
 	static int state = 0;
 	switch(state){
@@ -439,7 +440,7 @@ Idle(float timeDelta)
 		state = 1;
 		break;
 	case 1:
-		Draw(timeDelta);
+		Draw();
 		break;
 	}
 }

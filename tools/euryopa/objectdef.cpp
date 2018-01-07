@@ -98,7 +98,7 @@ SetupAtomic(rw::Atomic *atm)
 	rw::platform = driver;
 	// no need to switch back pipes because we reset it anyway
 
-	rw::MatFX::disableEffects(atm);	// so cloning won't reattach any MatFX pipes
+//	rw::MatFX::disableEffects(atm);	// so cloning won't reattach any MatFX pipes
 
 	if(params.neoWorldPipe)
 		atm->pipeline = neoWorldPipe;
@@ -106,7 +106,6 @@ SetupAtomic(rw::Atomic *atm)
 		SetupBuildingPipe(atm);
 	else
 		atm->pipeline = nil;
-assert(atm->pipeline = neoWorldPipe);
 	atm->setRenderCB(myRenderCB);
 }
 
@@ -115,6 +114,25 @@ ObjectDef::CantLoad(void)
 {
 	log("Can't load object %s\n", m_name);
 	m_cantLoad = true;
+}
+
+static rw::Clump*
+loadclump(rw::Stream *stream)
+{
+	using namespace rw;
+	rw::Clump *c = nil;
+	ChunkHeaderInfo header;
+	readChunkHeaderInfo(stream, &header);
+	UVAnimDictionary *prev = currentUVAnimDictionary;
+	if(header.type == ID_UVANIMDICT){
+		UVAnimDictionary *dict = UVAnimDictionary::streamRead(stream);
+		currentUVAnimDictionary = dict;
+		readChunkHeaderInfo(stream, &header);
+	}
+	if(header.type == ID_CLUMP)
+		c = Clump::streamRead(stream);
+	currentUVAnimDictionary= prev;
+	return c;
 }
 
 void
@@ -131,10 +149,8 @@ ObjectDef::LoadAtomic(void)
 
 	buffer = ReadFileFromImage(this->m_imageIndex, &size);
 	stream.open((uint8*)buffer, size);
-	if(rw::findChunk(&stream, rw::ID_CLUMP, nil, nil)){
-		clump = rw::Clump::streamRead(&stream);
-		if(clump == nil)
-			goto out;
+	clump = loadclump(&stream);
+	if(clump){
 		FORLIST(lnk, clump->atomics){
 			atomic = rw::Atomic::fromClump(lnk);
 			nodename = gta::getNodeName(atomic->getFrame());
@@ -148,10 +164,9 @@ ObjectDef::LoadAtomic(void)
 			SetupAtomic(atomic);
 		}
 		clump->destroy();
+		if(m_atomics[0] == nil)
+			CantLoad();
 	}
-	if(m_atomics[0] == nil)
-		CantLoad();
-out:
 	stream.close();
 }
 
@@ -166,19 +181,16 @@ ObjectDef::LoadClump(void)
 
 	buffer = ReadFileFromImage(this->m_imageIndex, &size);
 	stream.open((uint8*)buffer, size);
-	if(rw::findChunk(&stream, rw::ID_CLUMP, nil, nil)){
-		clump = rw::Clump::streamRead(&stream);
-		if(clump == nil)
-			goto out;
+	clump = loadclump(&stream);
+	if(clump){
 		FORLIST(lnk, clump->atomics){
 			atomic = rw::Atomic::fromClump(lnk);
 			SetupAtomic(atomic);
 		}
 		SetClump(clump);
+		if(m_clump == nil)
+			CantLoad();
 	}
-	if(m_clump == nil)
-		CantLoad();
-out:
 	stream.close();
 }
 

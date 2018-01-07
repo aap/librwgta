@@ -38,6 +38,8 @@ usage(void)
 	fprintf(stderr, "\t-m extract multiclump dff\n");
 	fprintf(stderr, "\t-v RW version, e.g. 33004 for 3.3.0.4\n");
 	fprintf(stderr, "\t-o output platform. ps2, xbox, mobile, d3d8, d3d9\n");
+	fprintf(stderr, "\t--ps2VCcar set up VC vehicle for use with PS2 and Xbox reflections\n");
+	fprintf(stderr, "\t--info dump some info about the file\n");
 	exit(1);
 }
 
@@ -105,11 +107,22 @@ dumpMatFXData(Material *m)
 		printf("%-32s ", env->tex->name);
 	printf("\n");
 
-//	if(env->coefficient){
-//		env->coefficient = 1.0f;
-//		m->surfaceProps.specular = 0.5f;
-//	}else
-//		m->surfaceProps.specular = 0.0f;
+}
+
+void
+setupMatFX_VCPS2Xbox(Material *m)
+{
+	if(MatFX::getEffects(m) != MatFX::ENVMAP)
+		return;
+	MatFX *matfx = MatFX::get(m);
+	int i = matfx->getEffectIndex(MatFX::ENVMAP);
+	MatFX::Env *env = &matfx->fx[i].env;
+
+	if(env->coefficient){
+		env->coefficient = 1.0f;
+		m->surfaceProps.specular = 0.5f;
+	}else
+		m->surfaceProps.specular = 0.0f;
 }
 
 void
@@ -278,6 +291,15 @@ extractmultiple(StreamFile &in)
 }
 
 int
+vertexAlpha(RGBA *col, int n)
+{
+	uint8 alpha = 0xFF;
+	while(n--)
+		alpha &= col++->alpha;
+	return alpha != 0xFF;
+}
+
+int
 main(int argc, char *argv[])
 {
 	rw::version = 0;
@@ -305,10 +327,19 @@ main(int argc, char *argv[])
 	int correctWinding = 0;
 	int multiclump = 0;
 	int setwhite = 0;
+	int ps2vccar = 0;
+	int info = 0;
 
 	char *s;
 	//char *seconddff = NULL;
 	ARGBEGIN{
+	case '-':
+		// hack for long options: _args is the long option
+		// and must be an empty string in the end
+		if(strcmp_ci(_args, "ps2vccar") == 0) ps2vccar++;
+		else if(strcmp_ci(_args, "info") == 0) info++;
+		_args = "";
+		break;
 	case 'u':
 		uninstance++;
 		break;
@@ -477,7 +508,6 @@ main(int argc, char *argv[])
 				m->color.red = 0xFF;
 				m->color.green = 0xFF;
 				m->color.blue = 0xFF;
-//				setSpecMap(m, "cabbiespeca");
 			}
 		}
 
@@ -492,6 +522,21 @@ main(int argc, char *argv[])
 	}
 */
 
+	if(ps2vccar)
+		FORLIST(lnk, c->atomics){
+			Atomic *a = Atomic::fromClump(lnk);
+//			gta::setPipelineID(a, 0);
+//			hAnimDoStream = 0;
+			Geometry *g = a->geometry;
+			for(int i = 0; i < g->matList.numMaterials; i++){
+				Material *m = g->matList.materials[i];
+				setupMatFX_VCPS2Xbox(m);
+			}
+		}
+
+	// Make sure we have all pipes attached for uninstance
+	FORLIST(lnk, c->atomics)
+		gta::attachCustomPipelines(Atomic::fromClump(lnk));;
 	int32 platform = findPlatform(c);
 	if(platform){
 		rw::platform = platform;
@@ -522,7 +567,47 @@ main(int argc, char *argv[])
 		rw::build = header.build;
 	}
 
-//	removeUnusedMaterials(c);
+	if(info){
+		int output = 0;
+#define PRINT(fmt, ...) do { if(!output) printf("%s: ", inputfilename); else putchar(' '); printf(fmt, __VA_ARGS__); output=1; }while(0)
+		if(currentUVAnimDictionary)
+			PRINT("uvanim");
+
+		int hasvertalpa = 0;
+		int haswetroad = 0;
+		int hasskin = 0;
+		int isnative = 0;
+		FORLIST(lnk, c->atomics){
+			Atomic *a = Atomic::fromClump(lnk);
+			Geometry *g = a->geometry;
+
+			if(Skin::get(g))
+				hasskin = 1;
+
+			if(g->flags & Geometry::NATIVE)
+				isnative = 1;
+
+			if(g->flags & Geometry::PRELIT && !isnative){
+				assert(g->colors);
+				RGBA *extracol = gta::getExtraVertColors(a);
+				if(vertexAlpha(g->colors, g->numVertices)){
+					if(extracol) haswetroad = 1;
+					else hasvertalpa = 1;
+				}
+				if(extracol && vertexAlpha(extracol, g->numVertices))
+					hasvertalpa = 1;
+			}
+		}
+		if(isnative) PRINT("instanced");
+		if(hasskin) PRINT("skin");
+		if(hasvertalpa) PRINT("vertalpha");
+		if(haswetroad) PRINT("wetroad");
+
+		if(output)
+			putchar('\n');
+	}
+
+	removeUnusedMaterials(c);
 
 	if(correctWinding)
 		FORLIST(lnk, c->atomics){

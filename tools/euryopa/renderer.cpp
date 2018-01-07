@@ -32,6 +32,8 @@ AddToRenderList(ObjectInst *inst, float dist)
 {
 	ObjectDef *obj = GetObjectDef(inst->m_objectId);
 	assert(inst->m_rwObject);
+
+	inst->PreRender();
 	if(obj->m_drawLast){
 		InstDist e;
 		e.inst = inst;
@@ -366,6 +368,7 @@ RenderInst(ObjectInst *inst)
 //		return;
 
 	obj = GetObjectDef(inst->m_objectId);
+	obj->m_hasPreRendered = false;
 
 	uint32 cull;
 	if(obj->m_noBackfaceCulling){

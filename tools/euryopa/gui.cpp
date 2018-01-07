@@ -82,6 +82,7 @@ uiMainmenu(void)
 		}
 		if(ImGui::BeginMenu("View")){
 			if(ImGui::MenuItem("Draw Collisions", nil, gRenderCollision)) { gRenderCollision ^= 1; }
+			if(ImGui::MenuItem("Play Animations", nil, gPlayAnimations)) { gPlayAnimations ^= 1; }
 			if(ImGui::MenuItem("Draw Background", nil, gRenderBackground)) { gRenderBackground ^= 1; }
 			if(ImGui::MenuItem("Draw Water", nil, gRenderWater)) { gRenderWater ^= 1; }
 			if(ImGui::MenuItem("Enable Fog", nil, gEnableFog)) { gEnableFog ^= 1; }
@@ -510,7 +511,7 @@ static ExampleAppLog logwindow;
 void addToLogWindow(const char *fmt, va_list args) { logwindow.AddLog(fmt, args); }
 
 void
-gui(float timeDelta)
+gui(void)
 {
 	static bool show_another_window = false;
 	static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);

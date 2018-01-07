@@ -336,7 +336,7 @@ AppEventHandler(sk::Event e, void *param)
 		break;
 	case IDLE:
 		timeStep = *(float*)param;
-		Idle(timeStep);
+		Idle();
 		return EVENTPROCESSED;
 	}
 	return sk::EVENTNOTPROCESSED;

@@ -44,10 +44,10 @@ neoWorldRenderCB(Atomic *atomic, d3d9::InstanceDataHeader *header)
 	for(uint32 i = 0; i < header->numMeshes; i++){
 		if(MatFX::getEffects(inst->material) == MatFX::DUAL){
 			MatFX *matfx = MatFX::get(inst->material);
-			MatFX::Dual *dual = &matfx->fx[matfx->getEffectIndex(MatFX::DUAL)].dual;
-			if(dual->tex == nil)
+			Texture *dualtex = matfx->getDualTexture();
+			if(dualtex == nil)
 				goto notex;
-			d3d::setTexture(1, dual->tex);
+			d3d::setTexture(1, dualtex);
 			lightfactor[0] = lightfactor[1] = lightfactor[2] = gNeoLightMapStrength;
 		}else{
 		notex:

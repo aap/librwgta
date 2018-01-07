@@ -50,6 +50,10 @@ customBuildingUninstanceCB(Geometry *geo, xbox::InstanceDataHeader *header)
 		          header->numVertices, header->stride);
 		src += sel == 4 ? 4 : 2*vertexFormatSizes[sel];
 	}
+
+	rw::V3d *extranormals = gta::allocateExtraNormals(geo);
+	uninstV3d(VERT_FLOAT3, extranormals, src,
+	          header->numVertices, header->stride);
 }
 
 void
@@ -61,14 +65,14 @@ registerXboxPipes(void)
 	pipe->pluginID = gta::RSPIPE_XBOX_CustomBuilding_PipeID;
 	pipe->pluginData = gta::RSPIPE_XBOX_CustomBuilding_PipeID;
 	pipe->instanceCB = nil;
-	pipe->uninstanceCB = customBuildingUninstanceCB;
+	pipe->uninstanceCB = defaultUninstanceCB;
 	XboxCustomBuildingPipe = pipe;
 
 	pipe = new xbox::ObjPipeline(PLATFORM_XBOX);
 	pipe->pluginID = gta::RSPIPE_XBOX_CustomBuildingDN_PipeID;
 	pipe->pluginData = gta::RSPIPE_XBOX_CustomBuildingDN_PipeID;
 	pipe->instanceCB = nil;
-	pipe->uninstanceCB = customBuildingUninstanceCB;
+	pipe->uninstanceCB = defaultUninstanceCB;
 	XboxCustomBuildingDNPipe = pipe;
 
 	pipe = new xbox::ObjPipeline(PLATFORM_XBOX);

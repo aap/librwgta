@@ -59,6 +59,7 @@ extern bool gUseBlurAmb;
 extern bool gNoTimeCull;
 extern bool gNoAreaCull;
 extern bool gDoBackfaceCulling;
+extern bool gPlayAnimations;
 
 // SA building pipe
 extern float gDayNightBalance;
@@ -152,7 +153,7 @@ extern int currentArea;
 bool IsHourInRange(int h1, int h2);
 void FindVersion(void);
 void LoadGame(void);
-void Idle(float timeDelta);
+void Idle(void);
 void DefinedState(void);
 
 // Game Data structures
@@ -258,6 +259,7 @@ struct ObjectDef
 	char m_animname[MODELNAMELEN];
 
 	bool m_cantLoad;
+	bool m_hasPreRendered;
 	int32 m_imageIndex;
 	float m_minDrawDist;
 	bool m_isBigBuilding;
@@ -327,6 +329,7 @@ struct ObjectInst
 	void SetupBigBuilding(void);
 	CRect GetBoundRect(void);
 	bool IsOnScreen(void);
+	void PreRender(void);
 
 	void JumpTo(void);
 	void Select(void);
@@ -464,5 +467,5 @@ namespace Clouds
 // GUI
 //
 
-void gui(float timeDelta);
+void gui(void);
 void uiShowCdImages(void);
