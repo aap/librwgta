@@ -10,7 +10,8 @@ using rw::V3d;
 void
 CCamera::Process(void)
 {
-	float scale = timeStep*30.0f;
+//	float scale = timeStep*30.0f;
+	float scale = 1.0f;
 //	scale = 1.0f;
 
 	float sensitivity = 1.0f;
@@ -87,7 +88,7 @@ CCamera::Process(void)
 		sidespeed = 0.0f;
 	if(sidespeed > 70.0f) sidespeed = 70.0f;
 	if(sidespeed < -70.0f) sidespeed = -70.0f;
-	TheCamera.pan(sidespeed, 0.0f);
+	TheCamera.pan(sidespeed*scale, 0.0f);
 
 
 

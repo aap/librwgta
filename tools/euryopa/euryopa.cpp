@@ -240,8 +240,8 @@ LoadGame(void)
 //	SetCurrentDirectory("C:/Users/aap/games/gtasa");
 //	SetCurrentDirectory("F://gtasa");
 //	SetCurrentDirectory("F://gta3_xbox");
-//	SetCurrentDirectory("F://gtasa_pc");
 //	SetCurrentDirectory("F://gtavc_xbox");
+//	SetCurrentDirectory("F://gtasa_pc");
 //	SetCurrentDirectory("I://");
 //	SetCurrentDirectory("C:\\Users\\aap\\games\\gta3d_latest");
 

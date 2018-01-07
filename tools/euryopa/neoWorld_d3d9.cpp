@@ -2,17 +2,17 @@
 
 using namespace rw;
 
-ObjPipeline *neoWorldPipe;
-
 #ifdef RW_D3D9
 
 using namespace d3d;
 using namespace d3d9;
 
+rw::ObjPipeline *neoWorldPipe;
+
 static void *neoWorldIII_PS;
 static void *neoWorldVC_PS;
 
-void
+static void
 neoWorldRenderCB(Atomic *atomic, d3d9::InstanceDataHeader *header)
 {
 	RawMatrix world;
@@ -54,13 +54,13 @@ neoWorldRenderCB(Atomic *atomic, d3d9::InstanceDataHeader *header)
 			d3d::setTexture(1, nil);
 			lightfactor[0] = lightfactor[1] = lightfactor[2] = 0.0f;
 		}
-		lightfactor[3] = 1.0f;
+		lightfactor[3] = inst->material->color.alpha/255.0f;
 		d3d::setTexture(0, inst->material->texture);
 		d3ddevice->SetPixelShaderConstantF(0, lightfactor, 1);
 
 		SetRenderState(VERTEXALPHA, inst->vertexAlpha || inst->material->color.alpha != 255);
 
-		rw::RGBA col = { 255, 255, 255, inst->material->color.alpha };
+		rw::RGBA col = { 255, 255, 255, 255 };
 		d3d::setMaterial(inst->material->surfaceProps, col);
 
 		d3d::setRenderState(D3DRS_AMBIENTMATERIALSOURCE, D3DMCS_MATERIAL);

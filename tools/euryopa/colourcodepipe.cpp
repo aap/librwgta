@@ -108,7 +108,7 @@ colourCodeRenderCB(Atomic *atomic, gl3::InstanceDataHeader *header)
 	RGBAf col;
 
 	setWorldMatrix(atomic->getFrame()->getLTM());
-	lightingCB();
+	lightingCB(0);
 
 	glBindBuffer(GL_ARRAY_BUFFER, header->vbo);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, header->ibo);

@@ -44,25 +44,6 @@ getComposedMatrix(Atomic *atm, RawMatrix *combined)
 	RawMatrix::transpose(combined, &compxpos);
 }
 
-// similar to GTA code, some useless stuff
-void
-getEnvMatrix(Atomic *atomic, Frame *envframe, RawMatrix *envmat)
-{
-	Matrix inv, env;
-	Clump *clump;
-	Frame *frame;
-
-	if(envframe == nil)
-		envframe = ((Camera*)engine->currentCamera)->getFrame();
-
-	clump = atomic->clump;
-
-	Matrix::invert(&inv, envframe->getLTM());
-	frame = clump ? clump->getFrame() : atomic->getFrame();
-	Matrix::mult(&env, frame->getLTM(), &inv);
-	convMatrix(envmat, &env);
-}
-
 static void
 buildingRenderCB_PS2(Atomic *atomic, d3d9::InstanceDataHeader *header)
 {
@@ -99,7 +80,7 @@ buildingRenderCB_PS2(Atomic *atomic, d3d9::InstanceDataHeader *header)
 	d3ddevice->SetVertexShaderConstantF(REG_ambient, (float*)&pAmbient->color, 1);
 
 	RawMatrix envmat;
-	getEnvMatrix(atomic, nil, &envmat);
+	GetBuildingEnvMatrix(atomic, nil, &envmat);
 	d3ddevice->SetVertexShaderConstantF(REG_envmat, (float*)&envmat, 4);
 
 	InstanceData *inst = header->inst;
@@ -157,17 +138,19 @@ buildingRenderCB_PS2(Atomic *atomic, d3d9::InstanceDataHeader *header)
 			fxparams[1] = 1.0f;
 			d3ddevice->SetVertexShaderConstantF(REG_fxParams, fxparams, 1);
 
-			int dst;
+			int dst, fog;
 			dst = GetRenderState(DESTBLEND);
+			fog = GetRenderState(FOGENABLE);
 			SetRenderState(DESTBLEND, BLENDONE);
+			SetRenderState(FOGENABLE, 0);
 			SetRenderState(VERTEXALPHA, 1);
 			d3d::flushCache();
 			d3ddevice->DrawIndexedPrimitive((D3DPRIMITIVETYPE)header->primType, inst->baseIndex,
 			                                0, inst->numVertices,
 			                                inst->startIndex, inst->numPrimitives);
 			SetRenderState(DESTBLEND, dst);
+			SetRenderState(FOGENABLE, fog);
 
-			d3d::setTexture(0, env->texture);
 			setVertexShader(gBuildingPipeSwitch == PLATFORM_PC ? pcBuildingVS : ps2BuildingVS);
 			setPixelShader(simplePS);
 		}

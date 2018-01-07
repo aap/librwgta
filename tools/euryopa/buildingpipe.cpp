@@ -60,6 +60,25 @@ ConvertXboxGeometry(Atomic *atm)
 	// Better handle in the instanceCB
 }
 
+// similar to GTA code, some useless stuff
+void
+GetBuildingEnvMatrix(Atomic *atomic, Frame *envframe, RawMatrix *envmat)
+{
+	Matrix inv, env;
+	Clump *clump;
+	Frame *frame;
+
+	if(envframe == nil)
+		envframe = ((Camera*)engine->currentCamera)->getFrame();
+
+	clump = atomic->clump;
+
+	Matrix::invert(&inv, envframe->getLTM());
+	frame = clump ? clump->getFrame() : atomic->getFrame();
+	Matrix::mult(&env, frame->getLTM(), &inv);
+	convMatrix(envmat, &env);
+}
+
 void
 SetupBuildingEnvMap(rw::Material *m)
 {

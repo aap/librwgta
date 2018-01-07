@@ -36,19 +36,16 @@ layout(std140) uniform Object
 
 uniform vec4 u_matColor;
 uniform vec4 u_surfaceProps;	// amb, spec, diff, extra
-uniform vec4 u_dayparam;
-uniform vec4 u_nightparam;
-uniform float u_colorscale;
-uniform mat4  u_texmat;
 
 layout(location = 0) in vec3 in_pos;
 layout(location = 1) in vec3 in_normal;
-layout(location = 2) in vec4 in_nightcolor;
+layout(location = 2) in vec4 in_color;
 layout(location = 3) in vec2 in_tex0;
-layout(location = 4) in vec4 in_daycolor;
+layout(location = 4) in vec2 in_tex1;
 
 out vec4 v_color;
 out vec2 v_tex0;
+out vec2 v_tex1;
 out float v_fog;
 
 void
@@ -57,12 +54,18 @@ main(void)
 	vec4 V = u_world * vec4(in_pos, 1.0);
 	vec4 cV = u_view * V;
 	gl_Position = u_proj * cV;
+	vec3 N = mat3(u_world) * in_normal;
 
-	v_color = in_nightcolor*u_nightparam + in_daycolor*u_dayparam;
-	v_color *= u_matColor / u_colorscale;
+	v_color = in_color;
+	for(int i = 0; i < u_numLights; i++){
+		float L = max(0.0, dot(N, -normalize(u_lights[i].direction.xyz)));
+		v_color.rgb += u_lights[i].color.rgb*L*u_surfaceProps.z;
+	}
 	v_color.rgb += u_ambLight.rgb*u_surfaceProps.x;
+	v_color *= u_matColor;
 
-	v_tex0 = (u_texmat * vec4(in_tex0, 0.0f, 1.0f)).xy;
+	v_tex0 = in_tex0;
+	v_tex1 = in_tex1;
 
 	v_fog = clamp((cV.z - u_fogEnd)/(u_fogStart - u_fogEnd), 0.0, 1.0);
 }

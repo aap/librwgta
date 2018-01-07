@@ -11,8 +11,11 @@ enum AttribIndices
 	ATTRIB_DAYCOLOR = 4,
 };
 
-static gl3::Shader *ps2BuildingShader;
-int32 u_dayparam, u_nightparam, u_colorscale;
+static gl3::Shader *ps2BuildingShader, *ps2BuildingFXShader;
+int32 u_dayparam, u_nightparam;	// DN
+int32 u_texmat;	// UVA
+int32 u_envmat, u_envXform, u_shininess;	// EnvMap
+int32 u_colorscale;
 
 #define U(i) currentShader->uniformLocations[i]
 
@@ -24,6 +27,7 @@ buildingInstanceCB(Geometry *geo, gl3::InstanceDataHeader *header)
 	AttribDesc attribs[12], *a, *b;
 	uint32 stride;
 	gta::ExtraVertColors *extracols = GETEXTRACOLOREXT(geo);
+	V3d *extranormals = gta::getExtraNormals(geo);
 
 	//
 	// Create attribute descriptions
@@ -43,7 +47,7 @@ buildingInstanceCB(Geometry *geo, gl3::InstanceDataHeader *header)
 	// Normals
 	// TODO: compress
 	bool hasNormals = !!(geo->flags & Geometry::NORMALS);
-	if(hasNormals){
+	if(hasNormals || extranormals){
 		a->index = ATTRIB_NORMAL;
 		a->size = 3;
 		a->type = GL_FLOAT;
@@ -114,11 +118,11 @@ buildingInstanceCB(Geometry *geo, gl3::InstanceDataHeader *header)
 	        header->totalNumVertex, a->stride);
 
 	// Normals
-	if(hasNormals){
+	if(hasNormals || extranormals){
 		for(a = attribs; a->index != ATTRIB_NORMAL; a++)
 			;
 		instV3d(VERT_FLOAT3, verts + a->offset,
-			geo->morphTargets[0].normals,
+			hasNormals ? geo->morphTargets[0].normals : extranormals,
 			header->totalNumVertex, a->stride);
 	}
 
@@ -177,12 +181,15 @@ buildingInstanceCB(Geometry *geo, gl3::InstanceDataHeader *header)
 static void
 buildingRenderCB(Atomic *atomic, gl3::InstanceDataHeader *header)
 {
+	RawMatrix ident;
+	Matrix *texmat;
 	Material *m;
 	RGBAf col;
 	GLfloat surfProps[4];
 
+	RawMatrix::setIdentity(&ident);
 	setWorldMatrix(atomic->getFrame()->getLTM());
-	lightingCB();
+	lightingCB(0);
 
 	glBindBuffer(GL_ARRAY_BUFFER, header->vbo);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, header->ibo);
@@ -207,6 +214,9 @@ buildingRenderCB(Atomic *atomic, gl3::InstanceDataHeader *header)
 	glUniform4fv(U(u_dayparam), 1, dayparam);
 	glUniform4fv(U(u_nightparam), 1, nightparam);
 
+	RawMatrix envmat;
+	GetBuildingEnvMatrix(atomic, nil, &envmat);
+
 	while(n--){
 		m = inst->material;
 
@@ -215,6 +225,9 @@ buildingRenderCB(Atomic *atomic, gl3::InstanceDataHeader *header)
 			colorscale = 255.0f/128.0f;
 		setTexture(0, m->texture);
 		glUniform1fv(U(u_colorscale), 1, &colorscale);
+
+		int hasEnv = (*(uint32*)&inst->material->surfaceProps.specular) & 1;
+		gta::EnvMat *env = gta::getEnvMat(inst->material);
 
 		convColor(&col, &m->color);
 		glUniform4fv(U(u_matColor), 1, (GLfloat*)&col);
@@ -225,11 +238,53 @@ buildingRenderCB(Atomic *atomic, gl3::InstanceDataHeader *header)
 		surfProps[3] = 0.0f;
 		glUniform4fv(U(u_surfaceProps), 1, surfProps);
 
+		// UV animation
+		if(MatFX::getEffects(inst->material) == MatFX::UVTRANSFORM){
+			MatFX *matfx = MatFX::get(inst->material);
+			matfx->getUVTransformMatrices(&texmat, nil);
+			if(texmat)
+				glUniformMatrix4fv(U(u_texmat), 1, 0, (float*)texmat);
+			else
+				glUniformMatrix4fv(U(u_texmat), 1, 0, (float*)&ident);
+		}else
+			glUniformMatrix4fv(U(u_texmat), 1, 0, (float*)&ident);
+
 		rw::SetRenderState(VERTEXALPHA, inst->vertexAlpha || m->color.alpha != 0xFF);
 
 		flushCache();
 		glDrawElements(header->primType, inst->numIndex,
 		               GL_UNSIGNED_SHORT, (void*)(uintptr)inst->offset);
+
+
+		if(hasEnv){
+			ps2BuildingFXShader->use();
+			glUniformMatrix4fv(U(u_envmat), 1, 0, (float*)&envmat);
+
+			setTexture(0, env->texture);
+
+			float envxform[4];
+			envxform[0] = envxform[1] = 0.0f;
+			envxform[2] = env->getScaleX();
+			envxform[3] = env->getScaleY();
+			glUniform4fv(U(u_envXform), 1, envxform);
+
+			float shininess;
+			shininess = env->getShininess();
+			glUniform1fv(U(u_shininess), 1, &shininess);
+
+			int dst;
+			dst = GetRenderState(DESTBLEND);
+			SetRenderState(DESTBLEND, BLENDONE);
+			SetRenderState(VERTEXALPHA, 1);
+
+			flushCache();
+			glDrawElements(header->primType, inst->numIndex,
+			               GL_UNSIGNED_SHORT, (void*)(uintptr)inst->offset);
+
+			SetRenderState(DESTBLEND, dst);
+			ps2BuildingShader->use();
+		}
+
 		inst++;
 	}
 	disableAttribPointers(header->attribDesc, header->numAttribs);
@@ -242,11 +297,19 @@ MakeCustomBuildingPipelines(void)
 
 	u_dayparam = registerUniform("u_dayparam");
 	u_nightparam = registerUniform("u_nightparam");
+	u_texmat = registerUniform("u_texmat");
+	u_envmat = registerUniform("u_envmat");
+	u_envXform = registerUniform("u_envXform");
+	u_shininess = registerUniform("u_shininess");
 	u_colorscale = registerUniform("u_colorscale");
 
 #include "gl_shaders/ps2Building_vs_gl3.inc"
 #include "gl_shaders/ps2Building_fs_gl3.inc"
 	ps2BuildingShader = Shader::fromStrings(ps2Building_vert_src, ps2Building_frag_src);
+#include "gl_shaders/ps2BuildingFX_vs_gl3.inc"
+#include "gl_shaders/ps2Env_fs_gl3.inc"
+	ps2BuildingFXShader = Shader::fromStrings(ps2BuildingFX_vert_src, ps2Env_frag_src);
+	assert(ps2BuildingFXShader);
 
 	pipe = new gl3::ObjPipeline(PLATFORM_GL3);
 	pipe->pluginID = gta::RSPIPE_PC_CustomBuilding_PipeID;
