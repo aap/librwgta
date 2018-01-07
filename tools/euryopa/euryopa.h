@@ -62,6 +62,7 @@ extern bool gDoBackfaceCulling;
 extern bool gPlayAnimations;
 
 // SA building pipe
+extern int gBuildingPipeSwitch;
 extern float gDayNightBalance;
 extern float gWetRoadEffect;
 
@@ -107,6 +108,9 @@ enum eGame
 	GAME_VC,
 	GAME_SA,
 };
+using rw::PLATFORM_PS2;
+using rw::PLATFORM_XBOX;
+enum { PLATFORM_PC = rw::PLATFORM_D3D8 };
 extern int gameversion;
 extern int gameplatform;
 inline bool isIII(void) { return gameversion == GAME_III; }

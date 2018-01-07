@@ -29,6 +29,7 @@ bool gDoBackfaceCulling;	// init from params
 bool gPlayAnimations = true;
 
 // SA building pipe
+int gBuildingPipeSwitch = PLATFORM_PS2;
 float gDayNightBalance;
 float gWetRoadEffect;
 
@@ -85,7 +86,7 @@ InitParams(void)
 		params.waterStart.set(-2048.0f, -2048.0f);
 		params.waterEnd.set(2048.0f, 2048.0f);
 		params.backfaceCull = false;
-		if(gameplatform == rw::PLATFORM_XBOX){
+		if(gameplatform == PLATFORM_XBOX){
 			params.txdFallbackGeneric = true;
 			params.neoWorldPipe = GAME_III;
 		}
@@ -106,9 +107,9 @@ InitParams(void)
 		params.waterTex = "waterclear256";
 		params.waterStart.set(-2048.0f - 400.0f, -2048.0f);
 		params.waterEnd.set(2048.0f - 400.0f, 2048.0f);
-		if(gameplatform == rw::PLATFORM_PS2)
+		if(gameplatform == PLATFORM_PS2)
 			params.backfaceCull = false;
-		if(gameplatform == rw::PLATFORM_XBOX){
+		else if(gameplatform == PLATFORM_XBOX){
 			params.neoWorldPipe = GAME_VC;
 			params.backfaceCull = false;
 		}
@@ -129,6 +130,7 @@ InitParams(void)
 		params.daynightPipe = true;
 		params.water = GAME_SA;
 		params.waterTex = "waterclear256";
+		gBuildingPipeSwitch = gameplatform;
 		break;
 	// more configs in the future (LCSPC, VCSPC, UG, ...)
 	}
@@ -150,14 +152,15 @@ FindVersion(void)
 		return;
 	}
 	if(doesFileExist("SYSTEM.CNF"))
-		gameplatform = rw::PLATFORM_PS2;
+		gameplatform = PLATFORM_PS2;
 	else if(doesFileExist("default.xbe"))
-		gameplatform = rw::PLATFORM_XBOX;
+		gameplatform = PLATFORM_XBOX;
 	else
-		gameplatform = 0;
+		gameplatform = PLATFORM_PC;
 	fclose(f);
 }
 
+/*
 void
 test(void)
 {
@@ -178,7 +181,15 @@ test(void)
 				printf(" %s\n", GetObjectDef(inst2->m_objectId)->m_name);
 		}
 	}
-}
+	if(0){
+		int i;
+		CPtrNode *p;
+		i = 0;
+		for(p = instances.first; p; p = p->next)
+			i++;
+		log("%d instances\n", i);
+	}
+}*/
 
 void
 handleTool(void)
@@ -229,6 +240,7 @@ LoadGame(void)
 //	SetCurrentDirectory("C:/Users/aap/games/gtasa");
 //	SetCurrentDirectory("F://gtasa");
 //	SetCurrentDirectory("F://gta3_xbox");
+//	SetCurrentDirectory("F://gtasa_pc");
 //	SetCurrentDirectory("F://gtavc_xbox");
 //	SetCurrentDirectory("I://");
 //	SetCurrentDirectory("C:\\Users\\aap\\games\\gta3d_latest");
@@ -241,8 +253,8 @@ LoadGame(void)
 	default: panic("unknown game");
 	}
 	switch(gameplatform){
-	case rw::PLATFORM_PS2: debug("assuming PS2\n"); break;
-	case rw::PLATFORM_XBOX: debug("assuming Xbox\n"); break;
+	case PLATFORM_PS2: debug("assuming PS2\n"); break;
+	case PLATFORM_XBOX: debug("assuming Xbox\n"); break;
 	default: debug("assuming PC\n"); break;
 	}
 	InitParams();
@@ -266,6 +278,8 @@ LoadGame(void)
 	}
 
 	Timecycle::Initialize();
+	if(params.neoWorldPipe)
+		Timecycle::InitNeoWorldTweak();
 	WaterLevel::Initialise();
 
 	AddColSlot("generic");
@@ -309,17 +323,6 @@ LoadGame(void)
 		if(obj) obj->m_isHidden = true;
 		obj = GetObjectDef("IslandLODbeach", nil);
 		if(obj) obj->m_isHidden = true;
-	}
-
-	//test();
-
-	if(0){
-		int i;
-		CPtrNode *p;
-		i = 0;
-		for(p = instances.first; p; p = p->next)
-			i++;
-		log("%d instances\n", i);
 	}
 }
 

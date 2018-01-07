@@ -27,8 +27,11 @@ enum {
 };
 
 
-static void *ps2BuildingVS, *ps2BuildingFxVS;
+static void *ps2BuildingVS, *pcBuildingVS, *ps2BuildingFxVS;
 static void *simplePS, *ps2EnvPS;
+
+void setVertexShader(void *vs) { d3ddevice->SetVertexShader((IDirect3DVertexShader9*)vs); }
+void setPixelShader(void *ps) { d3ddevice->SetPixelShader((IDirect3DPixelShader9*)ps); }
 
 void
 getComposedMatrix(Atomic *atm, RawMatrix *combined)
@@ -73,9 +76,8 @@ buildingRenderCB_PS2(Atomic *atomic, d3d9::InstanceDataHeader *header)
 	d3ddevice->SetIndices((IDirect3DIndexBuffer9*)header->indexBuffer);
 	d3ddevice->SetVertexDeclaration((IDirect3DVertexDeclaration9*)header->vertexDeclaration);
 
-
-	d3ddevice->SetVertexShader((IDirect3DVertexShader9*)ps2BuildingVS);
-	d3ddevice->SetPixelShader((IDirect3DPixelShader9*)simplePS);
+	setVertexShader(gBuildingPipeSwitch == PLATFORM_PC ? pcBuildingVS : ps2BuildingVS);
+	setPixelShader(simplePS);
 
 	getComposedMatrix(atomic, &combined);
 	d3ddevice->SetVertexShaderConstantF(REG_transform, (float*)&combined, 4);
@@ -103,7 +105,7 @@ buildingRenderCB_PS2(Atomic *atomic, d3d9::InstanceDataHeader *header)
 	InstanceData *inst = header->inst;
 	for(uint32 i = 0; i < header->numMeshes; i++){
 		float colorscale = 1.0f;
-		if(inst->material->texture)
+		if(inst->material->texture && gBuildingPipeSwitch == PLATFORM_PS2)
 			colorscale = 255.0f/128.0f;
 		d3ddevice->SetVertexShaderConstantF(REG_shaderParams, &colorscale, 1);
 		d3ddevice->SetPixelShaderConstantF(0, &colorscale, 1);
@@ -139,8 +141,8 @@ buildingRenderCB_PS2(Atomic *atomic, d3d9::InstanceDataHeader *header)
 		                                inst->startIndex, inst->numPrimitives);
 
 		if(hasEnv){
-			d3ddevice->SetVertexShader((IDirect3DVertexShader9*)ps2BuildingFxVS);
-			d3ddevice->SetPixelShader((IDirect3DPixelShader9*)ps2EnvPS);
+			setVertexShader(ps2BuildingFxVS);
+			setPixelShader(ps2EnvPS);
 
 			d3d::setTexture(0, env->texture);
 
@@ -166,8 +168,8 @@ buildingRenderCB_PS2(Atomic *atomic, d3d9::InstanceDataHeader *header)
 			SetRenderState(DESTBLEND, dst);
 
 			d3d::setTexture(0, env->texture);
-			d3ddevice->SetVertexShader((IDirect3DVertexShader9*)ps2BuildingVS);
-			d3ddevice->SetPixelShader((IDirect3DPixelShader9*)simplePS);
+			setVertexShader(gBuildingPipeSwitch == PLATFORM_PC ? pcBuildingVS : ps2BuildingVS);
+			setPixelShader(simplePS);
 		}
 
 		inst++;
@@ -348,8 +350,10 @@ MakeCustomBuildingPipelines(void)
 	d3d9::ObjPipeline *pipe;
 
 #include "d3d_shaders/ps2BuildingVS.inc"
+#include "d3d_shaders/pcBuildingVS.inc"
 #include "d3d_shaders/simplePS.inc"
 	d3ddevice->CreateVertexShader((DWORD*)ps2BuildingVS_cso, (IDirect3DVertexShader9**)&ps2BuildingVS);
+	d3ddevice->CreateVertexShader((DWORD*)pcBuildingVS_cso, (IDirect3DVertexShader9**)&pcBuildingVS);
 	d3ddevice->CreatePixelShader((DWORD*)simplePS_cso, (IDirect3DPixelShader9**)&simplePS);
 
 #include "d3d_shaders/ps2BuildingFxVS.inc"

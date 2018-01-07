@@ -43,6 +43,7 @@ Interpolate(ColourSet *dst, ColourSet *a, ColourSet *b, float fa, float fb)
 	dst->intensityLimit = fa * a->intensityLimit + fb * b->intensityLimit;
 	dst->waterFogAlpha = fa * a->waterFogAlpha + fb * b->waterFogAlpha;
 	dst->dirMult = fa * a->dirMult + fb * b->dirMult;
+	dst->lightMapIntensity = fa * a->lightMapIntensity + fb * b->lightMapIntensity;
 }
 
 static ColourSet *timecycleData;
@@ -327,6 +328,56 @@ Initialize(void)
 	}
 }
 
+static void
+readFloat(char *s, int line, int field, uint32 offset)
+{
+	ColourSet *cs = &GetColourSet(line, field);
+	sscanf(s, "%f", (float*)((uint8*)cs + offset));
+}
+
+static void
+neoReadWeatherTimeBlock(FILE *file, void (*f)(char*,int,int,uint32), uint32 offset)
+{
+	char buf[24], *p;
+	int c;
+	int line, field;
+
+	line = 0;
+	c = getc(file);
+	while(c != EOF && line < params.numHours){
+		field = 0;
+		if(c != EOF && c != '#'){
+			while(c != EOF && c != '\n' && field < params.numWeathers){
+				p = buf;
+				while(c != EOF && c == '\t')
+					c = getc(file);
+				*p++ = c;
+				while(c = getc(file), c != EOF && c != '\t' && c != '\n')
+					*p++ = c;
+				*p++ = '\0';
+				f(buf, line, field, offset);
+				field++;
+			}
+			line++;
+		}
+		while(c != EOF && c != '\n')
+			c = getc(file);
+		c = getc(file);
+	}
+	ungetc(c, file);
+}
+
+void
+InitNeoWorldTweak(void)
+{
+	FILE *file;
+	if(file = fopen_ci("neo/worldTweakingTable.dat", "r"), file){
+		neoReadWeatherTimeBlock(file, readFloat, offsetof(ColourSet, lightMapIntensity));
+		fclose(file);
+	}else
+		log("warning: couldn't open neo/worldTweakingTable.dat");
+}
+
 void
 Update(void)
 {
@@ -371,6 +422,8 @@ Update(void)
 	currentFogColour.red = (currentColours.skyTop.red + 2.0f*currentColours.skyBottom.red)/3.0f;
 	currentFogColour.green = (currentColours.skyTop.green + 2.0f*currentColours.skyBottom.green)/3.0f;
 	currentFogColour.blue = (currentColours.skyTop.blue + 2.0f*currentColours.skyBottom.blue)/3.0f;
+
+	gNeoLightMapStrength = currentColours.lightMapIntensity;
 }
 
 void

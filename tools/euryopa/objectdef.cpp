@@ -104,8 +104,13 @@ SetupAtomic(rw::Atomic *atm)
 		atm->pipeline = neoWorldPipe;
 	else if(params.daynightPipe && IsBuildingPipeAttached(atm))
 		SetupBuildingPipe(atm);
-	else
-		atm->pipeline = nil;
+	else{
+		if(params.daynightPipe)
+			// TEMPORARY because our MatFX can't do UV anim yet
+			SetupBuildingPipe(atm);
+		else
+			atm->pipeline = nil;
+	}
 	atm->setRenderCB(myRenderCB);
 }
 

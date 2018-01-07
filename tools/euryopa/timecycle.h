@@ -30,12 +30,15 @@ namespace Timecycle
 		float intensityLimit;
 		float waterFogAlpha;
 		float dirMult;
+		// neo
+		float lightMapIntensity;
 	};
 	extern ColourSet currentColours;
 	extern rw::RGBAf currentFogColour;
 	extern rw::RGBA belowHorizonColour;
 
 	void Initialize(void);
+	void InitNeoWorldTweak(void);
 	void Update(void);
 	void SetLights(void);
 }

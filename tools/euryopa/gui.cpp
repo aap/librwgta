@@ -87,7 +87,7 @@ uiMainmenu(void)
 			if(ImGui::MenuItem("Draw Water", nil, gRenderWater)) { gRenderWater ^= 1; }
 			if(ImGui::MenuItem("Enable Fog", nil, gEnableFog)) { gEnableFog ^= 1; }
 			if(params.timecycle == GAME_VC)
-			if(ImGui::MenuItem("Use Blur Ambient", nil, gUseBlurAmb)) { gUseBlurAmb ^= 1; }
+				if(ImGui::MenuItem("Use Blur Ambient", nil, gUseBlurAmb)) { gUseBlurAmb ^= 1; }
 			if(ImGui::MenuItem("Backface Culling", nil, gDoBackfaceCulling)) { gDoBackfaceCulling ^= 1; }
 
 			ImGui::Separator();
@@ -101,7 +101,7 @@ uiMainmenu(void)
 			if(ImGui::MenuItem("Render all Areas", nil, gNoAreaCull)) { gNoAreaCull ^= 1; }
 			ImGui::EndMenu();
 		}
-		if(ImGui::BeginMenu("Misc")){
+		if(ImGui::BeginMenu("Window")){
 			if(ImGui::MenuItem("Show Demo Window", nil, showDemoWindow)) { showDemoWindow ^= 1; }
 			if(ImGui::MenuItem("Show Editor Window", nil, showEditorWindow)) { showEditorWindow ^= 1; }
 			if(ImGui::MenuItem("Show Info Window", nil, showInstanceWindow)) { showInstanceWindow ^= 1; }
@@ -261,7 +261,7 @@ uiEditorWindow(void)
 
 		if(params.daynightPipe){
 			ImGui::SliderFloat("Day/Night Balance", &gDayNightBalance, 0.0f, 1.0f, "%.2f");
-			if(gameplatform != rw::PLATFORM_XBOX)
+			if(gameplatform != PLATFORM_XBOX)
 				ImGui::SliderFloat("Wet Road Effect", &gWetRoadEffect, 0.0f, 1.0f, "%.2f");
 		}
 
@@ -294,6 +294,37 @@ uiEditorWindow(void)
 
 		if(params.neoWorldPipe)
 			ImGui::SliderFloat("Neo Light map", &gNeoLightMapStrength, 0.0f, 1.0f, "%.2f");
+
+		ImGui::TreePop();
+	}
+
+	if(ImGui::TreeNode("Rendering")){
+		ImGui::Checkbox("Draw Collisions", &gRenderCollision);
+		ImGui::Checkbox("Play Animations", &gPlayAnimations);
+		ImGui::Checkbox("Draw Background", &gRenderBackground);
+		ImGui::Checkbox("Draw Water", &gRenderWater);
+		ImGui::Checkbox("Enable Fog", &gEnableFog);
+		if(params.timecycle == GAME_VC)
+			ImGui::Checkbox("Use Blur Ambient", &gUseBlurAmb);
+		ImGui::Checkbox("Backface Culling", &gDoBackfaceCulling);
+
+		ImGui::Separator();
+		static int render = 0;
+		ImGui::RadioButton("Render Normal", &render, 0);
+		ImGui::RadioButton("Render only HD", &render, 1);
+		ImGui::RadioButton("Render only LOD", &render, 2);
+		gRenderOnlyHD = !!(render&1);
+		gRenderOnlyLod = !!(render&2);
+		ImGui::Checkbox("Render all Timed Objects", &gNoTimeCull);
+		ImGui::Checkbox("Render all Areas", &gNoAreaCull);
+		ImGui::Separator();
+
+		if(params.daynightPipe){
+			ImGui::Text("Building Pipe"); ImGui::SameLine();
+			ImGui::RadioButton("PS2", &gBuildingPipeSwitch, PLATFORM_PS2); ImGui::SameLine();
+			ImGui::RadioButton("PC", &gBuildingPipeSwitch, PLATFORM_PC); ImGui::SameLine();
+			ImGui::RadioButton("Xbox", &gBuildingPipeSwitch, PLATFORM_XBOX);
+		}
 
 		ImGui::TreePop();
 	}

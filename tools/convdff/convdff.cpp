@@ -577,6 +577,8 @@ main(int argc, char *argv[])
 		int haswetroad = 0;
 		int hasskin = 0;
 		int isnative = 0;
+		int extracols = 0;
+		int extranorms = 0;
 		FORLIST(lnk, c->atomics){
 			Atomic *a = Atomic::fromClump(lnk);
 			Geometry *g = a->geometry;
@@ -587,9 +589,12 @@ main(int argc, char *argv[])
 			if(g->flags & Geometry::NATIVE)
 				isnative = 1;
 
+			RGBA *extracol = gta::getExtraVertColors(a);
+			V3d *extranorm = gta::getExtraNormals(g);
+			if(extracol) extracols = 1;
+			if(extranorm) extranorms = 1;
 			if(g->flags & Geometry::PRELIT && !isnative){
 				assert(g->colors);
-				RGBA *extracol = gta::getExtraVertColors(a);
 				if(vertexAlpha(g->colors, g->numVertices)){
 					if(extracol) haswetroad = 1;
 					else hasvertalpa = 1;
@@ -601,6 +606,8 @@ main(int argc, char *argv[])
 		if(isnative) PRINT("instanced");
 		if(hasskin) PRINT("skin");
 		if(hasvertalpa) PRINT("vertalpha");
+		if(extracols) PRINT("extracolors");
+		if(extranorms) PRINT("extranormals");
 		if(haswetroad) PRINT("wetroad");
 
 		if(output)
