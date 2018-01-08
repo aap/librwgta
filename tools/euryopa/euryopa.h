@@ -42,6 +42,7 @@ void plUpdatePad(CControllerState *state);
 void ConvertTxd(rw::TexDictionary *txd);
 
 extern float timeStep;
+extern float avgTimeStep;
 
 #define DEGTORAD(d) (d/180.0f*PI)
 
@@ -54,12 +55,17 @@ extern bool gRenderOnlyLod;
 extern bool gRenderOnlyHD;
 extern bool gRenderBackground;
 extern bool gRenderWater;
+extern bool gRenderPostFX;
 extern bool gEnableFog;
 extern bool gUseBlurAmb;
 extern bool gNoTimeCull;
 extern bool gNoAreaCull;
 extern bool gDoBackfaceCulling;
 extern bool gPlayAnimations;
+
+// SA postfx
+extern int  gColourFilter;
+extern bool gRadiosity;
 
 // SA building pipe
 extern int gBuildingPipeSwitch;
@@ -451,6 +457,10 @@ void RenderColModelWire(CColModel *col, rw::Matrix *xform, bool onlyBounds);
 void RenderAxesWidget(rw::V3d pos, rw::V3d x, rw::V3d y, rw::V3d z);
 void RenderEverythingCollisions(void);
 void RenderDebugLines(void);
+
+
+void RenderPostFX(void);
+
 
 namespace WaterLevel
 {

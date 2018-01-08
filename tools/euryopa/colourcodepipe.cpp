@@ -71,7 +71,7 @@ GetColourCode(int x, int y)
 
 	D3DLOCKED_RECT d3dlr;
 	D3DSURFACE_DESC desc;
-	LPDIRECT3DSURFACE9 surf = nil;
+	IDirect3DSurface9 *surf = nil;
 	backbuffer->GetDesc(&desc);
 	d3ddevice->CreateOffscreenPlainSurface(desc.Width, desc.Height, desc.Format,
 		D3DPOOL_SYSTEMMEM, &surf, nil);

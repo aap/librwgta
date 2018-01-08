@@ -2,6 +2,7 @@
 #include <Xinput.h>
 
 float timeStep;
+float avgTimeStep;
 
 SceneGlobals Scene;
 rw::EngineStartParams engineStartParams;

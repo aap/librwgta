@@ -85,6 +85,7 @@ uiMainmenu(void)
 			if(ImGui::MenuItem("Play Animations", nil, gPlayAnimations)) { gPlayAnimations ^= 1; }
 			if(ImGui::MenuItem("Draw Background", nil, gRenderBackground)) { gRenderBackground ^= 1; }
 			if(ImGui::MenuItem("Draw Water", nil, gRenderWater)) { gRenderWater ^= 1; }
+			if(ImGui::MenuItem("Draw PostFX", nil, gRenderPostFX)) { gRenderPostFX ^= 1; }
 			if(ImGui::MenuItem("Enable Fog", nil, gEnableFog)) { gEnableFog ^= 1; }
 			if(params.timecycle == GAME_VC)
 				if(ImGui::MenuItem("Use Blur Ambient", nil, gUseBlurAmb)) { gUseBlurAmb ^= 1; }
@@ -303,6 +304,14 @@ uiEditorWindow(void)
 		ImGui::Checkbox("Play Animations", &gPlayAnimations);
 		ImGui::Checkbox("Draw Background", &gRenderBackground);
 		ImGui::Checkbox("Draw Water", &gRenderWater);
+		ImGui::Checkbox("Draw PostFX", &gRenderPostFX);
+		if(params.timecycle == GAME_SA){
+			ImGui::Text("Colour filter"); ImGui::SameLine();
+			ImGui::RadioButton("None##NOPOSTFX", &gColourFilter, 0); ImGui::SameLine();
+			ImGui::RadioButton("PS2##PS2POSTFX", &gColourFilter, PLATFORM_PS2); ImGui::SameLine();
+			ImGui::RadioButton("PC/Xbox##PCPOSTFX", &gColourFilter, PLATFORM_PC); ImGui::SameLine();
+			ImGui::Checkbox("Radiosity", &gRadiosity);
+		}
 		ImGui::Checkbox("Enable Fog", &gEnableFog);
 		if(params.timecycle == GAME_VC)
 			ImGui::Checkbox("Use Blur Ambient", &gUseBlurAmb);
@@ -321,9 +330,9 @@ uiEditorWindow(void)
 
 		if(params.daynightPipe){
 			ImGui::Text("Building Pipe"); ImGui::SameLine();
-			ImGui::RadioButton("PS2", &gBuildingPipeSwitch, PLATFORM_PS2); ImGui::SameLine();
-			ImGui::RadioButton("PC", &gBuildingPipeSwitch, PLATFORM_PC); ImGui::SameLine();
-			ImGui::RadioButton("Xbox", &gBuildingPipeSwitch, PLATFORM_XBOX);
+			ImGui::RadioButton("PS2##PS2BUILD", &gBuildingPipeSwitch, PLATFORM_PS2); ImGui::SameLine();
+			ImGui::RadioButton("PC##PCBUILD", &gBuildingPipeSwitch, PLATFORM_PC); ImGui::SameLine();
+			ImGui::RadioButton("Xbox##XBOXBUILD", &gBuildingPipeSwitch, PLATFORM_XBOX);
 		}
 
 		ImGui::TreePop();

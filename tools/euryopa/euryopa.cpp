@@ -21,12 +21,17 @@ bool gRenderOnlyLod;
 bool gRenderOnlyHD;
 bool gRenderBackground = true;
 bool gRenderWater = true;
+bool gRenderPostFX = true;
 bool gEnableFog = true;
-bool gUseBlurAmb;
+bool gUseBlurAmb = gRenderPostFX;
 bool gNoTimeCull;
 bool gNoAreaCull;
 bool gDoBackfaceCulling;	// init from params
 bool gPlayAnimations = true;
+
+// SA postfx
+int  gColourFilter;
+bool gRadiosity;
 
 // SA building pipe
 int gBuildingPipeSwitch = PLATFORM_PS2;
@@ -130,7 +135,10 @@ InitParams(void)
 		params.daynightPipe = true;
 		params.water = GAME_SA;
 		params.waterTex = "waterclear256";
+
 		gBuildingPipeSwitch = gameplatform;
+		gColourFilter = gameplatform;
+		gRadiosity = gColourFilter == PLATFORM_PS2;
 		break;
 	// more configs in the future (LCSPC, VCSPC, UG, ...)
 	}
@@ -242,7 +250,7 @@ LoadGame(void)
 //	SetCurrentDirectory("F://gta3_xbox");
 //	SetCurrentDirectory("F://gtavc_xbox");
 //	SetCurrentDirectory("F://gtasa_pc");
-//	SetCurrentDirectory("I://");
+//	SetCurrentDirectory("E://");
 //	SetCurrentDirectory("C:\\Users\\aap\\games\\gta3d_latest");
 
 	FindVersion();
@@ -357,6 +365,21 @@ dogizmo(void)
 }
 
 void
+updateFPS(void)
+{
+	static float history[100];
+	static float total;
+	static int n;
+	static int i;
+
+	total += timeStep - history[i];
+	history[i] = timeStep;
+	i = (i+1) % 100;
+	n = i > n ? i : n;
+	avgTimeStep = total / n;
+}
+
+void
 Draw(void)
 {
 	static rw::RGBA clearcol = { 0x80, 0x80, 0x80, 0xFF };
@@ -367,6 +390,8 @@ Draw(void)
 		sk::globals.quit = 1;
 		return;
 	}
+
+	updateFPS();
 
 	ImGui_ImplRW_NewFrame(timeStep);
 	ImGuizmo::BeginFrame();
@@ -414,6 +439,9 @@ Draw(void)
 	if(gRenderWater)
 		WaterLevel::Render();
 	RenderTransparent();
+
+	if(gRenderPostFX)
+		RenderPostFX();
 
 	DefinedState();
 	rw::SetRenderState(rw::FOGENABLE, 0);

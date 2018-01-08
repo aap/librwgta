@@ -38,6 +38,7 @@ usage(void)
 	fprintf(stderr, "\t-m extract multiclump dff\n");
 	fprintf(stderr, "\t-v RW version, e.g. 33004 for 3.3.0.4\n");
 	fprintf(stderr, "\t-o output platform. ps2, xbox, mobile, d3d8, d3d9\n");
+	fprintf(stderr, "\t--III2VCcar specmap. convert reflections from III to VC using specmap\n");
 	fprintf(stderr, "\t--ps2VCcar set up VC vehicle for use with PS2 and Xbox reflections\n");
 	fprintf(stderr, "\t--info dump some info about the file\n");
 	exit(1);
@@ -144,16 +145,18 @@ dumpMat(Material *m)
 	dumpMatFXData(m);
 }
 
-void
+int
 setSpecMap(Material *m, const char *name)
 {
 	if(m->surfaceProps.specular != 0.0f){
 		MatFX::setEffects(m, MatFX::ENVMAP);
 		MatFX *mfx = MatFX::get(m);
-		mfx->setEnvCoefficient(1.0f);
+		mfx->setEnvCoefficient(m->surfaceProps.specular);
 		rw::Texture *tex = rw::Texture::read(name, nil);
 		mfx->setEnvTexture(tex);
+		return 1;
 	}
+	return 0;
 }
 
 void
@@ -327,18 +330,25 @@ main(int argc, char *argv[])
 	int correctWinding = 0;
 	int multiclump = 0;
 	int setwhite = 0;
+	int iiiToVcCar = 0;
+	char *specmap = "reflection01";
 	int ps2vccar = 0;
 	int info = 0;
 
-	char *s;
+	char *s, *longarg;
 	//char *seconddff = NULL;
 	ARGBEGIN{
 	case '-':
 		// hack for long options: _args is the long option
 		// and must be an empty string in the end
-		if(strcmp_ci(_args, "ps2vccar") == 0) ps2vccar++;
-		else if(strcmp_ci(_args, "info") == 0) info++;
+		longarg = _args;
 		_args = "";
+		if(strcmp_ci(longarg, "ps2vccar") == 0) ps2vccar++;
+		else if(strcmp_ci(longarg, "iii2vccar") == 0){
+			iiiToVcCar++;
+			specmap = EARGF(usage());
+		}else if(strcmp_ci(longarg, "info") == 0) info++;
+		else usage();
 		break;
 	case 'u':
 		uninstance++;
@@ -522,6 +532,19 @@ main(int argc, char *argv[])
 	}
 */
 
+	if(iiiToVcCar)
+		FORLIST(lnk, c->atomics){
+			Atomic *a = Atomic::fromClump(lnk);
+			Geometry *g = a->geometry;
+			int hasenv = 0;
+			for(int i = 0; i < g->matList.numMaterials; i++){
+				Material *m = g->matList.materials[i];
+				hasenv |= setSpecMap(m, specmap);
+			}
+			if(hasenv)
+				MatFX::enableEffects(a);
+		}
+
 	if(ps2vccar)
 		FORLIST(lnk, c->atomics){
 			Atomic *a = Atomic::fromClump(lnk);
@@ -533,7 +556,6 @@ main(int argc, char *argv[])
 				setupMatFX_VCPS2Xbox(m);
 			}
 		}
-
 	// Make sure we have all pipes attached for uninstance
 	FORLIST(lnk, c->atomics)
 		gta::attachCustomPipelines(Atomic::fromClump(lnk));;
