@@ -17,13 +17,16 @@ int currentArea;
 // Options
 
 bool gRenderCollision;
+bool gRenderTimecycleBoxes;
 bool gRenderOnlyLod;
 bool gRenderOnlyHD;
 bool gRenderBackground = true;
 bool gRenderWater = true;
 bool gRenderPostFX = true;
 bool gEnableFog = true;
+bool gEnableTimecycleBoxes = true;
 bool gUseBlurAmb = gRenderPostFX;
+bool gOverrideBlurAmb = true;
 bool gNoTimeCull;
 bool gNoAreaCull;
 bool gDoBackfaceCulling;	// init from params
@@ -76,6 +79,13 @@ InitParams(void)
 	params.initcampos.set(1356.0f, -1107.0f, 96.0f);
 	params.initcamtarg.set(1276.0f, -984.0f, 68.0f);
 	params.backfaceCull = true;
+	params.alphaRefDefault = 2;
+	params.alphaRef = 2;
+	params.ps2AlphaTest = gameplatform == PLATFORM_PS2;
+	if(params.ps2AlphaTest){
+		params.alphaRefDefault = 128;
+		params.alphaRef = 128;
+	}
 
 	switch(gameversion){
 	case GAME_III:
@@ -91,9 +101,19 @@ InitParams(void)
 		params.waterStart.set(-2048.0f, -2048.0f);
 		params.waterEnd.set(2048.0f, 2048.0f);
 		params.backfaceCull = false;
-		if(gameplatform == PLATFORM_XBOX){
+		switch(gameplatform){
+		case PLATFORM_PS2:
+			break;
+		case PLATFORM_PC:
+			break;
+		case PLATFORM_XBOX:
+			// not so sure about the values
+			// I think it's hardcoded by ID
+			params.alphaRefDefault = 6;
+			params.alphaRef = 128;
 			params.txdFallbackGeneric = true;
 			params.neoWorldPipe = GAME_III;
+			break;
 		}
 		break;
 	case GAME_VC:
@@ -112,11 +132,20 @@ InitParams(void)
 		params.waterTex = "waterclear256";
 		params.waterStart.set(-2048.0f - 400.0f, -2048.0f);
 		params.waterEnd.set(2048.0f - 400.0f, 2048.0f);
-		if(gameplatform == PLATFORM_PS2)
+		switch(gameplatform){
+		case PLATFORM_PS2:
 			params.backfaceCull = false;
-		else if(gameplatform == PLATFORM_XBOX){
+			break;
+		case PLATFORM_PC:
+			break;
+		case PLATFORM_XBOX:
+			// not so sure about the values
+			// I think it's hardcoded by ID
+			params.alphaRefDefault = 6;
+			params.alphaRef = 128;
 			params.neoWorldPipe = GAME_VC;
 			params.backfaceCull = false;
+			break;
 		}
 		break;
 	case GAME_SA:
@@ -137,8 +166,14 @@ InitParams(void)
 		params.waterTex = "waterclear256";
 
 		gBuildingPipeSwitch = gameplatform;
-		gColourFilter = gameplatform;
+		gColourFilter = PLATFORM_PC;
 		gRadiosity = gColourFilter == PLATFORM_PS2;
+		if(gameplatform == PLATFORM_PS2){
+			gColourFilter = PLATFORM_PS2;
+		}else{
+			params.alphaRefDefault = 2;
+			params.alphaRef = 100;
+		}
 		break;
 	// more configs in the future (LCSPC, VCSPC, UG, ...)
 	}
@@ -250,7 +285,7 @@ LoadGame(void)
 //	SetCurrentDirectory("F://gta3_xbox");
 //	SetCurrentDirectory("F://gtavc_xbox");
 //	SetCurrentDirectory("F://gtasa_pc");
-//	SetCurrentDirectory("E://");
+	SetCurrentDirectory("I://");
 //	SetCurrentDirectory("C:\\Users\\aap\\games\\gta3d_latest");
 
 	FindVersion();
@@ -364,6 +399,8 @@ dogizmo(void)
 //	ImGuizmo::DrawCube((float*)&gizview, (float*)&cam->devProj, (float*)&gizobj);
 }
 
+static uint64 frameCounter;
+
 void
 updateFPS(void)
 {
@@ -385,11 +422,18 @@ Draw(void)
 	static rw::RGBA clearcol = { 0x80, 0x80, 0x80, 0xFF };
 
 	CPad *pad = CPad::GetPad(0);
-	if(/*CPad::IsKeyDown('Q') || CPad::IsKeyDown(KEY_ESC) ||*/
-	   pad->NewState.start && pad->NewState.select){
+	if(pad->NewState.start && pad->NewState.select){
 		sk::globals.quit = 1;
 		return;
 	}
+
+	// HACK: we load a lot in the first frame
+	// which messes up the average
+	if(frameCounter == 0)
+		timeStep = 1/30.0f;
+
+	if(!gOverrideBlurAmb)
+		gUseBlurAmb = gRenderPostFX;
 
 	updateFPS();
 
@@ -414,7 +458,10 @@ Draw(void)
 	LoadAllRequestedObjects();
 	BuildRenderList();
 
+	// Has to be called for highlighting some objects
+	// but also can mess with some timecycle mid frame :/
 	gui();
+
 //	dogizmo();
 
 	handleTool();
@@ -451,7 +498,12 @@ Draw(void)
 	TheCamera.DrawTarget();
 	if(gRenderCollision)
 		RenderEverythingCollisions();
+	if(gRenderTimecycleBoxes)
+		Timecycle::RenderBoxes();
 
+	TheCamera.m_rwcam->endUpdate();
+	TheCamera.m_rwcam->setFarPlane(5000.0f);
+	TheCamera.m_rwcam->beginUpdate();
 	RenderDebugLines();
 
 	ImGui::EndFrame();
@@ -459,6 +511,7 @@ Draw(void)
 
 	TheCamera.m_rwcam->endUpdate();
 	TheCamera.m_rwcam->showRaster();
+	frameCounter++;
 }
 
 void

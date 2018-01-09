@@ -192,7 +192,7 @@ DefinedState(void)
 	SetRenderState(rw::SRCBLEND, rw::BLENDSRCALPHA);
 	SetRenderState(rw::DESTBLEND, rw::BLENDINVSRCALPHA);
 	SetRenderState(rw::FOGENABLE, 0);
-	SetRenderState(rw::ALPHATESTREF, 10);
+	SetRenderState(rw::ALPHATESTREF, params.alphaRefDefault);
 	SetRenderState(rw::ALPHATESTFUNC, rw::ALPHAGREATEREQUAL);
 	rw::RGBA fog;
 	rw::convColor(&fog, &Timecycle::currentFogColour);
@@ -239,6 +239,13 @@ InitRW(void)
 	if(!sk::InitRW())
 		return false;
 	rw::d3d::isP8supported = false;
+
+// HACK HACK HACK
+// patch in our own callback into the default pipeline
+#ifdef RW_D3D9
+	void defaultRenderCB_GSemu(rw::Atomic *atomic, rw::d3d9::InstanceDataHeader *header);
+	((rw::d3d9::ObjPipeline*)rw::engine->driver[rw::platform]->defaultPipeline)->renderCB = defaultRenderCB_GSemu;
+#endif
 
 	rw::Image *img = rw::Image::create(1, 1, 32);
 	uint32 white = 0xFFFFFFFF;

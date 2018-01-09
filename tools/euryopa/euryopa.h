@@ -17,6 +17,8 @@ using rw::int16;
 using rw::uint16;
 using rw::int32;
 using rw::uint32;
+using rw::int64;
+using rw::uint64;
 using rw::float32;
 using rw::bool32;
 
@@ -51,13 +53,16 @@ extern float avgTimeStep;
 //
 
 extern bool gRenderCollision;
+extern bool gRenderTimecycleBoxes;
 extern bool gRenderOnlyLod;
 extern bool gRenderOnlyHD;
 extern bool gRenderBackground;
 extern bool gRenderWater;
 extern bool gRenderPostFX;
 extern bool gEnableFog;
+extern bool gEnableTimecycleBoxes;
 extern bool gUseBlurAmb;
+extern bool gOverrideBlurAmb;
 extern bool gNoTimeCull;
 extern bool gNoAreaCull;
 extern bool gDoBackfaceCulling;
@@ -85,6 +90,7 @@ enum {
 	NUMSCENES = 80,
 	NUMIPLS = 512,
 	NUMCDIMAGES = 100,
+	NUMTCYCBOXES = 64,
 
 	NUMWATERVERTICES = 4000,
 	NUMWATERQUADS = 1000,
@@ -144,6 +150,10 @@ struct Params
 	int water;
 	const char *waterTex;
 	rw::V2d waterStart, waterEnd;	// waterpro
+
+	int alphaRefDefault;	// preset value
+	int alphaRef;		// the regular one we want to use for rendering
+	bool ps2AlphaTest;	// emulate PS2 alpha test
 
 	bool backfaceCull;
 	bool txdFallbackGeneric;
@@ -453,8 +463,13 @@ void RenderOpaque(void);
 void RenderTransparent(void);
 void RenderEverything(void);
 
-void RenderColModelWire(CColModel *col, rw::Matrix *xform, bool onlyBounds);
+// Debug Render
+void RenderLine(rw::V3d v1, rw::V3d v2, rw::RGBA c1, rw::RGBA c2);
+void RenderWireBox(CBox *box, rw::RGBA col, rw::Matrix *xform);
+void RenderWireSphere(CSphere *sphere, rw::RGBA col, rw::Matrix *xform);
+void RenderWireTriangle(rw::V3d *v1, rw::V3d *v2, rw::V3d *v3, rw::RGBA col, rw::Matrix *xform);
 void RenderAxesWidget(rw::V3d pos, rw::V3d x, rw::V3d y, rw::V3d z);
+
 void RenderEverythingCollisions(void);
 void RenderDebugLines(void);
 

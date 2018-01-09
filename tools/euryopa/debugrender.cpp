@@ -89,10 +89,10 @@ AddDebugLine(float x1, float y1, float z1, float x2, float y2, float z2, rw::RGB
 	debugLines[n].col2 = c2;
 }
 
-static void AddDebugLine(rw::V3d v1, rw::V3d v2, rw::RGBA c1, rw::RGBA c2) { AddDebugLine(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, c1, c2); }
+void RenderLine(rw::V3d v1, rw::V3d v2, rw::RGBA c1, rw::RGBA c2) { AddDebugLine(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, c1, c2); }
 
-static void
-RenderBox(CBox *box, rw::RGBA col, rw::Matrix *xform)
+void
+RenderWireBox(CBox *box, rw::RGBA col, rw::Matrix *xform)
 {
 	rw::V3d verts[8];
 	verts[0].x = box->min.x;
@@ -121,24 +121,24 @@ RenderBox(CBox *box, rw::RGBA col, rw::Matrix *xform)
 	verts[7].z = box->max.z;
 	rw::V3d::transformPoints(verts, verts, 8, xform);
 
-	AddDebugLine(verts[0], verts[1], col, col);
-	AddDebugLine(verts[1], verts[3], col, col);
-	AddDebugLine(verts[3], verts[2], col, col);
-	AddDebugLine(verts[2], verts[0], col, col);
+	RenderLine(verts[0], verts[1], col, col);
+	RenderLine(verts[1], verts[3], col, col);
+	RenderLine(verts[3], verts[2], col, col);
+	RenderLine(verts[2], verts[0], col, col);
 
-	AddDebugLine(verts[0+4], verts[1+4], col, col);
-	AddDebugLine(verts[1+4], verts[3+4], col, col);
-	AddDebugLine(verts[3+4], verts[2+4], col, col);
-	AddDebugLine(verts[2+4], verts[0+4], col, col);
+	RenderLine(verts[0+4], verts[1+4], col, col);
+	RenderLine(verts[1+4], verts[3+4], col, col);
+	RenderLine(verts[3+4], verts[2+4], col, col);
+	RenderLine(verts[2+4], verts[0+4], col, col);
 
-	AddDebugLine(verts[0], verts[4], col, col);
-	AddDebugLine(verts[1], verts[5], col, col);
-	AddDebugLine(verts[2], verts[6], col, col);
-	AddDebugLine(verts[3], verts[7], col, col);
+	RenderLine(verts[0], verts[4], col, col);
+	RenderLine(verts[1], verts[5], col, col);
+	RenderLine(verts[2], verts[6], col, col);
+	RenderLine(verts[3], verts[7], col, col);
 }
 
-static void
-RenderSphere(CSphere *sphere, rw::RGBA col, rw::Matrix *xform)
+void
+RenderWireSphere(CSphere *sphere, rw::RGBA col, rw::Matrix *xform)
 {
 	rw::V3d c;
 	rw::V3d verts[6];
@@ -151,58 +151,26 @@ RenderSphere(CSphere *sphere, rw::RGBA col, rw::Matrix *xform)
 	verts[4].y += sphere->radius;
 	verts[5].y -= sphere->radius;
 
-	AddDebugLine(verts[0], verts[2], col, col);
-	AddDebugLine(verts[0], verts[3], col, col);
-	AddDebugLine(verts[0], verts[4], col, col);
-	AddDebugLine(verts[0], verts[5], col, col);
-	AddDebugLine(verts[1], verts[2], col, col);
-	AddDebugLine(verts[1], verts[3], col, col);
-	AddDebugLine(verts[1], verts[4], col, col);
+	RenderLine(verts[0], verts[2], col, col);
+	RenderLine(verts[0], verts[3], col, col);
+	RenderLine(verts[0], verts[4], col, col);
+	RenderLine(verts[0], verts[5], col, col);
+	RenderLine(verts[1], verts[2], col, col);
+	RenderLine(verts[1], verts[3], col, col);
+	RenderLine(verts[1], verts[4], col, col);
 }
 
-static void
-RenderTriangle(rw::V3d *v1, rw::V3d *v2, rw::V3d *v3, rw::RGBA col, rw::Matrix *xform)
+void
+RenderWireTriangle(rw::V3d *v1, rw::V3d *v2, rw::V3d *v3, rw::RGBA col, rw::Matrix *xform)
 {
 	rw::V3d verts[3];
 	verts[0] = *v1;
 	verts[1] = *v2;
 	verts[2] = *v3;
 	rw::V3d::transformPoints(verts, verts, 3, xform);
-	AddDebugLine(verts[0], verts[1], col, col);
-	AddDebugLine(verts[1], verts[2], col, col);
-	AddDebugLine(verts[2], verts[0], col, col);
-}
-
-void
-RenderColModelWire(CColModel *col, rw::Matrix *xform, bool onlyBounds)
-{
-	static const rw::RGBA red = { 255, 0, 0, 255 };
-	static const rw::RGBA green = { 0, 255, 0, 255 };
-	static const rw::RGBA blue = { 0, 0, 255, 255 };
-	static const rw::RGBA magenta = { 255, 0, 255, 255 };
-	static const rw::RGBA white = { 255, 255, 255, 255 };
-	int i;
-	CColTriangle *tri;
-
-	RenderBox(&col->boundingBox, red, xform);
-	if(onlyBounds)
-		return;
-	for(i = 0; i < col->numBoxes; i++)
-		RenderBox(&col->boxes[i].box, white, xform);
-	for(i = 0; i < col->numSpheres; i++)
-		RenderSphere(&col->spheres[i].sph, magenta, xform);
-	for(i = 0; i < col->numTriangles; i++){
-		tri = &col->triangles[i];
-		if(col->flags & 0x80){
-			rw::V3d v[3];
-			v[0] = col->compVertices[tri->a].Uncompress();
-			v[1] = col->compVertices[tri->b].Uncompress();
-			v[2] = col->compVertices[tri->c].Uncompress();
-			RenderTriangle(&v[0], &v[1], &v[2], green, xform);
-		}else
-			RenderTriangle(&col->vertices[tri->a], &col->vertices[tri->b], &col->vertices[tri->c],
-				green, xform);
-	}
+	RenderLine(verts[0], verts[1], col, col);
+	RenderLine(verts[1], verts[2], col, col);
+	RenderLine(verts[2], verts[0], col, col);
 }
 
 void
@@ -211,7 +179,7 @@ RenderAxesWidget(rw::V3d pos, rw::V3d x, rw::V3d y, rw::V3d z)
 	rw::RGBA red = { 255, 0, 0, 255 };
 	rw::RGBA green = { 0, 255, 0, 255 };
 	rw::RGBA blue = { 0, 0, 255, 255 };
-	AddDebugLine(pos, add(pos, x), red, red);
-	AddDebugLine(pos, add(pos, y), green, green);
-	AddDebugLine(pos, add(pos, z), blue, blue);
+	RenderLine(pos, add(pos, x), red, red);
+	RenderLine(pos, add(pos, y), green, green);
+	RenderLine(pos, add(pos, z), blue, blue);
 }

@@ -67,7 +67,8 @@ InitPostFX(void)
 		// we may want to blur later on
 		backBufferTex->setAddressU(Texture::Addressing::CLAMP);
 		backBufferTex->setAddressV(Texture::Addressing::CLAMP);
-	}
+	}else
+		backBufferTex->raster = backBuffer;
 }
 
 #ifdef RW_D3D9
@@ -104,15 +105,15 @@ static void
 CreateShaders(void)
 {
 #include "d3d_shaders/colourfilterIII_PS.inc"
-	d3ddevice->CreatePixelShader((DWORD*)colourfilterIII_PS_cso, (IDirect3DPixelShader9**)&colourfilterIII_PS);
+	colourfilterIII_PS = createPixelShader(colourfilterIII_PS_cso);
 #include "d3d_shaders/colourfilterVC_PS.inc"
-	d3ddevice->CreatePixelShader((DWORD*)colourfilterVC_PS_cso, (IDirect3DPixelShader9**)&colourfilterVC_PS);
+	colourfilterVC_PS = createPixelShader(colourfilterVC_PS_cso);
 #include "d3d_shaders/colourfilterSAPS2_PS.inc"
-	d3ddevice->CreatePixelShader((DWORD*)colourfilterSAPS2_PS_cso, (IDirect3DPixelShader9**)&colourfilterSAPS2_PS);
+	colourfilterSAPS2_PS = createPixelShader(colourfilterSAPS2_PS_cso);
 #include "d3d_shaders/colourfilterSAPC_PS.inc"
-	d3ddevice->CreatePixelShader((DWORD*)colourfilterSAPC_PS_cso, (IDirect3DPixelShader9**)&colourfilterSAPC_PS);
+	colourfilterSAPC_PS = createPixelShader(colourfilterSAPC_PS_cso);
 #include "d3d_shaders/radiosityPS.inc"
-	d3ddevice->CreatePixelShader((DWORD*)radiosityPS_cso, (IDirect3DPixelShader9**)&radiosityPS);
+	radiosityPS = createPixelShader(radiosityPS_cso);
 
 	shadersInitialized = true;
 }
@@ -120,7 +121,7 @@ CreateShaders(void)
 static void
 RenderColourFilterIII(void)
 {
-	d3ddevice->SetPixelShader((IDirect3DPixelShader9*)colourfilterIII_PS);
+	setPixelShader(colourfilterIII_PS);
 	rw::im2d::RenderIndexedPrimitive(rw::PRIMTYPETRILIST,
 		&verts, 4, &indices, 6);
 }
@@ -128,7 +129,7 @@ RenderColourFilterIII(void)
 static void
 RenderColourFilterVC(void)
 {
-	d3ddevice->SetPixelShader((IDirect3DPixelShader9*)colourfilterVC_PS);
+	setPixelShader(colourfilterVC_PS);
 	rw::im2d::RenderIndexedPrimitive(rw::PRIMTYPETRILIST,
 		&verts, 4, &indices, 6);
 }
@@ -136,7 +137,7 @@ RenderColourFilterVC(void)
 static void
 RenderColourFilterSAPS2(void)
 {
-	d3ddevice->SetPixelShader((IDirect3DPixelShader9*)colourfilterSAPS2_PS);
+	setPixelShader(colourfilterSAPS2_PS);
 	rw::im2d::RenderIndexedPrimitive(rw::PRIMTYPETRILIST,
 		&verts, 4, &indices, 6);
 }
@@ -144,7 +145,7 @@ RenderColourFilterSAPS2(void)
 static void
 RenderColourFilterSAPC(void)
 {
-	d3ddevice->SetPixelShader((IDirect3DPixelShader9*)colourfilterSAPC_PS);
+	setPixelShader(colourfilterSAPC_PS);
 	rw::im2d::RenderIndexedPrimitive(rw::PRIMTYPETRILIST,
 		&verts, 4, &indices, 6);
 }
@@ -152,7 +153,7 @@ RenderColourFilterSAPC(void)
 static void
 RenderRadiosity(void)
 {
-	d3ddevice->SetPixelShader((IDirect3DPixelShader9*)radiosityPS);
+	setPixelShader(radiosityPS);
 	rw::im2d::RenderIndexedPrimitive(rw::PRIMTYPETRILIST,
 		&verts, 4, &indices, 6);
 }

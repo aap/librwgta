@@ -39,6 +39,8 @@ namespace Timecycle
 
 	void Initialize(void);
 	void InitNeoWorldTweak(void);
+	void AddBox(CBox box, int farClp, int extraCol, float extraStrength, float falloff, float lodDist);
 	void Update(void);
 	void SetLights(void);
+	void RenderBoxes(void);
 }

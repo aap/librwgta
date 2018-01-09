@@ -3,6 +3,97 @@
 namespace Timecycle
 {
 
+struct Box
+{
+	CBox box;
+	float farclp;
+	float lodDistMult;
+	int extraColor;
+	float strength;
+	float falloff;
+
+	CBox getOuterBox(void){
+		CBox outbox = box;
+		outbox.min.x -= falloff;
+		outbox.min.y -= falloff;
+		outbox.min.z -= falloff/3.0;
+		outbox.max.x += falloff;
+		outbox.max.y += falloff;
+		outbox.max.z += falloff/3.0f;
+		return outbox;
+	}
+};
+
+static Box boxes[NUMTCYCBOXES];
+static int numBoxes;
+
+Box*
+FindBox(rw::V3d pos, float *amount, bool wantLod, bool wantFar, Box *exclude)
+{
+	int i;
+	Box *b;
+	rw::V3d dist;
+	for(i = 0; i < numBoxes; i++){
+		b = &boxes[i];
+		if(b == exclude ||
+		   wantLod && b->lodDistMult == 1.0f ||
+		   wantFar && b->farclp == 0.0f)
+			continue;
+
+		CBox inbox = b->box;
+		CBox outbox = b->getOuterBox();
+		if(pos.x < outbox.min.x || pos.y < outbox.min.y || pos.z < outbox.min.z ||
+		   pos.x > outbox.max.x || pos.y > outbox.max.y || pos.z > outbox.max.z)
+			continue;
+
+		if(pos.x < inbox.min.x)
+			dist.x = inbox.min.x - pos.x;
+		else if(pos.x > inbox.max.x)
+			dist.x = pos.x - inbox.max.x;
+		else
+			dist.x = 0.0f;
+
+		if(pos.y < inbox.min.y)
+			dist.y = inbox.min.y - pos.y;
+		else if(pos.y > inbox.max.y)
+			dist.y = pos.y - inbox.max.y;
+		else
+			dist.y = 0.0f;
+
+		if(pos.z < inbox.min.z)
+			dist.z = inbox.min.z - pos.z;
+		else if(pos.z > inbox.max.z)
+			dist.z = pos.z - inbox.max.z;
+		else
+			dist.z = 0.0f;
+
+		dist.z *= 3.0f;
+		*amount = 1.0f - length(dist)/b->falloff;
+		return b;
+	}
+	return nil;
+}
+
+void
+AddBox(CBox box, int farClp, int extraCol, float extraStrength, float falloff, float lodDist)
+{
+	if(numBoxes >= NUMTCYCBOXES){
+		log("warning: more than %d timecycle boxes\n", NUMTCYCBOXES);
+		return;
+	}
+	Box *tbox = &boxes[numBoxes++];
+	tbox->box = box;
+	tbox->farclp = farClp;
+	if(lodDist > 4.0f){
+		log("timecycle: clamping box lodDist %f to 4.0\n", lodDist);
+		lodDist = 4.0f;
+	}
+	tbox->lodDistMult = lodDist;
+	tbox->extraColor = extraCol;
+	tbox->strength = extraStrength/100.0f;
+	tbox->falloff = falloff;
+}
+
 static void
 Interpolate(rw::RGBAf *dst, rw::RGBAf *a, rw::RGBAf *b, float fa, float fb)
 {
@@ -291,6 +382,9 @@ InitializeSA(void)
 		cs->lowCloud = rw::makeRGBAf(cloudR/255.0f, cloudG/255.0f, cloudB/255.0f, 0);
 		cs->fluffyCloudBottom = rw::makeRGBAf(fluffyBotR/255.0f, fluffyBotG/255.0f, fluffyBotB/255.0f, 0);
 		cs->water = rw::makeRGBAf(waterR/255.0f, waterG/255.0f, waterB/255.0f, waterA/255.0f);
+		// Clamp values so PC timecycle works
+		if(postfx1A > 128) postfx1A = 128;
+		if(postfx2A > 128) postfx2A = 128;
 		cs->postfx1 = rw::makeRGBAf(postfx1R/255.0f, postfx1G/255.0f, postfx1B/255.0f, postfx1A/255.0f);
 		cs->postfx2 = rw::makeRGBAf(postfx2R/255.0f, postfx2G/255.0f, postfx2B/255.0f, postfx2A/255.0f);
 		cs->cloudAlpha = cloudAlpha;
@@ -379,45 +473,120 @@ InitNeoWorldTweak(void)
 }
 
 void
-Update(void)
+UpdateSA(void)
 {
 	// TODO: 24h support!
-	ColourSet curOld, curNew, nextOld, nextNew, oldInterp, newInterp;
 
-	float timeInterp = 0.0f;
+	rw::V3d pos = TheCamera.m_position;
 
-	int curHourSel, nextHourSel;
-	if(extraColours >= 0){
-		currentColours = GetColourSet(extraColours % params.numHours, params.extraColours + extraColours / params.numHours);
-	}else{
-		if(params.timecycle == GAME_SA){
-			static int hours[] = { 0, 5, 6, 7, 12, 19, 20, 22, 24 };
-			static int belowHoriz[] = { 30, 30, 30, 50, 60, 60, 50, 35 };
-			float time = currentHour + currentMinute/60.0f;
-			int curHour, nextHour;
-	
-			for(curHourSel = 0; time >= hours[curHourSel+1]; curHourSel++);
-			nextHourSel = (curHourSel + 1) % params.numHours;
-			curHour = hours[curHourSel];
-			nextHour = hours[curHourSel+1];
-			timeInterp = (time - curHour) / (float)(nextHour - curHour);
-	
-			int bh = belowHoriz[curHourSel]*(1.0f-timeInterp) + belowHoriz[nextHourSel]*timeInterp;
-			belowHorizonColour = rw::makeRGBA(bh, bh, bh, 255);
-		}else{
-			curHourSel = currentHour;
-			nextHourSel = (currentHour+1)%24;
-			timeInterp = currentMinute/60.0f;
+	// Find modifying boxes
+	float lodAmt, farAmt1, farAmt2, weatherAmt;
+	Box *lodBox = FindBox(pos, &lodAmt, true, false, nil);
+	Box *farBox1 = FindBox(pos, &farAmt1, false, true, nil);
+	Box *farBox2 = nil;
+	// Try to find a smaller box for the far value
+	if(farBox1){
+		farBox2 = FindBox(pos, &farAmt2, false, true, farBox1);
+		if(farBox2 &&
+		   farBox2->box.max.x - farBox2->box.min.x > farBox2->box.max.y - farBox2->box.min.y){
+			// swap if the new box was the bigger one
+			Box *tb = farBox1; farBox1 = farBox2; farBox2 = tb;
+			float tf = farAmt1; farAmt1 = farAmt2; farAmt2 = tf;
 		}
-		curOld = GetColourSet(curHourSel, oldWeather);
-		curNew = GetColourSet(curHourSel, newWeather);
-		nextOld = GetColourSet(nextHourSel, oldWeather);
-		nextNew = GetColourSet(nextHourSel, newWeather);
-	
-		Interpolate(&oldInterp, &curOld, &nextOld, 1.0f-timeInterp, timeInterp);
-		Interpolate(&newInterp, &curNew, &nextNew, 1.0f-timeInterp, timeInterp);
-		Interpolate(&currentColours, &oldInterp, &newInterp, 1.0f-weatherInterpolation, weatherInterpolation);
 	}
+	Box *weatherBox = FindBox(pos, &weatherAmt, false, false, nil);
+
+
+	static int hours[] = { 0, 5, 6, 7, 12, 19, 20, 22, 24 };
+	static int belowHoriz[] = { 30, 30, 30, 50, 60, 60, 50, 35 };
+	ColourSet curOld, curNew, nextOld, nextNew, oldInterp, newInterp;
+	float time = currentHour + currentMinute/60.0f;
+	int curHour, nextHour;
+	int curHourSel, nextHourSel;
+
+	for(curHourSel = 0; time >= hours[curHourSel+1]; curHourSel++);
+	nextHourSel = (curHourSel + 1) % params.numHours;
+	curHour = hours[curHourSel];
+	nextHour = hours[curHourSel+1];
+	float timeInterp = (time - curHour) / (float)(nextHour - curHour);
+
+	curOld = GetColourSet(curHourSel, oldWeather);
+	curNew = GetColourSet(curHourSel, newWeather);
+	nextOld = GetColourSet(nextHourSel, oldWeather);
+	nextNew = GetColourSet(nextHourSel, newWeather);
+
+	int bh = belowHoriz[curHourSel]*(1.0f-timeInterp) + belowHoriz[nextHourSel]*timeInterp;
+	belowHorizonColour = rw::makeRGBA(bh, bh, bh, 255);
+
+	Interpolate(&oldInterp, &curOld, &nextOld, 1.0f-timeInterp, timeInterp);
+	Interpolate(&newInterp, &curNew, &nextNew, 1.0f-timeInterp, timeInterp);
+	Interpolate(&currentColours, &oldInterp, &newInterp, 1.0f-weatherInterpolation, weatherInterpolation);
+
+	// TODO: lots of stuff that's not so important now
+
+	// Apply box modifiers
+	if(gEnableTimecycleBoxes){
+		if(weatherBox && weatherBox->extraColor >= 0){
+			int boxWeather = (weatherBox->extraColor / params.numHours) + params.extraColours;
+			int boxHour = weatherBox->extraColor % params.numHours;
+			float f = weatherBox->strength*weatherAmt;
+			ColourSet boxcolours = GetColourSet(boxHour, boxWeather);
+			ColourSet tmp;
+			Interpolate(&tmp, &currentColours, &boxcolours, 1.0f - f, f);
+			// We don't want to change everything
+			currentColours.skyTop = tmp.skyTop;
+			currentColours.skyBottom = tmp.skyBottom;
+			currentColours.water = tmp.water;
+			currentColours.amb = tmp.amb;
+			currentColours.amb_obj = tmp.amb_obj;
+			if(tmp.farClp < currentColours.farClp)
+				currentColours.farClp = tmp.farClp;
+			currentColours.fogSt = tmp.fogSt;
+			currentColours.postfx1 = tmp.postfx1;
+			currentColours.postfx2 = tmp.postfx2;
+		}
+
+		// TODO: lod box, and also use the value somewhere
+
+		if(farBox1 && farBox1->farclp < currentColours.farClp)
+			currentColours.farClp = currentColours.farClp*(1.0f-farAmt1) + farBox1->farclp*farAmt1;
+		if(farBox2 && farBox2->farclp < currentColours.farClp)
+			currentColours.farClp = currentColours.farClp*(1.0f-farAmt2) + farBox2->farclp*farAmt2;
+	}
+
+	if(extraColours >= 0)
+		currentColours = GetColourSet(extraColours % params.numHours, params.extraColours + extraColours / params.numHours);
+
+	currentFogColour.red = (currentColours.skyTop.red + 2.0f*currentColours.skyBottom.red)/3.0f;
+	currentFogColour.green = (currentColours.skyTop.green + 2.0f*currentColours.skyBottom.green)/3.0f;
+	currentFogColour.blue = (currentColours.skyTop.blue + 2.0f*currentColours.skyBottom.blue)/3.0f;
+
+	gNeoLightMapStrength = currentColours.lightMapIntensity;
+}
+
+void
+Update(void)
+{
+	if(params.timecycle == GAME_SA){
+		UpdateSA();
+		return;
+	}
+
+	ColourSet curOld, curNew, nextOld, nextNew, oldInterp, newInterp;
+	int curHourSel = currentHour;
+	int nextHourSel = (currentHour+1)%24;
+	float timeInterp = currentMinute/60.0f;
+	curOld = GetColourSet(curHourSel, oldWeather);
+	curNew = GetColourSet(curHourSel, newWeather);
+	nextOld = GetColourSet(nextHourSel, oldWeather);
+	nextNew = GetColourSet(nextHourSel, newWeather);
+
+	Interpolate(&oldInterp, &curOld, &nextOld, 1.0f-timeInterp, timeInterp);
+	Interpolate(&newInterp, &curNew, &nextNew, 1.0f-timeInterp, timeInterp);
+	Interpolate(&currentColours, &oldInterp, &newInterp, 1.0f-weatherInterpolation, weatherInterpolation);
+
+	if(extraColours >= 0)
+		currentColours = GetColourSet(extraColours % params.numHours, params.extraColours + extraColours / params.numHours);
 
 	currentFogColour.red = (currentColours.skyTop.red + 2.0f*currentColours.skyBottom.red)/3.0f;
 	currentFogColour.green = (currentColours.skyTop.green + 2.0f*currentColours.skyBottom.green)/3.0f;
@@ -438,6 +607,58 @@ SetLights(void)
 		pAmbient->setColor(currentColours.amb_bl.red, currentColours.amb_bl.green, currentColours.amb_bl.blue);
 	else
 		pAmbient->setColor(currentColours.amb.red, currentColours.amb.green, currentColours.amb.blue);
+}
+
+static void
+GetBoxVertices(CBox box, rw::V3d *verts)
+{
+	verts[0].x = box.min.x;
+	verts[0].y = box.min.y;
+	verts[0].z = box.min.z;
+	verts[1].x = box.max.x;
+	verts[1].y = box.min.y;
+	verts[1].z = box.min.z;
+	verts[2].x = box.min.x;
+	verts[2].y = box.max.y;
+	verts[2].z = box.min.z;
+	verts[3].x = box.max.x;
+	verts[3].y = box.max.y;
+	verts[3].z = box.min.z;
+	verts[4].x = box.min.x;
+	verts[4].y = box.min.y;
+	verts[4].z = box.max.z;
+	verts[5].x = box.max.x;
+	verts[5].y = box.min.y;
+	verts[5].z = box.max.z;
+	verts[6].x = box.min.x;
+	verts[6].y = box.max.y;
+	verts[6].z = box.max.z;
+	verts[7].x = box.max.x;
+	verts[7].y = box.max.y;
+	verts[7].z = box.max.z;
+}
+
+void
+RenderBoxes(void)
+{
+	rw::RGBA colin = { 255, 255, 0, 255 };
+	rw::RGBA colout = { 0, 255, 255, 255 };
+	rw::Matrix ident;
+	ident.setIdentity();
+
+	int i, j;
+	rw::V3d corners[16];
+	for(i = 0; i < numBoxes; i++){
+		CBox outbox = boxes[i].getOuterBox();
+
+		RenderWireBox(&boxes[i].box, colin, &ident);
+		RenderWireBox(&outbox, colout, &ident);
+
+		GetBoxVertices(boxes[i].box, corners);
+		GetBoxVertices(outbox, corners+8);
+		for(j = 0; j < 8; j++)
+			RenderLine(corners[j], corners[j+8], colin, colout);
+	}
 }
 
 }

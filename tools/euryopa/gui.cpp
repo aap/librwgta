@@ -7,6 +7,10 @@ static bool showInstanceWindow;
 static bool showLogWindow;
 static bool showHelpWindow;
 
+static bool showTimeWeatherWindow;
+static bool showViewWindow;
+static bool showRenderingWindow;
+
 // From the demo, slightly changed
 struct ExampleAppLog
 {
@@ -40,7 +44,6 @@ struct ExampleAppLog
 	void
 	Draw(const char *title, bool *p_open = nil)
 	{
-		ImGui::SetNextWindowSize(ImVec2(500,400), ImGuiCond_FirstUseEver);
 		ImGui::Begin(title, p_open);
 		if(ImGui::Button("Clear")) Clear();
 		ImGui::SameLine();
@@ -80,40 +83,17 @@ uiMainmenu(void)
 			if(ImGui::MenuItem("Exit", "Alt+F4")) sk::globals.quit = 1;
 			ImGui::EndMenu();
 		}
-		if(ImGui::BeginMenu("View")){
-			if(ImGui::MenuItem("Draw Collisions", nil, gRenderCollision)) { gRenderCollision ^= 1; }
-			if(ImGui::MenuItem("Play Animations", nil, gPlayAnimations)) { gPlayAnimations ^= 1; }
-			if(ImGui::MenuItem("Draw Background", nil, gRenderBackground)) { gRenderBackground ^= 1; }
-			if(ImGui::MenuItem("Draw Water", nil, gRenderWater)) { gRenderWater ^= 1; }
-			if(ImGui::MenuItem("Draw PostFX", nil, gRenderPostFX)) { gRenderPostFX ^= 1; }
-			if(ImGui::MenuItem("Enable Fog", nil, gEnableFog)) { gEnableFog ^= 1; }
-			if(params.timecycle == GAME_VC)
-				if(ImGui::MenuItem("Use Blur Ambient", nil, gUseBlurAmb)) { gUseBlurAmb ^= 1; }
-			if(ImGui::MenuItem("Backface Culling", nil, gDoBackfaceCulling)) { gDoBackfaceCulling ^= 1; }
-
-			ImGui::Separator();
-			static int render = 0;
-			ImGui::RadioButton("Render Normal", &render, 0);
-			ImGui::RadioButton("Render only HD", &render, 1);
-			ImGui::RadioButton("Render only LOD", &render, 2);
-			gRenderOnlyHD = !!(render&1);
-			gRenderOnlyLod = !!(render&2);
-			if(ImGui::MenuItem("Render all Timed Objects", nil, gNoTimeCull)) { gNoTimeCull ^= 1; }
-			if(ImGui::MenuItem("Render all Areas", nil, gNoAreaCull)) { gNoAreaCull ^= 1; }
-			ImGui::EndMenu();
-		}
 		if(ImGui::BeginMenu("Window")){
-			if(ImGui::MenuItem("Show Demo Window", nil, showDemoWindow)) { showDemoWindow ^= 1; }
-			if(ImGui::MenuItem("Show Editor Window", nil, showEditorWindow)) { showEditorWindow ^= 1; }
-			if(ImGui::MenuItem("Show Info Window", nil, showInstanceWindow)) { showInstanceWindow ^= 1; }
-			if(ImGui::MenuItem("Show Log Window", nil, showLogWindow)) { showLogWindow ^= 1; }
+			if(ImGui::MenuItem("Time & Weather", "T", showTimeWeatherWindow)) { showTimeWeatherWindow ^= 1; }
+			if(ImGui::MenuItem("View", "V", showViewWindow)) { showViewWindow ^= 1; }
+			if(ImGui::MenuItem("Rendering", "R", showRenderingWindow)) { showRenderingWindow ^= 1; }
+			if(ImGui::MenuItem("Object Info", "I", showInstanceWindow)) { showInstanceWindow ^= 1; }
+			if(ImGui::MenuItem("Editor ", nil, showEditorWindow)) { showEditorWindow ^= 1; }
+			if(ImGui::MenuItem("Log ", nil, showLogWindow)) { showLogWindow ^= 1; }
+			if(ImGui::MenuItem("Demo ", nil, showDemoWindow)) { showDemoWindow ^= 1; }
 			if(ImGui::MenuItem("Help", nil, showHelpWindow)) { showHelpWindow ^= 1; }
 			ImGui::EndMenu();
 		}
-
-		ImGui::PushItemWidth(100);
-		ImGui::SliderFloat("Draw Distance", &TheCamera.m_LODmult, 0.5f, 3.0f, "%.3f");
-		ImGui::PopItemWidth();
 
 		if(params.numAreas){
 			ImGui::PushItemWidth(100);
@@ -208,23 +188,8 @@ advanceMinute(int diff)
 }
 
 static void
-uiEditorWindow(void)
+uiTimeWeather(void)
 {
-	CPtrNode *p;
-	ObjectInst *inst;
-	ObjectDef *obj;
-
-	ImGui::SetNextWindowSize(ImVec2(500, 250), ImGuiCond_FirstUseEver);
-
-	ImGui::Begin("Editor Window", &showEditorWindow);
-
-	if(ImGui::TreeNode("Camera")){
-		ImGui::InputFloat3("Cam position", (float*)&TheCamera.m_position);
-		ImGui::InputFloat3("Cam target", (float*)&TheCamera.m_target);
-		ImGui::TreePop();
-	}
-
-	if(ImGui::TreeNode("Time & Weather")){
 		static int weatherWidth;
 		if(weatherWidth == 0){
 			int i, w;
@@ -291,111 +256,67 @@ uiEditorWindow(void)
 		ImGui::PopItemWidth();
 		ImGui::PopItemWidth();
 
-		ImGui::SliderInt("Extracolour", &extraColours, -1, params.numExtraColours*params.numHours - 1);
+		if(params.timecycle != GAME_III)
+			ImGui::SliderInt("Extracolour", &extraColours, -1, params.numExtraColours*params.numHours - 1);
 
 		if(params.neoWorldPipe)
 			ImGui::SliderFloat("Neo Light map", &gNeoLightMapStrength, 0.0f, 1.0f, "%.2f");
+}
 
-		ImGui::TreePop();
-	}
-
-	if(ImGui::TreeNode("Rendering")){
-		ImGui::Checkbox("Draw Collisions", &gRenderCollision);
+static void
+uiView(void)
+{
+	ImGui::Checkbox("Draw Collisions", &gRenderCollision);
+	if(params.timecycle == GAME_SA)
+		ImGui::Checkbox("Draw TimeCycle boxes", &gRenderTimecycleBoxes);
+	ImGui::Checkbox("Draw Water", &gRenderWater);
+	if(gameversion == GAME_SA)
 		ImGui::Checkbox("Play Animations", &gPlayAnimations);
-		ImGui::Checkbox("Draw Background", &gRenderBackground);
-		ImGui::Checkbox("Draw Water", &gRenderWater);
-		ImGui::Checkbox("Draw PostFX", &gRenderPostFX);
-		if(params.timecycle == GAME_SA){
-			ImGui::Text("Colour filter"); ImGui::SameLine();
-			ImGui::RadioButton("None##NOPOSTFX", &gColourFilter, 0); ImGui::SameLine();
-			ImGui::RadioButton("PS2##PS2POSTFX", &gColourFilter, PLATFORM_PS2); ImGui::SameLine();
-			ImGui::RadioButton("PC/Xbox##PCPOSTFX", &gColourFilter, PLATFORM_PC); ImGui::SameLine();
-			ImGui::Checkbox("Radiosity", &gRadiosity);
-		}
-		ImGui::Checkbox("Enable Fog", &gEnableFog);
-		if(params.timecycle == GAME_VC)
-			ImGui::Checkbox("Use Blur Ambient", &gUseBlurAmb);
-		ImGui::Checkbox("Backface Culling", &gDoBackfaceCulling);
 
-		ImGui::Separator();
-		static int render = 0;
-		ImGui::RadioButton("Render Normal", &render, 0);
-		ImGui::RadioButton("Render only HD", &render, 1);
-		ImGui::RadioButton("Render only LOD", &render, 2);
-		gRenderOnlyHD = !!(render&1);
-		gRenderOnlyLod = !!(render&2);
-		ImGui::Checkbox("Render all Timed Objects", &gNoTimeCull);
+	static int render = 0;
+	ImGui::RadioButton("Render Normal", &render, 0);
+	ImGui::RadioButton("Render only HD", &render, 1);
+	ImGui::RadioButton("Render only LOD", &render, 2);
+	gRenderOnlyHD = !!(render&1);
+	gRenderOnlyLod = !!(render&2);
+	ImGui::SliderFloat("Draw Distance", &TheCamera.m_LODmult, 0.5f, 3.0f, "%.3f");
+	ImGui::Checkbox("Render all Timed Objects", &gNoTimeCull);
+	if(params.numAreas)
 		ImGui::Checkbox("Render all Areas", &gNoAreaCull);
-		ImGui::Separator();
+}
 
-		if(params.daynightPipe){
-			ImGui::Text("Building Pipe"); ImGui::SameLine();
-			ImGui::RadioButton("PS2##PS2BUILD", &gBuildingPipeSwitch, PLATFORM_PS2); ImGui::SameLine();
-			ImGui::RadioButton("PC##PCBUILD", &gBuildingPipeSwitch, PLATFORM_PC); ImGui::SameLine();
-			ImGui::RadioButton("Xbox##XBOXBUILD", &gBuildingPipeSwitch, PLATFORM_XBOX);
-		}
-
-		ImGui::TreePop();
+static void
+uiRendering(void)
+{
+	ImGui::Checkbox("Draw PostFX", &gRenderPostFX);
+	if(params.timecycle == GAME_VC){
+		ImGui::Checkbox("Use Blur Ambient", &gUseBlurAmb); ImGui::SameLine();
+		ImGui::Checkbox("Override", &gOverrideBlurAmb);
 	}
-
-	if(ImGui::TreeNode("CD images")){
-		uiShowCdImages();
-		ImGui::TreePop();
+	if(params.timecycle == GAME_SA){
+		ImGui::Text("Colour filter"); ImGui::SameLine();
+		ImGui::RadioButton("None##NOPOSTFX", &gColourFilter, 0); ImGui::SameLine();
+		ImGui::RadioButton("PS2##PS2POSTFX", &gColourFilter, PLATFORM_PS2); ImGui::SameLine();
+		ImGui::RadioButton("PC/Xbox##PCPOSTFX", &gColourFilter, PLATFORM_PC); ImGui::SameLine();
+		ImGui::Checkbox("Radiosity", &gRadiosity);
 	}
-
-	if(ImGui::TreeNode("Selection")){
-		for(p = selection.first; p; p = p->next){
-			inst = (ObjectInst*)p->item;
-			obj = GetObjectDef(inst->m_objectId);
-			ImGui::PushID(inst);
-			ImGui::Selectable(obj->m_name);
-			ImGui::PopID();
-			if(ImGui::IsItemHovered()){
-				inst->m_highlight = HIGHLIGHT_HOVER;
-				if(ImGui::IsMouseClicked(1))
-					inst->Deselect();
-				if(ImGui::IsMouseDoubleClicked(0))
-					inst->JumpTo();
-			}
-		}
-		ImGui::TreePop();
+	if(params.daynightPipe){
+		ImGui::Text("Building Pipe"); ImGui::SameLine();
+		ImGui::RadioButton("PS2##PS2BUILD", &gBuildingPipeSwitch, PLATFORM_PS2); ImGui::SameLine();
+		ImGui::RadioButton("PC##PCBUILD", &gBuildingPipeSwitch, PLATFORM_PC); ImGui::SameLine();
+		ImGui::RadioButton("Xbox##XBOXBUILD", &gBuildingPipeSwitch, PLATFORM_XBOX);
 	}
+	ImGui::Checkbox("Backface Culling", &gDoBackfaceCulling);
+	// TODO: not params
+	ImGui::Checkbox("PS2 Alpha test", &params.ps2AlphaTest);
+	ImGui::InputInt("Alpha Ref", &params.alphaRef, 1);
+	if(params.alphaRef < 0) params.alphaRef = 0;
+	if(params.alphaRef > 255) params.alphaRef = 255;
 
-	if(ImGui::TreeNode("Instances")){
-		static ImGuiTextFilter filter;
-		filter.Draw();
-		static bool highlight;
-		ImGui::Checkbox("Highlight matches", &highlight);
-		for(p = instances.first; p; p = p->next){
-			inst = (ObjectInst*)p->item;
-			obj = GetObjectDef(inst->m_objectId);
-			if(filter.PassFilter(obj->m_name)){
-				bool pop = false;
-				if(inst->m_selected){
-					ImGui::PushStyleColor(ImGuiCol_Text, (ImVec4)ImColor(255, 0, 0));
-					pop = true;
-				}
-				ImGui::PushID(inst);
-				ImGui::Selectable(obj->m_name);
-				ImGui::PopID();
-				if(ImGui::IsItemHovered()){
-					if(ImGui::IsMouseClicked(1))
-						inst->Select();
-					if(ImGui::IsMouseDoubleClicked(0))
-						inst->JumpTo();
-				}
-				if(pop)
-					ImGui::PopStyleColor();
-				if(highlight)
-					inst->m_highlight = HIGHLIGHT_FILTER;
-				if(ImGui::IsItemHovered())
-					inst->m_highlight = HIGHLIGHT_HOVER;
-			}
-		}
-		ImGui::TreePop();
-	}
-
-	ImGui::End();
+	ImGui::Checkbox("Draw Background", &gRenderBackground);
+	ImGui::Checkbox("Enable Fog", &gEnableFog);
+	if(params.timecycle == GAME_SA)
+		ImGui::Checkbox("Enable TimeCycle boxes", &gEnableTimecycleBoxes);
 }
 
 static void
@@ -417,7 +338,7 @@ uiInstInfo(ObjectInst *inst)
 		inst->m_rotation.y,
 		inst->m_rotation.x,
 		inst->m_rotation.w);
-	if(!isIII())
+	if(params.numAreas)
 		ImGui::Text("Area: %d", inst->m_area);
 
 	if(params.objFlagset == GAME_SA){
@@ -433,8 +354,6 @@ uiObjInfo(ObjectDef *obj)
 {
 	int i;
 	TxdDef *txd;
-
-	ImGui::SetNextWindowSize(ImVec2(500, 500), ImGuiCond_FirstUseEver);
 
 	txd = GetTxdDef(obj->m_txdSlot);
 	static char buf[MODELNAMELEN];
@@ -532,10 +451,84 @@ uiObjInfo(ObjectDef *obj)
 }
 
 static void
+uiEditorWindow(void)
+{
+	CPtrNode *p;
+	ObjectInst *inst;
+	ObjectDef *obj;
+
+	ImGui::Begin("Editor Window", &showEditorWindow);
+
+	if(ImGui::TreeNode("Camera")){
+		ImGui::InputFloat3("Cam position", (float*)&TheCamera.m_position);
+		ImGui::InputFloat3("Cam target", (float*)&TheCamera.m_target);
+		ImGui::Text("Far: %f", Timecycle::currentColours.farClp);
+		ImGui::TreePop();
+	}
+
+	if(ImGui::TreeNode("CD images")){
+		uiShowCdImages();
+		ImGui::TreePop();
+	}
+
+	if(ImGui::TreeNode("Selection")){
+		for(p = selection.first; p; p = p->next){
+			inst = (ObjectInst*)p->item;
+			obj = GetObjectDef(inst->m_objectId);
+			ImGui::PushID(inst);
+			ImGui::Selectable(obj->m_name);
+			ImGui::PopID();
+			if(ImGui::IsItemHovered()){
+				inst->m_highlight = HIGHLIGHT_HOVER;
+				if(ImGui::IsMouseClicked(1))
+					inst->Deselect();
+				if(ImGui::IsMouseDoubleClicked(0))
+					inst->JumpTo();
+			}
+		}
+		ImGui::TreePop();
+	}
+
+	if(ImGui::TreeNode("Instances")){
+		static ImGuiTextFilter filter;
+		filter.Draw();
+		static bool highlight;
+		ImGui::Checkbox("Highlight matches", &highlight);
+		for(p = instances.first; p; p = p->next){
+			inst = (ObjectInst*)p->item;
+			obj = GetObjectDef(inst->m_objectId);
+			if(filter.PassFilter(obj->m_name)){
+				bool pop = false;
+				if(inst->m_selected){
+					ImGui::PushStyleColor(ImGuiCol_Text, (ImVec4)ImColor(255, 0, 0));
+					pop = true;
+				}
+				ImGui::PushID(inst);
+				ImGui::Selectable(obj->m_name);
+				ImGui::PopID();
+				if(ImGui::IsItemHovered()){
+					if(ImGui::IsMouseClicked(1))
+						inst->Select();
+					if(ImGui::IsMouseDoubleClicked(0))
+						inst->JumpTo();
+				}
+				if(pop)
+					ImGui::PopStyleColor();
+				if(highlight)
+					inst->m_highlight = HIGHLIGHT_FILTER;
+				if(ImGui::IsItemHovered())
+					inst->m_highlight = HIGHLIGHT_HOVER;
+			}
+		}
+		ImGui::TreePop();
+	}
+
+	ImGui::End();
+}
+
+static void
 uiInstWindow(void)
 {
-	ImGui::SetNextWindowSize(ImVec2(500, 500), ImGuiCond_FirstUseEver);
-
 	ImGui::Begin("Object Info", &showInstanceWindow);
 	if(selection.first){
 		ObjectInst *inst = (ObjectInst*)selection.first->item;
@@ -558,8 +551,31 @@ gui(void)
 
 	uiMainmenu();
 
-	if(showEditorWindow) uiEditorWindow();
+	if(CPad::IsKeyJustDown('T')) showTimeWeatherWindow ^= 1;
+	if(showTimeWeatherWindow){
+		ImGui::Begin("Time & Weather", &showTimeWeatherWindow);
+		uiTimeWeather();
+		ImGui::End();
+	}
+
+	if(CPad::IsKeyJustDown('V')) showViewWindow ^= 1;
+	if(showViewWindow){
+		ImGui::Begin("View", &showViewWindow);
+		uiView();
+		ImGui::End();
+	}
+
+	if(CPad::IsKeyJustDown('R')) showRenderingWindow ^= 1;
+	if(showRenderingWindow){
+		ImGui::Begin("Rendering", &showRenderingWindow);
+		uiRendering();
+		ImGui::End();
+	}
+
+	if(CPad::IsKeyJustDown('I')) showInstanceWindow ^= 1;
 	if(showInstanceWindow) uiInstWindow();
+
+	if(showEditorWindow) uiEditorWindow();
 	if(showHelpWindow) uiHelpWindow();
 	if(showDemoWindow){
 		ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiCond_FirstUseEver);

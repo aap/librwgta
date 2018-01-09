@@ -262,6 +262,30 @@ LoadObjectInstance(char *line)
 void LoadZone(char *line) { }
 void LoadCullZone(char *line) { }
 
+void
+LoadTimeCycleModifier(char *line)
+{
+	CBox box;
+	int farclp;
+	int extraCol;
+	float extraColIntensity;
+	float falloffDist;
+	float unused;
+	float lodDistMult;
+
+	falloffDist = 100.0f;
+	unused = 1.0;
+	lodDistMult = 1.0f;
+	if(sscanf(line, "%f %f %f  %f %f %f  %d  %d %f  %f %f %f",
+			&box.min.x, &box.min.y, &box.min.z,
+			&box.max.x, &box.max.y, &box.max.z,
+			&farclp,
+			&extraCol, &extraColIntensity,
+			&falloffDist, &unused, &lodDistMult) < 12)
+		lodDistMult = unused;
+	Timecycle::AddBox(box, farclp, extraCol, extraColIntensity, falloffDist, lodDistMult);
+}
+
 DatDesc zoneDesc[] = {
 	{ "end", LoadNothing },
 	{ "zone", LoadMapZone },
@@ -299,7 +323,7 @@ DatDesc iplDesc[] = {
 	{ "enex", LoadNothing },
 	{ "cars", LoadNothing },
 	{ "jump", LoadNothing },
-	{ "tcyc", LoadNothing },
+	{ "tcyc", LoadTimeCycleModifier },
 	{ "auzo", LoadNothing },
 	{ "", nil }
 };

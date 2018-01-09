@@ -34,9 +34,9 @@ neoWorldRenderCB(Atomic *atomic, d3d9::InstanceDataHeader *header)
 	d3ddevice->SetVertexDeclaration((IDirect3DVertexDeclaration9*)header->vertexDeclaration);
 
 	if(params.neoWorldPipe == GAME_III)
-		d3ddevice->SetPixelShader((IDirect3DPixelShader9*)neoWorldIII_PS);
+		setPixelShader(neoWorldIII_PS);
 	else
-		d3ddevice->SetPixelShader((IDirect3DPixelShader9*)neoWorldVC_PS);
+		setPixelShader(neoWorldVC_PS);
 
 	float lightfactor[4];
 
@@ -70,10 +70,12 @@ neoWorldRenderCB(Atomic *atomic, d3d9::InstanceDataHeader *header)
 			d3d::setRenderState(D3DRS_EMISSIVEMATERIALSOURCE, D3DMCS_MATERIAL);
 		d3d::setRenderState(D3DRS_DIFFUSEMATERIALSOURCE, inst->vertexAlpha ? D3DMCS_COLOR1 : D3DMCS_MATERIAL);
 
-		d3d::flushCache();
-		d3ddevice->DrawIndexedPrimitive((D3DPRIMITIVETYPE)header->primType, inst->baseIndex,
-		                                0, inst->numVertices,
-		                                inst->startIndex, inst->numPrimitives);
+
+		if(params.ps2AlphaTest)
+			drawInst_GSemu(header, inst);
+		else
+			drawInst(header, inst);
+
 		inst++;
 	}
 	d3ddevice->SetPixelShader(nil);
@@ -85,8 +87,8 @@ MakeNeoWorldPipe(void)
 {
 #include "d3d_shaders/neoWorldIII_PS.inc"
 #include "d3d_shaders/neoWorldVC_PS.inc"
-	d3ddevice->CreatePixelShader((DWORD*)neoWorldIII_PS_cso, (IDirect3DPixelShader9**)&neoWorldIII_PS);
-	d3ddevice->CreatePixelShader((DWORD*)neoWorldVC_PS_cso, (IDirect3DPixelShader9**)&neoWorldVC_PS);
+	neoWorldIII_PS = createPixelShader(neoWorldIII_PS_cso);
+	neoWorldVC_PS = createPixelShader(neoWorldVC_PS_cso);
 
 	d3d9::ObjPipeline *pipe;
 	pipe = new d3d9::ObjPipeline(PLATFORM_D3D9);

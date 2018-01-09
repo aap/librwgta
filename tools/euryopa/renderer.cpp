@@ -343,13 +343,13 @@ myRenderCB(rw::Atomic *atomic)
 		colourCode = highlightColor;
 		colourCode.alpha = 128;
 		int32 zwrite, fog;
-		zwrite = rw::GetRenderState(rw::ZWRITEENABLE);
+		zwrite = GetRenderState(rw::ZWRITEENABLE);
 		fog = rw::GetRenderState(rw::FOGENABLE);
-		rw::SetRenderState(rw::ZWRITEENABLE, 0);
-		rw::SetRenderState(rw::FOGENABLE, 0);
+		SetRenderState(rw::ZWRITEENABLE, 0);
+		SetRenderState(rw::FOGENABLE, 0);
 		colourCodePipe->render(atomic);
-		rw::SetRenderState(rw::ZWRITEENABLE, zwrite);
-		rw::SetRenderState(rw::FOGENABLE, fog);
+		SetRenderState(rw::ZWRITEENABLE, zwrite);
+		SetRenderState(rw::FOGENABLE, fog);
 	}else
 		atomic->getPipeline()->render(atomic);
 }
@@ -403,17 +403,21 @@ RenderTransparentInst(ObjectInst *inst)
 	ObjectDef *obj;
 	obj = GetObjectDef(inst->m_objectId);
 
-	if(obj->m_noZwrite)
-		rw::SetRenderState(rw::ZWRITEENABLE, 0);
+	if(obj->m_noZwrite){
+		SetRenderState(rw::ZWRITEENABLE, 0);
+		SetRenderState(rw::ALPHATESTREF, 0);
+	}else
+		SetRenderState(rw::ALPHATESTREF, params.alphaRef);
+
 //	This is not handled that way by GTA, only on fading entities....
 //	if(obj->m_additive)
-//		rw::SetRenderState(rw::DESTBLEND, rw::BLENDONE);
+//		SetRenderState(rw::DESTBLEND, rw::BLENDONE);
 
 	RenderInst(inst);
 
 	if(obj->m_noZwrite)
-		rw::SetRenderState(rw::ZWRITEENABLE, 1);
-//	rw::SetRenderState(rw::DESTBLEND, rw::BLENDINVSRCALPHA);
+		SetRenderState(rw::ZWRITEENABLE, 1);
+//	SetRenderState(rw::DESTBLEND, rw::BLENDINVSRCALPHA);
 }
 
 static void
@@ -537,6 +541,8 @@ BuildRenderList(void)
 void
 RenderOpaque(void)
 {
+	SetRenderState(rw::ALPHATESTREF, params.alphaRef);
+
 	SetRenderState(rw::CULLMODE, gDoBackfaceCulling ? rw::CULLBACK : rw::CULLNONE);
 	int i;
 	for(i = 0; i < numVisibleInsts; i++)
@@ -596,3 +602,77 @@ RenderInit(void)
 	MakeCustomBuildingPipelines();
 	MakeNeoWorldPipe();
 }
+
+#ifdef RW_D3D9
+
+using namespace rw;
+using namespace d3d;
+using namespace d3d9;
+
+void
+defaultRenderCB_GSemu(Atomic *atomic, d3d9::InstanceDataHeader *header)
+{
+	RawMatrix world;
+	Geometry *geo = atomic->geometry;
+
+	int lighting = !!(geo->flags & rw::Geometry::LIGHT);
+	if(lighting)
+		d3d::lightingCB();
+
+	d3d::setRenderState(D3DRS_LIGHTING, lighting);
+
+	Frame *f = atomic->getFrame();
+	convMatrix(&world, f->getLTM());
+	d3ddevice->SetTransform(D3DTS_WORLD, (D3DMATRIX*)&world);
+
+	d3ddevice->SetStreamSource(0, (IDirect3DVertexBuffer9*)header->vertexStream[0].vertexBuffer,
+	                           0, header->vertexStream[0].stride);
+	d3ddevice->SetIndices((IDirect3DIndexBuffer9*)header->indexBuffer);
+	d3ddevice->SetVertexDeclaration((IDirect3DVertexDeclaration9*)header->vertexDeclaration);
+
+	InstanceData *inst = header->inst;
+	for(uint32 i = 0; i < header->numMeshes; i++){
+		// Texture
+		d3d::setTexture(0, inst->material->texture);
+		d3d::setTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
+		d3d::setTextureStageState(0, D3DTSS_COLORARG1, D3DTA_CURRENT);
+		d3d::setTextureStageState(0, D3DTSS_COLORARG2, D3DTA_TEXTURE);
+		d3d::setTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
+		d3d::setTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_CURRENT);
+		d3d::setTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_TEXTURE);
+
+		SetRenderState(VERTEXALPHA, inst->vertexAlpha || inst->material->color.alpha != 255);
+
+		// Material colour
+		const rw::RGBA *col = &inst->material->color;
+		d3d::setTextureStageState(1, D3DTSS_CONSTANT, D3DCOLOR_ARGB(col->alpha,col->red,col->green,col->blue));
+		d3d::setTextureStageState(1, D3DTSS_COLOROP, D3DTOP_MODULATE);
+		d3d::setTextureStageState(1, D3DTSS_COLORARG1, D3DTA_CURRENT);
+		d3d::setTextureStageState(1, D3DTSS_COLORARG2, D3DTA_CONSTANT);
+		d3d::setTextureStageState(1, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
+		d3d::setTextureStageState(1, D3DTSS_ALPHAARG1, D3DTA_CURRENT);
+		d3d::setTextureStageState(1, D3DTSS_ALPHAARG2, D3DTA_CONSTANT);
+
+		const static rw::RGBA white = { 255, 255, 255, 255 };
+		d3d::setMaterial(inst->material->surfaceProps, white);
+
+		d3d::setRenderState(D3DRS_AMBIENTMATERIALSOURCE, D3DMCS_MATERIAL);
+		if(geo->flags & Geometry::PRELIT)
+			d3d::setRenderState(D3DRS_EMISSIVEMATERIALSOURCE, D3DMCS_COLOR1);
+		else
+			d3d::setRenderState(D3DRS_EMISSIVEMATERIALSOURCE, D3DMCS_MATERIAL);
+		d3d::setRenderState(D3DRS_DIFFUSEMATERIALSOURCE, inst->vertexAlpha ? D3DMCS_COLOR1 : D3DMCS_MATERIAL);
+
+// This is the change
+		if(params.ps2AlphaTest)
+			drawInst_GSemu(header, inst);
+		else
+			drawInst(header, inst);
+//
+		inst++;
+	}
+	d3d::setTextureStageState(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
+	d3d::setTextureStageState(1, D3DTSS_ALPHAOP, D3DTOP_DISABLE);
+}
+
+#endif

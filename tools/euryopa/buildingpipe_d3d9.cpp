@@ -30,9 +30,6 @@ enum {
 static void *ps2BuildingVS, *pcBuildingVS, *ps2BuildingFxVS;
 static void *simplePS, *ps2EnvPS;
 
-void setVertexShader(void *vs) { d3ddevice->SetVertexShader((IDirect3DVertexShader9*)vs); }
-void setPixelShader(void *ps) { d3ddevice->SetPixelShader((IDirect3DPixelShader9*)ps); }
-
 void
 getComposedMatrix(Atomic *atm, RawMatrix *combined)
 {
@@ -116,10 +113,10 @@ buildingRenderCB_PS2(Atomic *atomic, d3d9::InstanceDataHeader *header)
 			d3ddevice->SetVertexShaderConstantF(REG_texmat, (float*)&ident, 4);
 
 
-		d3d::flushCache();
-		d3ddevice->DrawIndexedPrimitive((D3DPRIMITIVETYPE)header->primType, inst->baseIndex,
-		                                0, inst->numVertices,
-		                                inst->startIndex, inst->numPrimitives);
+		if(params.ps2AlphaTest)
+			drawInst_GSemu(header, inst);
+		else
+			drawInst(header, inst);
 
 		if(hasEnv){
 			setVertexShader(ps2BuildingFxVS);
@@ -335,14 +332,14 @@ MakeCustomBuildingPipelines(void)
 #include "d3d_shaders/ps2BuildingVS.inc"
 #include "d3d_shaders/pcBuildingVS.inc"
 #include "d3d_shaders/simplePS.inc"
-	d3ddevice->CreateVertexShader((DWORD*)ps2BuildingVS_cso, (IDirect3DVertexShader9**)&ps2BuildingVS);
-	d3ddevice->CreateVertexShader((DWORD*)pcBuildingVS_cso, (IDirect3DVertexShader9**)&pcBuildingVS);
-	d3ddevice->CreatePixelShader((DWORD*)simplePS_cso, (IDirect3DPixelShader9**)&simplePS);
+	ps2BuildingVS = createVertexShader(ps2BuildingVS_cso);
+	pcBuildingVS = createVertexShader(pcBuildingVS_cso);
+	simplePS = createPixelShader(simplePS_cso);
 
 #include "d3d_shaders/ps2BuildingFxVS.inc"
 #include "d3d_shaders/ps2EnvPS.inc"
-	d3ddevice->CreateVertexShader((DWORD*)ps2BuildingFxVS_cso, (IDirect3DVertexShader9**)&ps2BuildingFxVS);
-	d3ddevice->CreatePixelShader((DWORD*)ps2EnvPS_cso, (IDirect3DPixelShader9**)&ps2EnvPS);
+	ps2BuildingFxVS = createVertexShader(ps2BuildingFxVS_cso);
+	ps2EnvPS = createPixelShader(ps2EnvPS_cso);
 
 
 	pipe = new d3d9::ObjPipeline(PLATFORM_D3D9);
