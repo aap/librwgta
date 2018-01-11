@@ -267,15 +267,24 @@ InitRW(void)
 	pDirect->getFrame()->rotate(&xaxis, 180.0f, rw::COMBINEREPLACE);
 	Scene.world->addLight(pDirect);
 
-	Scene.camera = sk::CameraCreate(sk::globals.width, sk::globals.height, 1);
-	Scene.camera->setFarPlane(5000.0f);
-	Scene.camera->setNearPlane(0.1f);
-	TheCamera.m_rwcam = Scene.camera;
+	TheCamera.m_rwcam = sk::CameraCreate(sk::globals.width, sk::globals.height, 1);
+	TheCamera.m_rwcam->setFarPlane(5000.0f);
+	TheCamera.m_rwcam->setNearPlane(0.1f);
+	// Create a second camera to use with a larger draw distance
+	TheCamera.m_rwcam_viewer = rw::Camera::create();
+	TheCamera.m_rwcam_viewer->setFrame(TheCamera.m_rwcam->getFrame());
+	TheCamera.m_rwcam_viewer->frameBuffer = TheCamera.m_rwcam->frameBuffer;
+	TheCamera.m_rwcam_viewer->zBuffer = TheCamera.m_rwcam->zBuffer;
+	TheCamera.m_rwcam_viewer->setFarPlane(5000.0f);
+	TheCamera.m_rwcam_viewer->setNearPlane(0.1f);
+
+	Scene.camera = TheCamera.m_rwcam;
 	TheCamera.m_aspectRatio = 640.0f/480.0f;
 
 	TheCamera.m_LODmult = 1.0f;
 
-	Scene.world->addCamera(Scene.camera);
+	Scene.world->addCamera(TheCamera.m_rwcam);
+	Scene.world->addCamera(TheCamera.m_rwcam_viewer);
 
 	ImGui_ImplRW_Init();
 	ImGui::StyleColorsClassic();
@@ -337,8 +346,10 @@ AppEventHandler(sk::Event e, void *param)
 		r = (Rect*)param;
 		sk::globals.width = r->w;
 		sk::globals.height = r->h;
-		if(Scene.camera){
-			sk::CameraSize(Scene.camera, r);
+		if(TheCamera.m_rwcam){
+			sk::CameraSize(TheCamera.m_rwcam, r);
+			TheCamera.m_rwcam_viewer->frameBuffer = TheCamera.m_rwcam->frameBuffer;
+			TheCamera.m_rwcam_viewer->zBuffer = TheCamera.m_rwcam->zBuffer;
 			TheCamera.m_aspectRatio = (float)r->w/r->h;
 		}
 		break;

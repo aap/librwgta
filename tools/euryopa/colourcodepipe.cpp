@@ -9,6 +9,8 @@ rw::RGBA colourCode;
 using namespace d3d;
 using namespace d3d9;
 
+static void *vs;
+
 void
 colourCodeRenderCB(Atomic *atomic, d3d9::InstanceDataHeader *header)
 {
@@ -25,6 +27,18 @@ colourCodeRenderCB(Atomic *atomic, d3d9::InstanceDataHeader *header)
 	                           0, header->vertexStream[0].stride);
 	d3ddevice->SetIndices((IDirect3DIndexBuffer9*)header->indexBuffer);
 	d3ddevice->SetVertexDeclaration((IDirect3DVertexDeclaration9*)header->vertexDeclaration);
+
+	// Use a vertex shader here if we're drawing over an object drawn
+	// with a vertex shader to minimize z-fights
+	if(d3d9UsedVertexShader){
+		void getComposedMatrix(Atomic *atm, RawMatrix *combined);
+		RawMatrix combined, ident;
+		RawMatrix::setIdentity(&ident);
+		setVertexShader(vs);
+		getComposedMatrix(atomic, &combined);
+		d3ddevice->SetVertexShaderConstantF(0, (float*)&combined, 4);
+		d3ddevice->SetVertexShaderConstantF(32, (float*)&ident, 4);
+	}
 
 	InstanceData *inst = header->inst;
 	uint32 blend;
@@ -43,18 +57,21 @@ colourCodeRenderCB(Atomic *atomic, d3d9::InstanceDataHeader *header)
 		d3d::setTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
 		d3d::setTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_TFACTOR);
 
-		d3d::flushCache();
-		d3ddevice->DrawIndexedPrimitive((D3DPRIMITIVETYPE)header->primType, inst->baseIndex,
-		                                0, inst->numVertices,
-		                                inst->startIndex, inst->numPrimitives);
+		d3d9::drawInst(header, inst);
+
 		d3d::setRenderState(D3DRS_ALPHABLENDENABLE, blend);
 		inst++;
 	}
+	setVertexShader(nil);
 }
 
 rw::ObjPipeline*
 makeColourCodePipeline(void)
 {
+	// reuse as our vertex shader
+#include "d3d_shaders/ps2BuildingVS.inc"
+	vs = createVertexShader(ps2BuildingVS_cso);
+
 	d3d9::ObjPipeline *pipe = new d3d9::ObjPipeline(PLATFORM_D3D9);
 	pipe->instanceCB = defaultInstanceCB;
 	pipe->uninstanceCB = defaultUninstanceCB;

@@ -129,7 +129,8 @@ uiHelpWindow(void)
 		"Ctrl+Alt+LMB; W/S: move forward/backward\n"
 		"MMB: pan\n"
 		"Alt+MMB: arc rotate around target\n"
-		"Ctrl+Alt+MMB: zoom into target"
+		"Ctrl+Alt+MMB: zoom into target\n"
+		"C: toggle viewer camera (longer far clip)"
 		);
 	ImGui::Separator();
 	ImGui::BulletText("Selection: click on an object to select it,\n"
@@ -269,6 +270,28 @@ uiView(void)
 	ImGui::Checkbox("Draw Collisions", &gRenderCollision);
 	if(params.timecycle == GAME_SA)
 		ImGui::Checkbox("Draw TimeCycle boxes", &gRenderTimecycleBoxes);
+	ImGui::Checkbox("Draw Zones", &gRenderZones);
+	if(gRenderZones){
+		ImGui::Indent();
+		ImGui::Checkbox("Map Zones", &gRenderMapZones);
+		switch(gameversion){
+		case GAME_III:
+			ImGui::Checkbox("Zones", &gRenderNavigZones);
+			ImGui::Checkbox("Cull Zones", &gRenderCullZones);
+			break;
+		case GAME_VC:
+			ImGui::Checkbox("Navig Zones", &gRenderNavigZones);
+			ImGui::Checkbox("Info Zones", &gRenderInfoZones);
+			break;
+		case GAME_SA:
+			ImGui::Checkbox("Navig Zones", &gRenderNavigZones);
+			break;
+		}
+		ImGui::Checkbox("Attrib Zones", &gRenderAttribZones);
+		ImGui::Unindent();
+	}
+
+
 	ImGui::Checkbox("Draw Water", &gRenderWater);
 	if(gameversion == GAME_SA)
 		ImGui::Checkbox("Play Animations", &gPlayAnimations);
@@ -540,6 +563,26 @@ uiInstWindow(void)
 	ImGui::End();
 }
 
+static void
+uiTest(void)
+{
+	ImGuiContext &g = *GImGui;
+	int y = g.FontBaseSize + g.Style.FramePadding.y * 2.0f;	// height of main menu
+	ImGui::SetNextWindowPos(ImVec2(0, y), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(200, sk::globals.height-y), ImGuiCond_Always);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+	ImGui::Begin("Dock", nil, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize);
+	ImGui::Text("hi there");
+	if(ImGui::IsWindowFocused())
+		ImGui::Text("focus");
+	if(ImGui::IsMouseDragging())
+		ImGui::Text("drag");
+	if(ImGui::IsWindowHovered())
+		ImGui::Text("hover");
+	ImGui::End();
+	ImGui::PopStyleVar();
+}
+
 static ExampleAppLog logwindow;
 void addToLogWindow(const char *fmt, va_list args) { logwindow.AddLog(fmt, args); }
 
@@ -550,6 +593,8 @@ gui(void)
 	static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
 	uiMainmenu();
+
+	if(CPad::IsKeyJustDown('C')) gUseViewerCam = !gUseViewerCam;
 
 	if(CPad::IsKeyJustDown('T')) showTimeWeatherWindow ^= 1;
 	if(showTimeWeatherWindow){
@@ -583,4 +628,6 @@ gui(void)
 	}
 
 	if(showLogWindow) logwindow.Draw("Log", &showLogWindow);
+
+//	uiTest();
 }

@@ -19,6 +19,8 @@ static uint16 currentScanCode;
 
 static rw::ObjPipeline *colourCodePipe;
 
+bool d3d9UsedVertexShader;
+
 enum Visibility
 {
 	VIS_INVISIBLE,
@@ -336,20 +338,24 @@ static rw::RGBA highlightColor;
 void
 myRenderCB(rw::Atomic *atomic)
 {
+	d3d9UsedVertexShader = false;
 	if(renderColourCoded)
 		colourCodePipe->render(atomic);
 	else if(highlightColor.red || highlightColor.green || highlightColor.blue){
 		atomic->getPipeline()->render(atomic);
 		colourCode = highlightColor;
 		colourCode.alpha = 128;
-		int32 zwrite, fog;
+		int32 zwrite, fog, aref;
 		zwrite = GetRenderState(rw::ZWRITEENABLE);
 		fog = rw::GetRenderState(rw::FOGENABLE);
+		aref = rw::GetRenderState(rw::ALPHATESTREF);
 		SetRenderState(rw::ZWRITEENABLE, 0);
 		SetRenderState(rw::FOGENABLE, 0);
+		SetRenderState(rw::ALPHATESTREF, 10);
 		colourCodePipe->render(atomic);
 		SetRenderState(rw::ZWRITEENABLE, zwrite);
 		SetRenderState(rw::FOGENABLE, fog);
+		SetRenderState(rw::ALPHATESTREF, aref);
 	}else
 		atomic->getPipeline()->render(atomic);
 }
@@ -609,6 +615,42 @@ using namespace rw;
 using namespace d3d;
 using namespace d3d9;
 
+static void
+defaultCombinerSetup(InstanceData *inst)
+{
+	int st = 0;
+	if(inst->material->texture){
+		// Texture
+		d3d::setTexture(st, inst->material->texture);
+		d3d::setTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
+		d3d::setTextureStageState(0, D3DTSS_COLORARG1, D3DTA_CURRENT);
+		d3d::setTextureStageState(0, D3DTSS_COLORARG2, D3DTA_TEXTURE);
+		d3d::setTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
+		d3d::setTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_CURRENT);
+		d3d::setTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_TEXTURE);
+		st++;
+	}else{
+		d3d::setTextureStageState(0, D3DTSS_COLOROP, D3DTOP_SELECTARG1);
+		d3d::setTextureStageState(0, D3DTSS_COLORARG1, D3DTA_CURRENT);
+		d3d::setTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
+		d3d::setTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_CURRENT);
+	}
+
+	// Material colour
+	const rw::RGBA *col = &inst->material->color;
+	d3d::setTextureStageState(1, D3DTSS_CONSTANT, D3DCOLOR_ARGB(col->alpha,col->red,col->green,col->blue));
+	d3d::setTextureStageState(1, D3DTSS_COLOROP, D3DTOP_MODULATE);
+	d3d::setTextureStageState(1, D3DTSS_COLORARG1, D3DTA_CURRENT);
+	d3d::setTextureStageState(1, D3DTSS_COLORARG2, D3DTA_CONSTANT);
+	d3d::setTextureStageState(1, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
+	d3d::setTextureStageState(1, D3DTSS_ALPHAARG1, D3DTA_CURRENT);
+	d3d::setTextureStageState(1, D3DTSS_ALPHAARG2, D3DTA_CONSTANT);
+	st++;
+
+	d3d::setTextureStageState(2, D3DTSS_COLOROP, D3DTOP_DISABLE);
+	d3d::setTextureStageState(2, D3DTSS_ALPHAOP, D3DTOP_DISABLE);
+}
+
 void
 defaultRenderCB_GSemu(Atomic *atomic, d3d9::InstanceDataHeader *header)
 {
@@ -632,27 +674,7 @@ defaultRenderCB_GSemu(Atomic *atomic, d3d9::InstanceDataHeader *header)
 
 	InstanceData *inst = header->inst;
 	for(uint32 i = 0; i < header->numMeshes; i++){
-		// Texture
-		d3d::setTexture(0, inst->material->texture);
-		d3d::setTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
-		d3d::setTextureStageState(0, D3DTSS_COLORARG1, D3DTA_CURRENT);
-		d3d::setTextureStageState(0, D3DTSS_COLORARG2, D3DTA_TEXTURE);
-		d3d::setTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
-		d3d::setTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_CURRENT);
-		d3d::setTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_TEXTURE);
-
 		SetRenderState(VERTEXALPHA, inst->vertexAlpha || inst->material->color.alpha != 255);
-
-		// Material colour
-		const rw::RGBA *col = &inst->material->color;
-		d3d::setTextureStageState(1, D3DTSS_CONSTANT, D3DCOLOR_ARGB(col->alpha,col->red,col->green,col->blue));
-		d3d::setTextureStageState(1, D3DTSS_COLOROP, D3DTOP_MODULATE);
-		d3d::setTextureStageState(1, D3DTSS_COLORARG1, D3DTA_CURRENT);
-		d3d::setTextureStageState(1, D3DTSS_COLORARG2, D3DTA_CONSTANT);
-		d3d::setTextureStageState(1, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
-		d3d::setTextureStageState(1, D3DTSS_ALPHAARG1, D3DTA_CURRENT);
-		d3d::setTextureStageState(1, D3DTSS_ALPHAARG2, D3DTA_CONSTANT);
-
 		const static rw::RGBA white = { 255, 255, 255, 255 };
 		d3d::setMaterial(inst->material->surfaceProps, white);
 
@@ -662,6 +684,8 @@ defaultRenderCB_GSemu(Atomic *atomic, d3d9::InstanceDataHeader *header)
 		else
 			d3d::setRenderState(D3DRS_EMISSIVEMATERIALSOURCE, D3DMCS_MATERIAL);
 		d3d::setRenderState(D3DRS_DIFFUSEMATERIALSOURCE, inst->vertexAlpha ? D3DMCS_COLOR1 : D3DMCS_MATERIAL);
+
+		defaultCombinerSetup(inst);
 
 // This is the change
 		if(params.ps2AlphaTest)

@@ -16,8 +16,6 @@ int currentArea;
 
 // Options
 
-bool gRenderCollision;
-bool gRenderTimecycleBoxes;
 bool gRenderOnlyLod;
 bool gRenderOnlyHD;
 bool gRenderBackground = true;
@@ -31,6 +29,17 @@ bool gNoTimeCull;
 bool gNoAreaCull;
 bool gDoBackfaceCulling;	// init from params
 bool gPlayAnimations = true;
+bool gUseViewerCam;
+
+// non-rendering things
+bool gRenderCollision;
+bool gRenderZones;
+bool gRenderMapZones;
+bool gRenderNavigZones;
+bool gRenderInfoZones;
+bool gRenderCullZones;
+bool gRenderAttribZones;
+bool gRenderTimecycleBoxes;
 
 // SA postfx
 int  gColourFilter;
@@ -235,17 +244,26 @@ test(void)
 }*/
 
 void
+RenderEverythingColourCoded(void)
+{
+	rw::SetRenderState(rw::FOGENABLE, 0);
+	SetRenderState(rw::ALPHATESTREF, 10);
+	int aref = params.alphaRef;
+	params.alphaRef = 10;
+	renderColourCoded = 1;
+	RenderEverything();
+	renderColourCoded = 0;
+	params.alphaRef = aref;
+}
+
+void
 handleTool(void)
 {
 	// select
 	if(CPad::IsMButtonClicked(1)){
 		static rw::RGBA black = { 0, 0, 0, 0xFF };
 		TheCamera.m_rwcam->clear(&black, rw::Camera::CLEARIMAGE|rw::Camera::CLEARZ);
-		rw::SetRenderState(rw::FOGENABLE, 0);
-
-		renderColourCoded = 1;
-		RenderEverything();
-		renderColourCoded = 0;
+		RenderEverythingColourCoded();
 		int32 c = GetColourCode(CPad::newMouseState.x, CPad::newMouseState.y);
 		ObjectInst *inst = GetInstanceByID(c);
 		if(inst){
@@ -285,7 +303,7 @@ LoadGame(void)
 //	SetCurrentDirectory("F://gta3_xbox");
 //	SetCurrentDirectory("F://gtavc_xbox");
 //	SetCurrentDirectory("F://gtasa_pc");
-	SetCurrentDirectory("I://");
+//	SetCurrentDirectory("E://");
 //	SetCurrentDirectory("C:\\Users\\aap\\games\\gta3d_latest");
 
 	FindVersion();
@@ -447,11 +465,17 @@ Draw(void)
 
 	TheCamera.m_rwcam->setFarPlane(Timecycle::currentColours.farClp);
 	TheCamera.m_rwcam->fogPlane = Timecycle::currentColours.fogSt;
+	TheCamera.m_rwcam_viewer->setFarPlane(5000.0f);
+	TheCamera.m_rwcam_viewer->fogPlane = Timecycle::currentColours.fogSt;
 
 	CPad::UpdatePads();
 	TheCamera.Process();
 	TheCamera.update();
-	TheCamera.m_rwcam->beginUpdate();
+	if(gUseViewerCam)
+		Scene.camera = TheCamera.m_rwcam_viewer;
+	else
+		Scene.camera = TheCamera.m_rwcam;
+	Scene.camera->beginUpdate();
 
 	DefinedState();
 
@@ -466,7 +490,8 @@ Draw(void)
 
 	handleTool();
 
-	TheCamera.m_rwcam->clear(&clearcol, rw::Camera::CLEARIMAGE|rw::Camera::CLEARZ);
+	DefinedState();
+	Scene.camera->clear(&clearcol, rw::Camera::CLEARIMAGE|rw::Camera::CLEARZ);
 	if(gRenderBackground){
 		SetRenderState(rw::CULLMODE, rw::CULLNONE);
 		rw::RGBA skytop, skybot;
@@ -486,6 +511,8 @@ Draw(void)
 	if(gRenderWater)
 		WaterLevel::Render();
 	RenderTransparent();
+	// DEBUG render object picking
+	//RenderEverythingColourCoded();
 
 	if(gRenderPostFX)
 		RenderPostFX();
@@ -500,17 +527,21 @@ Draw(void)
 		RenderEverythingCollisions();
 	if(gRenderTimecycleBoxes)
 		Timecycle::RenderBoxes();
+	if(gRenderZones)
+		Zones::Render();
+	if(gRenderCullZones)
+		Zones::RenderCullZones();
+	if(gRenderAttribZones)
+		Zones::RenderAttribZones();
 
-	TheCamera.m_rwcam->endUpdate();
-	TheCamera.m_rwcam->setFarPlane(5000.0f);
-	TheCamera.m_rwcam->beginUpdate();
+	// This fucks up the z buffer, but what else can we do?
 	RenderDebugLines();
 
 	ImGui::EndFrame();
 	ImGui::Render();
 
-	TheCamera.m_rwcam->endUpdate();
-	TheCamera.m_rwcam->showRaster();
+	Scene.camera->endUpdate();
+	Scene.camera->showRaster();
 	frameCounter++;
 }
 

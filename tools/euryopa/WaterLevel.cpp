@@ -291,7 +291,7 @@ RenderWaterpro(void)
 			sph.center.x = x + WATERSMALLSECTORSZX/2;
 			sph.center.y = y + WATERSMALLSECTORSZY/2;
 			sph.center.z = z;
-			if(Scene.camera->frustumTestSphere(&sph) != rw::Camera::SPHEREOUTSIDE)
+			if(TheCamera.m_rwcam->frustumTestSphere(&sph) != rw::Camera::SPHEREOUTSIDE)
 				RenderOneFlatSmallWaterPoly(x, y, z, color);
 		}
 

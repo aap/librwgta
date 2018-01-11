@@ -157,6 +157,7 @@ buildingRenderCB_PS2(Atomic *atomic, d3d9::InstanceDataHeader *header)
 
 	d3ddevice->SetVertexShader(nil);
 	d3ddevice->SetPixelShader(nil);
+	d3d9UsedVertexShader = true;
 }
 
 #define GETEXTRACOLOREXT(g) PLUGINOFFSET(gta::ExtraVertColors, g, gta::extraVertColorOffset)

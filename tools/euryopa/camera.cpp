@@ -132,6 +132,7 @@ CCamera::update(void)
 {
 	if(m_rwcam){
 		m_rwcam->setFOV(m_fov, m_aspectRatio);
+		m_rwcam_viewer->setFOV(m_fov, m_aspectRatio);
 
 		rw::Frame *f = m_rwcam->getFrame();
 		if(f){

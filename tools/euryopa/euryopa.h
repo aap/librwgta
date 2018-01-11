@@ -52,8 +52,6 @@ extern float avgTimeStep;
 // Options
 //
 
-extern bool gRenderCollision;
-extern bool gRenderTimecycleBoxes;
 extern bool gRenderOnlyLod;
 extern bool gRenderOnlyHD;
 extern bool gRenderBackground;
@@ -67,6 +65,17 @@ extern bool gNoTimeCull;
 extern bool gNoAreaCull;
 extern bool gDoBackfaceCulling;
 extern bool gPlayAnimations;
+extern bool gUseViewerCam;
+
+// non-rendering things
+extern bool gRenderCollision;
+extern bool gRenderZones;
+extern bool gRenderMapZones;
+extern bool gRenderNavigZones;
+extern bool gRenderInfoZones;
+extern bool gRenderCullZones;
+extern bool gRenderAttribZones;
+extern bool gRenderTimecycleBoxes;
 
 // SA postfx
 extern int  gColourFilter;
@@ -95,6 +104,7 @@ enum {
 	NUMWATERVERTICES = 4000,
 	NUMWATERQUADS = 1000,
 	NUMWATERTRIS = 1000,
+	NUMZONES = 500,	// for each type
 };
 
 #define LODDISTANCE (300.0f)
@@ -110,6 +120,19 @@ struct CRGBA
 
 #include "timecycle.h"
 #include "Sprite.h"
+
+namespace Zones {
+void CreateZone(const char *name, int type, CBox box, int level, const char *text);
+void Render(void);
+void AddAttribZone(CBox box, int flags, int wantedLevelDrop);
+void AddAttribZone(rw::V3d pos, float s1x, float s1y,
+	float s2x, float s2y, float zmin, float zmax, int flags);
+void AddMirrorAttribZone(rw::V3d pos, float s1x, float s1y,
+	float s2x, float s2y, float zmin, float zmax,
+	int flags, rw::Plane mirror);
+void RenderAttribZones(void);
+void RenderCullZones(void);
+}
 
 // Game
 
@@ -433,6 +456,8 @@ extern rw::Texture *whiteTex;
 extern SceneGlobals Scene;
 extern CCamera TheCamera;
 
+extern bool d3d9UsedVertexShader;
+
 bool32 instWhite(int type, uint8 *dst, uint32 numVertices, uint32 stride);
 
 void myRenderCB(rw::Atomic *atomic);
@@ -465,6 +490,7 @@ void RenderEverything(void);
 
 // Debug Render
 void RenderLine(rw::V3d v1, rw::V3d v2, rw::RGBA c1, rw::RGBA c2);
+void RenderWireBoxVerts(rw::V3d *verts, rw::RGBA col);
 void RenderWireBox(CBox *box, rw::RGBA col, rw::Matrix *xform);
 void RenderWireSphere(CSphere *sphere, rw::RGBA col, rw::Matrix *xform);
 void RenderWireTriangle(rw::V3d *v1, rw::V3d *v2, rw::V3d *v3, rw::RGBA col, rw::Matrix *xform);

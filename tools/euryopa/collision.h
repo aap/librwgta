@@ -8,6 +8,19 @@ struct CBox
 {
 	rw::V3d min;
 	rw::V3d max;
+
+	void FindMinMax(void){
+		float tmp;
+		if(max.x < min.x){
+			tmp = min.x; min.x = max.x; max.x = tmp;
+		}
+		if(max.y < min.y){
+			tmp = min.y; min.y = max.y; max.y = tmp;
+		}
+		if(max.z < min.z){
+			tmp = min.z; min.z = max.z; max.z = tmp;
+		}
+	}
 };
 
 struct CompressedVector

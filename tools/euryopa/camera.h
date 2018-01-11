@@ -2,6 +2,7 @@ class CCamera
 {
 public:
 	rw::Camera *m_rwcam;
+	rw::Camera *m_rwcam_viewer;	// with larger far clip
 	rw::V3d m_position;
 	rw::V3d m_target;
 	rw::V3d m_up;

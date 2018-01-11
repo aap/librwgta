@@ -92,6 +92,25 @@ AddDebugLine(float x1, float y1, float z1, float x2, float y2, float z2, rw::RGB
 void RenderLine(rw::V3d v1, rw::V3d v2, rw::RGBA c1, rw::RGBA c2) { AddDebugLine(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, c1, c2); }
 
 void
+RenderWireBoxVerts(rw::V3d *verts, rw::RGBA col)
+{
+	RenderLine(verts[0], verts[1], col, col);
+	RenderLine(verts[1], verts[3], col, col);
+	RenderLine(verts[3], verts[2], col, col);
+	RenderLine(verts[2], verts[0], col, col);
+
+	RenderLine(verts[0+4], verts[1+4], col, col);
+	RenderLine(verts[1+4], verts[3+4], col, col);
+	RenderLine(verts[3+4], verts[2+4], col, col);
+	RenderLine(verts[2+4], verts[0+4], col, col);
+
+	RenderLine(verts[0], verts[4], col, col);
+	RenderLine(verts[1], verts[5], col, col);
+	RenderLine(verts[2], verts[6], col, col);
+	RenderLine(verts[3], verts[7], col, col);
+}
+
+void
 RenderWireBox(CBox *box, rw::RGBA col, rw::Matrix *xform)
 {
 	rw::V3d verts[8];
@@ -121,20 +140,7 @@ RenderWireBox(CBox *box, rw::RGBA col, rw::Matrix *xform)
 	verts[7].z = box->max.z;
 	rw::V3d::transformPoints(verts, verts, 8, xform);
 
-	RenderLine(verts[0], verts[1], col, col);
-	RenderLine(verts[1], verts[3], col, col);
-	RenderLine(verts[3], verts[2], col, col);
-	RenderLine(verts[2], verts[0], col, col);
-
-	RenderLine(verts[0+4], verts[1+4], col, col);
-	RenderLine(verts[1+4], verts[3+4], col, col);
-	RenderLine(verts[3+4], verts[2+4], col, col);
-	RenderLine(verts[2+4], verts[0+4], col, col);
-
-	RenderLine(verts[0], verts[4], col, col);
-	RenderLine(verts[1], verts[5], col, col);
-	RenderLine(verts[2], verts[6], col, col);
-	RenderLine(verts[3], verts[7], col, col);
+	RenderWireBoxVerts(verts, col);
 }
 
 void

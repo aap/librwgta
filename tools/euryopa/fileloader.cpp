@@ -70,8 +70,6 @@ LoadDataFile(const char *filename, DatDesc *desc)
 
 void LoadNothing(char *line) { }
 
-void LoadMapZone(char *line) { }
-
 void
 LoadObject(char *line)
 {
@@ -259,8 +257,73 @@ LoadObjectInstance(char *line)
 		tmpInsts[numTmpInsts++] = inst;
 }
 
-void LoadZone(char *line) { }
-void LoadCullZone(char *line) { }
+void
+LoadZone(char *line)
+{
+	char name[24];
+	char text[24];
+	int type;
+	CBox box;
+	int level;
+	int n;
+	n = sscanf(line, "%s %d %f %f %f %f %f %f %d %s",
+			name, &type,
+			&box.min.x, &box.min.y, &box.min.z,
+			&box.max.x, &box.max.y, &box.max.z,
+			&level, text);
+	if(n == 9)
+		// in III we add all zones here to the zones array
+		Zones::CreateZone(name, type, box, level, nil);
+	else if(n == 10)
+		Zones::CreateZone(name, type, box, level, text);
+}
+
+void
+LoadMapZone(char *line)
+{
+	// Should only be called from III
+	// zones always added to mapzone array
+	LoadZone(line);
+}
+
+void
+LoadCullZone(char *line)
+{
+	rw::V3d center;
+	int flags;
+	int wantedLevelDrop;
+
+	wantedLevelDrop = 0;
+	if(isSA()){
+		float s1x, s1y;
+		float s2x, s2y;
+		float zmin, zmax;
+		rw::Plane mirror;
+		if(sscanf(line, "%f %f %f  %f %f %f  %f %f %f  %d  %f %f %f %f",
+				&center.x, &center.y, &center.z,
+				&s1x, &s1y, &zmin,
+				&s2x, &s2y, &zmax,
+				&flags,
+				&mirror.normal.x, &mirror.normal.y, &mirror.normal.z, &mirror.distance) == 14)
+			Zones::AddMirrorAttribZone(center, s1x, s1y, s2x, s2y, zmin, zmax, flags, mirror);
+		else{
+			sscanf(line, "%f %f %f  %f %f %f  %f %f %f  %d %d",
+				&center.x, &center.y, &center.z,
+				&s1x, &s1y, &zmin,
+				&s2x, &s2y, &zmax,
+				&flags, &wantedLevelDrop);
+			Zones::AddAttribZone(center, s1x, s1y, s2x, s2y, zmin, zmax, flags);
+		}
+	}else{
+		CBox box;
+		sscanf(line, "%f %f %f  %f %f %f  %f %f %f  %d %d",
+			&center.x, &center.y, &center.z,
+			&box.min.x, &box.min.y, &box.min.z,
+			&box.max.x, &box.max.y, &box.max.z,
+			&flags, &wantedLevelDrop);
+		Zones::AddAttribZone(box, flags, wantedLevelDrop);
+	}
+}
 
 void
 LoadTimeCycleModifier(char *line)
