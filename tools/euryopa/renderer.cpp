@@ -618,17 +618,15 @@ using namespace d3d9;
 static void
 defaultCombinerSetup(InstanceData *inst)
 {
-	int st = 0;
 	if(inst->material->texture){
 		// Texture
-		d3d::setTexture(st, inst->material->texture);
+		d3d::setTexture(0, inst->material->texture);
 		d3d::setTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
 		d3d::setTextureStageState(0, D3DTSS_COLORARG1, D3DTA_CURRENT);
 		d3d::setTextureStageState(0, D3DTSS_COLORARG2, D3DTA_TEXTURE);
 		d3d::setTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
 		d3d::setTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_CURRENT);
 		d3d::setTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_TEXTURE);
-		st++;
 	}else{
 		d3d::setTextureStageState(0, D3DTSS_COLOROP, D3DTOP_SELECTARG1);
 		d3d::setTextureStageState(0, D3DTSS_COLORARG1, D3DTA_CURRENT);
@@ -645,7 +643,6 @@ defaultCombinerSetup(InstanceData *inst)
 	d3d::setTextureStageState(1, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
 	d3d::setTextureStageState(1, D3DTSS_ALPHAARG1, D3DTA_CURRENT);
 	d3d::setTextureStageState(1, D3DTSS_ALPHAARG2, D3DTA_CONSTANT);
-	st++;
 
 	d3d::setTextureStageState(2, D3DTSS_COLOROP, D3DTOP_DISABLE);
 	d3d::setTextureStageState(2, D3DTSS_ALPHAOP, D3DTOP_DISABLE);
@@ -659,7 +656,7 @@ defaultRenderCB_GSemu(Atomic *atomic, d3d9::InstanceDataHeader *header)
 
 	int lighting = !!(geo->flags & rw::Geometry::LIGHT);
 	if(lighting)
-		d3d::lightingCB();
+		d3d::lightingCB(!!(geo->flags & rw::Geometry::NORMALS));
 
 	d3d::setRenderState(D3DRS_LIGHTING, lighting);
 

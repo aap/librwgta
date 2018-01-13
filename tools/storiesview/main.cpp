@@ -23,9 +23,11 @@ rw::EngineStartParams engineStartParams;
 rw::Material *cubeMat;
 rw::Geometry *cubeGeo;
 rw::Light *pAmbient;
-int drawCubes = 0;
+bool drawCubes;
 int drawLOD = 1;
 int frameCounter = -1;
+float timeStep;
+float avgTimeStep;
 
 CTimeCycle *pTimecycle;
 rw::RGBA currentAmbient;
@@ -34,13 +36,18 @@ rw::RGBA currentSkyTop;
 rw::RGBA currentSkyBot;
 rw::RGBA currentFog;
 CPathFind *gpThePaths;
+CPool_col *pColPool;
+CStreaming *pStreaming;
+FILE *gCdImage;
+uint8 *gStreamingBuf;
 
 
 int curSectX = 28;
 int curSectY = 4;
-int curIntr = -1;
-int curHour = 12;
-int curWeather = 0;
+int currentArea = -1;
+int currentHour = 12;
+int currentMinute = 0;
+int currentWeather = 0;
 
 void
 panic(const char *fmt, ...)
@@ -137,8 +144,8 @@ void
 Init(void)
 {
 	sk::globals.windowtitle = "Stories viewer";
-	sk::globals.width = 640;
-	sk::globals.height = 480;
+	sk::globals.width = 1280;
+	sk::globals.height = 800;
 	sk::globals.quit = 0;
 }
 
@@ -165,30 +172,30 @@ attachPlugins(void)
 void
 updateTimecycle(void)
 {
-	if(curWeather >= 0){
-		currentAmbient.red = pTimecycle->m_nAmbientRed[curHour][curWeather];
-		currentAmbient.green = pTimecycle->m_nAmbientGreen[curHour][curWeather];
-		currentAmbient.blue = pTimecycle->m_nAmbientBlue[curHour][curWeather];
-		currentEmissive.red = pTimecycle->m_nAmbientRed_Bl[curHour][curWeather];
-		currentEmissive.green = pTimecycle->m_nAmbientGreen_Bl[curHour][curWeather];
-		currentEmissive.blue = pTimecycle->m_nAmbientBlue_Bl[curHour][curWeather];
-		currentSkyTop.red = pTimecycle->m_nSkyTopRed[curHour][curWeather];
-		currentSkyTop.green = pTimecycle->m_nSkyTopGreen[curHour][curWeather];
-		currentSkyTop.blue = pTimecycle->m_nSkyTopBlue[curHour][curWeather];
+	if(currentWeather >= 0){
+		currentAmbient.red = pTimecycle->m_nAmbientRed[currentHour][currentWeather];
+		currentAmbient.green = pTimecycle->m_nAmbientGreen[currentHour][currentWeather];
+		currentAmbient.blue = pTimecycle->m_nAmbientBlue[currentHour][currentWeather];
+		currentEmissive.red = pTimecycle->m_nAmbientRed_Bl[currentHour][currentWeather];
+		currentEmissive.green = pTimecycle->m_nAmbientGreen_Bl[currentHour][currentWeather];
+		currentEmissive.blue = pTimecycle->m_nAmbientBlue_Bl[currentHour][currentWeather];
+		currentSkyTop.red = pTimecycle->m_nSkyTopRed[currentHour][currentWeather];
+		currentSkyTop.green = pTimecycle->m_nSkyTopGreen[currentHour][currentWeather];
+		currentSkyTop.blue = pTimecycle->m_nSkyTopBlue[currentHour][currentWeather];
 		currentSkyTop.alpha = 255;
-		currentSkyBot.red = pTimecycle->m_nSkyBottomRed[curHour][curWeather];
-		currentSkyBot.green = pTimecycle->m_nSkyBottomGreen[curHour][curWeather];
-		currentSkyBot.blue = pTimecycle->m_nSkyBottomBlue[curHour][curWeather];
+		currentSkyBot.red = pTimecycle->m_nSkyBottomRed[currentHour][currentWeather];
+		currentSkyBot.green = pTimecycle->m_nSkyBottomGreen[currentHour][currentWeather];
+		currentSkyBot.blue = pTimecycle->m_nSkyBottomBlue[currentHour][currentWeather];
 		currentSkyBot.alpha = 255;
 
-		pTimecycle->m_fCurrentWaterRed = pTimecycle->m_fWaterRed[curHour][curWeather];
-		pTimecycle->m_fCurrentWaterGreen = pTimecycle->m_fWaterGreen[curHour][curWeather];
-		pTimecycle->m_fCurrentWaterBlue = pTimecycle->m_fWaterBlue[curHour][curWeather];
-		pTimecycle->m_fCurrentWaterAlpha = pTimecycle->m_fWaterAlpha[curHour][curWeather];
+		pTimecycle->m_fCurrentWaterRed = pTimecycle->m_fWaterRed[currentHour][currentWeather];
+		pTimecycle->m_fCurrentWaterGreen = pTimecycle->m_fWaterGreen[currentHour][currentWeather];
+		pTimecycle->m_fCurrentWaterBlue = pTimecycle->m_fWaterBlue[currentHour][currentWeather];
+		pTimecycle->m_fCurrentWaterAlpha = pTimecycle->m_fWaterAlpha[currentHour][currentWeather];
 		if(pTimecycle->m_fCurrentWaterAlpha < 200)	// not 100% sure this is right
 			pTimecycle->m_fCurrentWaterAlpha = 200;
-		TheCamera.m_rwcam->setFarPlane(pTimecycle->m_fFarClip[curHour][curWeather]);
-		TheCamera.m_rwcam->fogPlane = pTimecycle->m_fFogStart[curHour][curWeather];
+		TheCamera.m_rwcam->setFarPlane(pTimecycle->m_fFarClip[currentHour][currentWeather]);
+		TheCamera.m_rwcam->fogPlane = pTimecycle->m_fFogStart[currentHour][currentWeather];
 	}else{
 		currentAmbient.red = 255;
 		currentAmbient.green = 255;
@@ -235,7 +242,7 @@ DefinedState(void)
 	SetRenderState(rw::SRCBLEND, rw::BLENDSRCALPHA);
 	SetRenderState(rw::DESTBLEND, rw::BLENDINVSRCALPHA);
 	SetRenderState(rw::FOGENABLE, 0);
-	SetRenderState(rw::ALPHATESTREF, 10);
+	SetRenderState(rw::ALPHATESTREF, 128);
 	SetRenderState(rw::ALPHATESTFUNC, rw::ALPHAGREATEREQUAL);
 	SetRenderState(rw::FOGCOLOR, *(uint32*)&currentFog);
 }
@@ -302,7 +309,6 @@ InitRW(void)
 	Scene.world = rw::World::create();
 
 	pAmbient = rw::Light::create(rw::Light::AMBIENT);
-//	pAmbient->setColor(0.2f, 0.2f, 0.2f);
 	pAmbient->setColor(1.0f, 1.0f, 1.0f);
 	Scene.world->addLight(pAmbient);
 
@@ -320,14 +326,12 @@ InitRW(void)
 	TheCamera.m_aspectRatio = 640.0f/480.0f;
 
 #ifdef LCS
-	TheCamera.m_position.set(1356.0f, -1107.0f, 96.0f);
-	TheCamera.m_target.set(1276.0f, -984.0f, 68.0f);
+	TheCamera.m_position.set(970.8f, -497.3f, 36.8f);
+	TheCamera.m_target.set(1092.5f, -417.3f, 3.8f);
 #endif
 #ifdef VCS
-//	TheCamera.m_position.set(292.0f, -1402.0f, 71.0f);
-	TheCamera.m_position.set(292.0f, -1402.0f, 0.0f);
-//	TheCamera.m_target.set(223.0f, -1268.0f, 41.0f);
-	TheCamera.m_target.set(223.0f, -1268.0f, 0.0f);
+	TheCamera.m_position.set(131.5f, -1674.2f, 59.8f);
+	TheCamera.m_target.set(67.9f, -1542.0f, 26.3f);
 #endif
 
 
@@ -337,6 +341,9 @@ InitRW(void)
 
 	Renderer::buildingPipe = makeBuildingPipe();
 
+	ImGui_ImplRW_Init();
+	ImGui::StyleColorsClassic();
+
 	return true;
 }
 
@@ -344,9 +351,9 @@ bool
 GetIsTimeInRange(uint8 h1, uint8 h2)
 {
 	if(h1 > h2)
-		return curHour >= h1 || curHour < h2;
+		return currentHour >= h1 || currentHour < h2;
 	else
-		return curHour >= h1 && curHour < h2;
+		return currentHour >= h1 && currentHour < h2;
 }
 
 RslTexture*
@@ -354,6 +361,77 @@ dumpTexNames(RslTexture *texture, void *pData)
 {
 	printf("%s\n", texture->name);
 	return texture;
+}
+
+// from storiesconv
+void
+AssignModelNames(void)
+{
+	int i;
+	const char *name;
+	char tmpname[50];
+	CBaseModelInfo *mi;
+	for(i = 0; i < CModelInfo::msNumModelInfos; i++){
+		mi = CModelInfo::Get(i);
+		if(mi == nil)
+			continue;
+
+		name = lookupHashKey(mi->hashKey);
+		if(mi->hashKey == 0)
+			name = "null";
+		else if(name == nil){
+			snprintf(tmpname, 50, "hash:%x", mi->hashKey);
+			name = strdup(tmpname);
+		}
+		mi->name = name;
+	}
+}
+
+void
+AllocateStreamingBufer(void)
+{
+	int i, n;
+	int max = 0;
+	n = pStreaming->GetNumStreamInfo();
+	for(i = 0; i < n; i++)
+		if(pStreaming->ms_aInfoForModel[i].cdSize > max)
+			max = pStreaming->ms_aInfoForModel[i].cdSize;
+	max *= 2048;
+	gStreamingBuf = rwNewT(uint8, max, 0);
+}
+
+int32
+LoadStreamFile(int32 id)
+{
+	CStreamingInfo *si = &pStreaming->ms_aInfoForModel[id];
+	if(si->cdSize <= 0)
+		return 0;
+	fseek(gCdImage, si->cdPosn*2048, SEEK_SET);
+	fread(gStreamingBuf, 1, si->cdSize*2048, gCdImage);
+	return si->cdSize*2048;
+}
+
+void
+LoadColStore(void)
+{
+	ColEntry *c;
+	CStreamingInfo *si;
+	int32 sz;
+	uint32 colIds = pStreaming->GetColOffset();
+	int i;
+	for(i = 0; i < pColPool->size; i++){
+		if(pColPool->flags[i] & 0x80)
+			continue;
+		c = &pColPool->items[i];
+//		printf("%d %d %s\n", i, i+colIds, c->name);
+		si = &pStreaming->ms_aInfoForModel[i+colIds];
+//		printf("\t%x (%x) %x (%x)\n", si->cdPosn, si->cdPosn*2048, si->cdSize, si->cdSize*2048);
+		sz = LoadStreamFile(i+colIds);
+		if(sz){
+			LoadCollisionFile(i, gStreamingBuf);
+//			printf("%4s\n", gStreamingBuf);
+		}
+	}
 }
 
 void
@@ -384,6 +462,8 @@ found:
 		sk::args.argc--;
 	}
 
+//	int x = offsetof(ResourceImage, streaming_Inst);
+
 #ifdef LCS
 	zfile = zopen("CHK/PS2/GAME.DTZ", "rb");
 #else
@@ -410,6 +490,23 @@ found:
 	pTimecycle = resimg->timecycle;
 	CWaterLevel_::Initialize(resimg->waterLevelInst);
 	gpThePaths = resimg->paths;
+	pColPool = resimg->colPool;
+	pStreaming = resimg->streaming_Inst;
+
+	AssignModelNames();
+
+#ifdef LCS
+	gCdImage = fopen("MODELS\\GTA3PS2.IMG", "rb");
+#else
+	gCdImage = fopen("GTA3PS2.IMG", "rb");	// VCS opens it from RUNDATA???
+#endif
+	if(gCdImage == nil){
+		sk::globals.quit = 1;
+		return;
+	}
+	AllocateStreamingBufer();
+
+	LoadColStore();
 
 	LoadLevel(levelToLoad);
 	int i;
@@ -633,6 +730,21 @@ drawHorizon(void)
 }
 
 void
+updateFPS(void)
+{
+	static float history[100];
+	static float total;
+	static int n;
+	static int i;
+
+	total += timeStep - history[i];
+	history[i] = timeStep;
+	i = (i+1) % 100;
+	n = i > n ? i : n;
+	avgTimeStep = total / n;
+}
+
+void
 Draw(void)
 {
 	static rw::RGBA clearcol = { 0x80, 0x80, 0x80, 0xFF };
@@ -643,56 +755,14 @@ Draw(void)
 		sk::globals.quit = 1;
 		return;
 	}
-	if(CPad::IsKeyJustDown('J')){
-		curSectY--;
-		if(curSectY < 0) curSectY = NUMSECTORSY-1;
-	}
-	if(CPad::IsKeyJustDown('K')){
-		curSectY++;
-		if(curSectY >= NUMSECTORSY) curSectY = 0;
-	}
-	if(CPad::IsKeyJustDown('H')){
-		curSectX--;
-		if(curSectX < 0) curSectX = NUMSECTORSX-1;
-	}
-	if(CPad::IsKeyJustDown('L')){
-		curSectX++;
-		if(curSectX >= NUMSECTORSX) curSectX = 0;
-	}
-	if(CPad::IsKeyJustDown('I')){
-		curIntr++;
-		if(curIntr >= gLevel->chunk->numInteriors) curIntr = -1;
-		debug("interior: %d\n", curIntr);
-	}
-	if(CPad::IsKeyJustDown('U')){
-		curIntr--;
-		if(curIntr < -1) curIntr = gLevel->chunk->numInteriors-1;
-		debug("interior: %d\n", curIntr);
-	}
-	if(CPad::IsKeyJustDown('T')){
-		curHour--;
-		if(curHour < 0) curHour = 23;
-		debug("hour: %d\n", curHour);
-	}
-	if(CPad::IsKeyJustDown('Y')){
-		curHour++;
-		if(curHour >= 24) curHour = 0;
-		debug("hour: %d\n", curHour);
-	}
-	if(CPad::IsKeyJustDown('Z')){
-		curWeather--;
-		if(curWeather < -1) curWeather = 7;
-		debug("weather: %d\n", curWeather);
-	}
-	if(CPad::IsKeyJustDown('X')){
-		curWeather++;
-		if(curWeather >= 8) curWeather = -1;
-		debug("weather: %d\n", curWeather);
-	}
-	if(CPad::IsKeyJustDown('C'))
-		drawCubes = !drawCubes;
-	if(CPad::IsKeyJustDown('B'))
-		drawLOD = !drawLOD;
+
+	// HACK HACK, reset this value if it appears to be too
+	// high, which indicates we loaded a lot last frame
+	if(timeStep > 2.0f)
+		timeStep = 1/30.0f;
+	updateFPS();
+
+	ImGui_ImplRW_NewFrame(timeStep);
 
 	updateTimecycle();
 
@@ -712,8 +782,8 @@ Draw(void)
 	drawHorizon();
 
 	if(drawCubes)
-//		Renderer::renderCubesIPL();
-		Renderer::renderPathNodes();
+		Renderer::renderDebugIPL();
+//		Renderer::renderPathNodes();
 //	renderCubesSector(curSectX, curSectY);
 
 	rw::SetRenderState(rw::FOGENABLE, 1);
@@ -721,8 +791,8 @@ Draw(void)
 	int i;
 	Renderer::reset();
 //	renderSector(worldSectors[curSectX][curSectY]);
-	if(curIntr >= 0)
-		renderSector(&gLevel->sectors[gLevel->chunk->interiors[curIntr].sectorId]);
+	if(currentArea >= 0)
+		renderSector(&gLevel->sectors[gLevel->chunk->interiors[currentArea].sectorId]);
 	else
 		for(i = 0; i < gLevel->numWorldSectors; i++)
 			renderSector(&gLevel->sectors[i]);
@@ -731,6 +801,15 @@ Draw(void)
 	Renderer::renderTransparent();
 
 	CWaterLevel_::mspInst->RenderWater();
+
+	rw::SetRenderState(rw::FOGENABLE, 0);
+
+	RenderDebugLines();
+
+	gui();
+
+	ImGui::EndFrame();
+	ImGui::Render();
 
 	TheCamera.m_rwcam->endUpdate();
 	TheCamera.m_rwcam->showRaster();
@@ -745,8 +824,6 @@ Idle(void)
 	switch(state){
 	case 0:
 		InitGame();
-//dumpInstances();
-//exit(0);
 		state = 1;
 		break;
 	case 1:
@@ -761,12 +838,18 @@ AppEventHandler(sk::Event e, void *param)
 {
 	using namespace sk;
 	Rect *r;
+	MouseState *ms;
+
+	ImGuiEventHandler(e, param);
+
+	ImGuiIO &io = ImGui::GetIO();
+
 	switch(e){
 	case INITIALIZE:
-//		AllocConsole();
-//		freopen("CONIN$", "r", stdin);
-//		freopen("CONOUT$", "w", stdout);
-//		freopen("CONOUT$", "w", stderr);
+		AllocConsole();
+		freopen("CONIN$", "r", stdin);
+		freopen("CONOUT$", "w", stdout);
+		freopen("CONOUT$", "w", stderr);
 
 		Init();
 		plAttachInput();
@@ -776,10 +859,23 @@ AppEventHandler(sk::Event e, void *param)
 	case PLUGINATTACH:
 		return attachPlugins() ? EVENTPROCESSED : EVENTERROR;
 	case KEYDOWN:
-		CPad::tempKeystates[*(int*)param] = 1;
+		if(!io.WantCaptureKeyboard && !io.WantTextInput /*&& !ImGuizmo::IsOver()*/)
+			CPad::tempKeystates[*(int*)param] = 1;
 		return EVENTPROCESSED;
 	case KEYUP:
 		CPad::tempKeystates[*(int*)param] = 0;
+		return EVENTPROCESSED;
+	case MOUSEBTN:
+		if(!io.WantCaptureMouse/* && !ImGuizmo::IsOver()*/){
+			ms = (MouseState*)param;
+			CPad::tempMouseState.btns = ms->buttons;
+		}else
+			CPad::tempMouseState.btns = 0;
+		return EVENTPROCESSED;
+	case MOUSEMOVE:
+		ms = (MouseState*)param;
+		CPad::tempMouseState.x = ms->posx;
+		CPad::tempMouseState.y = ms->posy;
 		return EVENTPROCESSED;
 	case RESIZE:
 		r = (Rect*)param;
@@ -791,6 +887,7 @@ AppEventHandler(sk::Event e, void *param)
 		}
 		break;
 	case IDLE:
+		timeStep = *(float*)param;
 		Idle();
 		return EVENTPROCESSED;
 	}

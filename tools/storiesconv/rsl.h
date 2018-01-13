@@ -3,6 +3,7 @@ enum {
 	MDL_IDENT  = 0x006D646C,
 	WRLD_IDENT = 0x57524C44,
 	GTAG_IDENT = 0x47544147,
+	COL2_IDENT = 0x636F6C32,
 };
 
 typedef uint16 float16;

@@ -146,6 +146,7 @@ project "lcsview"
 	files { "tools/storiesconv/relocchunk.cpp" }
 	files { "tools/storiesconv/rsl.cpp" }
 	files { "tools/storiesconv/rslconv.cpp" }
+	files { "tools/storiesconv/hash.cpp" }
 	includedirs { Zlibdir }
 	libdirs { Zlibdir }
 	links { "zlib" }
@@ -153,7 +154,7 @@ project "lcsview"
 	removeplatforms { "*amd64*" }
 	removeplatforms { "ps2" } -- for now
 	defines { "LCS" }
-	debugdir "L:/"
+	debugdir "L:/."
 
 project "vcsview"
 	kind "WindowedApp"
@@ -164,6 +165,7 @@ project "vcsview"
 	files { "tools/storiesconv/relocchunk.cpp" }
 	files { "tools/storiesconv/rsl.cpp" }
 	files { "tools/storiesconv/rslconv.cpp" }
+	files { "tools/storiesconv/hash.cpp" }
 	includedirs { Zlibdir }
 	libdirs { Zlibdir }
 	links { "zlib" }
@@ -171,7 +173,7 @@ project "vcsview"
 	removeplatforms { "*amd64*" }
 	removeplatforms { "ps2" } -- for now
 	defines { "VCS" }
-	debugdir "V:/"
+	debugdir "V:/."
 
 project "euryopa"
 	kind "WindowedApp"

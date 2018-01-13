@@ -42,6 +42,109 @@ struct CVuVector
 	float x, y, z, w;
 };
 
+struct CompressedVector
+{
+	int16 x, y, z;
+	CVector Uncompress(void){
+		CVector v = { x/128.0f, y/128.0f, z/128.0f };
+		return v;
+	}
+};
+static_assert(sizeof(CompressedVector) == 6, "CompressedVector: error");
+
+struct CSphere
+{
+	CVector center;
+	float radius;
+};
+
+struct CBox
+{
+	CVuVector min;
+	CVuVector max;
+
+	void FindMinMax(void){
+		float tmp;
+		if(max.x < min.x){
+			tmp = min.x; min.x = max.x; max.x = tmp;
+		}
+		if(max.y < min.y){
+			tmp = min.y; min.y = max.y; max.y = tmp;
+		}
+		if(max.z < min.z){
+			tmp = min.z; min.z = max.z; max.z = tmp;
+		}
+	}
+};
+
+struct CColSphere
+{
+	CSphere sph;
+	uint8 mat;
+	uint8 flag;
+	int32 pad[3];
+};
+
+struct CColBox
+{
+	CBox box;
+	uint8 mat;
+	uint8 flag;
+	int32 pad[3];
+};
+
+struct CColTriangle
+{
+	int16 a, b, c;
+	uint8 mat;
+};
+static_assert(sizeof(CColTriangle) == 8, "CColTriangle: error");
+
+struct ColSection
+{
+	CBox box;
+	int16 first;
+	int16 last;
+	int32 pad[3];
+};
+
+struct CColModel
+{
+	CSphere boundingSphere;
+	CBox boundingBox;
+#ifdef LCS
+	int16 numSpheres;
+	int16 numBoxes;
+	int16 numTriangles;
+	uint8 numLines;
+	uint8 numTriSections;
+	uint8 colStoreId;
+	uint8 field_39;
+	uint8 field_3A;
+	uint8 field_3B;
+#else
+	int16 numBoxes;
+	int16 numTriangles;
+	int16 numSpheres;
+	uint8 numTriSections;
+	uint8 colStoreId;
+#endif
+	CColSphere *spheres;
+	void *lines;
+	CColBox *boxes;
+
+	ColSection *triSections;
+	CompressedVector *vertices;
+	CColTriangle *triangles;
+	int32 unk0;
+	int32 pad0[2];
+#ifdef VCS
+	int32 pad1;
+#endif
+};
+static_assert(sizeof(CColModel) == 0x60, "CColModel: error");
+
+
 struct TexListDef
 {
 	RslTexList *texlist;
@@ -89,7 +192,7 @@ struct CBaseModelInfo
 	int8	num2dFx;
 	bool	ownsColModel;
 	int8	field15;	// alpha?
-	void	*colModel;
+	CColModel	*colModel;
 	int16	_2dfxIndex;
 	int16	objectIndex;
 	int16	refCount;
@@ -328,8 +431,8 @@ struct CPool_generic
 {
 	void *items;
 	uint8 *flags;
-	int  size;
-	int  allocPtr;
+	int32  size;
+	int32  allocPtr;
 	char name[16];
 };
 
@@ -337,8 +440,8 @@ struct CPool_entity
 {
 	CEntity *items;
 	uint8 *flags;
-	int  size;
-	int  allocPtr;
+	int32  size;
+	int32  allocPtr;
 	char name[16];
 };
 
@@ -346,8 +449,8 @@ struct CPool_txd
 {
 	TexListDef *items;
 	uint8 *flags;
-	int  size;
-	int  allocPtr;
+	int32  size;
+	int32  allocPtr;
 	char name[16];
 };
 
@@ -659,6 +762,129 @@ struct CPathFind
 #endif
 };
 
+struct ColEntry
+{
+	int32 unk;
+	uint8 loaded;
+	CRect rect;
+#ifdef VCS
+	CRect rect2;	// what is this?
+#endif
+	char name[20];
+#ifdef LCS
+	int16 firstIndex;
+	int16 lastIndex;
+#else
+	int32 firstIndex;
+	int32 lastIndex;
+#endif
+	uint8 *chunkData;	// pointer to relocatable chunk, includes header
+};
+
+struct CPool_col
+{
+	ColEntry *items;
+	uint8 *flags;
+	int32  size;
+	int32  allocPtr;
+	char name[16];
+};
+
+struct CStreamingInfo
+{
+#ifdef LCS
+	CStreamingInfo *pNextRequest;
+	CStreamingInfo *pPrevRequest;
+	uint8 uLoadStatus;
+	uint8 uLoadFlags;
+	int16 nModelIndex;
+	int32 cdPosn;
+	int32 cdSize;
+#else
+	int32 field_0;	// uninitialized
+	int32 field_4;	// 0
+	int32 field_8;	// 0
+	int16 field_C;	// 0
+	int16 field_E;	// uninitialized
+	int32 cdPosn;
+	int32 cdSize;
+#endif
+};
+
+struct CStreaming
+{
+#ifdef LCS
+	// MOBILE! the beginning is the same on PS2 but count on it
+	int32 field_0;
+	CStreamingInfo ms_aInfoForModel[6175];
+	int32 ms_imageOffsets;
+	int32 field_1E274;
+	int32 ms_imageSize;
+	int32 field_1E27C;
+	uint8 array_1E280[50];
+	int32 field_1E2B4;
+	int32 field_1E2B8;
+	int32 field_1E2BC;
+	int32 field_1E2C0;
+	int32 field_1E2C4;
+	int32 field_1E2C8;
+	int32 field_1E2CC;
+	uint8 array_1E2D0[16];
+	int32 field_1E2E0;
+	int32 field_1E2E4;
+	int32 ms_currentPedGrp;
+	int16 ms_loadedGangs;
+	int16 field_1E2EE;
+	int32 field_1E2F0;
+	int32 ms_streamingBufferSize;
+	void *ms_pExtraObjectsDir;
+	CStreamingInfo ms_startLoadedList;
+	CStreamingInfo ms_endLoadedList;
+	CStreamingInfo ms_startRequestedList;
+	CStreamingInfo ms_endRequestedList;
+	int32 IslandLODIndID;
+	int32 IslandLODcomINDId;
+	int32 IslandLODcomSUBID;
+	int32 IslandLODsubINDID;
+	int32 IslandLODsubCOMID;
+	int32 field_1E360;
+	int32 field_1E364;
+	int32 field_1E368;
+	int32 field_1E36C;
+	int32 field_1E370;
+
+	// streaming ranges
+	// 4900 models	(dff, mdl)
+	// 1200 txds	(txd, tex)
+	// 15 cols	(col, col2)
+	// 60 ifps	(ifp, anim)
+	int32 GetTxdOffset(void) { return 4900; }
+	int32 GetColOffset(void) { return 4900 + 1200; }
+	int32 GetIfpOffset(void) { return 4900 + 1200 + 15; }
+	int32 GetNumStreamInfo(void) { return 4900 + 1200 + 15 + 60; }
+#else
+	// this thing is way different again, thanks R*
+	int32 field_0;	// 0
+	int32 field_4;	// 74000
+	int32 txdIdOffset;
+	int32 colIdOffset;
+	int32 ifpIdOffset;
+	int32 numStreamInfos;
+	int32 field_18;	// 0
+	int32 field_1C;	// C
+	uint8 array_20[0x50];	// probably same as array_1E280 above
+	uint8 array_70[0x58];
+	CStreamingInfo *ms_aInfoForModel;
+	uint32 fields_CC[6];	// probably two linked lists
+	void *ms_pExtraObjectsDir;
+	// ...
+	int32 GetTxdOffset(void) { return txdIdOffset; }
+	int32 GetColOffset(void) { return colIdOffset; }
+	int32 GetIfpOffset(void) { return ifpIdOffset; }
+	int32 GetNumStreamInfo(void) { return numStreamInfos; }
+#endif
+};
+
 struct ResourceImage {
 	CPathFind *paths;
 	CPool_entity *buildingPool;
@@ -678,7 +904,7 @@ struct ResourceImage {
 	int16 *modelIndices;
 	CPool_txd *texlistPool;
 	RslTexList *storedTexList;
-	CPool_generic *colPool;
+	CPool_col *colPool;
 	int32 colOnlyBB;
 	void *tempColModels;
 	void *objectInfo;	// object.dat
@@ -687,7 +913,7 @@ struct ResourceImage {
 #else
 	void *unknown0;
 #endif
-	void *streaming_Inst;	// gta3.dir
+	CStreaming *streaming_Inst;	// gta3.dir
 
 	CAnimManager *animManagerInst;
 	void *fightMoves;		// fistfite.dat

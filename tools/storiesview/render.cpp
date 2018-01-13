@@ -47,7 +47,7 @@ renderTransparent(void)
 }
 
 void
-drawEntity(CEntity *e)
+drawEntityCube(CEntity *e)
 {
 	rw::Atomic *atomic;
 	if(e->rslObject == 0){
@@ -64,7 +64,35 @@ drawEntity(CEntity *e)
 }
 
 void
-renderCubesIPL(void)
+drawEntityBS(CEntity *e)
+{
+	rw::Matrix mat;
+	CBaseModelInfo *mi = CModelInfo::Get(e->modelIndex);
+	if(mi == nil || mi->colModel == nil)
+		return;
+	if(mi->type != MODELINFO_SIMPLE && mi->type != MODELINFO_TIME)
+		return;
+	CSimpleModelInfo *smi = (CSimpleModelInfo*)mi;
+	CTimeModelInfo *tmi = nil;
+	if(mi->type == MODELINFO_TIME)
+		tmi = (CTimeModelInfo*)mi;
+
+	bool lod = !!(smi->flags & 0x10);
+	if(lod != drawLOD)
+		return;
+	if(tmi && !GetIsTimeInRange(tmi->timeOn, tmi->timeOff))
+		return;
+
+	if(TheCamera.distanceTo(*(rw::V3d*)&e->placeable.matrix.matrix.pos) > smi->drawDistances[0])
+		return;
+
+	mat = *(rw::Matrix*)&e->placeable.matrix.matrix;
+	mat.optimize();
+	RenderColModelWire(mi->colModel, &mat, true);
+}
+
+void
+renderDebugIPL(void)
 {
 	CBuilding *b;
 	int i, n;
@@ -79,14 +107,14 @@ renderCubesIPL(void)
 		b = pBuildingPool->GetSlot(i);
 		if(b == nil)
 			continue;
-		drawEntity(b);
+		drawEntityBS(b);
 	}
 	n = pTreadablePool->GetSize();
 	for(i = 0; i < n; i++){
 		b = pTreadablePool->GetSlot(i);
 		if(b == nil)
 			continue;
-		drawEntity(b);
+		drawEntityBS(b);
 	}
 }
 

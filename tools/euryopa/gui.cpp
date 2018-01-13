@@ -191,77 +191,77 @@ advanceMinute(int diff)
 static void
 uiTimeWeather(void)
 {
-		static int weatherWidth;
-		if(weatherWidth == 0){
-			int i, w;
-			for(i = 0; i < params.numWeathers; i++){
-				w = ImGui::CalcTextSize(params.weatherNames[i]).x;
-				if(w > weatherWidth)
-					weatherWidth = w;
-			}
-			weatherWidth += 30;
+	static int weatherWidth;
+	if(weatherWidth == 0){
+		int i, w;
+		for(i = 0; i < params.numWeathers; i++){
+			w = ImGui::CalcTextSize(params.weatherNames[i]).x;
+			if(w > weatherWidth)
+				weatherWidth = w;
 		}
+		weatherWidth += 30;
+	}
 
 
-		ImGui::PushItemWidth(100);
-		ImGui::BeginGroup();
-		ImGui::Text("Hour");
-		ImGui::InputInt("##Hour", &currentHour, 1);
-		advanceHour(0);
-		ImGui::EndGroup();
+	ImGui::PushItemWidth(100);
+	ImGui::BeginGroup();
+	ImGui::Text("Hour");
+	ImGui::InputInt("##Hour", &currentHour, 1);
+	advanceHour(0);
+	ImGui::EndGroup();
 
-		ImGui::SameLine();
+	ImGui::SameLine();
 
-		ImGui::BeginGroup();
-		ImGui::Text("Minute");
-		ImGui::InputInt("##Minute", &currentMinute, 1);
-		advanceMinute(0);
-		ImGui::EndGroup();
-
-
-		ImGui::PushItemWidth(0);
-		int totalMinute = currentHour*60 + currentMinute;
-		ImGui::SliderInt("##TotalMinute", &totalMinute, 0, 24*60-1);
-		currentHour = totalMinute/60;
-		currentMinute = totalMinute%60;
-		ImGui::PopItemWidth();
-
-		if(params.daynightPipe){
-			ImGui::SliderFloat("Day/Night Balance", &gDayNightBalance, 0.0f, 1.0f, "%.2f");
-			if(gameplatform != PLATFORM_XBOX)
-				ImGui::SliderFloat("Wet Road Effect", &gWetRoadEffect, 0.0f, 1.0f, "%.2f");
-		}
+	ImGui::BeginGroup();
+	ImGui::Text("Minute");
+	ImGui::InputInt("##Minute", &currentMinute, 1);
+	advanceMinute(0);
+	ImGui::EndGroup();
 
 
-		ImGui::PushItemWidth(weatherWidth);
-		ImGui::BeginGroup();
-		ImGui::Text("Weather A");
-		uiWeatherBox("##WeatherA", &oldWeather);
-		ImGui::EndGroup();
-		ImGui::PopItemWidth();
+	ImGui::PushItemWidth(0);
+	int totalMinute = currentHour*60 + currentMinute;
+	ImGui::SliderInt("##TotalMinute", &totalMinute, 0, 24*60-1);
+	currentHour = totalMinute/60;
+	currentMinute = totalMinute%60;
+	ImGui::PopItemWidth();
 
-		ImGui::SameLine();
+	if(params.daynightPipe){
+		ImGui::SliderFloat("Day/Night Balance", &gDayNightBalance, 0.0f, 1.0f, "%.2f");
+		if(gameplatform != PLATFORM_XBOX)
+			ImGui::SliderFloat("Wet Road Effect", &gWetRoadEffect, 0.0f, 1.0f, "%.2f");
+	}
 
-		ImGui::BeginGroup();
-		ImGui::Text("");
-		ImGui::SliderFloat("##Interpolation", &weatherInterpolation, 0.0f, 1.0f, "%.2f");
-		ImGui::EndGroup();
 
-		ImGui::SameLine();
+	ImGui::PushItemWidth(weatherWidth);
+	ImGui::BeginGroup();
+	ImGui::Text("Weather A");
+	uiWeatherBox("##WeatherA", &oldWeather);
+	ImGui::EndGroup();
+	ImGui::PopItemWidth();
 
-		ImGui::PushItemWidth(weatherWidth);
-		ImGui::BeginGroup();
-		ImGui::Text("Weather B");
-		uiWeatherBox("##WeatherB", &newWeather);
-		ImGui::EndGroup();
-		ImGui::PopItemWidth();
-		ImGui::PopItemWidth();
+	ImGui::SameLine();
 
-		if(params.timecycle != GAME_III)
-			ImGui::SliderInt("Extracolour", &extraColours, -1, params.numExtraColours*params.numHours - 1);
+	ImGui::BeginGroup();
+	ImGui::Text("");
+	ImGui::SliderFloat("##Interpolation", &weatherInterpolation, 0.0f, 1.0f, "%.2f");
+	ImGui::EndGroup();
 
-		if(params.neoWorldPipe)
-			ImGui::SliderFloat("Neo Light map", &gNeoLightMapStrength, 0.0f, 1.0f, "%.2f");
+	ImGui::SameLine();
+
+	ImGui::PushItemWidth(weatherWidth);
+	ImGui::BeginGroup();
+	ImGui::Text("Weather B");
+	uiWeatherBox("##WeatherB", &newWeather);
+	ImGui::EndGroup();
+	ImGui::PopItemWidth();
+	ImGui::PopItemWidth();
+
+	if(params.timecycle != GAME_III)
+		ImGui::SliderInt("Extracolour", &extraColours, -1, params.numExtraColours*params.numHours - 1);
+
+	if(params.neoWorldPipe)
+		ImGui::SliderFloat("Neo Light map", &gNeoLightMapStrength, 0.0f, 1.0f, "%.2f");
 }
 
 static void

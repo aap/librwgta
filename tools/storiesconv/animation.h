@@ -46,7 +46,7 @@ struct CAnimBlock
 #endif
 	int32 animBase;	// into the blend tree array
 	int32 numAnims;
-	void *data;	// whatever this is exactly, starts with 'anim'
+	void *chunkData;	// pointer to relocatable chunk, includes header
 #ifdef VCS
 	int32 unk0;
 	int32 unk1;

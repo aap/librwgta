@@ -67,6 +67,12 @@ public:
 	void Clear(void);
 };
 
+struct CMouseControllerState
+{
+	uint32 btns;	// bit 0-2 button 1-3
+	int x, y;
+};
+
 class CPad
 {
 public:
@@ -79,11 +85,24 @@ public:
 	static uint16 oldKeystates[KEY_NUMKEYS];
 	static uint16 newKeystates[KEY_NUMKEYS];
 	static uint16 tempKeystates[KEY_NUMKEYS];
+	static CMouseControllerState oldMouseState;
+	static CMouseControllerState newMouseState;
+	static CMouseControllerState tempMouseState;
+	static int clickState;
+	static int clickx, clicky;
+	static int clickbtn;
 
 	static CPad *GetPad(int n) { return &Pads[n]; }
 	static void UpdatePads(void);
 	static bool IsKeyJustDown(int key);
 	static bool IsKeyDown(int key);
+	static bool IsShiftDown(void) { return IsKeyDown(KEY_LSHIFT) || IsKeyDown(KEY_RSHIFT); }
+	static bool IsCtrlDown(void) { return IsKeyDown(KEY_LCTRL) || IsKeyDown(KEY_RCTRL); }
+	static bool IsAltDown(void) { return IsKeyDown(KEY_LALT) || IsKeyDown(KEY_RALT); }
+	static bool IsMButtonJustDown(int btn);
+	static bool IsMButtonJustUp(int btn);
+	static bool IsMButtonClicked(int btn);
+	static bool IsMButtonDown(int btn);
 };
 
 #define IsButtonJustDown(pad, btn) \

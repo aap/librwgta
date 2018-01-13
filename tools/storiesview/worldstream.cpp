@@ -662,6 +662,13 @@ printf("missing 0x%X %x\n", inst->resId, inst->GetId());
 		rw::Sphere sph = { { x, y, z }, r };
 		if(TheCamera.m_rwcam->frustumTestSphere(&sph) == rw::Camera::SPHEREOUTSIDE)
 			continue;
+		if(TheCamera.distanceTo(sph.center) < 400.0f){
+			CSphere s = { { x, y, z }, r };
+			static rw::RGBA c = { 0, 0, 255, 255 };
+			static rw::Matrix ident;
+			ident.setIdentity();
+			RenderWireSphere(&s, c, &ident);
+		}
 
 		if(be->isTransparent)
 			Renderer::addToTransparentRenderList(se->instances[i]);

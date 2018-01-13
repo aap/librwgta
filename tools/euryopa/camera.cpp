@@ -11,58 +11,34 @@ void
 CCamera::Process(void)
 {
 	float scale = avgTimeStep*30.0f;
-//	scale = 1.0f;
-
 	float sensitivity = 1.0f;
-
-	// Keyboard
-/*	// this is crap
-	float sensitivity = 1.0f;
-	if(CPad::IsKeyDown(KEY_LSHIFT) || CPad::IsKeyDown(KEY_RSHIFT))
-		sensitivity *= 2.0f;
-	if(CPad::IsKeyDown('W')) TheCamera.orbit(0.0f, 0.05f*scale);
-	if(CPad::IsKeyDown('S')) TheCamera.orbit(0.0f, -0.05f*scale);
-	if(CPad::IsKeyDown('A')) TheCamera.orbit(-0.05f*scale, 0.0f);
-	if(CPad::IsKeyDown('D')) TheCamera.orbit(0.05f*scale, 0.0f);
-	if(CPad::IsKeyDown(KEY_UP)) TheCamera.turn(0.0f, 0.05f*scale);
-	if(CPad::IsKeyDown(KEY_DOWN)) TheCamera.turn(0.0f, -0.05f*scale);
-	if(CPad::IsKeyDown(KEY_LEFT)) TheCamera.turn(0.05f*scale, 0.0f);
-	if(CPad::IsKeyDown(KEY_RIGHT)) TheCamera.turn(-0.05f*scale, 0.0f);
-	if(CPad::IsKeyDown(KEY_LALT) || CPad::IsKeyDown(KEY_RALT)){
-		if(CPad::IsKeyDown('R')) TheCamera.dolly(5.0f*sensitivity*scale);
-		if(CPad::IsKeyDown('F')) TheCamera.dolly(-5.0f*sensitivity*scale);
-	}else{
-		if(CPad::IsKeyDown('R')) TheCamera.zoom(5.0f*sensitivity*scale);
-		if(CPad::IsKeyDown('F')) TheCamera.zoom(-5.0f*sensitivity*scale);
-	}
-*/
 
 	// Mouse
 	// first person
 	if(CPad::IsMButtonDown(1)){
 		if(CPad::IsAltDown() && CPad::IsCtrlDown()){
 			float dy = (CPad::oldMouseState.y - CPad::newMouseState.y);
-			TheCamera.dolly(dy*scale);
+			dolly(dy*scale);
 		}else{
 			float dx = (CPad::oldMouseState.x - CPad::newMouseState.x);
 			float dy = (CPad::oldMouseState.y - CPad::newMouseState.y);
-			TheCamera.turn(DEGTORAD(dx)/2.0f*scale, DEGTORAD(dy)/2.0f*scale);
+			turn(DEGTORAD(dx)/2.0f*scale, DEGTORAD(dy)/2.0f*scale);
 		}
 	}
 	// roughly 3ds max controls
 	if(CPad::IsMButtonDown(2)){
 		if(CPad::IsAltDown() && CPad::IsCtrlDown()){
 			float dy = (CPad::oldMouseState.y - CPad::newMouseState.y);
-			TheCamera.zoom(dy*scale);
+			zoom(dy*scale);
 		}else if(CPad::IsAltDown()){
 			float dx = (CPad::oldMouseState.x - CPad::newMouseState.x);
 			float dy = (CPad::oldMouseState.y - CPad::newMouseState.y);
-			TheCamera.orbit(DEGTORAD(dx)/2.0f*scale, -DEGTORAD(dy)/2.0f*scale);
+			orbit(DEGTORAD(dx)/2.0f*scale, -DEGTORAD(dy)/2.0f*scale);
 		}else{
 			float dx = (CPad::oldMouseState.x - CPad::newMouseState.x);
 			float dy = (CPad::oldMouseState.y - CPad::newMouseState.y);
 			float dist = distanceToTarget();
-			TheCamera.pan(dx*scale*dist/100.0f, -dy*scale*dist/100.0f);
+			pan(dx*scale*dist/100.0f, -dy*scale*dist/100.0f);
 		}
 	}
 
@@ -76,7 +52,7 @@ CCamera::Process(void)
 		speed = 0.0f;
 	if(speed > 70.0f) speed = 70.0f;
 	if(speed < -70.0f) speed = -70.0f;
-	TheCamera.dolly(speed*scale);
+	dolly(speed*scale);
 
 	static float sidespeed = 0.0f;
 	if(CPad::IsKeyDown('A'))
@@ -87,7 +63,7 @@ CCamera::Process(void)
 		sidespeed = 0.0f;
 	if(sidespeed > 70.0f) sidespeed = 70.0f;
 	if(sidespeed < -70.0f) sidespeed = -70.0f;
-	TheCamera.pan(sidespeed*scale, 0.0f);
+	pan(sidespeed*scale, 0.0f);
 
 
 
@@ -100,21 +76,21 @@ CCamera::Process(void)
 			sensitivity = 4.0f;
 	}else if(pad->NewState.l2)
 		sensitivity = 0.5f;
-	if(pad->NewState.square) TheCamera.zoom(0.4f*sensitivity*scale);
-	if(pad->NewState.cross) TheCamera.zoom(-0.4f*sensitivity*scale);
-	TheCamera.orbit(pad->NewState.getLeftX()/25.0f*sensitivity*scale,
+	if(pad->NewState.square) zoom(0.4f*sensitivity*scale);
+	if(pad->NewState.cross) zoom(-0.4f*sensitivity*scale);
+	orbit(pad->NewState.getLeftX()/25.0f*sensitivity*scale,
 	                -pad->NewState.getLeftY()/25.0f*sensitivity*scale);
-	TheCamera.turn(-pad->NewState.getRightX()/25.0f*sensitivity*scale,
+	turn(-pad->NewState.getRightX()/25.0f*sensitivity*scale,
 	               pad->NewState.getRightY()/25.0f*sensitivity*scale);
 	if(pad->NewState.up)
-		TheCamera.dolly(2.0f*sensitivity*scale);
+		dolly(2.0f*sensitivity*scale);
 	if(pad->NewState.down)
-		TheCamera.dolly(-2.0f*sensitivity*scale);
+		dolly(-2.0f*sensitivity*scale);
 
-	if(IsButtonJustDown(pad, start)){
-		printf("cam.position: %f, %f, %f\n", m_position.x, m_position.y, m_position.z);
-		printf("cam.target: %f, %f, %f\n", m_target.x, m_target.y, m_target.z);
-	}
+//	if(IsButtonJustDown(pad, start)){
+//		printf("cam.position: %f, %f, %f\n", m_position.x, m_position.y, m_position.z);
+//		printf("cam.target: %f, %f, %f\n", m_target.x, m_target.y, m_target.z);
+//	}
 }
 
 void

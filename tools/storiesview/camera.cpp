@@ -10,25 +10,62 @@ using rw::V3d;
 void
 CCamera::Process(void)
 {
-	// Keyboard
+	float scale = avgTimeStep*30.0f;
 	float sensitivity = 1.0f;
-	if(CPad::IsKeyDown(KEY_LSHIFT) || CPad::IsKeyDown(KEY_RSHIFT))
-		sensitivity *= 2.0f;
-	if(CPad::IsKeyDown('W')) TheCamera.orbit(0.0f, 0.05f);
-	if(CPad::IsKeyDown('S')) TheCamera.orbit(0.0f, -0.05f);
-	if(CPad::IsKeyDown('A')) TheCamera.orbit(-0.05f, 0.0f);
-	if(CPad::IsKeyDown('D')) TheCamera.orbit(0.05f, 0.0f);
-	if(CPad::IsKeyDown(KEY_UP)) TheCamera.turn(0.0f, 0.05f);
-	if(CPad::IsKeyDown(KEY_DOWN)) TheCamera.turn(0.0f, -0.05f);
-	if(CPad::IsKeyDown(KEY_LEFT)) TheCamera.turn(0.05f, 0.0f);
-	if(CPad::IsKeyDown(KEY_RIGHT)) TheCamera.turn(-0.05f, 0.0f);
-	if(CPad::IsKeyDown(KEY_LALT) || CPad::IsKeyDown(KEY_RALT)){
-		if(CPad::IsKeyDown('R')) TheCamera.dolly(5.0f*sensitivity);
-		if(CPad::IsKeyDown('F')) TheCamera.dolly(-5.0f*sensitivity);
-	}else{
-		if(CPad::IsKeyDown('R')) TheCamera.zoom(5.0f*sensitivity);
-		if(CPad::IsKeyDown('F')) TheCamera.zoom(-5.0f*sensitivity);
+
+	// Mouse
+	// first person
+	if(CPad::IsMButtonDown(1)){
+		if(CPad::IsAltDown() && CPad::IsCtrlDown()){
+			float dy = (CPad::oldMouseState.y - CPad::newMouseState.y);
+			dolly(dy*scale);
+		}else{
+			float dx = (CPad::oldMouseState.x - CPad::newMouseState.x);
+			float dy = (CPad::oldMouseState.y - CPad::newMouseState.y);
+			turn(DEGTORAD(dx)/2.0f*scale, DEGTORAD(dy)/2.0f*scale);
+		}
 	}
+	// roughly 3ds max controls
+	if(CPad::IsMButtonDown(2)){
+		if(CPad::IsAltDown() && CPad::IsCtrlDown()){
+			float dy = (CPad::oldMouseState.y - CPad::newMouseState.y);
+			zoom(dy*scale);
+		}else if(CPad::IsAltDown()){
+			float dx = (CPad::oldMouseState.x - CPad::newMouseState.x);
+			float dy = (CPad::oldMouseState.y - CPad::newMouseState.y);
+			orbit(DEGTORAD(dx)/2.0f*scale, -DEGTORAD(dy)/2.0f*scale);
+		}else{
+			float dx = (CPad::oldMouseState.x - CPad::newMouseState.x);
+			float dy = (CPad::oldMouseState.y - CPad::newMouseState.y);
+			float dist = distanceToTarget();
+			pan(dx*scale*dist/100.0f, -dy*scale*dist/100.0f);
+		}
+	}
+
+	// Keyboard
+	static float speed = 0.0f;
+	if(CPad::IsKeyDown('W'))
+		speed += 0.1f;
+	else if(CPad::IsKeyDown('S'))
+		speed -= 0.1f;
+	else
+		speed = 0.0f;
+	if(speed > 70.0f) speed = 70.0f;
+	if(speed < -70.0f) speed = -70.0f;
+	dolly(speed*scale);
+
+	static float sidespeed = 0.0f;
+	if(CPad::IsKeyDown('A'))
+		sidespeed -= 0.1f;
+	else if(CPad::IsKeyDown('D'))
+		sidespeed += 0.1f;
+	else
+		sidespeed = 0.0f;
+	if(sidespeed > 70.0f) sidespeed = 70.0f;
+	if(sidespeed < -70.0f) sidespeed = -70.0f;
+	pan(sidespeed*scale, 0.0f);
+
+
 
 	// Pad
 	CPad *pad = CPad::GetPad(0);
@@ -39,21 +76,16 @@ CCamera::Process(void)
 			sensitivity = 4.0f;
 	}else if(pad->NewState.l2)
 		sensitivity = 0.5f;
-	if(pad->NewState.square) TheCamera.zoom(0.4f*sensitivity);
-	if(pad->NewState.cross) TheCamera.zoom(-0.4f*sensitivity);
-	TheCamera.orbit(pad->NewState.getLeftX()/30.0f*sensitivity,
-	                -pad->NewState.getLeftY()/30.0f*sensitivity);
-	TheCamera.turn(-pad->NewState.getRightX()/30.0f*sensitivity,
-	               pad->NewState.getRightY()/30.0f*sensitivity);
+	if(pad->NewState.square) zoom(0.4f*sensitivity*scale);
+	if(pad->NewState.cross) zoom(-0.4f*sensitivity*scale);
+	orbit(pad->NewState.getLeftX()/25.0f*sensitivity*scale,
+	                -pad->NewState.getLeftY()/25.0f*sensitivity*scale);
+	turn(-pad->NewState.getRightX()/25.0f*sensitivity*scale,
+	               pad->NewState.getRightY()/25.0f*sensitivity*scale);
 	if(pad->NewState.up)
-		TheCamera.dolly(2.0f*sensitivity);
+		dolly(2.0f*sensitivity*scale);
 	if(pad->NewState.down)
-		TheCamera.dolly(-2.0f*sensitivity);
-
-	if(IsButtonJustDown(pad, start)){
-		printf("cam.position: %f, %f, %f\n", m_position.x, m_position.y, m_position.z);
-		printf("cam.target: %f, %f, %f\n", m_target.x, m_target.y, m_target.z);
-	}
+		dolly(-2.0f*sensitivity*scale);
 }
 
 void
@@ -139,7 +171,7 @@ CCamera::zoom(float dist)
 	V3d dir = sub(m_target, m_position);
 	float curdist = length(dir);
 	if(dist >= curdist)
-		dist = curdist-0.01f;
+		dist = curdist-0.3f;
 	dir = setlength(dir, dist);
 	m_position = add(m_position, dir);
 }
@@ -155,10 +187,34 @@ CCamera::pan(float x, float y)
 	m_target = add(m_target, dir);
 }
 
+void
+CCamera::setDistanceFromTarget(float dist)
+{
+	V3d dir = sub(m_position, m_target);
+	dir = scale(normalize(dir), dist);
+	m_position = add(m_target, dir);
+}
+
 float
 CCamera::distanceTo(V3d v)
 {
 	return length(sub(m_position, v));
+}
+
+float
+CCamera::distanceToTarget(void)
+{
+	return length(sub(m_position, m_target));
+}
+
+// calculate minimum distance to a sphere at the target
+// so the whole sphere is visible
+float
+CCamera::minDistToSphere(float r)
+{
+	float t = min(m_rwcam->viewWindow.x, m_rwcam->viewWindow.y);
+	float a = atan(t);	// half FOV angle
+	return r/sin(a);
 }
 
 CCamera::CCamera()
@@ -174,3 +230,10 @@ CCamera::CCamera()
 	m_LODmult = 1.0f;
 }
 
+bool
+CCamera::IsSphereVisible(rw::Sphere *sph, rw::Matrix *xform)
+{
+	rw::Sphere sphere = *sph;
+	rw::V3d::transformPoints(&sphere.center, &sphere.center, 1, xform);
+	return m_rwcam->frustumTestSphere(&sphere) != rw::Camera::SPHEREOUTSIDE;
+}

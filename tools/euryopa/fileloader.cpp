@@ -381,7 +381,7 @@ DatDesc iplDesc[] = {
 	{ "path", LoadNothing },
 
 	{ "occl", LoadNothing },
-	{ "mult", LoadNothing },
+	{ "mult", LoadNothing },	// actually no-op
 	{ "grge", LoadNothing },
 	{ "enex", LoadNothing },
 	{ "cars", LoadNothing },

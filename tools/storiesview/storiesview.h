@@ -25,6 +25,13 @@ typedef uint16 float16;
 #include <leedsgta.h>
 #include <streamworld.h>
 
+const char *lookupHashKey(uint32 key);
+uint32 GetKey(const char *str, int len);
+uint32 GetUppercaseKey(const char *str, int len);
+uint32 CalcHashKey(const char *str, int len);
+uint32 CalcHashKey(const char *str);
+
+
 #include "Pad.h"
 #include "Camera.h"
 #include "TexListStore.h"
@@ -34,6 +41,10 @@ void debug(const char *fmt, ...);
 
 void plCapturePad(int arg);
 void plUpdatePad(CControllerState *state);
+
+#define DEGTORAD(d) (d/180.0f*PI)
+#define min(a,b) ((a) < (b) ? (a) : (b))
+#define max(a,b) ((a) > (b) ? (a) : (b))
 
 struct Zfile;
 Zfile *zopen(const char *path, const char *mode);
@@ -61,9 +72,17 @@ enum eLevel
 #endif
 };
 
-extern int frameCounter;
 extern CCamera TheCamera;
+extern bool drawCubes;
 extern int drawLOD;
+extern int frameCounter;
+extern float timeStep;
+extern float avgTimeStep;
+
+extern int currentArea;
+extern int currentHour;
+extern int currentMinute;
+extern int currentWeather;
 
 // helpers
 extern rw::Geometry *cubeGeo;
@@ -74,6 +93,9 @@ bool GetIsTimeInRange(uint8 h1, uint8 h2);
 
 rw::Raster *convertRasterPS2(RslRasterPS2 *ras);
 
+
+void LoadCollisionFile(int id, uint8 *data);
+void RenderColModelWire(CColModel *col, rw::Matrix *xform, bool onlyBounds);
 
 enum SectorType
 {
@@ -143,7 +165,7 @@ void renderSector(SectorExt*);
 namespace Renderer
 {
 extern rw::ObjPipeline *buildingPipe;
-void renderCubesIPL(void);
+void renderDebugIPL(void);
 void renderPathNodes(void);
 void reset(void);
 void addToOpaqueRenderList(rw::Atomic *a);
@@ -163,6 +185,8 @@ extern CTimeCycle *pTimecycle;
 extern rw::RGBA currentAmbient;
 extern rw::RGBA currentEmissive;
 extern CPathFind *gpThePaths;
+extern CPool_col *pColPool;
+extern CStreaming *pStreaming;
 
 struct CModelInfo
 {
@@ -181,3 +205,13 @@ struct CWaterLevel_ : CWaterLevel
 	static void RenderOneFlatSmallWaterPoly(float x, float y, float z, rw::RGBA const &color);
 	static void RenderOneFlatLargeWaterPoly(float x, float y, float z, rw::RGBA const &color);
 };
+
+void gui(void);
+
+void RenderDebugLines(void);
+void RenderLine(rw::V3d v1, rw::V3d v2, rw::RGBA c1, rw::RGBA c2);
+void RenderWireBoxVerts(rw::V3d *verts, rw::RGBA col);
+void RenderWireBox(CBox *box, rw::RGBA col, rw::Matrix *xform);
+void RenderWireSphere(CSphere *sphere, rw::RGBA col, rw::Matrix *xform);
+void RenderWireTriangle(rw::V3d *v1, rw::V3d *v2, rw::V3d *v3, rw::RGBA col, rw::Matrix *xform);
+void RenderAxesWidget(rw::V3d pos, rw::V3d x, rw::V3d y, rw::V3d z);
