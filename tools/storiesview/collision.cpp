@@ -27,19 +27,26 @@ LoadCollisionFile(int id, uint8 *data)
 	}
 }
 
+static const rw::RGBA red = { 255, 0, 0, 255 };
+static const rw::RGBA green = { 0, 255, 0, 255 };
+static const rw::RGBA blue = { 0, 0, 255, 255 };
+static const rw::RGBA magenta = { 255, 0, 255, 255 };
+static const rw::RGBA white = { 255, 255, 255, 255 };
+
+void
+RenderColBoundingSphere(CColModel *col, rw::Matrix *xform)
+{
+	RenderWireSphere(&col->boundingSphere, red, xform);
+}
+
 void
 RenderColModelWire(CColModel *col, rw::Matrix *xform, bool onlyBounds)
 {
-	static const rw::RGBA red = { 255, 0, 0, 255 };
-	static const rw::RGBA green = { 0, 255, 0, 255 };
-	static const rw::RGBA blue = { 0, 0, 255, 255 };
-	static const rw::RGBA magenta = { 255, 0, 255, 255 };
-	static const rw::RGBA white = { 255, 255, 255, 255 };
 	int i;
 	CColTriangle *tri;
 
-//	RenderWireBox(&col->boundingBox, red, xform);
-	RenderWireSphere(&col->boundingSphere, red, xform);
+	RenderWireBox(&col->boundingBox, red, xform);
+//	RenderWireSphere(&col->boundingSphere, red, xform);
 	if(onlyBounds)
 		return;
 	for(i = 0; i < col->numBoxes; i++)

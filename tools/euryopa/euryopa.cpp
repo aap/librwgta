@@ -305,6 +305,7 @@ LoadGame(void)
 //	SetCurrentDirectory("F://gtasa_pc");
 //	SetCurrentDirectory("E://");
 //	SetCurrentDirectory("C:\\Users\\aap\\games\\gta3d_latest");
+//	SetCurrentDirectory("C:/Users/aap/games/lcspc");
 
 	FindVersion();
 	switch(gameversion){

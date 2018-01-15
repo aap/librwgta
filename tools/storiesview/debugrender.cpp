@@ -164,6 +164,7 @@ RenderWireSphere(CSphere *sphere, rw::RGBA col, rw::Matrix *xform)
 	RenderLine(verts[1], verts[2], col, col);
 	RenderLine(verts[1], verts[3], col, col);
 	RenderLine(verts[1], verts[4], col, col);
+	RenderLine(verts[1], verts[5], col, col);
 }
 
 void

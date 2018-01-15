@@ -112,6 +112,8 @@ struct BuildingExt
 	uint8 timeOn, timeOff;
 	bool hidden;
 	bool isTransparent;
+	int32 iplId;
+	int interior;
 
 	struct Model {
 		int lastFrame;
@@ -144,6 +146,7 @@ struct ResourceExt
 struct LevelExt
 {
 	sLevelChunk *chunk;
+	int levelid;
 	FILE *imgfile;
 	int numWorldSectors;
 	int numSectors;
@@ -157,10 +160,17 @@ struct LevelExt
 extern LevelExt *gLevel;
 extern SectorExt *worldSectors[NUMSECTORSX][NUMSECTORSY];
 void LoadLevel(eLevel lev);
-void LoadSector(int n);
+void LoadSector(int n, int interior);
 void LoadArea(int n);
 void renderCubesSector(SectorExt*);
 void renderSector(SectorExt*);
+
+// To link world buildings into IPL entities
+struct BuildingLink
+{
+	int n;
+	BuildingExt **insts;
+};
 
 namespace Renderer
 {
@@ -215,3 +225,13 @@ void RenderWireBox(CBox *box, rw::RGBA col, rw::Matrix *xform);
 void RenderWireSphere(CSphere *sphere, rw::RGBA col, rw::Matrix *xform);
 void RenderWireTriangle(rw::V3d *v1, rw::V3d *v2, rw::V3d *v3, rw::RGBA col, rw::Matrix *xform);
 void RenderAxesWidget(rw::V3d pos, rw::V3d x, rw::V3d y, rw::V3d z);
+
+// misc
+
+extern FILE *logfile;
+void openLogFile(char *path);
+void closeLogFile(void);
+void dumpIPLBoundingSpheres(void);
+void dumpInstBS(int level, sGeomInstance *inst);
+
+void LinkInstances(void);

@@ -21,6 +21,10 @@
 //	cWorldGeom::cSector
 //	sLevelSectorDirectory
 //	sStripData
+//	sDynamic
+//	sLevelSwap
+//	sInteriorSwap
+//	sBuildingSwapInfo
 
 struct sBuildingGeometry	// leeds name
 {
@@ -107,12 +111,12 @@ struct AreaInfo
 	int32 numResources;
 };
 
-struct Interior
+struct sInteriorSwap
 {
 	uint8 secx, secy;	// position of this sector
 	// not quite sure what these two do exactly
 	uint8 buildingIndex;	// index into the building swap array
-	uint8 buildingSwap;	// a boolean apparently?
+	uint8 buildingSwap;	// some kind of id?
 	int16 sectorId;		// sector index
 };
 
@@ -187,7 +191,7 @@ struct sLevelChunk	// leeds name
 	void *ys;	// 48 bytes
 #endif
 	int32 numInteriors;
-	Interior *interiors;
+	sInteriorSwap *interiors;
 
 #ifdef LCS
 	int32 numRadarSections;

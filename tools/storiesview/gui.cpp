@@ -62,7 +62,7 @@ uiView(void)
 	ImGui::RadioButton("Render HD", &drawLOD, 0);
 	ImGui::RadioButton("Render LOD", &drawLOD, 1);
 
-	ImGui::Checkbox("Render Cubes", &drawCubes);
+	ImGui::Checkbox("Render Debug", &drawCubes);
 }
 
 void

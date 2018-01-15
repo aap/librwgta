@@ -508,17 +508,27 @@ found:
 
 	LoadColStore();
 
+//XX	openLogFile("C:/ipl_insts.txt");
+//XX	dumpIPLBoundingSpheres();
+//XX	closeLogFile();
+
+//XX	static char tmp[100];
+//XX	sprintf(tmp, "C:/world_insts_%d.txt", levelToLoad);
+//XX	openLogFile(tmp);
 	LoadLevel(levelToLoad);
 	int i;
 	for(i = 0; i < gLevel->numWorldSectors; i++)
-		LoadSector(i);
+		LoadSector(i, -1);
 	for(i = 0; i < gLevel->chunk->numInteriors; i++)
-		LoadSector(gLevel->chunk->interiors[i].sectorId);
+		LoadSector(gLevel->chunk->interiors[i].sectorId, i);
 
 #ifdef VCS
 	for(i = 0; i < gLevel->chunk->numAreas; i++)
 		LoadArea(i);
 #endif
+//XX	closeLogFile();
+
+	LinkInstances();
 }
 
 // Arguments:

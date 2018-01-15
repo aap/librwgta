@@ -607,28 +607,53 @@ unswizzle8(uint8 *dst, uint8 *src, uint32 w, uint32 h)
 		}
 }
 
+// This is NOT a PS2 swizzle algorithm, maybe PSP leftover?
 void
-unswizzle16(uint16 *dst, uint16 *src, int32 w, int32 h)
+unswizzle32_unk(uint32 *dst, uint32 *src, uint32 w, uint32 h)
 {
-	for(int y = 0; y < h; y++)
-		for(int x = 0; x < w; x++){
-			int32 pageX = x & (~0x3f);
-			int32 pageY = y & (~0x3f);
-			int32 pages_horz = (w+63)/64;
-			int32 pages_vert = (h+63)/64;
-			int32 page_number = (pageY/64)*pages_horz + (pageX/64);
-			int32 page32Y = (page_number/pages_vert)*32;
-			int32 page32X = (page_number%pages_vert)*64;
-			int32 page_location = (page32Y*h + page32X)*2;
-			int32 locX = x & 0x3f;
-			int32 locY = y & 0x3f;
-			int32 block_location = (locX&(~0xf))*h + (locY&(~0x7))*2;
-			int32 column_location = ((y&0x7)*h + (x&0x7))*2;
-			int32 short_num = (x>>3)&1;       // 0,1
-			uint32 swizzled = page_location + block_location +
-			                  column_location + short_num;
-			dst[y*w+x] = src[swizzled];
+	int x, y;
+	uint32 u, v;
+
+	int32 lw, lh;
+	for(lw = 1; 1<<lw < w; lw++);
+	for(lh = 1; 1<<lh < h; lh++);
+
+	// Not quite sure about the masks but it seems to work with the few textures there are
+	uint32 masku = 0;
+	uint32 maskv = 0;
+	uint32 n = 2;
+	uint32 sh = 0;
+	uint32 c;
+	do{
+		c = 0;
+		if(lw > 0){
+			n = n < lw ? n: lw;
+			masku |= ((1<<n)-1) << sh;
+			lw -= n;
+			sh += n;
+			n++;
+			c = 1;
 		}
+		if(lh > 0){
+			n = n < lh ? n: lh;
+			maskv |= ((1<<n)-1) << sh;
+			lh -= n;
+			sh += n;
+			n++;
+			c = 1;
+		}
+	}while(c);
+
+	// standard unswizzling
+	v = 0;
+	for(y = 0; y < h; y++){
+		u = 0;
+		for(x = 0; x < w; x++){
+			dst[y*w + x] = src[u|v];
+			u = (u - masku) & masku;
+		}
+		v = (v - maskv) & maskv;
+	}
 }
 
 bool32 unswizzle = 1;
@@ -639,19 +664,19 @@ convertTo32(uint8 *out, uint8 *pal, uint8 *tex,
 {
 	uint32 x;
 	if(d == 32){
-		//uint32 *dat = new uint32[w*h];
-		//if(swiz && unswizzle)
-		//	unswizzle8_hack(dat, (uint32*)tex, w, h);
-		//else
-		//	memcpy(dat, tex, w*h*4);
-		//tex = (uint8*)dat;
+		uint32 *dat = new uint32[w*h];
+		if(swiz && unswizzle)
+			unswizzle32_unk(dat, (uint32*)tex, w, h);
+		else
+			memcpy(dat, tex, w*h*4);
+		tex = (uint8*)dat;
 		for(uint32 i = 0; i < w*h; i++){
 			out[i*4+0] = tex[i*4+0];
 			out[i*4+1] = tex[i*4+1];
 			out[i*4+2] = tex[i*4+2];
 			out[i*4+3] = tex[i*4+3]*255/128;
 		}
-		//delete[] dat;
+		delete[] dat;
 	}
 	if(d == 16) return;	// TODO
 	if(d == 8){
@@ -733,7 +758,9 @@ RslTexture *dumpTextureCB(RslTexture *texture, void*)
 //	if(myswiz == swizmask)
 //		return texture;
 
-	printf(" %x %x %x %x %x %s\n", w, h, d, mip, swizmask, texture->name);
+//	printf(" %x %x %x %x %x %s\n", w, h, d, mip, swizmask, texture->name);
+	if(d == 32)
+		printf("%s\n", texture->name);
 	Image *img = Image::create(w, h, 32);
 	img->allocate();
 	convertTo32(img->pixels, palette, texels, w, h, d, swizmask&1);

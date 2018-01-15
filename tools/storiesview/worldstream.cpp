@@ -60,6 +60,7 @@ GetBuildingExt(int id)
 		return gLevel->buildings[id];
 	be = (BuildingExt*)malloc(sizeof(BuildingExt));
 	memset(be, 0, sizeof(BuildingExt));
+	be->iplId = -1;
 	gLevel->buildings[id] = be;
 	return be;
 }
@@ -88,6 +89,7 @@ LoadLevel(eLevel lev)
 	gLevel = new LevelExt;
 	memset(gLevel, 0, sizeof(LevelExt));
 	gLevel->chunk = (sLevelChunk*)data;
+	gLevel->levelid = lev;
 	gLevel->imgfile = fopen(imgname, "rb");
 	if(gLevel->imgfile == nil){
 		sk::globals.quit = 1;
@@ -144,21 +146,22 @@ LoadLevel(eLevel lev)
 			be->isTimed = true;
 			be->timeOff = trig->timeOff & 0x7F;
 			be->timeOn = trig->timeOn;
-		}else
+		}else{
 			be->hidden = true;
-//		printf("%d %d %d\t%d\n", time->timeOff & 0x80, time->timeOn, time->timeOff & 0x7F, time->id);
+//			printf("%02x %02x\t%d\n", trig->timeOff & 0x7F, trig->timeOn, trig->id);
+		}
 		trig++;
 	}
 
 	// Set up interior sectors
-	Interior *intr = gLevel->chunk->interiors;
+	sInteriorSwap *intr = gLevel->chunk->interiors;
 	for(i = 0; i < gLevel->chunk->numInteriors; i++){
 		se = &gLevel->sectors[intr->sectorId];
 		se->secx = intr->secx;
 		se->secy = intr->secy;
 		se->origin = worldSectorPositions[se->secx][se->secy];
 		se->type = SECTOR_INTERIOR;
-//		printf("%d %d %d %d %d\n", intr->listIndex, intr->listOffset, intr->c, intr->d, intr->streamWorldId);
+		printf("%d %d %d %d %d\n", intr->secx, intr->secy, intr->buildingIndex, intr->buildingSwap, intr->sectorId);
 		intr++;
 	}
 
@@ -175,7 +178,7 @@ LoadLevel(eLevel lev)
 }
 
 void
-LoadSector(int n)
+LoadSector(int n, int interior)
 {
 	int i;
 
@@ -211,8 +214,11 @@ LoadSector(int n)
 	// Make some room for our RW data
 	if(se->type == SECTOR_WORLD || se->type == SECTOR_INTERIOR){
 		sGeomInstance *inst;
-		for(inst = se->sect->sectionA; inst != se->sect->sectionEnd; inst++)
+		for(inst = se->sect->sectionA; inst != se->sect->sectionEnd; inst++){
+			GetBuildingExt(inst->GetId())->interior = interior;
+//XX			dumpInstBS(gLevel->levelid, inst);
 			se->numInstances++;
+		}
 		se->instances = (rw::Atomic**)malloc(se->numInstances*sizeof(void*));
 		memset(se->instances, 0, se->numInstances*sizeof(void*));
 		se->dummies = (rw::Atomic**)malloc(se->numInstances*sizeof(void*));
@@ -228,7 +234,7 @@ LoadSector(int n)
 				se->timeOn = trig->timeOn;
 			}else
 				se->hidden = true;
-			LoadSector(trig->id);
+			LoadSector(trig->id, -1);
 
 //			printf("%d %d %d\t%d\n", trig->timeOff & 0x80, trig->timeOn, trig->timeOff & 0x7F, trig->id);
 			trig++;
@@ -590,6 +596,15 @@ BuildingExt::GetResourceInfo(int id)
 	return m;
 }
 
+CEntity*
+GetEntityById(int id)
+{
+	if((id & ~0xFFFF) == 0)
+		return pBuildingPool->GetSlot(id & 0xFFFF);
+	else
+		return pTreadablePool->GetSlot(id & 0xFFFF);
+}
+
 void
 renderSector(SectorExt *se)
 {
@@ -662,6 +677,16 @@ printf("missing 0x%X %x\n", inst->resId, inst->GetId());
 		rw::Sphere sph = { { x, y, z }, r };
 		if(TheCamera.m_rwcam->frustumTestSphere(&sph) == rw::Camera::SPHEREOUTSIDE)
 			continue;
+
+		if(be->iplId >= 0){
+			CEntity *e = GetEntityById(be->iplId);
+			BuildingLink *bl = (BuildingLink*)e->vtable;
+			// Draw entities with a weird number of counterparts
+			if(bl->n == 1)
+				continue;
+		}//else
+		//	continue;
+
 		if(TheCamera.distanceTo(sph.center) < 400.0f){
 			CSphere s = { { x, y, z }, r };
 			static rw::RGBA c = { 0, 0, 255, 255 };

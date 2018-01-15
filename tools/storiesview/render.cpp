@@ -68,6 +68,15 @@ drawEntityBS(CEntity *e)
 {
 	rw::Matrix mat;
 	CBaseModelInfo *mi = CModelInfo::Get(e->modelIndex);
+	BuildingLink *bl = (BuildingLink*)e->vtable;
+
+	// Draw entities with a weird number of counterparts
+//	if(bl->n == 1)
+//		return;
+
+	assert(e->area == 0);
+	assert(mi);
+	assert(mi->colModel);
 	if(mi == nil || mi->colModel == nil)
 		return;
 	if(mi->type != MODELINFO_SIMPLE && mi->type != MODELINFO_TIME)
@@ -83,18 +92,19 @@ drawEntityBS(CEntity *e)
 	if(tmi && !GetIsTimeInRange(tmi->timeOn, tmi->timeOff))
 		return;
 
-	if(TheCamera.distanceTo(*(rw::V3d*)&e->placeable.matrix.matrix.pos) > smi->drawDistances[0])
+	rw::V3d pos = *(rw::V3d*)&e->placeable.matrix.matrix.pos;
+	if(pos.z < 100.0f && TheCamera.distanceTo(pos) > smi->drawDistances[0])
 		return;
 
 	mat = *(rw::Matrix*)&e->placeable.matrix.matrix;
 	mat.optimize();
-	RenderColModelWire(mi->colModel, &mat, true);
+	RenderColModelWire(mi->colModel, &mat, false);
 }
 
 void
 renderDebugIPL(void)
 {
-	CBuilding *b;
+	CEntity *e;
 	int i, n;
 
 	cubeMat->color.red = 0;
@@ -104,18 +114,25 @@ renderDebugIPL(void)
 
 	n = pBuildingPool->GetSize();
 	for(i = 0; i < n; i++){
-		b = pBuildingPool->GetSlot(i);
-		if(b == nil)
+		e = pBuildingPool->GetSlot(i);
+		if(e == nil)
 			continue;
-		drawEntityBS(b);
+		drawEntityBS(e);
 	}
 	n = pTreadablePool->GetSize();
 	for(i = 0; i < n; i++){
-		b = pTreadablePool->GetSlot(i);
-		if(b == nil)
+		e = pTreadablePool->GetSlot(i);
+		if(e == nil)
 			continue;
-		drawEntityBS(b);
+		drawEntityBS(e);
 	}
+//	n = pDummyPool->GetSize();
+//	for(i = 0; i < n; i++){
+//		e = pDummyPool->GetSlot(i);
+//		if(e == nil)
+//			continue;
+//		drawEntityBS(e);
+//	}
 }
 
 void
