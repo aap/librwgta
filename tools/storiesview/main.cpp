@@ -528,6 +528,11 @@ found:
 #endif
 //XX	closeLogFile();
 
+	for(i = 0; i < gLevel->numWorldSectors; i++)
+		LoadSectorInsts(&gLevel->sectors[i]);
+	for(i = 0; i < gLevel->chunk->numInteriors; i++)
+		LoadSectorInsts(&gLevel->sectors[gLevel->chunk->interiors[i].sectorId]);
+
 	LinkInstances();
 }
 
@@ -802,10 +807,10 @@ Draw(void)
 	Renderer::reset();
 //	renderSector(worldSectors[curSectX][curSectY]);
 	if(currentArea >= 0)
-		renderSector(&gLevel->sectors[gLevel->chunk->interiors[currentArea].sectorId]);
+		RenderSector(&gLevel->sectors[gLevel->chunk->interiors[currentArea].sectorId]);
 	else
 		for(i = 0; i < gLevel->numWorldSectors; i++)
-			renderSector(&gLevel->sectors[i]);
+			RenderSector(&gLevel->sectors[i]);
 
 	Renderer::renderOpaque();
 	Renderer::renderTransparent();

@@ -142,7 +142,7 @@ struct CColModel
 	int32 pad1;
 #endif
 };
-static_assert(sizeof(CColModel) == 0x60, "CColModel: error");
+//static_assert(sizeof(CColModel) == 0x60, "CColModel: error");
 
 
 struct TexListDef

@@ -500,6 +500,17 @@ main(int argc, char *argv[])
 	}
 */
 
+/*
+	FORLIST(lnk, txd->textures){
+		Texture *tex = Texture::fromDict(lnk);
+		Raster *ras = tex->raster;
+		d3d::D3dRaster *natras = PLUGINOFFSET(d3d::D3dRaster, ras, d3d::nativeRasterOffset);
+		if(ras->platform == PLATFORM_D3D8 || ras->platform == PLATFORM_D3D9)
+		if(natras->customFormat == 0 && (ras->format & 0xF00) == Raster::C1555)
+			printf("%s %s\n", argv[0], tex->name);
+	}
+*/
+
 	if(outplatform == PLATFORM_D3D8)
 		FORLIST(lnk, txd->textures){
 			Texture *tex = Texture::fromDict(lnk);

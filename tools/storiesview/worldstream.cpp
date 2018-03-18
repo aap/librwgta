@@ -161,7 +161,7 @@ LoadLevel(eLevel lev)
 		se->secy = intr->secy;
 		se->origin = worldSectorPositions[se->secx][se->secy];
 		se->type = SECTOR_INTERIOR;
-		printf("%d %d %d %d %d\n", intr->secx, intr->secy, intr->buildingIndex, intr->buildingSwap, intr->sectorId);
+	//	printf("%d %d %d %d %d\n", intr->secx, intr->secy, intr->buildingIndex, intr->buildingSwap, intr->sectorId);
 		intr++;
 	}
 
@@ -606,7 +606,53 @@ GetEntityById(int id)
 }
 
 void
-renderSector(SectorExt *se)
+LoadBuildingInst(SectorExt *se, int i)
+{
+	sGeomInstance *inst = &se->sect->sectionA[i];
+	BuildingExt *be = GetBuildingExt(inst->GetId());
+
+	if(se->instances[i])
+		return;
+	Resource *res = GetResource(inst->resId);
+
+	rw::Geometry *geo = nil;
+	rw::Matrix m = *(rw::Matrix*)&inst->matrix;
+	if(res->raw == nil){
+		// This shouldn't happen eventually probably
+		m.right.set(1.0f, 0.0f, 0.0f);
+		m.up.set(0.0f, 1.0f, 0.0f);
+		m.at.set(0.0f, 0.0f, 1.0f);
+		geo = cubeGeo;
+	}else if(res->dmaChain){
+		geo = (rw::Geometry*)res->dmaChain;
+	}else{
+		geo = makeWorldGeometry(res->geometry);
+		res->dmaChain = geo;
+	}
+	be->isTransparent = isGeoTransparent(geo);
+
+	rw::Atomic *a = rw::Atomic::create();
+	rw::Frame *f = rw::Frame::create();
+	a->setGeometry(geo, 0);
+	a->setFrame(f);
+	a->pipeline = Renderer::buildingPipe;
+	m.pos = add(m.pos, se->origin);
+
+	m.optimize();
+	f->transform(&m, rw::COMBINEREPLACE);
+	se->instances[i] = a;
+}
+
+void
+LoadSectorInsts(SectorExt *se)
+{
+	int i;
+	for(i = 0; i < se->numInstances; i++)
+		LoadBuildingInst(se, i);
+}
+
+void
+RenderSector(SectorExt *se)
 {
 	int i;
 
@@ -638,37 +684,8 @@ renderSector(SectorExt *se)
 		if(re->sector && re->sector->isTimed && !GetIsTimeInRange(re->sector->timeOn, re->sector->timeOff))
 			continue;
 
-		if(se->instances[i] == nil){
-			Resource *res = GetResource(inst->resId);
-
-			rw::Geometry *geo = nil;
-			rw::Matrix m = *(rw::Matrix*)&inst->matrix;
-			if(res->raw == nil){
-printf("missing 0x%X %x\n", inst->resId, inst->GetId());
-				// This shouldn't happen eventually probably
-				m.right.set(1.0f, 0.0f, 0.0f);
-				m.up.set(0.0f, 1.0f, 0.0f);
-				m.at.set(0.0f, 0.0f, 1.0f);
-				geo = cubeGeo;
-			}else if(res->dmaChain){
-				geo = (rw::Geometry*)res->dmaChain;
-			}else{
-				geo = makeWorldGeometry(res->geometry);
-				res->dmaChain = geo;
-			}
-			be->isTransparent = isGeoTransparent(geo);
-
-			rw::Atomic *a = rw::Atomic::create();
-			rw::Frame *f = rw::Frame::create();
-			a->setGeometry(geo, 0);
-			a->setFrame(f);
-			a->pipeline = Renderer::buildingPipe;
-			m.pos = add(m.pos, se->origin);
-
-			m.optimize();
-			f->transform(&m, rw::COMBINEREPLACE);
-			se->instances[i] = a;
-		}
+		if(se->instances[i] == nil)
+			LoadBuildingInst(se, i);
 
 		float x = halfFloatToFloat(inst->bound[0]);
 		float y = halfFloatToFloat(inst->bound[1]);
@@ -678,6 +695,7 @@ printf("missing 0x%X %x\n", inst->resId, inst->GetId());
 		if(TheCamera.m_rwcam->frustumTestSphere(&sph) == rw::Camera::SPHEREOUTSIDE)
 			continue;
 
+/*
 		if(be->iplId >= 0){
 			CEntity *e = GetEntityById(be->iplId);
 			BuildingLink *bl = (BuildingLink*)e->vtable;
@@ -694,6 +712,7 @@ printf("missing 0x%X %x\n", inst->resId, inst->GetId());
 			ident.setIdentity();
 			RenderWireSphere(&s, c, &ident);
 		}
+*/
 
 		if(be->isTransparent)
 			Renderer::addToTransparentRenderList(se->instances[i]);
@@ -703,7 +722,7 @@ printf("missing 0x%X %x\n", inst->resId, inst->GetId());
 }
 
 void
-renderCubesSector(SectorExt *se)
+RenderCubesSector(SectorExt *se)
 {
 	int i;
 	if(se == nil)

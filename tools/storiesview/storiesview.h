@@ -162,8 +162,9 @@ extern SectorExt *worldSectors[NUMSECTORSX][NUMSECTORSY];
 void LoadLevel(eLevel lev);
 void LoadSector(int n, int interior);
 void LoadArea(int n);
-void renderCubesSector(SectorExt*);
-void renderSector(SectorExt*);
+void LoadSectorInsts(SectorExt *se);
+void RenderSector(SectorExt*);
+void RenderCubesSector(SectorExt*);
 
 // To link world buildings into IPL entities
 struct BuildingLink

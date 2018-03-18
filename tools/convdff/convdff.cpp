@@ -60,18 +60,42 @@ dumpUVAnim(Animation *anim)
 	}
 }
 
+char*
+getFrameUserName(rw::Frame *f)
+{
+	using namespace rw;
+	int32 i;
+	UserDataArray *ar;
+	int32 n = UserDataArray::frameGetCount(f);
+	for(i = 0; i < n; i++){
+		ar = UserDataArray::frameGet(f, i);
+		if(strcmp(ar->name, "name") == 0 && ar->datatype == rw::USERDATASTRING)
+			return ar->getString(0);
+	}
+	return "";
+}
+
+char*
+getFrameName(Frame *f)
+{
+	char *name = gta::getNodeName(f);
+	if(name[0] == '\0')
+		name = getFrameUserName(f);
+	return name;
+}
+
 void
 dumpFrameHier(Frame *frame, int ind = 0)
 {
 	for(int i = 0; i < ind; i++)
 		printf("  ");
-	const char *name = gta::getNodeName(frame);
+	const char *name = getFrameName(frame);
 	HAnimData *hanim = HAnimData::get(frame);
 	printf("*%s %d %d %s\n", name[0] ? name : "---", frame->objectList.count(), hanim->id, hanim->hierarchy ? "HIERARCHY" : "");
 	if(hanim->hierarchy){
 		HAnimHierarchy *h = hanim->hierarchy;
 		for(int i = 0; i < h->numNodes; i++){
-			name = h->nodeInfo[i].frame ? gta::getNodeName(h->nodeInfo[i].frame) : "";
+			name = h->nodeInfo[i].frame ? getFrameName(h->nodeInfo[i].frame) : "";
 			printf("\t\t%d %d\t%p %s\n", h->nodeInfo[i].id, h->nodeInfo[i].flags, h->nodeInfo[i].frame, name);
 
 			if(0){
