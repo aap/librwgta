@@ -5,10 +5,22 @@ namespace Renderer
 
 rw::ObjPipeline *buildingPipe;
 
+rw::ObjPipeline *colourCodePipe;
+rw::RGBA colourCode;
+rw::RGBA highlightColor;
+bool renderColourCoded;
+
+
+struct InstAtm
+{
+	sGeomInstance *inst;
+	rw::Atomic *atm;
+};
+
 int numOpaqueAtomics;
 int numTransparentAtomics;
-rw::Atomic *opaqueRenderList[0x8000];
-rw::Atomic *transparentRenderList[0x8000];
+InstAtm opaqueRenderList[0x8000];
+InstAtm transparentRenderList[0x8000];
 
 void
 reset(void)
@@ -18,16 +30,73 @@ reset(void)
 }
 
 void
-addToOpaqueRenderList(rw::Atomic *a)
+addToOpaqueRenderList(sGeomInstance *inst, rw::Atomic *a)
 {
-	opaqueRenderList[numOpaqueAtomics++] = a;
+	opaqueRenderList[numOpaqueAtomics].inst = inst;
+	opaqueRenderList[numOpaqueAtomics++].atm = a;
 }
 
 void
-addToTransparentRenderList(rw::Atomic *a)
+addToTransparentRenderList(sGeomInstance *inst, rw::Atomic *a)
 {
 	// TODO: sort
-	transparentRenderList[numTransparentAtomics++] = a;
+	transparentRenderList[numTransparentAtomics].inst = inst;
+	transparentRenderList[numTransparentAtomics++].atm = a;
+}
+
+void
+myRenderCB(rw::Atomic *atomic)
+{
+	if(renderColourCoded)
+		colourCodePipe->render(atomic);
+	else if(highlightColor.red || highlightColor.green || highlightColor.blue){
+		atomic->getPipeline()->render(atomic);
+		colourCode = highlightColor;
+		colourCode.alpha = 128;
+		int32 zwrite, fog, aref;
+		zwrite = GetRenderState(rw::ZWRITEENABLE);
+		fog = rw::GetRenderState(rw::FOGENABLE);
+		aref = rw::GetRenderState(rw::ALPHATESTREF);
+		SetRenderState(rw::ZWRITEENABLE, 0);
+		SetRenderState(rw::FOGENABLE, 0);
+		SetRenderState(rw::ALPHATESTREF, 10);
+		colourCodePipe->render(atomic);
+		SetRenderState(rw::ZWRITEENABLE, zwrite);
+		SetRenderState(rw::FOGENABLE, fog);
+		SetRenderState(rw::ALPHATESTREF, aref);
+	}else
+		atomic->getPipeline()->render(atomic);
+}
+
+void
+setColourCode(int n)
+{
+	colourCode.red = n & 0xFF;
+	colourCode.green = n>>8 & 0xFF;
+	colourCode.blue = n>>16 & 0xFF;
+	colourCode.alpha = 255;
+}
+
+void
+RenderInst(sGeomInstance *inst, rw::Atomic *a)
+{
+	static rw::RGBA black = { 0, 0, 0, 255 };
+	static rw::RGBA red = { 255, 0, 0, 255 };
+	static rw::RGBA green = { 0, 255, 0, 255 };
+	static rw::RGBA blue = { 0, 0, 255, 255 };
+	static rw::RGBA highlightCols[] = { black, green, red, blue };
+
+	int id = inst->GetId();
+	BuildingExt *be = GetBuildingExt(id);
+	setColourCode(id);
+
+	if(be->selected)
+		highlightColor = red;
+	if(be->highlight)
+		highlightColor = green;
+
+	a->render();
+	highlightColor = black;
 }
 
 void
@@ -35,7 +104,7 @@ renderOpaque(void)
 {
 	int i;
 	for(i = 0; i < numOpaqueAtomics; i++)
-		opaqueRenderList[i]->render();
+		RenderInst(opaqueRenderList[i].inst, opaqueRenderList[i].atm);
 }
 
 void
@@ -43,7 +112,18 @@ renderTransparent(void)
 {
 	int i;
 	for(i = 0; i < numTransparentAtomics; i++)
-		transparentRenderList[i]->render();
+		RenderInst(transparentRenderList[i].inst, transparentRenderList[i].atm);
+}
+
+void
+renderEverythingColourCoded(void)
+{
+	rw::SetRenderState(rw::FOGENABLE, 0);
+	SetRenderState(rw::ALPHATESTREF, 10);
+	renderColourCoded = 1;
+	renderOpaque();
+	renderTransparent();
+	renderColourCoded = 0;
 }
 
 void
@@ -64,17 +144,19 @@ drawEntityCube(CEntity *e)
 }
 
 void
-drawEntityBS(CEntity *e)
+drawEntityCol(CEntity *e)
 {
 	rw::Matrix mat;
 	CBaseModelInfo *mi = CModelInfo::Get(e->modelIndex);
-	BuildingLink *bl = (BuildingLink*)e->vtable;
+	EntityExt *ee = (EntityExt*)e->vtable;
 
-	// Draw entities with a weird number of counterparts
-//	if(bl->n == 1)
-//		return;
+	if(drawUnmatched)
+		if(ee->n == 1)
+			return;
+	if(!drawCol && ee->highlight == 0 && !ee->selected)
+		return;
 
-	assert(e->area == 0);
+//	assert(e->area == 0);
 	assert(mi);
 	assert(mi->colModel);
 	if(mi == nil || mi->colModel == nil)
@@ -93,16 +175,38 @@ drawEntityBS(CEntity *e)
 		return;
 
 	rw::V3d pos = *(rw::V3d*)&e->placeable.matrix.matrix.pos;
-	if(pos.z < 100.0f && TheCamera.distanceTo(pos) > smi->drawDistances[0])
+	if(!ee->highlight && !ee->selected && pos.z < 100.0f && TheCamera.distanceTo(pos) > smi->drawDistances[0]*2)
 		return;
+
+	ee->highlight = 0;
 
 	mat = *(rw::Matrix*)&e->placeable.matrix.matrix;
 	mat.optimize();
-	RenderColModelWire(mi->colModel, &mat, false);
+	if(drawWorld && !ee->selected)
+		RenderColModelWire(mi->colModel, &mat, false);
+	else{
+		rw::RGBA col;
+		if(renderColourCoded)
+			col = colourCode;
+		else{
+			if(ee->selected)
+				RenderColModelWire(mi->colModel, &mat, false);
+			else
+				RenderColModelWire(mi->colModel, &mat, true);
+
+			srand((int)mi->colModel);
+			int tmp = rand();
+			col = *(rw::RGBA*)&tmp;
+			col.alpha = 255;
+		}
+		RenderColMeshSolid(mi->colModel, &mat, col);
+		if(drawBounds)
+			RenderColBoxSolid(mi->colModel, &mat, col);
+	}
 }
 
 void
-renderDebugIPL(void)
+renderColModels(void)
 {
 	CEntity *e;
 	int i, n;
@@ -117,14 +221,16 @@ renderDebugIPL(void)
 		e = pBuildingPool->GetSlot(i);
 		if(e == nil)
 			continue;
-		drawEntityBS(e);
+		setColourCode(i | 0x10000);
+		drawEntityCol(e);
 	}
 	n = pTreadablePool->GetSize();
 	for(i = 0; i < n; i++){
 		e = pTreadablePool->GetSlot(i);
 		if(e == nil)
 			continue;
-		drawEntityBS(e);
+		setColourCode(i | 0x20000);
+		drawEntityCol(e);
 	}
 //	n = pDummyPool->GetSize();
 //	for(i = 0; i < n; i++){

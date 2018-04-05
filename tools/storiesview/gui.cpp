@@ -2,6 +2,7 @@
 
 static bool showTimeWeatherWindow;
 static bool showViewWindow;
+static bool showObjectWindow;
 
 static void
 advanceHour(int diff)
@@ -59,10 +60,87 @@ uiTimeWeather(void)
 static void
 uiView(void)
 {
-	ImGui::RadioButton("Render HD", &drawLOD, 0);
-	ImGui::RadioButton("Render LOD", &drawLOD, 1);
+	ImGui::Checkbox("Render World", &drawWorld);
+	ImGui::Checkbox("Render LOD", &drawLOD);
 
-	ImGui::Checkbox("Render Debug", &drawCubes);
+	ImGui::NewLine();
+
+	ImGui::Checkbox("Render Collision", &drawCol);
+	ImGui::Checkbox("Render Solid Bounds", &drawBounds);
+
+	ImGui::NewLine();
+
+	ImGui::Checkbox("Render only Unmatched", &drawUnmatched);
+}
+
+static void
+entityInfo(CEntity *e)
+{
+	static char tmp[64];
+	int i;
+
+	CBaseModelInfo *mi = CModelInfo::Get(e->modelIndex);
+	EntityExt *ee = (EntityExt*)e->vtable;
+
+	ImGui::Text("model: %s", mi->name);
+
+	sprintf(tmp, "ipl: 0x%X", ee->GetIplID());
+	ImGui::PushID(e);
+	ImGui::Selectable(tmp);
+	ImGui::PopID();
+	if(ImGui::IsItemHovered())
+		ee->highlight = 1;
+
+	for(i = 0; i < ee->n; i++){
+		sprintf(tmp, "  %p", ee->insts[i]);
+		ImGui::PushID(ee->insts[i]);
+		ImGui::Selectable(tmp);
+		ImGui::PopID();
+		if(ImGui::IsItemHovered())
+			ee->insts[i]->highlight = 1;
+	}
+}
+
+static void
+uiObject(void)
+{
+	int i;
+	char tmp[64];
+
+	BuildingExt *b = BuildingExt::GetSelection();
+	if(b && ImGui::TreeNode("Building")){
+		ImGui::Text("%p", b);
+		if(b->iplId >= 0){
+			CEntity *e = GetEntityById(b->iplId);
+			entityInfo(e);
+		}
+		ImGui::TreePop();
+	}
+
+	CEntity *e = EntityExt::GetSelection();
+	if(e && ImGui::TreeNode("Entity")){
+		entityInfo(e);
+		ImGui::TreePop();
+	}
+
+	if(ImGui::Button("Write Links"))
+		WriteLinks();
+
+	if(b && ImGui::Button("Unlink"))
+		b->SetEntity(-1);
+
+	if(EntityExt::selection.count() != 1 ||
+	   BuildingExt::selection.count() != 1)
+		return;
+
+	static char *failtext = "";	// not used after all....
+	if(ImGui::Button("Link")){
+		EntityExt *ee = (EntityExt*)e->vtable;
+		printf("%p %x\n", b, ee->GetIplID());
+		b->SetEntity(ee->GetIplID());
+	}else if(!ImGui::IsItemHovered())
+		failtext = "";
+	ImGui::Text(failtext);
 }
 
 void
@@ -80,5 +158,28 @@ gui(void)
 		ImGui::Begin("View", &showViewWindow);
 		uiView();
 		ImGui::End();
+	}
+
+	if(CPad::IsKeyJustDown('O')) showObjectWindow ^= 1;
+	if(showObjectWindow){
+		ImGui::Begin("Object", &showObjectWindow);
+		uiObject();
+		ImGui::End();
+	}
+
+	if(CPad::IsKeyJustDown('H')){
+		drawCol = !drawCol;
+		drawWorld = !drawCol;
+	}
+	if(CPad::IsKeyJustDown('B'))
+		drawBounds = !drawBounds;
+	if(CPad::IsKeyJustDown('X') &&
+	   EntityExt::selection.count() == 1 &&
+	   BuildingExt::selection.count() == 1){
+		BuildingExt *b = BuildingExt::GetSelection();
+		CEntity *e = EntityExt::GetSelection();
+		EntityExt *ee = (EntityExt*)e->vtable;
+		printf("%p %x\n", b, ee->GetIplID());
+		b->SetEntity(ee->GetIplID());
 	}
 }

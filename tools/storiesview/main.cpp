@@ -23,8 +23,12 @@ rw::EngineStartParams engineStartParams;
 rw::Material *cubeMat;
 rw::Geometry *cubeGeo;
 rw::Light *pAmbient;
-bool drawCubes;
-int drawLOD = 1;
+//bool drawCubes;
+bool drawCol;
+bool drawBounds;
+bool drawLOD = true;
+bool drawWorld = true;
+bool drawUnmatched;
 int frameCounter = -1;
 float timeStep;
 float avgTimeStep;
@@ -340,6 +344,7 @@ InitRW(void)
 	makeCube();
 
 	Renderer::buildingPipe = makeBuildingPipe();
+	Renderer::colourCodePipe = makeColourCodePipeline();
 
 	ImGui_ImplRW_Init();
 	ImGui::StyleColorsClassic();
@@ -445,7 +450,7 @@ InitGame(void)
 		sk::args.argv++;
 		sk::args.argc--;
 	}
-	eLevel levelToLoad = (eLevel)1;
+	eLevel levelToLoad = (eLevel)3;
 	if(sk::args.argc > 0){
 		const char *levelname = *sk::args.argv;
 		int i;
@@ -532,6 +537,9 @@ found:
 		LoadSectorInsts(&gLevel->sectors[i]);
 	for(i = 0; i < gLevel->chunk->numInteriors; i++)
 		LoadSectorInsts(&gLevel->sectors[gLevel->chunk->interiors[i].sectorId]);
+
+	BuildingExt::selection.init();
+	EntityExt::selection.init();
 
 	LinkInstances();
 }
@@ -745,6 +753,112 @@ drawHorizon(void)
 }
 
 void
+ClearBuildingSelection(void)
+{
+	int i;
+	BuildingExt *b;
+	for(i = 0; i < 0x8000; i++)
+		if(b = FindBuildingExt(i))
+			b->Deselect();
+}
+
+void
+ClearEntitySelection(void)
+{
+	int i, n;
+	CEntity *e;
+	n = pBuildingPool->GetSize();
+	for(i = 0; i < n; i++){
+		e = pBuildingPool->GetSlot(i);
+		if(e == nil)
+			continue;
+		EntityExt::Deselect(e);
+	}
+	n = pTreadablePool->GetSize();
+	for(i = 0; i < n; i++){
+		e = pTreadablePool->GetSlot(i);
+		if(e == nil)
+			continue;
+		EntityExt::Deselect(e);
+	}
+}
+
+void
+ClearSelection(void)
+{
+	ClearBuildingSelection();
+	ClearEntitySelection();
+}
+
+// handle click selecting world objects
+void
+pickWorldObject(void)
+{
+	static rw::RGBA white = { 0xFF, 0xFF, 0xFF, 0xFF };
+	TheCamera.m_rwcam->clear(&white, rw::Camera::CLEARIMAGE|rw::Camera::CLEARZ);
+	Renderer::renderEverythingColourCoded();
+	int32 c = Renderer::GetColourCode(CPad::newMouseState.x, CPad::newMouseState.y);
+	BuildingExt *build = FindBuildingExt(c);
+	if(build){
+		if(CPad::IsShiftDown())
+			build->Select();
+		else if(CPad::IsAltDown())
+			build->Deselect();
+		else if(CPad::IsCtrlDown()){
+			if(build->selected) build->Deselect();
+			else build->Select();
+		}else{
+			ClearSelection();
+			build->Select();
+		}
+	}else
+		ClearSelection();
+}
+
+void
+pickColModel(void)
+{
+	CEntity *e;
+	static rw::RGBA white = { 0xFF, 0xFF, 0xFF, 0xFF };
+	TheCamera.m_rwcam->clear(&white, rw::Camera::CLEARIMAGE|rw::Camera::CLEARZ);
+	Renderer::renderColourCoded = 1;
+	Renderer::renderColModels();
+	Renderer::renderColourCoded = 0;
+	RenderDebugTris();
+	RenderDebugLines();
+	int32 c = Renderer::GetColourCode(CPad::newMouseState.x, CPad::newMouseState.y);
+	if((c & 0xFF0000) == 0x10000){
+		e = pBuildingPool->GetSlot(c & 0xFFFF);
+		assert(e);
+		EntityExt *ee = (EntityExt*)e->vtable;
+		if(CPad::IsShiftDown())
+			EntityExt::Select(e);
+		else if(CPad::IsAltDown())
+			EntityExt::Deselect(e);
+		else if(CPad::IsCtrlDown()){
+			if(ee->selected) EntityExt::Deselect(e);
+			else EntityExt::Select(e);
+		}else{
+			ClearSelection();
+			EntityExt::Select(e);
+		}
+	}else
+		ClearSelection();
+}
+
+void
+handleClick(void)
+{
+	// select
+	if(CPad::IsMButtonClicked(1)){
+		if(drawWorld)
+			pickWorldObject();
+		else if(drawCol)
+			pickColModel();
+	}
+}
+
+void
 updateFPS(void)
 {
 	static float history[100];
@@ -784,44 +898,53 @@ Draw(void)
 	CPad::UpdatePads();
 	TheCamera.Process();
 
-	TheCamera.m_rwcam->clear(&clearcol, rw::Camera::CLEARIMAGE|rw::Camera::CLEARZ);
 	TheCamera.update();
 	TheCamera.m_rwcam->beginUpdate();
 
-	pAmbient->setColor(currentEmissive.red/255.0f, currentEmissive.green/255.0f, currentEmissive.blue/255.0f);
+	int i;
+	Renderer::reset();
 
+	if(drawWorld){
+//		renderSector(worldSectors[curSectX][curSectY]);
+		if(currentArea >= 0)
+			RenderSector(&gLevel->sectors[gLevel->chunk->interiors[currentArea].sectorId]);
+		else
+			for(i = 0; i < gLevel->numWorldSectors; i++)
+				RenderSector(&gLevel->sectors[i]);
+	}
+
+	DefinedState();
+	rw::SetRenderState(rw::FOGENABLE, 0);
+
+	handleClick();
+
+	TheCamera.m_rwcam->clear(&clearcol, rw::Camera::CLEARIMAGE|rw::Camera::CLEARZ);
+	pAmbient->setColor(currentEmissive.red/255.0f, currentEmissive.green/255.0f, currentEmissive.blue/255.0f);
 	DefinedState();
 	rw::SetRenderState(rw::FOGENABLE, 0);
 
 	drawBackground();
 	drawHorizon();
 
-	if(drawCubes)
-		Renderer::renderDebugIPL();
+//	if(drawCubes)
 //		Renderer::renderPathNodes();
 //	renderCubesSector(curSectX, curSectY);
 
-	rw::SetRenderState(rw::FOGENABLE, 1);
+	gui();
 
-	int i;
-	Renderer::reset();
-//	renderSector(worldSectors[curSectX][curSectY]);
-	if(currentArea >= 0)
-		RenderSector(&gLevel->sectors[gLevel->chunk->interiors[currentArea].sectorId]);
-	else
-		for(i = 0; i < gLevel->numWorldSectors; i++)
-			RenderSector(&gLevel->sectors[i]);
+	Renderer::renderColModels();
+
+	rw::SetRenderState(rw::FOGENABLE, 1);
 
 	Renderer::renderOpaque();
 	Renderer::renderTransparent();
 
-	CWaterLevel_::mspInst->RenderWater();
+//	CWaterLevel_::mspInst->RenderWater();
 
 	rw::SetRenderState(rw::FOGENABLE, 0);
 
+	RenderDebugTris();
 	RenderDebugLines();
-
-	gui();
 
 	ImGui::EndFrame();
 	ImGui::Render();

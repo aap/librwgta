@@ -73,8 +73,12 @@ enum eLevel
 };
 
 extern CCamera TheCamera;
-extern bool drawCubes;
-extern int drawLOD;
+//extern bool drawCubes;
+extern bool drawCol;
+extern bool drawBounds;
+extern bool drawLOD;
+extern bool drawWorld;
+extern bool drawUnmatched;
 extern int frameCounter;
 extern float timeStep;
 extern float avgTimeStep;
@@ -96,6 +100,8 @@ rw::Raster *convertRasterPS2(RslRasterPS2 *ras);
 
 void LoadCollisionFile(int id, uint8 *data);
 void RenderColModelWire(CColModel *col, rw::Matrix *xform, bool onlyBounds);
+void RenderColBoxSolid(CColModel *col, rw::Matrix *xform, rw::RGBA c);
+void RenderColMeshSolid(CColModel *col, rw::Matrix *xform, rw::RGBA c);
 
 enum SectorType
 {
@@ -108,12 +114,16 @@ enum SectorType
 // streamed world
 struct BuildingExt
 {
+	int id;	// our own id
 	bool isTimed;
 	uint8 timeOn, timeOff;
 	bool hidden;
 	bool isTransparent;
 	int32 iplId;
 	int interior;
+	bool selected;
+	int highlight;
+	rw::LLLink inSelection;
 
 	struct Model {
 		int lastFrame;
@@ -123,6 +133,12 @@ struct BuildingExt
 	Model *resources;
 
 	Model *GetResourceInfo(int id);
+
+	static rw::LinkList selection;
+	static BuildingExt *GetSelection(void);
+	void Select(void);
+	void Deselect(void);
+	void SetEntity(int iplId);
 };
 struct SectorExt
 {
@@ -165,25 +181,51 @@ void LoadArea(int n);
 void LoadSectorInsts(SectorExt *se);
 void RenderSector(SectorExt*);
 void RenderCubesSector(SectorExt*);
+BuildingExt *GetBuildingExt(int id);
+BuildingExt *FindBuildingExt(int id);
 
-// To link world buildings into IPL entities
-struct BuildingLink
+struct EntityExt
 {
+	CEntity *entity;
+
+	bool selected;
+	int highlight;
+	rw::LLLink inSelection;
+
+	// To link world buildings into IPL entities
 	int n;
 	BuildingExt **insts;
+
+	static rw::LinkList selection;
+	static CEntity *GetSelection(void);
+	static void Select(CEntity *e);
+	static void Deselect(CEntity *e);
+	void AddBuilding(BuildingExt *b);
+	void RemoveBuilding(BuildingExt *b);
+	int GetIplID(void);
 };
 
 namespace Renderer
 {
 extern rw::ObjPipeline *buildingPipe;
+void renderColModels(void);
 void renderDebugIPL(void);
 void renderPathNodes(void);
 void reset(void);
-void addToOpaqueRenderList(rw::Atomic *a);
-void addToTransparentRenderList(rw::Atomic *a);
+void addToOpaqueRenderList(sGeomInstance *inst, rw::Atomic *a);
+void addToTransparentRenderList(sGeomInstance*inst, rw::Atomic *a);
 void renderOpaque(void);
 void renderTransparent(void);
+void renderEverythingColourCoded(void);
+
+void myRenderCB(rw::Atomic *atomic);
+
+extern rw::ObjPipeline *colourCodePipe;
+extern rw::RGBA colourCode;
+extern bool renderColourCoded;
+int32 GetColourCode(int x, int y);
 };
+rw::ObjPipeline *makeColourCodePipeline(void);
 rw::ObjPipeline *makeBuildingPipe(void);
 
 typedef CPool<CBuilding, CBuilding> BuildingPool;
@@ -220,11 +262,15 @@ struct CWaterLevel_ : CWaterLevel
 void gui(void);
 
 void RenderDebugLines(void);
+void RenderDebugTris(void);
 void RenderLine(rw::V3d v1, rw::V3d v2, rw::RGBA c1, rw::RGBA c2);
 void RenderWireBoxVerts(rw::V3d *verts, rw::RGBA col);
 void RenderWireBox(CBox *box, rw::RGBA col, rw::Matrix *xform);
+void RenderSolidBox(CBox *box, rw::RGBA col, rw::Matrix *xform);
 void RenderWireSphere(CSphere *sphere, rw::RGBA col, rw::Matrix *xform);
+void RenderSolidSphere(CSphere *sphere, rw::RGBA col, rw::Matrix *xform);
 void RenderWireTriangle(rw::V3d *v1, rw::V3d *v2, rw::V3d *v3, rw::RGBA col, rw::Matrix *xform);
+void RenderSolidTriangle(rw::V3d *v1, rw::V3d *v2, rw::V3d *v3, rw::RGBA col, rw::Matrix *xform);
 void RenderAxesWidget(rw::V3d pos, rw::V3d x, rw::V3d y, rw::V3d z);
 
 // misc
@@ -235,4 +281,6 @@ void closeLogFile(void);
 void dumpIPLBoundingSpheres(void);
 void dumpInstBS(int level, sGeomInstance *inst);
 
+CEntity *GetEntityById(int id);
 void LinkInstances(void);
+void WriteLinks(void);

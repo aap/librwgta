@@ -62,3 +62,29 @@ RenderColModelWire(CColModel *col, rw::Matrix *xform, bool onlyBounds)
 		RenderWireTriangle(&v[0], &v[1], &v[2], green, xform);
 	}
 }
+
+void
+RenderColBoxSolid(CColModel *col, rw::Matrix *xform, rw::RGBA c)
+{
+	RenderSolidBox(&col->boundingBox, c, xform);
+}
+
+void
+RenderColMeshSolid(CColModel *col, rw::Matrix *xform, rw::RGBA c)
+{
+	int i;
+	CColTriangle *tri;
+
+	for(i = 0; i < col->numBoxes; i++)
+		RenderSolidBox(&col->boxes[i].box, c, xform);
+	for(i = 0; i < col->numSpheres; i++)
+		RenderSolidSphere(&col->spheres[i].sph, c, xform);
+	for(i = 0; i < col->numTriangles; i++){
+		tri = &col->triangles[i];
+		rw::V3d v[3];
+		v[0] = *(rw::V3d*)&col->vertices[tri->a/6].Uncompress();
+		v[1] = *(rw::V3d*)&col->vertices[tri->b/6].Uncompress();
+		v[2] = *(rw::V3d*)&col->vertices[tri->c/6].Uncompress();
+		RenderSolidTriangle(&v[0], &v[1], &v[2], c, xform);
+	}
+}

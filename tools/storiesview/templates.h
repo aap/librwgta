@@ -18,6 +18,7 @@ public:
 template<typename T, typename U>
 class CPool
 {
+public:
 	U     *m_entries;
 	union Flags {
 		struct {
@@ -30,7 +31,6 @@ class CPool
 	int    m_allocPtr;
 	char   m_name[16];
 
-public:
 	CPool(int size){
 		m_entries = (U*)malloc(sizeof(U)*size);
 		m_flags = (Flags*)malloc(sizeof(Flags)*size);

@@ -52,19 +52,6 @@ GetResource(int id)
 	return &gLevel->chunk->resourceTable[id];
 }
 
-BuildingExt*
-GetBuildingExt(int id)
-{
-	BuildingExt *be;
-	if(gLevel->buildings[id])
-		return gLevel->buildings[id];
-	be = (BuildingExt*)malloc(sizeof(BuildingExt));
-	memset(be, 0, sizeof(BuildingExt));
-	be->iplId = -1;
-	gLevel->buildings[id] = be;
-	return be;
-}
-
 void
 LoadLevel(eLevel lev)
 {
@@ -581,30 +568,6 @@ makeWorldGeometry(sBuildingGeometry *bgeom)
 	return geo;
 };
 
-BuildingExt::Model*
-BuildingExt::GetResourceInfo(int id)
-{
-	Model *m;
-	for(m = this->resources; m; m = m->next)
-		if(m->resId == id)
-			return m;
-	m = (Model*)malloc(sizeof(Model));
-	m->next = this->resources;
-	this->resources = m;
-	m->resId = id;
-	m->lastFrame = 0;
-	return m;
-}
-
-CEntity*
-GetEntityById(int id)
-{
-	if((id & ~0xFFFF) == 0)
-		return pBuildingPool->GetSlot(id & 0xFFFF);
-	else
-		return pTreadablePool->GetSlot(id & 0xFFFF);
-}
-
 void
 LoadBuildingInst(SectorExt *se, int i)
 {
@@ -635,6 +598,7 @@ LoadBuildingInst(SectorExt *se, int i)
 	rw::Frame *f = rw::Frame::create();
 	a->setGeometry(geo, 0);
 	a->setFrame(f);
+	a->renderCB = Renderer::myRenderCB;
 	a->pipeline = Renderer::buildingPipe;
 	m.pos = add(m.pos, se->origin);
 
@@ -695,16 +659,17 @@ RenderSector(SectorExt *se)
 		if(TheCamera.m_rwcam->frustumTestSphere(&sph) == rw::Camera::SPHEREOUTSIDE)
 			continue;
 
-/*
-		if(be->iplId >= 0){
-			CEntity *e = GetEntityById(be->iplId);
-			BuildingLink *bl = (BuildingLink*)e->vtable;
-			// Draw entities with a weird number of counterparts
-			if(bl->n == 1)
-				continue;
-		}//else
-		//	continue;
+		if(drawUnmatched){
+			if(be->iplId >= 0){
+				CEntity *e = GetEntityById(be->iplId);
+				EntityExt *ee = (EntityExt*)e->vtable;
+				if(ee->n == 1)
+					continue;
+			}//else
+			//	continue;
+		}
 
+/*
 		if(TheCamera.distanceTo(sph.center) < 400.0f){
 			CSphere s = { { x, y, z }, r };
 			static rw::RGBA c = { 0, 0, 255, 255 };
@@ -714,10 +679,11 @@ RenderSector(SectorExt *se)
 		}
 */
 
+		be->highlight = 0;
 		if(be->isTransparent)
-			Renderer::addToTransparentRenderList(se->instances[i]);
+			Renderer::addToTransparentRenderList(inst, se->instances[i]);
 		else
-			Renderer::addToOpaqueRenderList(se->instances[i]);
+			Renderer::addToOpaqueRenderList(inst, se->instances[i]);
 	}
 }
 

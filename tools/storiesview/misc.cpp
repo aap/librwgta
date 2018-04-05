@@ -81,22 +81,33 @@ dumpIPLBoundingSpheres(void)
 }
 
 
-#ifdef VCS
-struct
+CEntity*
+GetEntityById(int id)
 {
-	int32 worldId;
-	int32 iplId;
-} links[] = {
-#include "vcs_links.inc"
-};
+	if((id & ~0xFFFF) == 0)
+		return pBuildingPool->GetSlot(id & 0xFFFF);
+	else
+		return pTreadablePool->GetSlot(id & 0xFFFF);
+}
+
+#ifdef VCS
+
+char *linkpath = "C:\\Users\\aap\\Desktop\\stories\\vcs_map\\vcs_links.txt";
+
+struct Link
+{
+	int worldId;
+	int iplId;
+} inactiveLinks[0x8000];
+int numInactiveLinks;
 
 void
 LinkInstances(void)
 {
-	int i, n;
+	int i, j, n;
 	CEntity *e;
 	BuildingExt *be;
-	BuildingLink *bl;
+	EntityExt *ee;
 
 	// reuse vtable to store world building ids
 	n = pBuildingPool->GetSize();
@@ -104,39 +115,106 @@ LinkInstances(void)
 		e = pBuildingPool->GetSlot(i);
 		if(e == nil)
 			continue;
-		bl = rwNewT(BuildingLink, 1, 0);
-		bl->n = 0;
-		bl->insts = nil;
-		e->vtable = bl;
+		ee = rwNewT(EntityExt, 1, 0);
+		memset(ee, 0, sizeof(*ee));
+		ee->entity = e;
+		e->vtable = ee;
 	}
 	n = pTreadablePool->GetSize();
 	for(i = 0; i < n; i++){
 		e = pTreadablePool->GetSlot(i);
 		if(e == nil)
 			continue;
-		bl = rwNewT(BuildingLink, 1, 0);
-		bl->n = 0;
-		bl->insts = nil;
-		e->vtable = bl;
+		ee = rwNewT(EntityExt, 1, 0);
+		memset(ee, 0, sizeof(*ee));
+		ee->entity = e;
+		e->vtable = ee;
 	}
 
+	FILE *f = fopen(linkpath, "r");
+	if(f == nil)
+		abort();
 
 	int levid = gLevel->levelid << 16;
-	for(i = 0; i < nelem(links); i++){
-		if((links[i].worldId & ~0xFFFF) != levid)
+	int worldId, iplId;
+	while(fscanf(f, "%x %x", &worldId, &iplId) == 2){
+		if((worldId & ~0xFFFF) != levid){
+			inactiveLinks[numInactiveLinks].worldId = worldId;
+			inactiveLinks[numInactiveLinks].iplId = iplId;
+			numInactiveLinks++;
 			continue;
+		}
 
-		be = GetBuildingExt(links[i].worldId&0x7FFF);
-		be->iplId = links[i].iplId;
-		if((links[i].iplId & ~0xFFFF) == 0)
-			e = pBuildingPool->GetSlot(links[i].iplId & 0xFFFF);
-		else
-			e = pTreadablePool->GetSlot(links[i].iplId & 0xFFFF);
-		bl = (BuildingLink*)e->vtable;
-		bl->n++;
-		bl->insts = rwResizeT(BuildingExt*, bl->insts, bl->n, 0);
-		bl->insts[bl->n-1] = be;
+		be = GetBuildingExt(worldId&0x7FFF);
+		be->SetEntity(iplId);
 	}
+
+/*
+	n = pBuildingPool->GetSize();
+	for(i = 0; i < n; i++){
+		e = pBuildingPool->GetSlot(i);
+		if(e == nil)
+			continue;
+		ee = (EntityExt*)e->vtable;
+		if(ee->n > 1){
+			for(j = 0; j < ee->n; j++)
+				ee->insts[j]->iplId = -1;
+			ee->n = 0;
+		}
+	}
+	n = pTreadablePool->GetSize();
+	for(i = 0; i < n; i++){
+		e = pTreadablePool->GetSlot(i);
+		if(e == nil)
+			continue;
+		ee = (EntityExt*)e->vtable;
+		if(ee->n > 1){
+			for(j = 0; j < ee->n; j++)
+				ee->insts[j]->iplId = -1;
+			ee->n = 0;
+		}
+	}
+*/
+	fclose(f);
+}
+
+void
+WriteLinks(void)
+{
+	int i, j, n;
+	CEntity *e;
+	EntityExt *ee;
+	int iplId;
+
+	FILE *f = fopen(linkpath, "w");
+	if(f == nil)
+		abort();
+
+	int levid = gLevel->levelid << 16;
+	n = pBuildingPool->GetSize();
+	for(i = 0; i < n; i++){
+		e = pBuildingPool->GetSlot(i);
+		if(e == nil)
+			continue;
+		ee = (EntityExt*)e->vtable;
+		iplId = i;
+		for(j = 0; j < ee->n; j++)
+			fprintf(f, "%x %x\n", ee->insts[j]->id | levid, iplId);
+	}
+	n = pTreadablePool->GetSize();
+	for(i = 0; i < n; i++){
+		e = pTreadablePool->GetSlot(i);
+		if(e == nil)
+			continue;
+		ee = (EntityExt*)e->vtable;
+		iplId = i | 0x10000;
+		for(j = 0; j < ee->n; j++)
+			fprintf(f, "%x %x\n", ee->insts[j]->id | levid, iplId);
+	}
+	for(i = 0; i < numInactiveLinks; i++)
+		fprintf(f, "%x %x\n", inactiveLinks[i].worldId, inactiveLinks[i].iplId);
+
+	fclose(f);
 }
 
 #else
@@ -146,7 +224,7 @@ LinkInstances(void)
 {
 	int i, n;
 	CEntity *e;
-	BuildingLink *bl;
+	EntityExt *bl;
 
 	// reuse vtable to store world building ids
 	n = pBuildingPool->GetSize();
@@ -154,9 +232,9 @@ LinkInstances(void)
 		e = pBuildingPool->GetSlot(i);
 		if(e == nil)
 			continue;
-		bl = rwNewT(BuildingLink, 1, 0);
-		bl->n = 0;
-		bl->insts = nil;
+		bl = rwNewT(EntityExt, 1, 0);
+		memset(bl, 0, sizeof(*bl));
+		bl->entity = e;
 		e->vtable = bl;
 	}
 	n = pTreadablePool->GetSize();
@@ -164,9 +242,9 @@ LinkInstances(void)
 		e = pTreadablePool->GetSlot(i);
 		if(e == nil)
 			continue;
-		bl = rwNewT(BuildingLink, 1, 0);
-		bl->n = 0;
-		bl->insts = nil;
+		bl = rwNewT(EntityExt, 1, 0);
+		memset(bl, 0, sizeof(*bl));
+		bl->entity = e;
 		e->vtable = bl;
 	}
 }
