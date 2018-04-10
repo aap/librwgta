@@ -668,6 +668,12 @@ RenderSector(SectorExt *se)
 			}//else
 			//	continue;
 		}
+		if(drawUnnamed && be->iplId >= 0){
+			CEntity *e = GetEntityById(be->iplId);
+			CBaseModelInfo *mi = CModelInfo::Get(e->modelIndex);
+			if(mi->field0)
+				continue;
+		}
 
 /*
 		if(TheCamera.distanceTo(sph.center) < 400.0f){
@@ -679,7 +685,7 @@ RenderSector(SectorExt *se)
 		}
 */
 
-		be->highlight = 0;
+		be->highlight = HIGHLIGHT_NONE;
 		if(be->isTransparent)
 			Renderer::addToTransparentRenderList(inst, se->instances[i]);
 		else

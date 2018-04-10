@@ -78,6 +78,7 @@ extern bool drawCol;
 extern bool drawBounds;
 extern bool drawLOD;
 extern bool drawWorld;
+extern bool drawUnnamed;
 extern bool drawUnmatched;
 extern int frameCounter;
 extern float timeStep;
@@ -198,35 +199,14 @@ struct EntityExt
 
 	static rw::LinkList selection;
 	static CEntity *GetSelection(void);
-	static void Select(CEntity *e);
-	static void Deselect(CEntity *e);
+	void Select(void);
+	void Deselect(void);
 	void AddBuilding(BuildingExt *b);
 	void RemoveBuilding(BuildingExt *b);
 	int GetIplID(void);
+	void JumpTo(void);
 };
 
-namespace Renderer
-{
-extern rw::ObjPipeline *buildingPipe;
-void renderColModels(void);
-void renderDebugIPL(void);
-void renderPathNodes(void);
-void reset(void);
-void addToOpaqueRenderList(sGeomInstance *inst, rw::Atomic *a);
-void addToTransparentRenderList(sGeomInstance*inst, rw::Atomic *a);
-void renderOpaque(void);
-void renderTransparent(void);
-void renderEverythingColourCoded(void);
-
-void myRenderCB(rw::Atomic *atomic);
-
-extern rw::ObjPipeline *colourCodePipe;
-extern rw::RGBA colourCode;
-extern bool renderColourCoded;
-int32 GetColourCode(int x, int y);
-};
-rw::ObjPipeline *makeColourCodePipeline(void);
-rw::ObjPipeline *makeBuildingPipe(void);
 
 typedef CPool<CBuilding, CBuilding> BuildingPool;
 typedef CPool<CTreadable, CTreadable> TreadablePool;
@@ -258,6 +238,42 @@ struct CWaterLevel_ : CWaterLevel
 	static void RenderOneFlatSmallWaterPoly(float x, float y, float z, rw::RGBA const &color);
 	static void RenderOneFlatLargeWaterPoly(float x, float y, float z, rw::RGBA const &color);
 };
+
+
+
+
+
+enum HighlightStyle
+{
+	HIGHLIGHT_NONE,
+	HIGHLIGHT_FILTER,
+	HIGHLIGHT_SELECTION,
+	HIGHLIGHT_HOVER,
+};
+
+namespace Renderer
+{
+extern rw::ObjPipeline *buildingPipe;
+void renderColModels(void);
+void renderDebugIPL(void);
+void renderPathNodes(void);
+void reset(void);
+void addToOpaqueRenderList(sGeomInstance *inst, rw::Atomic *a);
+void addToTransparentRenderList(sGeomInstance*inst, rw::Atomic *a);
+void renderOpaque(void);
+void renderTransparent(void);
+void renderEverythingColourCoded(void);
+
+void myRenderCB(rw::Atomic *atomic);
+
+extern rw::ObjPipeline *colourCodePipe;
+extern rw::RGBA colourCode;
+extern bool renderColourCoded;
+int32 GetColourCode(int x, int y);
+};
+rw::ObjPipeline *makeColourCodePipeline(void);
+rw::ObjPipeline *makeBuildingPipe(void);
+
 
 void gui(void);
 

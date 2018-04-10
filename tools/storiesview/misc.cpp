@@ -92,7 +92,8 @@ GetEntityById(int id)
 
 #ifdef VCS
 
-char *linkpath = "C:\\Users\\aap\\Desktop\\stories\\vcs_map\\vcs_links.txt";
+//char *linkpath = "C:\\Users\\aap\\Desktop\\stories\\vcs_map\\vcs_links.txt";
+char *linkpath = "C:\\vcs_links.txt";
 
 struct Link
 {

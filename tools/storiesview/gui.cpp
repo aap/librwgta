@@ -70,6 +70,7 @@ uiView(void)
 
 	ImGui::NewLine();
 
+	ImGui::Checkbox("Render only unnamed", &drawUnnamed);
 	ImGui::Checkbox("Render only Unmatched", &drawUnmatched);
 }
 
@@ -82,14 +83,21 @@ entityInfo(CEntity *e)
 	CBaseModelInfo *mi = CModelInfo::Get(e->modelIndex);
 	EntityExt *ee = (EntityExt*)e->vtable;
 
-	ImGui::Text("model: %s", mi->name);
+	strcpy(tmp, mi->name);
+	ImGui::InputText("X", tmp, 64);
+//	ImGui::Text("model: %s", mi->name);
 
 	sprintf(tmp, "ipl: 0x%X", ee->GetIplID());
 	ImGui::PushID(e);
 	ImGui::Selectable(tmp);
 	ImGui::PopID();
-	if(ImGui::IsItemHovered())
+	if(ImGui::IsItemHovered()){
 		ee->highlight = 1;
+		if(ImGui::IsMouseClicked(1))
+			ee->Select();
+		if(ImGui::IsMouseDoubleClicked(0))
+			ee->JumpTo();
+	}
 
 	for(i = 0; i < ee->n; i++){
 		sprintf(tmp, "  %p", ee->insts[i]);
@@ -105,7 +113,6 @@ static void
 uiObject(void)
 {
 	int i;
-	char tmp[64];
 
 	BuildingExt *b = BuildingExt::GetSelection();
 	if(b && ImGui::TreeNode("Building")){
@@ -123,24 +130,63 @@ uiObject(void)
 		ImGui::TreePop();
 	}
 
+	if(ImGui::TreeNode("Instances")){
+		static ImGuiTextFilter filter;
+		filter.Draw();
+		static bool highlight;
+		ImGui::Checkbox("Highlight matches", &highlight);
+
+		int n;
+		EntityExt *ee;
+		n = pBuildingPool->GetSize();
+		for(i = 0; i < n; i++){
+			e = pBuildingPool->GetSlot(i);
+			if(e == nil)
+				continue;
+			ee = (EntityExt*)e->vtable;
+			CBaseModelInfo *mi = CModelInfo::Get(e->modelIndex);
+			if(filter.PassFilter(mi->name)){
+				bool pop = false;
+				if(ee->selected){
+					ImGui::PushStyleColor(ImGuiCol_Text, (ImVec4)ImColor(255, 0, 0));
+					pop = true;
+				}
+				ImGui::PushID(e);
+				ImGui::Selectable(mi->name);
+				ImGui::PopID();
+				if(ImGui::IsItemHovered()){
+					if(ImGui::IsMouseClicked(1))
+						ee->Select();
+					if(ImGui::IsMouseDoubleClicked(0))
+						ee->JumpTo();
+				}
+				if(pop)
+					ImGui::PopStyleColor();
+				if(highlight)
+					ee->highlight = HIGHLIGHT_FILTER;
+				if(ImGui::IsItemHovered())
+					ee->highlight = HIGHLIGHT_HOVER;
+			}
+		}
+	}
+
 	if(ImGui::Button("Write Links"))
 		WriteLinks();
 
 	if(b && ImGui::Button("Unlink"))
 		b->SetEntity(-1);
 
-	if(EntityExt::selection.count() != 1 ||
-	   BuildingExt::selection.count() != 1)
-		return;
-
-	static char *failtext = "";	// not used after all....
-	if(ImGui::Button("Link")){
-		EntityExt *ee = (EntityExt*)e->vtable;
-		printf("%p %x\n", b, ee->GetIplID());
-		b->SetEntity(ee->GetIplID());
-	}else if(!ImGui::IsItemHovered())
-		failtext = "";
-	ImGui::Text(failtext);
+	if(EntityExt::selection.count() == 1 &&
+	   BuildingExt::selection.count() == 1){
+		static char *failtext = "";	// not used after all....
+		if(ImGui::Button("Link")){
+			EntityExt *ee = (EntityExt*)e->vtable;
+			printf("%p %x\n", b, ee->GetIplID());
+			b->SetEntity(ee->GetIplID());
+		}else if(!ImGui::IsItemHovered())
+			failtext = "";
+		ImGui::Text(failtext);
+	}
 }
 
 void
@@ -173,6 +219,7 @@ gui(void)
 	}
 	if(CPad::IsKeyJustDown('B'))
 		drawBounds = !drawBounds;
+/*
 	if(CPad::IsKeyJustDown('X') &&
 	   EntityExt::selection.count() == 1 &&
 	   BuildingExt::selection.count() == 1){
@@ -182,4 +229,5 @@ gui(void)
 		printf("%p %x\n", b, ee->GetIplID());
 		b->SetEntity(ee->GetIplID());
 	}
+*/
 }

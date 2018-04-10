@@ -28,6 +28,7 @@ bool drawCol;
 bool drawBounds;
 bool drawLOD = true;
 bool drawWorld = true;
+bool drawUnnamed;
 bool drawUnmatched;
 int frameCounter = -1;
 float timeStep;
@@ -382,11 +383,13 @@ AssignModelNames(void)
 			continue;
 
 		name = lookupHashKey(mi->hashKey);
+		mi->field0 = 1;	// has name
 		if(mi->hashKey == 0)
 			name = "null";
 		else if(name == nil){
 			snprintf(tmpname, 50, "hash:%x", mi->hashKey);
 			name = strdup(tmpname);
+			mi->field0 = 0;
 		}
 		mi->name = name;
 	}
@@ -450,7 +453,7 @@ InitGame(void)
 		sk::args.argv++;
 		sk::args.argc--;
 	}
-	eLevel levelToLoad = (eLevel)3;
+	eLevel levelToLoad = (eLevel)1;
 	if(sk::args.argc > 0){
 		const char *levelname = *sk::args.argv;
 		int i;
@@ -772,14 +775,14 @@ ClearEntitySelection(void)
 		e = pBuildingPool->GetSlot(i);
 		if(e == nil)
 			continue;
-		EntityExt::Deselect(e);
+		((EntityExt*)e->vtable)->Deselect();
 	}
 	n = pTreadablePool->GetSize();
 	for(i = 0; i < n; i++){
 		e = pTreadablePool->GetSlot(i);
 		if(e == nil)
 			continue;
-		EntityExt::Deselect(e);
+		((EntityExt*)e->vtable)->Deselect();
 	}
 }
 
@@ -832,15 +835,15 @@ pickColModel(void)
 		assert(e);
 		EntityExt *ee = (EntityExt*)e->vtable;
 		if(CPad::IsShiftDown())
-			EntityExt::Select(e);
+			ee->Select();
 		else if(CPad::IsAltDown())
-			EntityExt::Deselect(e);
+			ee->Deselect();
 		else if(CPad::IsCtrlDown()){
-			if(ee->selected) EntityExt::Deselect(e);
-			else EntityExt::Select(e);
+			if(ee->selected) ee->Deselect();
+			else ee->Select();
 		}else{
 			ClearSelection();
-			EntityExt::Select(e);
+			ee->Select();
 		}
 	}else
 		ClearSelection();

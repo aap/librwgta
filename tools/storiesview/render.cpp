@@ -90,10 +90,9 @@ RenderInst(sGeomInstance *inst, rw::Atomic *a)
 	BuildingExt *be = GetBuildingExt(id);
 	setColourCode(id);
 
-	if(be->selected)
-		highlightColor = red;
-	if(be->highlight)
-		highlightColor = green;
+	if(be->selected && be->highlight < HIGHLIGHT_SELECTION)
+		be->highlight = HIGHLIGHT_SELECTION;
+	highlightColor = highlightCols[be->highlight];
 
 	a->render();
 	highlightColor = black;
@@ -162,6 +161,8 @@ drawEntityCol(CEntity *e)
 	if(mi == nil || mi->colModel == nil)
 		return;
 	if(mi->type != MODELINFO_SIMPLE && mi->type != MODELINFO_TIME)
+		return;
+	if(drawUnnamed && mi->field0)
 		return;
 	CSimpleModelInfo *smi = (CSimpleModelInfo*)mi;
 	CTimeModelInfo *tmi = nil;
