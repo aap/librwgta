@@ -1020,6 +1020,8 @@ AppEventHandler(sk::Event e, void *param)
 		return EVENTPROCESSED;
 	case RESIZE:
 		r = (Rect*)param;
+		if(r->h == 0) r->h = 1;
+
 		sk::globals.width = r->w;
 		sk::globals.height = r->h;
 		if(Scene.camera){

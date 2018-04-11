@@ -344,6 +344,10 @@ AppEventHandler(sk::Event e, void *param)
 		return EVENTPROCESSED;
 	case RESIZE:
 		r = (Rect*)param;
+		// TODO: register when we're minimized
+		if(r->w == 0) r->w = 1;
+		if(r->h == 0) r->h = 1;
+
 		sk::globals.width = r->w;
 		sk::globals.height = r->h;
 		if(TheCamera.m_rwcam){

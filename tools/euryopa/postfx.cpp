@@ -85,7 +85,7 @@ GetBackbuffer(Raster *raster)
 	IDirect3DTexture9 *tex = (IDirect3DTexture9*)natras->texture;
 	IDirect3DSurface9 *surf = nil;
 	IDirect3DSurface9 *backbuf = nil;
-	tex->GetSurfaceLevel(0, &surf);
+ 	tex->GetSurfaceLevel(0, &surf);
 	assert(surf);
 	d3ddevice->GetRenderTarget(0, &backbuf);
 	assert(backbuf);
