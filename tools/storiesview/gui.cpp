@@ -170,6 +170,7 @@ uiObject(void)
 		}
 	}
 
+#if 0
 	if(ImGui::Button("Write Links"))
 		WriteLinks();
 
@@ -187,6 +188,7 @@ uiObject(void)
 			failtext = "";
 		ImGui::Text(failtext);
 	}
+#endif
 }
 
 void

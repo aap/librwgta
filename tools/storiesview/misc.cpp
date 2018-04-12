@@ -93,7 +93,6 @@ GetEntityById(int id)
 #ifdef VCS
 
 //char *linkpath = "C:\\Users\\aap\\Desktop\\stories\\vcs_map\\vcs_links.txt";
-char *linkpath = "C:\\vcs_links.txt";
 
 struct Link
 {
@@ -101,6 +100,17 @@ struct Link
 	int iplId;
 } inactiveLinks[0x8000];
 int numInactiveLinks;
+
+//#define USE_FILE
+
+#ifdef USE_FILE
+char *linkpath = "C:\\vcs_links.txt";
+#else
+Link filelinks[] = {
+#include "vcs_links.inc"
+	{ -1, -1 }
+};
+#endif
 
 void
 LinkInstances(void)
@@ -132,13 +142,20 @@ LinkInstances(void)
 		e->vtable = ee;
 	}
 
+	int levid = gLevel->levelid << 16;
+	int worldId, iplId;
+
+#ifdef USE_FILE
 	FILE *f = fopen(linkpath, "r");
 	if(f == nil)
 		abort();
 
-	int levid = gLevel->levelid << 16;
-	int worldId, iplId;
 	while(fscanf(f, "%x %x", &worldId, &iplId) == 2){
+#else
+	for(Link *l = filelinks;
+	    worldId = l->worldId, iplId = l->iplId, worldId >= 0;
+	    l++){
+#endif
 		if((worldId & ~0xFFFF) != levid){
 			inactiveLinks[numInactiveLinks].worldId = worldId;
 			inactiveLinks[numInactiveLinks].iplId = iplId;
@@ -150,6 +167,10 @@ LinkInstances(void)
 		be->SetEntity(iplId);
 	}
 
+#ifdef USE_FILE
+	fclose(f);
+#endif
+// no longer useful
 /*
 	n = pBuildingPool->GetSize();
 	for(i = 0; i < n; i++){
@@ -176,12 +197,12 @@ LinkInstances(void)
 		}
 	}
 */
-	fclose(f);
 }
 
 void
 WriteLinks(void)
 {
+#ifdef USE_FILE
 	int i, j, n;
 	CEntity *e;
 	EntityExt *ee;
@@ -216,6 +237,7 @@ WriteLinks(void)
 		fprintf(f, "%x %x\n", inactiveLinks[i].worldId, inactiveLinks[i].iplId);
 
 	fclose(f);
+#endif
 }
 
 #else
