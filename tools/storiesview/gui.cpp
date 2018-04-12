@@ -208,7 +208,7 @@ gui(void)
 		ImGui::End();
 	}
 
-	if(CPad::IsKeyJustDown('O')) showObjectWindow ^= 1;
+	if(CPad::IsKeyJustDown('I')) showObjectWindow ^= 1;
 	if(showObjectWindow){
 		ImGui::Begin("Object", &showObjectWindow);
 		uiObject();
