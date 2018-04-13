@@ -87,7 +87,7 @@ entityInfo(CEntity *e)
 	ImGui::InputText("X", tmp, 64);
 //	ImGui::Text("model: %s", mi->name);
 
-	sprintf(tmp, "ipl: 0x%X", ee->GetIplID());
+	sprintf(tmp, "ipl: %d, 0x%X", e->modelIndex, ee->GetIplID());
 	ImGui::PushID(e);
 	ImGui::Selectable(tmp);
 	ImGui::PopID();
@@ -104,8 +104,11 @@ entityInfo(CEntity *e)
 		ImGui::PushID(ee->insts[i]);
 		ImGui::Selectable(tmp);
 		ImGui::PopID();
-		if(ImGui::IsItemHovered())
+		if(ImGui::IsItemHovered()){
 			ee->insts[i]->highlight = 1;
+			if(ImGui::IsMouseClicked(1))
+				ee->insts[i]->Select();
+		}
 	}
 }
 
@@ -170,7 +173,7 @@ uiObject(void)
 		}
 	}
 
-#if 0
+#ifdef EDIT_LINKS
 	if(ImGui::Button("Write Links"))
 		WriteLinks();
 
@@ -221,7 +224,8 @@ gui(void)
 	}
 	if(CPad::IsKeyJustDown('B'))
 		drawBounds = !drawBounds;
-/*
+
+#ifdef EDIT_LINKS
 	if(CPad::IsKeyJustDown('X') &&
 	   EntityExt::selection.count() == 1 &&
 	   BuildingExt::selection.count() == 1){
@@ -231,5 +235,5 @@ gui(void)
 		printf("%p %x\n", b, ee->GetIplID());
 		b->SetEntity(ee->GetIplID());
 	}
-*/
+#endif
 }

@@ -297,7 +297,7 @@ void
 LoadGame(void)
 {
 //	SetCurrentDirectory("C:/Users/aap/games/gta3");
-	SetCurrentDirectory("C:/Users/aap/games/gtavc");
+//	SetCurrentDirectory("C:/Users/aap/games/gtavc");
 //	SetCurrentDirectory("C:/Users/aap/games/gtasa");
 //	SetCurrentDirectory("F://gtasa");
 //	SetCurrentDirectory("F://gta3_xbox");

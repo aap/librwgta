@@ -875,10 +875,10 @@ dumpVCSObjects(void)
 			printf("%x %.0f ", smi->flags, smi->drawDistances[0]);
 			if(smi->flags & 0x10)
 				printf("BIGBUILD ");
-			if(smi->relatedObject)
+			if(smi->relatedObject && bmi->hashKey != 0xd37e2fbd)	// this is seriously fucked up
 				if(smi->relatedObject->name)
 					printf("REL:%s ", smi->relatedObject->name);
-				else
+				else if(smi->relatedObject->hashKey != 0xd37e2fbd)	// this is seriously fucked up
 					printf("REL:%x ", smi->relatedObject->hashKey);
 		}
 

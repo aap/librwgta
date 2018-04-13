@@ -92,8 +92,6 @@ GetEntityById(int id)
 
 #ifdef VCS
 
-//char *linkpath = "C:\\Users\\aap\\Desktop\\stories\\vcs_map\\vcs_links.txt";
-
 struct Link
 {
 	int worldId;
@@ -101,10 +99,9 @@ struct Link
 } inactiveLinks[0x8000];
 int numInactiveLinks;
 
-//#define USE_FILE
-
-#ifdef USE_FILE
+#ifdef EDIT_LINKS
 char *linkpath = "C:\\vcs_links.txt";
+//char *linkpath = "C:\\Users\\aap\\Desktop\\stories\\vcs_map\\vcs_links.txt";
 #else
 Link filelinks[] = {
 #include "vcs_links.inc"
@@ -145,7 +142,7 @@ LinkInstances(void)
 	int levid = gLevel->levelid << 16;
 	int worldId, iplId;
 
-#ifdef USE_FILE
+#ifdef EDIT_LINKS
 	FILE *f = fopen(linkpath, "r");
 	if(f == nil)
 		abort();
@@ -167,7 +164,7 @@ LinkInstances(void)
 		be->SetEntity(iplId);
 	}
 
-#ifdef USE_FILE
+#ifdef EDIT_LINKS
 	fclose(f);
 #endif
 // no longer useful
@@ -202,7 +199,7 @@ LinkInstances(void)
 void
 WriteLinks(void)
 {
-#ifdef USE_FILE
+#ifdef EDIT_LINKS
 	int i, j, n;
 	CEntity *e;
 	EntityExt *ee;

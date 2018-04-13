@@ -25,6 +25,9 @@ typedef uint16 float16;
 #include <leedsgta.h>
 #include <streamworld.h>
 
+//#define EDIT_LINKS
+
+
 const char *lookupHashKey(uint32 key);
 uint32 GetKey(const char *str, int len);
 uint32 GetUppercaseKey(const char *str, int len);
