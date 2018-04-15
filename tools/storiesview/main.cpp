@@ -449,11 +449,13 @@ InitGame(void)
 	sk::args.argv++;
 	sk::args.argc--;
 	if(sk::args.argc > 0){
-		SetCurrentDirectory(*sk::args.argv);
-		sk::args.argv++;
-		sk::args.argc--;
+		if(SetCurrentDirectory(*sk::args.argv)){
+			// Only advance if the directory was correct
+			sk::args.argv++;
+			sk::args.argc--;
+		}
 	}
-	eLevel levelToLoad = (eLevel)1;
+	eLevel levelToLoad = (eLevel)2;
 	if(sk::args.argc > 0){
 		const char *levelname = *sk::args.argv;
 		int i;
@@ -469,6 +471,7 @@ found:
 		sk::args.argv++;
 		sk::args.argc--;
 	}
+	printf("loading level %s\n", levelNames[levelToLoad-1]);
 
 //	int x = offsetof(ResourceImage, streaming_Inst);
 
@@ -478,6 +481,7 @@ found:
 	zfile = zopen("PS2/GAME.DTZ", "rb");
 #endif
 	if(zfile == nil){
+		printf("failed to open game.dtz\n");
 		sk::globals.quit = 1;
 		return;
 	}
@@ -509,6 +513,7 @@ found:
 	gCdImage = fopen("GTA3PS2.IMG", "rb");	// VCS opens it from RUNDATA???
 #endif
 	if(gCdImage == nil){
+		printf("failed to open gta3ps2.img\n");
 		sk::globals.quit = 1;
 		return;
 	}
@@ -545,6 +550,8 @@ found:
 	EntityExt::selection.init();
 
 	LinkInstances();
+
+	printf("load done\n");
 }
 
 // Arguments:
@@ -987,12 +994,12 @@ AppEventHandler(sk::Event e, void *param)
 
 	switch(e){
 	case INITIALIZE:
-/*
-		AllocConsole();
-		freopen("CONIN$", "r", stdin);
-		freopen("CONOUT$", "w", stdout);
-		freopen("CONOUT$", "w", stderr);
-*/
+
+//		AllocConsole();
+//		freopen("CONIN$", "r", stdin);
+//		freopen("CONOUT$", "w", stdout);
+//		freopen("CONOUT$", "w", stderr);
+
 		Init();
 		plAttachInput();
 		return EVENTPROCESSED;
