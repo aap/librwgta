@@ -455,7 +455,7 @@ InitGame(void)
 			sk::args.argc--;
 		}
 	}
-	eLevel levelToLoad = (eLevel)2;
+	eLevel levelToLoad = (eLevel)1;
 	if(sk::args.argc > 0){
 		const char *levelname = *sk::args.argv;
 		int i;
