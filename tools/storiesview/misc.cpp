@@ -84,10 +84,12 @@ dumpIPLBoundingSpheres(void)
 CEntity*
 GetEntityById(int id)
 {
-	if((id & ~0xFFFF) == 0)
-		return pBuildingPool->GetSlot(id & 0xFFFF);
-	else
-		return pTreadablePool->GetSlot(id & 0xFFFF);
+	switch(id>>16){
+	case 0: return pBuildingPool->GetSlot(id & 0xFFFF);
+	case 1: return pTreadablePool->GetSlot(id & 0xFFFF);
+	case 2: return pDummyPool->GetSlot(id & 0xFFFF);
+	default: return nil;
+	}
 }
 
 #ifdef VCS
@@ -108,6 +110,7 @@ Link filelinks[] = {
 	{ -1, -1 }
 };
 #endif
+
 
 void
 LinkInstances(void)
@@ -131,6 +134,17 @@ LinkInstances(void)
 	n = pTreadablePool->GetSize();
 	for(i = 0; i < n; i++){
 		e = pTreadablePool->GetSlot(i);
+		if(e == nil)
+			continue;
+		ee = rwNewT(EntityExt, 1, 0);
+		memset(ee, 0, sizeof(*ee));
+		ee->entity = e;
+		e->vtable = ee;
+	}
+	// we don't expect to use this for much
+	n = pDummyPool->GetSize();
+	for(i = 0; i < n; i++){
+		e = pDummyPool->GetSlot(i);
 		if(e == nil)
 			continue;
 		ee = rwNewT(EntityExt, 1, 0);

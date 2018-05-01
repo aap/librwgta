@@ -62,6 +62,7 @@ uiView(void)
 {
 	ImGui::Checkbox("Render World", &drawWorld);
 	ImGui::Checkbox("Render LOD", &drawLOD);
+	ImGui::Checkbox("Render Dynamic objects (COL only)", &drawDummies);
 
 	ImGui::NewLine();
 
@@ -113,6 +114,36 @@ entityInfo(CEntity *e)
 }
 
 static void
+listEntity(CEntity *e, ImGuiTextFilter *filter, bool highlight)
+{
+	EntityExt *ee;
+	ee = (EntityExt*)e->vtable;
+	CBaseModelInfo *mi = CModelInfo::Get(e->modelIndex);
+	if(filter->PassFilter(mi->name)){
+		bool pop = false;
+		if(ee->selected){
+			ImGui::PushStyleColor(ImGuiCol_Text, (ImVec4)ImColor(255, 0, 0));
+			pop = true;
+		}
+		ImGui::PushID(e);
+		ImGui::Selectable(mi->name);
+		ImGui::PopID();
+		if(ImGui::IsItemHovered()){
+			if(ImGui::IsMouseClicked(1))
+				ee->Select();
+			if(ImGui::IsMouseDoubleClicked(0))
+				ee->JumpTo();
+		}
+		if(pop)
+			ImGui::PopStyleColor();
+		if(highlight)
+			ee->highlight = HIGHLIGHT_FILTER;
+		if(ImGui::IsItemHovered())
+			ee->highlight = HIGHLIGHT_HOVER;
+	}
+}
+
+static void
 uiObject(void)
 {
 	int i;
@@ -140,35 +171,20 @@ uiObject(void)
 		ImGui::Checkbox("Highlight matches", &highlight);
 
 		int n;
-		EntityExt *ee;
 		n = pBuildingPool->GetSize();
 		for(i = 0; i < n; i++){
 			e = pBuildingPool->GetSlot(i);
 			if(e == nil)
 				continue;
-			ee = (EntityExt*)e->vtable;
-			CBaseModelInfo *mi = CModelInfo::Get(e->modelIndex);
-			if(filter.PassFilter(mi->name)){
-				bool pop = false;
-				if(ee->selected){
-					ImGui::PushStyleColor(ImGuiCol_Text, (ImVec4)ImColor(255, 0, 0));
-					pop = true;
-				}
-				ImGui::PushID(e);
-				ImGui::Selectable(mi->name);
-				ImGui::PopID();
-				if(ImGui::IsItemHovered()){
-					if(ImGui::IsMouseClicked(1))
-						ee->Select();
-					if(ImGui::IsMouseDoubleClicked(0))
-						ee->JumpTo();
-				}
-				if(pop)
-					ImGui::PopStyleColor();
-				if(highlight)
-					ee->highlight = HIGHLIGHT_FILTER;
-				if(ImGui::IsItemHovered())
-					ee->highlight = HIGHLIGHT_HOVER;
+			listEntity(e, &filter, highlight);
+		}
+		if(drawDummies){
+			n = pDummyPool->GetSize();
+			for(i = 0; i < n; i++){
+				e = pDummyPool->GetSlot(i);
+				if(e == nil)
+					continue;
+				listEntity(e, &filter, highlight);
 			}
 		}
 	}

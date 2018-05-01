@@ -176,7 +176,7 @@ drawEntityCol(CEntity *e)
 		return;
 
 	rw::V3d pos = *(rw::V3d*)&e->placeable.matrix.matrix.pos;
-	if(!ee->highlight && !ee->selected && pos.z < 100.0f && TheCamera.distanceTo(pos) > smi->drawDistances[0]*2)
+	if(!ee->highlight && !ee->selected && pos.z < 100.0f && TheCamera.distanceTo(pos) > smi->drawDistances[0])
 		return;
 
 	ee->highlight = 0;
@@ -233,13 +233,16 @@ renderColModels(void)
 		setColourCode(i | 0x20000);
 		drawEntityCol(e);
 	}
-//	n = pDummyPool->GetSize();
-//	for(i = 0; i < n; i++){
-//		e = pDummyPool->GetSlot(i);
-//		if(e == nil)
-//			continue;
-//		drawEntityBS(e);
-//	}
+	if(drawDummies){
+		n = pDummyPool->GetSize();
+		for(i = 0; i < n; i++){
+			e = pDummyPool->GetSlot(i);
+			if(e == nil)
+				continue;
+			setColourCode(i | 0x30000);
+			drawEntityCol(e);
+		}
+	}
 }
 
 void

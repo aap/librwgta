@@ -27,6 +27,7 @@ rw::Light *pAmbient;
 bool drawCol;
 bool drawBounds;
 bool drawLOD = true;
+bool drawDummies = false;
 bool drawWorld = true;
 bool drawUnnamed;
 bool drawUnmatched;
@@ -455,7 +456,7 @@ InitGame(void)
 			sk::args.argc--;
 		}
 	}
-	eLevel levelToLoad = (eLevel)1;
+	eLevel levelToLoad = (eLevel)2;
 	if(sk::args.argc > 0){
 		const char *levelname = *sk::args.argv;
 		int i;
@@ -837,9 +838,13 @@ pickColModel(void)
 	RenderDebugTris();
 	RenderDebugLines();
 	int32 c = Renderer::GetColourCode(CPad::newMouseState.x, CPad::newMouseState.y);
-	if((c & 0xFF0000) == 0x10000){
-		e = pBuildingPool->GetSlot(c & 0xFFFF);
-		assert(e);
+	switch(c >> 16){
+	case 1: e = pBuildingPool->GetSlot(c & 0xFFFF); break;
+	case 2: e = pTreadablePool->GetSlot(c & 0xFFFF); break;
+	case 3: e = pDummyPool->GetSlot(c & 0xFFFF); break;
+	default: e = nil;
+	}
+	if(e){
 		EntityExt *ee = (EntityExt*)e->vtable;
 		if(CPad::IsShiftDown())
 			ee->Select();

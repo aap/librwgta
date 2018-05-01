@@ -80,6 +80,7 @@ extern CCamera TheCamera;
 extern bool drawCol;
 extern bool drawBounds;
 extern bool drawLOD;
+extern bool drawDummies;
 extern bool drawWorld;
 extern bool drawUnnamed;
 extern bool drawUnmatched;
