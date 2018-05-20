@@ -1,5 +1,11 @@
 #include "III.h"
 
+// Get rid of bullshit windows definitions, we're not running on an 8086
+#ifdef far
+#undef far
+#undef near
+#endif
+
 int CRenderer::ms_nNoOfVisibleEntities;
 int CRenderer::ms_nNoOfInVisibleEntities;
 CEntity *CRenderer::ms_aVisibleEntityPtrs[2000];

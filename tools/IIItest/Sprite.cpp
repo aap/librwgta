@@ -1,5 +1,11 @@
 #include "III.h"
 
+// Get rid of bullshit windows definitions, we're not running on an 8086
+#ifdef far
+#undef far
+#undef near
+#endif
+
 rw::RWDEVICE::Im2DVertex Sprite2d::ma_vertices[4];
 
 // Arguments:

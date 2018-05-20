@@ -155,9 +155,12 @@ plAttachInput(void)
 			pads[numPads++] = i;
 }
 
+
 LRESULT CALLBACK
 WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+	static int buttons = 0;
+
 	switch(msg){
 	case WM_DESTROY:
 		printf("DESTROY\n");
@@ -167,31 +170,57 @@ WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_SYSKEYDOWN:
 	case WM_KEYDOWN:
 		if(wParam == VK_MENU){
-			CPad::tempKeystates[keymap[VK_LMENU]] = !!(GetKeyState(VK_LMENU) & 0x8000);
-			CPad::tempKeystates[keymap[VK_RMENU]] = !!(GetKeyState(VK_RMENU) & 0x8000);
+			if(GetKeyState(VK_LMENU) & 0x8000) KeyDown(keymap[VK_LMENU]);
+			if(GetKeyState(VK_RMENU) & 0x8000) KeyDown(keymap[VK_RMENU]);
 		}else if(wParam == VK_CONTROL){
-			CPad::tempKeystates[keymap[VK_LCONTROL]] = !!(GetKeyState(VK_LCONTROL) & 0x8000);
-			CPad::tempKeystates[keymap[VK_RCONTROL]] = !!(GetKeyState(VK_RCONTROL) & 0x8000);
+			if(GetKeyState(VK_LCONTROL) & 0x8000) KeyDown(keymap[VK_LCONTROL]);
+			if(GetKeyState(VK_RCONTROL) & 0x8000) KeyDown(keymap[VK_RCONTROL]);
 		}else if(wParam == VK_SHIFT){
-			CPad::tempKeystates[keymap[VK_LSHIFT]] = !!(GetKeyState(VK_LSHIFT) & 0x8000);
-			CPad::tempKeystates[keymap[VK_RSHIFT]] = !!(GetKeyState(VK_RSHIFT) & 0x8000);
+			if(GetKeyState(VK_LSHIFT) & 0x8000) KeyDown(keymap[VK_LSHIFT]);
+			if(GetKeyState(VK_RSHIFT) & 0x8000) KeyDown(keymap[VK_RSHIFT]);
 		}else
-			CPad::tempKeystates[keymap[wParam]] = 1;
+			KeyDown(keymap[wParam]);
 		break;
 
 	case WM_SYSKEYUP:
 	case WM_KEYUP:
 		if(wParam == VK_MENU){
-			CPad::tempKeystates[keymap[VK_LMENU]] = !!(GetKeyState(VK_LMENU) & 0x8000);
-			CPad::tempKeystates[keymap[VK_RMENU]] = !!(GetKeyState(VK_RMENU) & 0x8000);
+			if((GetKeyState(VK_LMENU) & 0x8000) == 0) KeyUp(keymap[VK_LMENU]);
+			if((GetKeyState(VK_RMENU) & 0x8000) == 0) KeyUp(keymap[VK_RMENU]);
 		}else if(wParam == VK_CONTROL){
-			CPad::tempKeystates[keymap[VK_LCONTROL]] = !!(GetKeyState(VK_LCONTROL) & 0x8000);
-			CPad::tempKeystates[keymap[VK_RCONTROL]] = !!(GetKeyState(VK_RCONTROL) & 0x8000);
+			if((GetKeyState(VK_LCONTROL) & 0x8000) == 0) KeyUp(keymap[VK_LCONTROL]);
+			if((GetKeyState(VK_RCONTROL) & 0x8000) == 0) KeyUp(keymap[VK_RCONTROL]);
 		}else if(wParam == VK_SHIFT){
-			CPad::tempKeystates[keymap[VK_LSHIFT]] = !!(GetKeyState(VK_LSHIFT) & 0x8000);
-			CPad::tempKeystates[keymap[VK_RSHIFT]] = !!(GetKeyState(VK_RSHIFT) & 0x8000);
+			if((GetKeyState(VK_LSHIFT) & 0x8000) == 0) KeyUp(keymap[VK_LSHIFT]);
+			if((GetKeyState(VK_RSHIFT) & 0x8000) == 0) KeyUp(keymap[VK_RSHIFT]);
 		}else
-			CPad::tempKeystates[keymap[wParam]] = 0;
+			KeyUp(keymap[wParam]);
+		break;
+
+	case WM_CHAR:
+		if(wParam > 0 && wParam < 0x10000)
+			CharInput(wParam);
+		break;
+
+	case WM_MOUSEMOVE:
+		POINTS p = MAKEPOINTS(lParam);
+		MouseMove(p.x, p.y);
+		break;
+
+	case WM_LBUTTONDOWN:
+		buttons |= 1; goto mbtn;
+	case WM_LBUTTONUP:
+		buttons &= ~1; goto mbtn;
+	case WM_MBUTTONDOWN:
+		buttons |= 2; goto mbtn;
+	case WM_MBUTTONUP:
+		buttons &= ~2; goto mbtn;
+	case WM_RBUTTONDOWN:
+		buttons |= 4; goto mbtn;
+	case WM_RBUTTONUP:
+		buttons &= ~4;
+	mbtn:
+		MouseButton(buttons);
 		break;
 
 	case WM_SIZE:
@@ -273,6 +302,8 @@ WinMain(HINSTANCE instance, HINSTANCE,
 		return 0;
 	}
 	engineStartParams.window = win;
+
+	GameInit();
 
 	TheGame();
 

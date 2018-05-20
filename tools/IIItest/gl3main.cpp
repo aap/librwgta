@@ -223,8 +223,8 @@ static void
 keypress(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
 	if(key >= 0 && key <= GLFW_KEY_LAST){
-		if(action == GLFW_RELEASE) CPad::tempKeystates[keymap[key]] = 0;
-		if(action == GLFW_PRESS)   CPad::tempKeystates[keymap[key]] = 1;
+		if(action == GLFW_RELEASE) KeyUp(keymap[key]);
+		if(action == GLFW_PRESS)   KeyDown(keymap[key]);
 	}
 }
 
@@ -250,6 +250,8 @@ main(int argc, char *argv[])
 	engineStartParams.width = 640;
 	engineStartParams.height = 480;
 	engineStartParams.windowtitle = "III";
+
+	GameInit();
 
 	TheGame();
 

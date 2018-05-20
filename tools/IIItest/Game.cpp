@@ -5,19 +5,6 @@ eLevelName CGame::currLevel;
 void
 CGame::InitialiseRW(void)
 {
-	rw::Engine::init();
-	gta::attachPlugins();
-	CVisibilityPlugins::PluginAttach();
-	rw::Engine::open();
-	rw::Engine::start(&engineStartParams);
-	plAttachInput();
-
-	rw::Texture::setLoadTextures(1);
-	rw::d3d::isP8supported = 0;
-	//rw::engine->makeDummies = 1;
-
-	rw::Image::setSearchPath("D:\\rockstargames\\ps2\\gta3\\MODELS\\gta3_archive\\txd_extracted\\;");
-
 	CTxdStore::Initialize();
 	CVisibilityPlugins::Initialise();
 	Scene.camera = CameraCreate(640, 480, 1);
@@ -39,22 +26,12 @@ CGame::InitialiseRW(void)
 	LightsCreate(Scene.world);
 }
 
-void
-CGame::InitialiseAfterRW(void)
-{
-	CTimer::Initialise();
-	CAnimManager::LoadAnimGroups();	// not in III
-	CHandlingData::Initialise();
-	CPedStats::Initialise();
-	CTimeCycle::Initialise();
-}
-
 int gameTxdSlot;
 
 void
 CGame::Initialise(void)
 {
-	CPools::Initialise();
+	CPools::Initialise();	// in CWorld::Initialise on PS2
 
 	CGame::currLevel = LEVEL_NONE;	// INDUSTRIAL gives problems :/
 
@@ -74,8 +51,14 @@ CGame::Initialise(void)
 	CWeather::Init();
 	CCullZones::Init();
 	CTheZones::Init();
+
+	cHandlingDataMgr::Initialise();
+	CAnimManager::LoadAnimGroups();	// not in III
+
 	InitModelIndices();
 	CModelInfo::Initialise();
+	CPedStats::Initialise();
+
 	CdStream::addImage("MODELS\\GTA3.IMG");
 	CFileLoader::LoadLevel("DATA\\DEFAULT.DAT");
 	CFileLoader::LoadLevel("DATA\\GTA3.DAT");
@@ -83,6 +66,8 @@ CGame::Initialise(void)
 
 	printf("--Setup water\n");
 	CWaterLevel::Initialise("DATA\\WATER.DAT");	// file is unused
+
+	CTimeCycle::Initialise();
 
 	printf("--Setup Streaming\n");
 	CStreaming::Init();
@@ -92,6 +77,7 @@ CGame::Initialise(void)
 	CStreaming::LoadAllRequestedModels();
 
 	printf("--Setup game variables\n");
+	CTimer::Initialise();
 	CClock::Initialise(1000);
 
 	printf("--Load scene\n");

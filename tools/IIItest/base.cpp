@@ -257,20 +257,39 @@ DoRWStuffStartOfFrame_Horizon(int16 topred, int16 topgreen, int16 topblue,
 }
 
 void
+Initialise3D(void)
+{
+	rw::Engine::init();
+	gta::attachPlugins();
+	CVisibilityPlugins::PluginAttach();
+	rw::Engine::open();
+	rw::Engine::start(&engineStartParams);
+	plAttachInput();
+
+	rw::Texture::setLoadTextures(1);
+	rw::d3d::isP8supported = 0;
+	//rw::engine->makeDummies = 1;
+
+	rw::Image::setSearchPath("D:\\rockstargames\\ps2\\gta3\\MODELS\\gta3_archive\\txd_extracted\\;");
+
+
+	CGame::InitialiseRW();
+}
+
+void
+GameInit(void)
+{
+	Initialise3D();
+}
+
+void
 TheGame(void)
 {
-	int lasttick, tick, acc, nframes;
-
 	debug("Into TheGame!!!\n");
 
 	isRunning = 1;
-	CGame::InitialiseRW();
-	CGame::InitialiseAfterRW();
-	CGame::Initialise();
 
-	lasttick = plGetTimeInMS();
-	nframes = 0;
-	acc = 0;
+	CGame::Initialise();
 
 	while(isRunning && !plWindowclosed()){
 		plHandleEvents();
@@ -278,9 +297,6 @@ TheGame(void)
 		CGame::Process();
 
 		SetLightsWithTimeOfDayColour(Scene.world);
-//		clearcol.red = CTimeCycle::m_nCurrentSkyTopRed;
-//		clearcol.green = CTimeCycle::m_nCurrentSkyTopGreen;
-//		clearcol.blue = CTimeCycle::m_nCurrentSkyTopBlue;
 
 		CRenderer::ConstructRenderList();
 
@@ -302,17 +318,37 @@ TheGame(void)
 
 		TheCamera.m_rwcam->endUpdate();
 		TheCamera.m_rwcam->showRaster();
-
-		nframes++;
-		tick = plGetTimeInMS();
-		acc += tick - lasttick;
-		lasttick = tick;
-		if(acc >= 10000){
-			printf("%f FPS\n", nframes/10.0f);
-			nframes = 0;
-			acc -= 10000;
-		}
 	}
 
 	rw::Engine::stop();
+}
+
+void
+KeyDown(int k)
+{
+	CPad::tempKeystates[k] = 1;
+}
+
+void
+KeyUp(int k)
+{
+	CPad::tempKeystates[k] = 0;
+}
+
+void
+CharInput(int c)
+{
+}
+
+void
+MouseMove(int x, int y)
+{
+	CPad::tempMouseState.x = x;
+	CPad::tempMouseState.y = y;
+}
+
+void
+MouseButton(int buttons)
+{
+	CPad::tempMouseState.btns = buttons;
 }

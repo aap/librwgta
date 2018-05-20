@@ -21,9 +21,11 @@ public:
 	void dolly(float dist);
 	void zoom(float dist);
 	void pan(float x, float y);
+	void setDistanceFromTarget(float dist);
 
 	void update(void);
 	float distanceTo(rw::V3d v);
+	float distanceToTarget(void);
 	bool isSphereVisible(CVector &center, float radius);
 
 	CCamera(void);

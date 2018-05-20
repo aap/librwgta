@@ -1,16 +1,16 @@
 #include "III.h"
 
-CHandlingData::Data CHandlingData::data[NUMHANDLINGS];
+cHandlingDataMgr::Data cHandlingDataMgr::data[NUMHANDLINGS];
 
 void
-CHandlingData::Initialise(void)
+cHandlingDataMgr::Initialise(void)
 {
-	CHandlingData::LoadHandlingData();
+	cHandlingDataMgr::LoadHandlingData();
 }
 
 
 void
-CHandlingData::LoadHandlingData(void)
+cHandlingDataMgr::LoadHandlingData(void)
 {
 	char name[14];
 	FILE *file;
@@ -19,15 +19,15 @@ CHandlingData::LoadHandlingData(void)
 	if(file = fopen("data/handling.cfg", "rb"), file == nil)
 		return;
 	int i = 0;
-	CHandlingData::Data *d;
+	Data *d;
 	while(line = CFileLoader::LoadLine(file)){
 		if(line[0] == ';')
 			continue;
 		sscanf(line, "%s", name);
-		i = CHandlingData::GetHandlingData(name);
+		i = GetHandlingData(name);
 		assert(i >= 0);
 		assert(i < NUMHANDLINGS);
-		d = &CHandlingData::data[i];
+		d = &data[i];
 		sscanf(line, "%s %f %f %f %f %f %f %f %d %f %f %f"
 		             "%c %f %f %c %c"
 		             "%f %f %d %f %f %f %f %f %d"
@@ -52,7 +52,7 @@ CHandlingData::LoadHandlingData(void)
 }
 
 int
-CHandlingData::GetHandlingData(const char *ident)
+cHandlingDataMgr::GetHandlingData(const char *ident)
 {
 	static const char *idents[] = {
 		"LANDSTAL",

@@ -7,11 +7,6 @@
 #include <rw.h>
 #include "rwgta.h"
 
-// Get rid of bullshit windows definitions, we're not running on an 8086
-#ifdef far
-#undef far
-#undef near
-#endif
 
 using namespace gta;
 
@@ -133,6 +128,8 @@ public:
 
 inline float
 clamp(float v, float min, float max){ return v<min ? min : v>max ? max : v; }
+#define DEGTORAD(d) (d/180.0f*PI)
+
 
 char *getPath(const char *path);
 FILE *fopen_ci(const char *path, const char *mode);
@@ -163,7 +160,15 @@ void DefinedState(void);
 
 extern CEntity *debugent;
 
+void GameInit(void);
 void TheGame(void);
+
+// input events
+void KeyDown(int k);
+void KeyUp(int k);
+void CharInput(int c);
+void MouseMove(int x, int y);
+void MouseButton(int buttons);
 
 // platform implementations
 extern rw::EngineStartParams engineStartParams;
@@ -283,51 +288,7 @@ public:
 	static int  GetPedStatType(const char *name);
 };
 
-class CHandlingData
-{
-	// NOT reversed data, just read from file
-	struct Transmission {
-		char nDriveType;
-		char nEngineType;
-		char nNumberOfGears;
-		uchar Flags;
-		float fEngineAcceleration;
-		float fMaxVelocity;
-	};
-	struct Data {
-		int ident;
-		float fMass;
-		rw::V3d Dimensions;
-		rw::V3d CenterOfMass;
-		int nPercentSubmerged;
-		float fTractionMultiplier;
-		float fTractionLoss;
-		float fTractionBias;
-		Transmission trans;
-
-		float fBrakeDeceleration;
-		float fBrakeBias;
-		bool bABS;
-		float fSteeringLock;
-		float fSuspensionForceLevel;
-		float fSuspensionDampingLevel;
-		float fSeatOffsetDistance;
-		float fCollisionDamageMultiplier;
-		int nMonetaryValue;
-
-		float fSuspensionUpperLimit;
-		float fSuspensionLowerLimit;
-		float fSuspensionBias;
-		uchar Flags;
-		uchar FrontLights;
-		uchar RearLights;
-	};
-	static Data data[NUMHANDLINGS];
-public:
-	static void Initialise(void);
-	static void LoadHandlingData(void);
-	static int  GetHandlingData(const char *ident);
-};
+#include "HandlingDataMgr.h"
 
 // Debug things
 extern rw::Camera debugCamState;	// copy of the camera state at some point in time
