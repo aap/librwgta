@@ -1,5 +1,13 @@
 #include "III.h"
 
+// have to put these somewhere
+int TempBufferIndicesStored;
+int TempBufferVerticesStored;
+rw::RWDEVICE::Im3DVertex TempVertexBuffer[TEMPBUFFERVERTSIZE];
+uint16 TempIndexBuffer[TEMPBUFFERINDEXSIZE];
+
+
+
 // Get rid of bullshit windows definitions, we're not running on an 8086
 #ifdef far
 #undef far
@@ -210,7 +218,7 @@ CRenderer::SetupBigBuildingVisibility(CEntity *ent)
 	}else if(mi->m_type == VEHICLEMODELINFO)
 		return ent->IsVisible();
 
-	float dist = (ms_vecCameraPosition-*ent->GetPosition()).Magnitude();
+	float dist = (ms_vecCameraPosition-ent->GetPosition()).Magnitude();
 	CSimpleModelInfo *nonLOD = mi->GetRelatedModel();
 
 	// Find out whether to draw below near distance.
@@ -310,7 +318,7 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 		return VIS_INVISIBLE;
 	}
 
-	float dist = (*ent->GetPosition() - ms_vecCameraPosition).Magnitude();
+	float dist = (ent->GetPosition() - ms_vecCameraPosition).Magnitude();
 
 	// This can only happen with multi-atomic models (e.g. railtracks)
 	// but why do we bump up the distance? can only be fading...
@@ -448,4 +456,31 @@ CRenderer::RenderFadingInEntities(void)
 	DeActivateDirectional();
 	SetAmbientColours();
 	CVisibilityPlugins::RenderFadingEntities();
+}
+
+void
+CRenderer::RenderCollisionLines(void)
+{
+	int i;
+	CVector dist;
+	CEntity *e;
+	CLink<CVisibilityPlugins::AlphaObjectInfo> *node;
+
+	for(i = 0; i < ms_nNoOfVisibleEntities; i++){
+		e = ms_aVisibleEntityPtrs[i];
+		dist = e->GetPosition() - ms_vecCameraPosition;
+		if(dist.x > -100.0f && dist.x < 100.0f &&
+		   dist.y > -100.0f && dist.y < 100.0f)
+			CCollision::DrawColModel(e->GetMatrix(), *CModelInfo::GetModelInfo(e->m_modelIndex)->GetColModel());
+	}
+
+	for(node = CVisibilityPlugins::m_alphaEntityList.tail.prev;
+	    node != &CVisibilityPlugins::m_alphaEntityList.head;
+	    node = node->prev){
+		CEntity *e = node->item.entity;
+		dist = e->GetPosition() - ms_vecCameraPosition;
+		if(dist.x > -100.0f && dist.x < 100.0f &&
+		   dist.y > -100.0f && dist.y < 100.0f)
+			CCollision::DrawColModel(e->GetMatrix(), *CModelInfo::GetModelInfo(e->m_modelIndex)->GetColModel());
+	}
 }

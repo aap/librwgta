@@ -73,3 +73,12 @@ public:
 		m_matrix.pos.z = 0.0f;
 	}
 };
+
+inline CVector
+operator*(const CMatrix &mat, const CVector &vec)
+{
+	return CVector(
+		mat.m_matrix.right.x * vec.x + mat.m_matrix.up.x * vec.y + mat.m_matrix.at.x * vec.z + mat.m_matrix.pos.x,
+		mat.m_matrix.right.y * vec.y + mat.m_matrix.up.y * vec.y + mat.m_matrix.at.y * vec.z + mat.m_matrix.pos.y,
+		mat.m_matrix.right.z * vec.z + mat.m_matrix.up.z * vec.y + mat.m_matrix.at.z * vec.z + mat.m_matrix.pos.z);
+}

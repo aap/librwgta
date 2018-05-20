@@ -43,13 +43,6 @@ CWaterLevel::Initialise(const char*)
 	CTxdStore::PopCurrentTxd();
 }
 
-#define TEMPBUFFERVERTSIZE 256
-#define TEMPBUFFERINDEXSIZE 1024
-int TempBufferIndicesStored;
-int TempBufferVerticesStored;
-rw::RWDEVICE::Im3DVertex TempVertexBuffer[TEMPBUFFERVERTSIZE];
-uint16 TempIndexBuffer[TEMPBUFFERINDEXSIZE];
-
 float TEXTURE_ADDU, TEXTURE_ADDV;
 
 void

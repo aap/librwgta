@@ -80,8 +80,8 @@ void
 CTheZones::Update(void)
 {
 	CVector pos = FindPlayerCoors();
-	m_pPlayersZone = FindSmallestZonePosition(&pos);
-	m_CurrLevel = GetLevelFromPosition(&pos);
+	m_pPlayersZone = FindSmallestZonePosition(pos);
+	m_CurrLevel = GetLevelFromPosition(pos);
 }
 
 void
@@ -219,11 +219,11 @@ CTheZones::ZoneIsEntirelyContainedWithinOtherZone(CZone *inner, CZone *outer)
 	   inner->minz < outer->minz ||
 	   inner->maxz > outer->maxz){
 		CVector min(inner->minx, inner->miny, inner->minz);
-		if(PointLiesWithinZone(&min, outer))
+		if(PointLiesWithinZone(min, outer))
 			debug("Overlapping zones %s and %s\n",
 			      inner->name, outer->name);
 		CVector max(inner->maxx, inner->maxy, inner->maxz);
-		if(PointLiesWithinZone(&max, outer))
+		if(PointLiesWithinZone(max, outer))
 			debug("Overlapping zones %s and %s\n",
 			      inner->name, outer->name);
 		return false;
@@ -232,15 +232,15 @@ CTheZones::ZoneIsEntirelyContainedWithinOtherZone(CZone *inner, CZone *outer)
 }
 
 bool
-CTheZones::PointLiesWithinZone(CVector const *v, CZone *zone)
+CTheZones::PointLiesWithinZone(const CVector &v, CZone *zone)
 {
-	return zone->minx <= v->x && v->x <= zone->maxx &&
-	       zone->miny <= v->y && v->y <= zone->maxy &&
-	       zone->minz <= v->z && v->z <= zone->maxz;
+	return zone->minx <= v.x && v.x <= zone->maxx &&
+	       zone->miny <= v.y && v.y <= zone->maxy &&
+	       zone->minz <= v.z && v.z <= zone->maxz;
 }
 
 eLevelName
-CTheZones::GetLevelFromPosition(CVector const *v)
+CTheZones::GetLevelFromPosition(CVector const &v)
 {
 	int i;
 //	if(!PointLiesWithinZone(v, &MapZoneArray[0]))
@@ -252,7 +252,7 @@ CTheZones::GetLevelFromPosition(CVector const *v)
 }
 
 CZone*
-CTheZones::FindSmallestZonePosition(CVector const *v)
+CTheZones::FindSmallestZonePosition(const CVector &v)
 {
 	CZone *best = &ZoneArray[0];
 	// zone to test next

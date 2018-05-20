@@ -114,21 +114,28 @@ CVisibilityPlugins::RenderFadingEntities(void)
 // RW Plugins
 //
 
+enum
+{
+	ID_VISIBILITYATOMIC = MAKEPLUGINID(VEND_ROCKSTAR, 0x00),
+	ID_VISIBILITYCLUMP  = MAKEPLUGINID(VEND_ROCKSTAR, 0x01),
+	ID_VISIBILITYFRAME  = MAKEPLUGINID(VEND_ROCKSTAR, 0x02),
+};
+
 bool
 CVisibilityPlugins::PluginAttach(void)
 {
 	using namespace rw;
 
 	ms_atomicPluginOffset = Atomic::registerPlugin(sizeof(AtomicExt),
-		gta::ID_VISIBILITYATOMIC,
+		ID_VISIBILITYATOMIC,
 		AtomicConstructor, AtomicDestructor, AtomicCopyConstructor);
 
 	ms_framePluginOffset = Frame::registerPlugin(sizeof(FrameExt),
-		gta::ID_VISIBILITYFRAME,
+		ID_VISIBILITYFRAME,
 		FrameConstructor, FrameDestructor, FrameCopyConstructor);
 
 	ms_clumpPluginOffset = Clump::registerPlugin(sizeof(ClumpExt),
-		gta::ID_VISIBILITYCLUMP,
+		ID_VISIBILITYCLUMP,
 		ClumpConstructor, ClumpDestructor, ClumpCopyConstructor);
 	return true;
 }

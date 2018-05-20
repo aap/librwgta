@@ -610,6 +610,72 @@ CFileLoader::LoadMapZone(char *line)
 // Collision
 //
 
+void
+CFileLoader::LoadCollisionModel(CColModel *colmodel, rw::uint8 *buf)
+{
+	float *fp = (float*)buf;
+	colmodel->boundingSphere.radius = *fp++;
+	colmodel->boundingSphere.center.x = *fp++;
+	colmodel->boundingSphere.center.y = *fp++;
+	colmodel->boundingSphere.center.z = *fp++;
+	colmodel->boundingBox.min.x = *fp++;
+	colmodel->boundingBox.min.y = *fp++;
+	colmodel->boundingBox.min.z = *fp++;
+	colmodel->boundingBox.max.x = *fp++;
+	colmodel->boundingBox.max.y = *fp++;
+	colmodel->boundingBox.max.z = *fp++;
+	buf = (uint8*)fp;
+	colmodel->numSpheres = *(int16*)buf;
+	buf += 4;
+	if(colmodel->numSpheres){
+		colmodel->spheres = new CColSphere[colmodel->numSpheres];
+		for(int i = 0; i < colmodel->numSpheres; i++){
+			colmodel->spheres[i].Set(*(float*)buf, *(CVector*)(buf+4), buf[16], buf[17]);
+			buf += 20;
+		}
+	}
+
+	colmodel->numLines = *(int16*)buf;
+	buf += 4;
+	if(colmodel->numLines){
+		colmodel->lines = new CColLine[colmodel->numLines];
+		for(int i = 0; i < colmodel->numLines; i++){
+			colmodel->lines[i].Set(*(CVector*)buf, *(CVector*)(buf+12));
+			buf += 24;
+		}
+	}
+
+	colmodel->numBoxes = *(int16*)buf;
+	buf += 4;
+	if(colmodel->numBoxes){
+		colmodel->boxes = new CColBox[colmodel->numBoxes];
+		for(int i = 0; i < colmodel->numBoxes; i++){
+			colmodel->boxes[i].Set(*(CVector*)buf, *(CVector*)(buf+12), buf[24], buf[25]);
+			buf += 28;
+		}
+	}
+
+	int32 numVertices = *(int16*)buf;
+	buf += 4;
+	if(numVertices){
+		colmodel->vertices = new CVector[numVertices];
+		for(int i = 0; i < numVertices; i++){
+			colmodel->vertices[i] = *(CVector*)buf;
+			buf += 12;
+		}
+	}
+
+	colmodel->numTriangles = *(int16*)buf;
+	buf += 4;
+	if(colmodel->numTriangles){
+		colmodel->triangles = new CColTriangle[colmodel->numTriangles];
+		for(int i = 0; i < colmodel->numTriangles; i++){
+			colmodel->triangles[i].Set(*(int32*)buf, *(int32*)(buf+4), *(int32*)(buf+8), buf[12]);
+			buf += 16;
+		}
+	}
+}
+
 #define COLL 0x4C4C4F43
 
 void
@@ -637,10 +703,10 @@ CFileLoader::LoadCollisionFile(const char *filename)
 		if(modelinfo){
 			CColModel *col = modelinfo->GetColModel();
 			if(col)
-				readColModel(col, work_buff+24);
+				LoadCollisionModel(col, work_buff+24);
 			else{
 				col = new CColModel;
-				readColModel(col, work_buff+24);
+				LoadCollisionModel(col, work_buff+24);
 				col->level = CGame::currLevel;
 				modelinfo->SetColModel(col, true);
 			}
@@ -686,7 +752,7 @@ CFileLoader::LoadAtomicFile(rw::Stream *stream, int id)
 		modelinfo = (CSimpleModelInfo*)CModelInfo::GetModelInfo(id);
 		FORLIST(lnk, clump->atomics){
 			atomic = rw::Atomic::fromClump(lnk);
-			nodename = gta::getNodeName(atomic->getFrame());
+			nodename = GetFrameNodeName(atomic->getFrame());
 			GetNameAndLOD(nodename, name, &n);
 			modelinfo->SetAtomic(n, atomic);
 			atomic->removeFromClump();
@@ -731,7 +797,7 @@ CFileLoader::LoadClumpFile(const char *filename)
 	while(findChunk(&stream, rw::ID_CLUMP, nil, nil)){
 		clump = Clump::streamRead(&stream);
 		if(clump){
-			nodename = gta::getNodeName(clump->getFrame());
+			nodename = GetFrameNodeName(clump->getFrame());
 			GetNameAndLOD(nodename, name, &n);
 			CClumpModelInfo *mi =
 			  (CClumpModelInfo*)CModelInfo::GetModelInfo(name, nil);
@@ -762,7 +828,7 @@ CFileLoader::LoadModelFile(const char *filename)
 		assert(clump);
 		FORLIST(lnk, clump->atomics){
 			atomic = rw::Atomic::fromClump(lnk);
-			nodename = gta::getNodeName(atomic->getFrame());
+			nodename = GetFrameNodeName(atomic->getFrame());
 			GetNameAndLOD(nodename, name, &n);
 			CSimpleModelInfo *mi =
 			  (CSimpleModelInfo*)CModelInfo::GetModelInfo(name, nil);
@@ -805,5 +871,5 @@ void
 CFileLoader::AddTexDictionaries(rw::TexDictionary *dst, rw::TexDictionary *src)
 {
 	FORLIST(lnk, src->textures)
-		dst->add(rw::Texture::fromDict(lnk));
+		dst->addFront(rw::Texture::fromDict(lnk));
 }

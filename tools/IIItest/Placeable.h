@@ -8,6 +8,7 @@ public:
 
 	CPlaceable(void);
 	virtual ~CPlaceable(void);
-	CVector *GetPosition(void) { return m_matrix.GetPosition(); }
+	CVector &GetPosition(void) { return *m_matrix.GetPosition(); }
+	CMatrix &GetMatrix(void) { return m_matrix; }
 	void SetTransform(rw::Matrix *m) { m_matrix = CMatrix(m, false); }
 };

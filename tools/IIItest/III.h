@@ -5,10 +5,11 @@
 #include <cassert>
 
 #include <rw.h>
-#include "rwgta.h"
+enum
+{
+	VEND_ROCKSTAR     = 0x0253F2,
+};
 
-
-using namespace gta;
 
 using rw::uint8;
 using rw::int8;
@@ -33,6 +34,11 @@ extern Globals globals;
 
 extern  uchar work_buff[55000];
 void debug(const char *fmt, ...);
+
+// node name
+void NodeNamePluginAttach(void);
+char *GetFrameNodeName(rw::Frame *f);
+
 
 #include "Pad.h"
 #include "templates.h"
@@ -94,8 +100,8 @@ public:
 #include "Weather.h"
 #include "Rect.h"
 #include "zones.h"
-#include "collisions.h"
 #include "Animation.h"
+#include "Collision.h"
 #include "ModelInfo.h"
 #include "ModelIndices.h"
 #include "PtrNode.h"
@@ -113,7 +119,6 @@ public:
 #include "Pools.h"
 #include "PathFind.h"
 #include "ObjectData.h"
-#include "Collision.h"
 
 #include "WaterLevel.h"
 #include "Sprite.h"
@@ -179,6 +184,13 @@ void plCapturePad(int n);
 void plUpdatePad(CControllerState *state);
 void plAttachInput(void);
 
+#define TEMPBUFFERVERTSIZE 256
+#define TEMPBUFFERINDEXSIZE 1024
+extern int TempBufferIndicesStored;
+extern int TempBufferVerticesStored;
+extern rw::RWDEVICE::Im3DVertex TempVertexBuffer[TEMPBUFFERVERTSIZE];
+extern uint16 TempIndexBuffer[TEMPBUFFERINDEXSIZE];
+
 struct StrAssoc
 {
 	const char *key;
@@ -207,6 +219,7 @@ public:
 	static void LoadScene(const char *filename);
 	static void LoadMapZones(const char *filename);
 	static void LoadDataFile(const char *filename, DatDesc *desc);
+	static void LoadCollisionModel(CColModel *colmodel, rw::uint8 *buf);
 	static void LoadCollisionFile(const char *filename);
 
 	static void LoadNothing(char *line) {}

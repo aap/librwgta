@@ -98,9 +98,7 @@ CEntity::GetIsOnScreenComplex(void)
 void
 CEntity::GetBoundCenter(CVector &out)
 {
-	rw::V3d::transformPoints((rw::V3d*)&out,
-		&CModelInfo::GetModelInfo(m_modelIndex)->GetColModel()->boundingSphere.center,
-		1, &m_matrix.m_matrix);
+	out = m_matrix * CModelInfo::GetModelInfo(m_modelIndex)->GetColModel()->boundingSphere.center;
 };
 
 
@@ -203,26 +201,19 @@ CRect
 CEntity::GetBoundRect(void)
 {
 	CRect rect;
-	rw::V3d v;
+	CVector v;
 	CColModel *col = CModelInfo::GetModelInfo(m_modelIndex)->GetColModel();
 
-	v = col->boundingBox.min;
-	rw::V3d::transformPoints(&v, &v, 1, &m_matrix.m_matrix);
-	rect.ContainPoint(CVector(v));
-
-	v = col->boundingBox.max;
-	rw::V3d::transformPoints(&v, &v, 1, &m_matrix.m_matrix);
-	rect.ContainPoint(CVector(v));
+	rect.ContainPoint(m_matrix * col->boundingBox.min);
+	rect.ContainPoint(m_matrix * col->boundingBox.max);
 
 	v = col->boundingBox.min;
 	v.x = col->boundingBox.max.x;
-	rw::V3d::transformPoints(&v, &v, 1, &m_matrix.m_matrix);
-	rect.ContainPoint(CVector(v));
+	rect.ContainPoint(m_matrix * v);
 
 	v = col->boundingBox.max;
 	v.x = col->boundingBox.min.x;
-	rw::V3d::transformPoints(&v, &v, 1, &m_matrix.m_matrix);
-	rect.ContainPoint(CVector(v));
+	rect.ContainPoint(m_matrix * v);
 
 	return rect;
 }

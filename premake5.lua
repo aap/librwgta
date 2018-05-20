@@ -210,6 +210,7 @@ project "d3d9test"
 
 project "IIItest"
 	tool("IIItest")
+	removelinks { "librwgta" }
 	kind "WindowedApp"
 	characterset ("MBCS")
 	flags { "WinMain" }

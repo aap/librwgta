@@ -209,12 +209,10 @@ DefinedState(void)
 	SetRenderState(rw::FOGENABLE, 0);
 	SetRenderState(rw::ALPHATESTREF, 10);
 	SetRenderState(rw::ALPHATESTFUNC, rw::ALPHAGREATEREQUAL);
-	rw::RGBA c;
-	c.red = CTimeCycle::m_nCurrentFogColourRed;
-	c.green = CTimeCycle::m_nCurrentFogColourGreen;
-	c.blue = CTimeCycle::m_nCurrentFogColourBlue;
-	c.alpha = 0xFF;
-	SetRenderState(rw::FOGCOLOR, *(uint32*)&c);
+	uint32 c = RWRGBAINT(CTimeCycle::m_nCurrentFogColourRed,
+		CTimeCycle::m_nCurrentFogColourGreen,
+		CTimeCycle::m_nCurrentFogColourBlue, 255);
+	SetRenderState(rw::FOGCOLOR, c);
 }
 
 void
@@ -243,6 +241,9 @@ void
 RenderDebugShit(void)
 {
 	DrawDebugFrustum();
+
+	if(CPad::IsKeyDown(KEY_TAB))
+		CRenderer::RenderCollisionLines();
 }
 
 void
@@ -257,11 +258,37 @@ DoRWStuffStartOfFrame_Horizon(int16 topred, int16 topgreen, int16 topblue,
 }
 
 void
+DoRWStuffEndOfFrame(void)
+{
+	Scene.camera->endUpdate();
+	Scene.camera->showRaster();
+}
+
+void
+PluginAttach(void)
+{
+	rw::ps2::registerPDSPlugin(40);
+	rw::ps2::registerPluginPDSPipes();
+
+	rw::registerMeshPlugin();
+	rw::registerNativeDataPlugin();
+	rw::registerAtomicRightsPlugin();
+	rw::registerMaterialRightsPlugin();
+	rw::xbox::registerVertexFormatPlugin();
+	rw::registerSkinPlugin();
+	rw::registerHAnimPlugin();
+
+	NodeNamePluginAttach();
+	CVisibilityPlugins::PluginAttach();
+
+	rw::registerMatFXPlugin();
+}
+
+void
 Initialise3D(void)
 {
 	rw::Engine::init();
-	gta::attachPlugins();
-	CVisibilityPlugins::PluginAttach();
+	PluginAttach();
 	rw::Engine::open();
 	rw::Engine::start(&engineStartParams);
 	plAttachInput();
@@ -309,15 +336,11 @@ TheGame(void)
 			CTimeCycle::m_nCurrentSkyBottomRed, CTimeCycle::m_nCurrentSkyBottomGreen, CTimeCycle::m_nCurrentSkyBottomBlue, 255);
 
 		DefinedState();
-//		debug("visible entities, alpha list: %d %d\n",
-//			CRenderer::ms_nNoOfVisibleEntities,
-//			CVisibilityPlugins::m_alphaEntityList.Count());
 
 		RenderScene();
 		RenderDebugShit();
 
-		TheCamera.m_rwcam->endUpdate();
-		TheCamera.m_rwcam->showRaster();
+		DoRWStuffEndOfFrame();
 	}
 
 	rw::Engine::stop();

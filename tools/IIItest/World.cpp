@@ -47,7 +47,7 @@ void
 dumpEntity(CEntity *e)
 {
 	CBaseModelInfo *mi = CModelInfo::GetModelInfo(e->m_modelIndex);
-	CVector *pos = e->GetPosition();
-//	debug("%d %s %f %f %f\n", e->m_modelIndex, mi->GetName(), pos->x, pos->y, pos->z);
+	CVector pos = e->GetPosition();
+//	debug("%d %s %f %f %f\n", e->m_modelIndex, mi->GetName(), pos.x, pos.y, pos.z);
 }
 

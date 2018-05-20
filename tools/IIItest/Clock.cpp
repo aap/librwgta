@@ -47,7 +47,6 @@ CClock::Update(void)
 				ms_nGameClockHours = 0;
 				// TODO: stats days passed
 		}
-	debug("tick %d:%d\n", ms_nGameClockHours, ms_nGameClockMinutes);
 	}
 	ms_nGameClockSeconds +=
 			60

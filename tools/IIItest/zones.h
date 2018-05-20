@@ -84,9 +84,9 @@ public:
 	static void InsertZoneIntoZoneHierarchy(CZone *zone);
 	static bool InsertZoneIntoZoneHierRecursive(CZone *z1, CZone *z2);
 	static bool ZoneIsEntirelyContainedWithinOtherZone(CZone *z1, CZone *z2);
-	static bool PointLiesWithinZone(CVector const *v, CZone *zone);
-	static eLevelName GetLevelFromPosition(CVector const *v);
-	static CZone *FindSmallestZonePosition(CVector const *v);
+	static bool PointLiesWithinZone(const CVector &v, CZone *zone);
+	static eLevelName GetLevelFromPosition(const CVector &v);
+	static CZone *FindSmallestZonePosition(const CVector &v);
 	static void AddZoneToAudioZoneArray(CZone *zone);
 	static void InitialiseAudioZoneArray(void);
 };

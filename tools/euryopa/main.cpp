@@ -198,8 +198,10 @@ DefinedState(void)
 	SetRenderState(rw::ALPHATESTREF, params.alphaRefDefault);
 	SetRenderState(rw::ALPHATESTFUNC, rw::ALPHAGREATEREQUAL);
 	rw::RGBA fog;
+	uint32 c;
 	rw::convColor(&fog, &Timecycle::currentFogColour);
-	SetRenderState(rw::FOGCOLOR, *(uint32*)&fog);
+	c = RWRGBAINT(fog.red, fog.green, fog.blue, 255);
+	SetRenderState(rw::FOGCOLOR, c);
 	SetRenderState(rw::CULLMODE, rw::CULLBACK);
 }
 

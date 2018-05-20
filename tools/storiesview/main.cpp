@@ -250,7 +250,9 @@ DefinedState(void)
 	SetRenderState(rw::FOGENABLE, 0);
 	SetRenderState(rw::ALPHATESTREF, 128);
 	SetRenderState(rw::ALPHATESTFUNC, rw::ALPHAGREATEREQUAL);
-	SetRenderState(rw::FOGCOLOR, *(uint32*)&currentFog);
+	uint32 c = RWRGBAINT(currentFog.red, currentFog.green,
+		currentFog.blue, 255);
+	SetRenderState(rw::FOGCOLOR, c);
 }
 
 void

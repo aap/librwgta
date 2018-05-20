@@ -19,4 +19,6 @@ public:
 	static void RenderEverythingBarRoads(void);
 	static void RenderRoads(void);
 	static void RenderFadingInEntities(void);
+
+	static void RenderCollisionLines(void);
 };
