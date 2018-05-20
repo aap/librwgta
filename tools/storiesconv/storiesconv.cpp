@@ -215,7 +215,7 @@ LoadVehicle(uint8 *data)
 	}
 
 	if(gamedata){
-		static char *dummynamesCar[] = {
+		static const char *dummynamesCar[] = {
 			"headlights",
 			"taillights",
 #ifdef VCS
@@ -226,20 +226,20 @@ LoadVehicle(uint8 *data)
 			"ped_backseat",
 			"exhaust"
 		};
-		static char *dummynamesBoat[] = {
+		static const char *dummynamesBoat[] = {
 			"ped_frontseat",
 		};
-		static char *dummynamesJetski[] = {
+		static const char *dummynamesJetski[] = {
 			"ped_frontseat",
 		};
-		static char *dummynamesTrain[] = {
+		static const char *dummynamesTrain[] = {
 			"light_front",
 			"light_rear",
 			"ped_left_entry",
 			"ped_mid_entry",
 			"ped_right_entry",
 		};
-		static char *dummynamesPlane[] = {
+		static const char *dummynamesPlane[] = {
 #ifdef LCS
 			"light_left",
 			"light_right",
@@ -262,7 +262,7 @@ LoadVehicle(uint8 *data)
 			"miscpos_b",
 #endif
 		};
-		static char *dummynamesBike[] = {
+		static const char *dummynamesBike[] = {
 			"headlights",
 			"taillights",
 #ifdef VCS
@@ -273,7 +273,7 @@ LoadVehicle(uint8 *data)
 			"ped_backseat",
 			"exhaust"
 		};
-		static char *dummynamesFerry[] = {
+		static const char *dummynamesFerry[] = {
 			"light_front",
 			"light_read",
 			"chim_left",
@@ -284,7 +284,7 @@ LoadVehicle(uint8 *data)
 			"car3_dummy"
 			"car4_dummy"
 		};
-		static char *dummynamesBmx[] = {
+		static const char *dummynamesBmx[] = {
 			"headlights",
 			"taillights",
 			"headlights2",
@@ -299,7 +299,7 @@ LoadVehicle(uint8 *data)
 			"miscpos_a",
 			"miscpos_b",
 		};
-		static char *dummynamesQuad[] = {
+		static const char *dummynamesQuad[] = {
 			"headlights",
 			"taillights",
 			"headlights2",
@@ -316,7 +316,7 @@ LoadVehicle(uint8 *data)
 			"miscpos_a",
 			"miscpos_b",
 		};
-		static char **dummyNamesLists[] = {
+		static const char **dummyNamesLists[] = {
 			dummynamesCar,
 			dummynamesBoat,
 #ifdef VCS
@@ -350,7 +350,7 @@ LoadVehicle(uint8 *data)
 			   vmi->hashKey != hash)
 				continue;
 
-			char **dummynames = dummyNamesLists[vmi->m_vehicleType];
+			const char **dummynames = dummyNamesLists[vmi->m_vehicleType];
 			for(j = 0; j < NUM_VEHICLE_DUMMIES; j++){
 				CVuVector *v = &vmi->m_dummyPos[j];
 				if(v->x == 0.0f && v->y == 0.0f && v->z == 0.0f)
@@ -423,7 +423,7 @@ computeFlags(int miflags)
 
 #define GROUPDEFEND };
 
-#define GROUPDEF(name, assocName, blockname, modelIndex) static char *name##names[] = {
+#define GROUPDEF(name, assocName, blockname, modelIndex) static const char *name##names[] = {
 #define ANIMDEF(animName, id, flags) animName
 ANIMGROUPS
 #undef ANIMDEF
@@ -641,7 +641,7 @@ CVector RoundVector(CVector &vec)
 	return v;
 }
 
-Quat RoundQuat(Quat &quat)
+Quat RoundQuat(const Quat &quat)
 {
 	const float epsilon = 0.0009f;
 	Quat q;
@@ -1044,7 +1044,7 @@ dumpLevel(sLevelChunk *level)
 
 	int len = strlen(arg1)+1;
 	char filename[1024];
-	strncpy(filename, arg1, len);
+	strncpy(filename, arg1, 1024);
 	filename[len-3] = 'i';
 	filename[len-2] = 'm';
 	filename[len-1] = 'g';
@@ -1370,7 +1370,8 @@ main(int argc, char *argv[])
 
 	sChunkHeader header;
 	stream.read(&header, sizeof(sChunkHeader));
-	uint8 *data = (uint8*)malloc(header.fileSize-sizeof(sChunkHeader));
+	uint8 *data;
+	data = (uint8*)malloc(header.fileSize-sizeof(sChunkHeader));
 	stream.read(data, header.fileSize-sizeof(sChunkHeader));
 	stream.close();
 	cReloctableChunk(header.ident, header.shrink).Fixup(header, data);

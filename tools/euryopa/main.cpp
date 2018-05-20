@@ -1,5 +1,9 @@
 #include "euryopa.h"
+
+//#define XINPUT
+#ifdef XINPUT
 #include <Xinput.h>
+#endif
 
 float timeStep;
 float avgTimeStep;
@@ -84,7 +88,6 @@ clampFloat(float f, float min, float max)
 	return f;
 }
 
-//#define XINPUT
 #ifdef XINPUT
 int pads[4];
 int numPads;

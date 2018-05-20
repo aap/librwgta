@@ -116,11 +116,11 @@ struct AnimAssocInfo
 
 struct AnimAssocDefinition
 {
-	char *name;
-	char *blockName;
+	const char *name;
+	const char *blockName;
 	int32 modelIndex;
 	int32 animCount;
-	char **animNames;
+	const char **animNames;
 	AnimAssocInfo *animInfoList;
 };
 

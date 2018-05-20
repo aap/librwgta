@@ -217,4 +217,6 @@ RenderPostFX(void)
 	d3ddevice->SetPixelShader(nil);
 }
 
+#else
+void RenderPostFX(void) {}
 #endif

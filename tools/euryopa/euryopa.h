@@ -1,4 +1,6 @@
+#ifdef _WIN32
 #include <Windows.h>	// necessary for the moment
+#endif
 
 #include <rw.h>
 #include <skeleton.h>
@@ -21,11 +23,12 @@ using rw::int64;
 using rw::uint64;
 using rw::float32;
 using rw::bool32;
+using rw::uintptr;
 
 struct ObjectInst;
 
 #include "Pad.h"
-#include "Camera.h"
+#include "camera.h"
 #include "collision.h"
 
 void panic(const char *fmt, ...);

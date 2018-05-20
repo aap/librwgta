@@ -6,7 +6,7 @@ class CWaterLevel
 	static uint8 aWaterBlockList[64][64];
 	static uint8 aWaterFineBlockList[128][128];
 public:
-	static void Initialise(char *unusedfilename);
+	static void Initialise(const char *unusedfilename);
 	static void RenderWater(void);
 	static void RenderAndEmptyRenderBuffer(void);
 	static void RenderOneFlatSmallWaterPoly(float x, float y, float z, rw::RGBA const &color);

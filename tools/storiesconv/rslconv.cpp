@@ -516,7 +516,7 @@ makeTextures(RslElement *atomic, void*)
 void
 moveAtomics(Frame *f)
 {
-	static char *names[] = { "", "hi_ok", "hi_dam" };
+	static const char *names[] = { "", "hi_ok", "hi_dam" };
 	if(f == NULL) return;
 	int n = f->objectList.count();
 	if(n > 1){

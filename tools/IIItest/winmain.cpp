@@ -1,3 +1,4 @@
+#ifdef _WIN32
 #include "III.h"
 
 #ifdef RW_D3D9
@@ -294,4 +295,6 @@ WinMain(HINSTANCE hinstance, HINSTANCE prevInstance,
 	freopen("CONOUT$", "w", stderr);
 	return main(__argc, __argv);
 }
+#endif
+
 #endif

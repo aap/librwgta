@@ -20,7 +20,7 @@ rw::Texture *gpWaterTex;
 rw::Raster *gpWaterRaster;
 
 void
-CWaterLevel::Initialise(char*)
+CWaterLevel::Initialise(const char*)
 {
 	FILE *file;
 

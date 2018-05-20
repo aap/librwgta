@@ -1,7 +1,7 @@
 #include "euryopa.h"
 #include <vector>
 
-#include "minilzo\minilzo.h"
+#include "minilzo/minilzo.h"
 
 /*
  * Streaming limits:
@@ -335,7 +335,7 @@ ReadFileFromImage(int i, int *size)
 void
 RequestObject(int id)
 {
-	requestList.InsertItem((void*)id);
+	requestList.InsertItem((void*)(uintptr)id);
 }
 
 void
@@ -344,7 +344,7 @@ LoadAllRequestedObjects(void)
 	CPtrNode *p;
 	int id;
 	for(p = requestList.first; p; p = p->next){
-		id = (int)p->item;
+		id = (int)(uintptr)p->item;
 		ObjectDef *obj = GetObjectDef(id);
 		if(!obj->IsLoaded())
 			obj->Load();

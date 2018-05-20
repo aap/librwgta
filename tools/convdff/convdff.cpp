@@ -72,7 +72,7 @@ getFrameUserName(rw::Frame *f)
 		if(strcmp(ar->name, "name") == 0 && ar->datatype == rw::USERDATASTRING)
 			return ar->getString(0);
 	}
-	return "";
+	return (char*)"";
 }
 
 char*
@@ -355,7 +355,7 @@ main(int argc, char *argv[])
 	int multiclump = 0;
 	int setwhite = 0;
 	int iiiToVcCar = 0;
-	char *specmap = "reflection01";
+	const char *specmap = "reflection01";
 	int ps2vccar = 0;
 	int info = 0;
 
@@ -366,7 +366,7 @@ main(int argc, char *argv[])
 		// hack for long options: _args is the long option
 		// and must be an empty string in the end
 		longarg = _args;
-		_args = "";
+		_args = (char*)"";
 		if(strcmp_ci(longarg, "ps2vccar") == 0) ps2vccar++;
 		else if(strcmp_ci(longarg, "iii2vccar") == 0){
 			iiiToVcCar++;
@@ -615,7 +615,7 @@ main(int argc, char *argv[])
 
 	if(info){
 		int output = 0;
-#define PRINT(fmt, ...) do { if(!output) printf("%s: ", inputfilename); else putchar(' '); printf(fmt, __VA_ARGS__); output=1; }while(0)
+#define PRINT(fmt) do { if(!output) printf("%s: ", inputfilename); else putchar(' '); printf(fmt); output=1; }while(0)
 		if(currentUVAnimDictionary)
 			PRINT("uvanim");
 
