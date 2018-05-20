@@ -968,7 +968,7 @@ struct ResourceImage {
 	void *unknown8;
 	void *unknown9;
 	int32 unknown10;
-	void *unknown11;
+	void *fontdef;
 #endif
 	int fontTexListSize;
 	void *fontCompressedTexList;

@@ -374,10 +374,11 @@ struct sPs2Geometry {
 	float32 bound[4];
 	uint32  size;		// and numMeshes
 	int32   flags;
+	uint16  numVerts;	// according to gtamodding.ru
+	uint16  dmaOffset;	// offset from beginning of struct to DMA data
 	uint32  unk1;
 	uint32  unk2;
 	uint32  unk3;
-	uint32  unk4;
 	float32 scale[3];
 	float32 pos[3];
 };
@@ -385,7 +386,7 @@ struct sPs2Geometry {
 struct sPs2GeometryMesh {
 	float32  bound[4];
 	float32  uvScale[2];
-	int32    unknown;
+	int32    unknown;	// has to do with the raster, see 0x39FA8C in VCS SLES file
 	uint32   dmaPacket;
 	uint16   numTriangles;
 	int16    matID;
