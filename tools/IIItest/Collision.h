@@ -33,12 +33,23 @@ struct CColLine
 
 struct CColTriangle
 {
-	int16 a;
-	int16 b;
-	int16 c;
+	uint16 a;
+	uint16 b;
+	uint16 c;
 	uint8 surface;
 
 	void Set(int a, int b, int c, uint8 surf);
+};
+
+struct CColTrianglePlane
+{
+	CVector normal;
+	float dist;
+	uint8 dir;
+
+	void Set(const CVector *v, CColTriangle &tri);
+	void GetNormal(CVector &n) const { n = normal; }
+	float CalcPoint(const CVector &v) const { return DotProduct(normal, v) - dist; };
 };
 
 //struct CColPoint
@@ -83,6 +94,18 @@ public:
 	static void Update(void);
 	static void LoadCollisionWhenINeedIt(bool changeLevel);
 	static void DrawColModel(const CMatrix &mat, const CColModel &colModel);
+
+	// all these return true if there's a collision
+	static bool TestSphereSphere(const CColSphere &s1, const CColSphere &s2);
+	static bool TestSphereBox(const CColSphere &sph, const CColBox &box);
+	static bool TestLineBox(const CColLine &line, const CColBox &box);
+	static bool TestVerticalLineBox(const CColLine &line, const CColBox &box);
+	static bool TestLineTriangle(const CColLine &line, const CVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane);
+	static bool TestLineSphere(const CColLine &line, const CColSphere &sph);
+	// LineOfSight
+	// SphereTriangle
+
+	static float DistToLine(const CVector *l0, const CVector *l1, const CVector *point);
 };
 
 #endif

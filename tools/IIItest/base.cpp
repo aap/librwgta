@@ -1,6 +1,8 @@
 #include "III.h"
 #include <cstdarg>
 
+#include "Test.h"
+
 Globals globals;
 
 CEntity *debugent;
@@ -235,6 +237,8 @@ RenderScene(void)
 	DefinedState();
 	CWaterLevel::RenderWater();
 	CRenderer::RenderFadingInEntities();
+
+	CTest::Render();
 }
 
 void

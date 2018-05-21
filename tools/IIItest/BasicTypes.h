@@ -8,9 +8,9 @@ public:
 	CVector(void) {}
 	CVector(float x, float y, float z) : x(x), y(y), z(z) {}
 	CVector(rw::V3d const &v) : x(v.x), y(v.y), z(v.z) {}
-	float Magnitude(void) { return sqrt(x*x + y*y + z*z); }
-	float MagnitudeSqr(void) { return x*x + y*y + z*z; }
-	float Magnitude2D(void) { return sqrt(x*x + y*y); }
+	float Magnitude(void) const { return sqrt(x*x + y*y + z*z); }
+	float MagnitudeSqr(void) const { return x*x + y*y + z*z; }
+	float Magnitude2D(void) const { return sqrt(x*x + y*y); }
 	void Normalise(void){
 		float sq = MagnitudeSqr();
 		if(sq > 0.0f){
@@ -35,7 +35,52 @@ public:
 	CVector operator+(const CVector &rhs) const {
 		return CVector(x+rhs.x, y+rhs.y, z+rhs.z);
 	}
+	CVector operator*(float t) const {
+		return CVector(x*t, y*t, z*t);
+	}
 };
+
+class CVector2D
+{
+public:
+	float x, y;
+	CVector2D(void) {}
+	CVector2D(float x, float y) : x(x), y(y) {}
+	CVector2D(const CVector &v) : x(v.x), y(v.y) {}
+	float Magnitude(void) const { return sqrt(x*x + y*y); }
+	float MagnitudeSqr(void) const { return x*x + y*y; }
+
+	void Normalise(void){
+		float sq = MagnitudeSqr();
+		if(sq > 0.0f){
+			float invsqrt = 1.0f/sqrt(sq);
+			x *= invsqrt;
+			y *= invsqrt;
+		}else
+			x = 0.0f;
+	}
+	CVector2D operator-(const CVector2D &rhs) const {
+		return CVector2D(x-rhs.x, y-rhs.y);
+	}
+	CVector2D operator+(const CVector2D &rhs) const {
+		return CVector2D(x+rhs.x, y+rhs.y);
+	}
+	CVector2D operator*(float t) const {
+		return CVector2D(x*t, y*t);
+	}
+};
+
+inline float DotProduct(const CVector &v1, const CVector &v2) {
+	return v1.x*v2.x + v1.y*v2.y + v1.z*v2.z;
+}
+inline CVector CrossProduct(const CVector &v1, const CVector &v2) {
+	return CVector(v1.y*v2.z - v1.z*v2.y,
+		v1.z*v2.x - v1.x*v2.z,
+		v1.x*v2.y - v1.y*v2.x);
+}
+inline float CrossProduct2D(const CVector2D &v1, const CVector2D &v2) {
+	return v1.x*v2.y - v1.y*v2.x;
+}
 
 class CMatrix
 {

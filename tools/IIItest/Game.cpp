@@ -1,5 +1,7 @@
 #include "III.h"
 
+#include "Test.h"
+
 eLevelName CGame::currLevel;
 
 void
@@ -82,6 +84,9 @@ CGame::Initialise(void)
 
 	printf("--Load scene\n");
 	CCollision::ms_collisionInMemory = CGame::currLevel;
+
+	///
+	CTest::Init();
 }
 
 void
@@ -104,5 +109,7 @@ CGame::Process(void)
 		CCollision::Update();
 		CTimeCycle::Update();
 		TheCamera.Process();
+
+		CTest::Update();
 	}
 }

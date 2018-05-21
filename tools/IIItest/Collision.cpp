@@ -1,5 +1,18 @@
 #include "III.h"
 
+#include "DebugDraw.h"
+
+
+enum Direction
+{
+	DIR_X_POS,
+	DIR_X_NEG,
+	DIR_Y_POS,
+	DIR_Y_NEG,
+	DIR_Z_POS,
+	DIR_Z_NEG,
+};
+
 eLevelName CCollision::ms_collisionInMemory;
 
 void
@@ -65,6 +78,249 @@ CCollision::LoadCollisionWhenINeedIt(bool changeLevel)
 	}
 }
 
+bool
+CCollision::TestSphereSphere(const CColSphere &s1, const CColSphere &s2)
+{
+	float d = s1.radius + s2.radius;
+	return (s1.center - s2.center).MagnitudeSqr() < d*d;
+}
+
+bool
+CCollision::TestSphereBox(const CColSphere &sph, const CColBox &box)
+{
+	if(sph.center.x + sph.radius < box.min.x) return false;
+	if(sph.center.x - sph.radius > box.max.x) return false;
+	if(sph.center.y + sph.radius < box.min.y) return false;
+	if(sph.center.y - sph.radius > box.max.y) return false;
+	if(sph.center.z + sph.radius < box.min.z) return false;
+	if(sph.center.z - sph.radius > box.max.z) return false;
+	return true;
+}
+
+bool
+CCollision::TestLineBox(const CColLine &line, const CColBox &box)
+{
+	float t, x, y, z;
+	// If either line point is in the box, we have a collision
+	if(line.p0.x > box.min.x && line.p0.x < box.max.x &&
+	   line.p0.y > box.min.y && line.p0.y < box.max.y &&
+	   line.p0.z > box.min.z && line.p0.z < box.max.z)
+		return true;
+	if(line.p1.x > box.min.x && line.p1.x < box.max.x &&
+	   line.p1.y > box.min.y && line.p1.y < box.max.y &&
+	   line.p1.z > box.min.z && line.p1.z < box.max.z)
+		return true;
+
+	// check if points are on opposite sides of min x plane
+	if((box.min.x - line.p1.x) * (box.min.x - line.p0.x) < 0.0f){
+		// parameter along line where we intersect
+		t = (box.min.x - line.p0.x) / (line.p1.x - line.p0.x);
+		// y of intersection
+		y = line.p0.y + (line.p1.y - line.p0.y)*t;
+		if(y > box.min.y && y < box.max.y){
+			// z of intersection
+			z = line.p0.z + (line.p1.z - line.p0.z)*t;
+			if(z > box.min.z && z < box.max.z)
+				return true;
+		}
+	}
+
+	// same test with max x plane
+	if((line.p1.x - box.max.x) * (line.p0.x - box.max.x) < 0.0f){
+		t = (line.p0.x - box.max.x) / (line.p0.x - line.p1.x);
+		y = line.p0.y + (line.p1.y - line.p0.y)*t;
+		if(y > box.min.y && y < box.max.y){
+			z = line.p0.z + (line.p1.z - line.p0.z)*t;
+			if(z > box.min.z && z < box.max.z)
+				return true;
+		}
+	}
+
+	// min y plne
+	if((box.min.y - line.p0.y) * (box.min.y - line.p1.y) < 0.0f){
+		t = (box.min.y - line.p0.y) / (line.p1.y - line.p0.y);
+		x = line.p0.x + (line.p1.x - line.p0.x)*t;
+		if(x > box.min.x && x < box.max.x){
+			z = line.p0.z + (line.p1.z - line.p0.z)*t;
+			if(z > box.min.z && z < box.max.z)
+				return true;
+		}
+	}
+
+	// max y plane
+	if((line.p0.y - box.max.y) * (line.p1.y - box.max.y) < 0.0f){
+		t = (line.p0.y - box.max.y) / (line.p0.y - line.p1.y);
+		x = line.p0.x + (line.p1.x - line.p0.x)*t;
+		if(x > box.min.x && x < box.max.x){
+			z = line.p0.z + (line.p1.z - line.p0.z)*t;
+			if(z > box.min.z && z < box.max.z)
+				return true;
+		}
+	}
+
+	// min z plne
+	if((box.min.z - line.p0.z) * (box.min.z - line.p1.z) < 0.0f){
+		t = (box.min.z - line.p0.z) / (line.p1.z - line.p0.z);
+		x = line.p0.x + (line.p1.x - line.p0.x)*t;
+		if(x > box.min.x && x < box.max.x){
+			y = line.p0.y + (line.p1.y - line.p0.y)*t;
+			if(y > box.min.y && y < box.max.y)
+				return true;
+		}
+	}
+
+	// max z plane
+	if((line.p0.z - box.max.z) * (line.p1.z - box.max.z) < 0.0f){
+		t = (line.p0.z - box.max.z) / (line.p0.z - line.p1.z);
+		x = line.p0.x + (line.p1.x - line.p0.x)*t;
+		if(x > box.min.x && x < box.max.x){
+			y = line.p0.y + (line.p1.y - line.p0.y)*t;
+			if(y > box.min.y && y < box.max.y)
+				return true;
+		}
+	}
+	return false;
+}
+
+bool
+CCollision::TestVerticalLineBox(const CColLine &line, const CColBox &box)
+{
+	if(line.p0.x <= box.min.x) return false;
+	if(line.p0.y <= box.min.y) return false;
+	if(line.p0.x >= box.max.x) return false;
+	if(line.p0.y >= box.max.y) return false;
+	if(line.p0.z < line.p1.z){
+		if(line.p0.z > box.max.z) return false;
+		if(line.p1.z < box.min.z) return false;
+	}else{
+		if(line.p1.z > box.max.z) return false;
+		if(line.p0.z < box.min.z) return false;
+	}
+	return true;
+}
+
+bool
+CCollision::TestLineTriangle(const CColLine &line, const CVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane)
+{
+	float t;
+	CVector normal;
+	plane.GetNormal(normal);
+
+	// if points are on the same side, no collision
+	if(plane.CalcPoint(line.p0) * plane.CalcPoint(line.p1) > 0.0f)
+		return false;
+
+	// intersection parameter on line
+	t = -plane.CalcPoint(line.p0) / DotProduct(line.p1 - line.p0, normal);
+	// find point of intersection
+	CVector p = line.p0 + (line.p1-line.p0)*t;
+
+	const CVector &va = verts[tri.a];
+	const CVector &vb = verts[tri.b];
+	const CVector &vc = verts[tri.c];
+	CVector2D vec1, vec2, vec3, vect;
+
+	// We do the test in 2D. With the plane direction we
+	// can figure out how to project the vectors.
+	// normal = (c-a) x (b-a)
+	switch(plane.dir){
+	case DIR_X_POS:
+		vec1.x = va.y; vec1.y = va.z;
+		vec2.x = vc.y; vec2.y = vc.z;
+		vec3.x = vb.y; vec3.y = vb.z;
+		vect.x = p.y; vect.y = p.z;
+		break;
+	case DIR_X_NEG:
+		vec1.x = va.y; vec1.y = va.z;
+		vec2.x = vb.y; vec2.y = vb.z;
+		vec3.x = vc.y; vec3.y = vc.z;
+		vect.x = p.y; vect.y = p.z;
+		break;
+	case DIR_Y_POS:
+		vec1.x = va.z; vec1.y = va.x;
+		vec2.x = vc.z; vec2.y = vc.x;
+		vec3.x = vb.z; vec3.y = vb.x;
+		vect.x = p.z; vect.y = p.x;
+		break;
+	case DIR_Y_NEG:
+		vec1.x = va.z; vec1.y = va.x;
+		vec2.x = vb.z; vec2.y = vb.x;
+		vec3.x = vc.z; vec3.y = vc.x;
+		vect.x = p.z; vect.y = p.x;
+		break;
+	case DIR_Z_POS:
+		vec1.x = va.x; vec1.y = va.y;
+		vec2.x = vc.x; vec2.y = vc.y;
+		vec3.x = vb.x; vec3.y = vb.y;
+		vect.x = p.x; vect.y = p.y;
+		break;
+	case DIR_Z_NEG:
+		vec1.x = va.x; vec1.y = va.y;
+		vec2.x = vb.x; vec2.y = vb.y;
+		vec3.x = vc.x; vec3.y = vc.y;
+		vect.x = p.x; vect.y = p.y;
+		break;
+	default:
+		assert(0);
+	}
+	// This is our triangle:
+	// 3-------2
+	//  \  P  /
+	//   \   /
+	//    \ /
+	//     1
+	// We can use the "2d cross product" to check on which side
+	// a vector is of another. Test is true if point is inside of all edges.
+	if(CrossProduct2D(vec2-vec1, vect-vec1) < 0.0f) return false;
+	if(CrossProduct2D(vec3-vec1, vect-vec1) > 0.0f) return false;
+	if(CrossProduct2D(vec3-vec2, vect-vec2) < 0.0f) return false;
+	return true;
+}
+
+// Test if line segment intersects with sphere.
+// If the first point is inside the sphere this test does not register a collision!
+bool
+CCollision::TestLineSphere(const CColLine &line, const CColSphere &sph)
+{
+	CVector v01 = line.p1 - line.p0;	// vector from p0 to p1
+	CVector v0c = sph.center - line.p0;	// vector from p0 to center
+	float linesq = v01.MagnitudeSqr();
+	// I leave in the strange -2 factors even though they serve no real purpose
+	float projline = -2.0f * DotProduct(v01, v0c);	// project v0c onto line
+	// Square of tangent from p0 multiplied by line length so we can compare with projline.
+	// The length of the tangent would be this: sqrt((c-p0)^2 - r^2).
+	// Negative if p0 is inside the sphere! This breaks the test!
+	float tansq = 4.0f * linesq *
+		(sph.center.MagnitudeSqr() - 2.0f*DotProduct(sph.center, line.p0) + line.p0.MagnitudeSqr() - sph.radius*sph.radius);
+	float diffsq = projline*projline - tansq;
+	// if diffsq < 0 that means the line is a passant, so no intersection
+	if(diffsq < 0.0f)
+		return false;
+	// projline (negative in GTA for some reason) is the point on the line
+	// in the middle of the two intersection points (startin from p0).
+	// sqrt(diffsq) somehow works out to be the distance from that
+	// midpoint to the intersection points.
+	// So subtract that and get rid of the awkward scaling:
+	float f = (-projline - sqrt(diffsq)) / (2.0f*linesq);
+	// f should now be in range [0, 1] for [p0, p1]
+	return f >= 0.0f && f <= 1.0f;
+}
+
+float
+CCollision::DistToLine(const CVector *l0, const CVector *l1, const CVector *point)
+{
+	float lensq = (*l0 - *l1).MagnitudeSqr();
+	float dot = DotProduct(*point - *l0, *l1 - *l0);
+	// Between 0 and len we're above the line.
+	// if not, calculate distance to endpoint
+	if(dot <= 0.0f)
+		return (*point - *l0).Magnitude();
+	if(dot >= lensq)
+		return (*point - *l1).Magnitude();
+	// distance to line
+	return sqrt((*point - *l0).MagnitudeSqr() - dot*dot/lensq);
+}
+
 
 /*
  * ColModel code
@@ -104,6 +360,26 @@ CColTriangle::Set(int a, int b, int c, uint8 surf)
 	this->surface = surf;
 }
 
+void
+CColTrianglePlane::Set(const CVector *v, CColTriangle &tri)
+{
+	const CVector &va = v[tri.a];
+	const CVector &vb = v[tri.b];
+	const CVector &vc = v[tri.c];
+
+	normal = CrossProduct(vc-va, vb-va);
+	normal.Normalise();
+	dist = DotProduct(normal, va);
+	CVector an(abs(normal.x), abs(normal.y), abs(normal.z));
+	// find out largest component and its direction
+	if(an.x > an.y && an.x > an.z)
+		dir = normal.x < 0.0f ? DIR_X_NEG : DIR_X_POS;
+	else if(an.y > an.z)
+		dir = normal.y < 0.0f ? DIR_Y_NEG : DIR_Y_POS;
+	else
+		dir = normal.z < 0.0f ? DIR_Z_NEG : DIR_Z_POS;;
+}
+
 CColModel::CColModel(void)
 {
 	this->numSpheres = 0;
@@ -127,115 +403,6 @@ CColModel::~CColModel(void)
 }
 
 
-static void
-RenderAndEmptyRenderBuffer(void)
-{
-	assert(TempBufferVerticesStored <= TEMPBUFFERVERTSIZE);
-	assert(TempBufferIndicesStored <= TEMPBUFFERINDEXSIZE);
-	if(TempBufferVerticesStored){
-		rw::im3d::Transform(TempVertexBuffer, TempBufferVerticesStored, nil);
-		rw::im3d::RenderIndexed(rw::PRIMTYPELINELIST, TempIndexBuffer, TempBufferIndicesStored);
-		rw::im3d::End();
-	}
-	TempBufferVerticesStored = 0;
-	TempBufferIndicesStored = 0;
-}
-
-static void
-RenderOneLine(float x1, float y1, float z1, float x2, float y2, float z2, uint32 c1, uint32 c2)
-{
-	if(TempBufferVerticesStored+2 >= TEMPBUFFERVERTSIZE ||
-	   TempBufferIndicesStored+2 >= TEMPBUFFERINDEXSIZE)
-		RenderAndEmptyRenderBuffer();
-
-	TempVertexBuffer[TempBufferVerticesStored + 0].setX(x1);
-	TempVertexBuffer[TempBufferVerticesStored + 0].setY(y1);
-	TempVertexBuffer[TempBufferVerticesStored + 0].setZ(z1);
-	TempVertexBuffer[TempBufferVerticesStored + 0].setColor(c1, c1>>8, c1>>16, c1>>24);
-	TempVertexBuffer[TempBufferVerticesStored + 1].setX(x2);
-	TempVertexBuffer[TempBufferVerticesStored + 1].setY(y2);
-	TempVertexBuffer[TempBufferVerticesStored + 1].setZ(z2);
-	TempVertexBuffer[TempBufferVerticesStored + 1].setColor(c2, c2>>8, c2>>16, c2>>24);
-
-	TempIndexBuffer[TempBufferIndicesStored++] = TempBufferVerticesStored++;
-	TempIndexBuffer[TempBufferIndicesStored++] = TempBufferVerticesStored++;
-}
-
-static void
-RenderWireBoxVerts(CVector *verts, rw::RGBA col)
-{
-	uint32 c = RWRGBAINT(col.red, col.green, col.blue, col.alpha);
-	RenderOneLine(verts[0].x, verts[0].y, verts[0].z, verts[1].x, verts[1].y, verts[1].z, c, c);
-	RenderOneLine(verts[1].x, verts[1].y, verts[1].z, verts[3].x, verts[3].y, verts[3].z, c, c);
-	RenderOneLine(verts[3].x, verts[3].y, verts[3].z, verts[2].x, verts[2].y, verts[2].z, c, c);
-	RenderOneLine(verts[2].x, verts[2].y, verts[2].z, verts[0].x, verts[0].y, verts[0].z, c, c);
-
-	RenderOneLine(verts[0+4].x, verts[0+4].y, verts[0+4].z, verts[1+4].x, verts[1+4].y, verts[1+4].z, c, c);
-	RenderOneLine(verts[1+4].x, verts[1+4].y, verts[1+4].z, verts[3+4].x, verts[3+4].y, verts[3+4].z, c, c);
-	RenderOneLine(verts[3+4].x, verts[3+4].y, verts[3+4].z, verts[2+4].x, verts[2+4].y, verts[2+4].z, c, c);
-	RenderOneLine(verts[2+4].x, verts[2+4].y, verts[2+4].z, verts[0+4].x, verts[0+4].y, verts[0+4].z, c, c);
-
-	RenderOneLine(verts[0].x, verts[0].y, verts[0].z, verts[4].x, verts[4].y, verts[4].z, c, c);
-	RenderOneLine(verts[1].x, verts[1].y, verts[1].z, verts[5].x, verts[5].y, verts[5].z, c, c);
-	RenderOneLine(verts[2].x, verts[2].y, verts[2].z, verts[6].x, verts[6].y, verts[6].z, c, c);
-	RenderOneLine(verts[3].x, verts[3].y, verts[3].z, verts[7].x, verts[7].y, verts[7].z, c, c);
-}
-
-static void
-RenderWireBox(const CMatrix &mat, const CVector &min, const CVector &max, rw::RGBA col)
-{
-	CVector verts[8];
-	verts[0].x = min.x;
-	verts[0].y = min.y;
-	verts[0].z = min.z;
-	verts[1].x = max.x;
-	verts[1].y = min.y;
-	verts[1].z = min.z;
-	verts[2].x = min.x;
-	verts[2].y = max.y;
-	verts[2].z = min.z;
-	verts[3].x = max.x;
-	verts[3].y = max.y;
-	verts[3].z = min.z;
-	verts[4].x = min.x;
-	verts[4].y = min.y;
-	verts[4].z = max.z;
-	verts[5].x = max.x;
-	verts[5].y = min.y;
-	verts[5].z = max.z;
-	verts[6].x = min.x;
-	verts[6].y = max.y;
-	verts[6].z = max.z;
-	verts[7].x = max.x;
-	verts[7].y = max.y;
-	verts[7].z = max.z;
-	rw::V3d::transformPoints((rw::V3d*)verts, (rw::V3d*)verts, 8, &mat.m_matrix);
-	RenderWireBoxVerts(verts, col);
-}
-
-static void
-RenderWireSphere(const CVector &center, float radius, rw::RGBA col)
-{
-	uint32 c = RWRGBAINT(col.red, col.green, col.blue, col.alpha);
-	RenderOneLine(center.x, center.y, center.z - radius, center.x - radius, center.y - radius, center.z, c, c);
-	RenderOneLine(center.x, center.y, center.z - radius, center.x - radius, center.y + radius, center.z, c, c);
-	RenderOneLine(center.x, center.y, center.z - radius, center.x + radius, center.y - radius, center.z, c, c);
-	RenderOneLine(center.x, center.y, center.z - radius, center.x + radius, center.y + radius, center.z, c, c);
-	RenderOneLine(center.x - radius, center.y - radius, center.z, center.x, center.y, center.z + radius, c, c);
-	RenderOneLine(center.x - radius, center.y + radius, center.z, center.x, center.y, center.z + radius, c, c);
-	RenderOneLine(center.x + radius, center.y - radius, center.z, center.x, center.y, center.z + radius, c, c);
-	RenderOneLine(center.x + radius, center.y + radius, center.z, center.x, center.y, center.z + radius, c, c);
-}
-
-static void
-RenderWireTri(CVector *verts, rw::RGBA col)
-{
-	uint32 c = RWRGBAINT(col.red, col.green, col.blue, col.alpha);
-	RenderOneLine(verts[0].x, verts[0].y, verts[0].z, verts[1].x, verts[1].y, verts[1].z, c, c);
-	RenderOneLine(verts[0].x, verts[0].y, verts[0].z, verts[2].x, verts[2].y, verts[2].z, c, c);
-	RenderOneLine(verts[2].x, verts[2].y, verts[2].z, verts[1].x, verts[1].y, verts[1].z, c, c);
-}
-
 void
 CCollision::DrawColModel(const CMatrix &mat, const CColModel &colModel)
 {
@@ -244,7 +411,6 @@ CCollision::DrawColModel(const CMatrix &mat, const CColModel &colModel)
 	static rw::RGBA magenta = { 255, 0, 255, 255 };
 	static rw::RGBA cyan = { 0, 255, 255, 255 };
 	static rw::RGBA white = { 255, 255, 255, 255 };
-	uint32 c;
 	int i;
 	CVector verts[3];
 
@@ -254,23 +420,21 @@ CCollision::DrawColModel(const CMatrix &mat, const CColModel &colModel)
 	rw::SetRenderState(rw::DESTBLEND, rw::BLENDINVSRCALPHA);
 	rw::engine->imtexture = nil;
 
-	RenderWireBox(mat, colModel.boundingBox.min, colModel.boundingBox.max, red);
+	CDebugDraw::RenderWireBox(mat, colModel.boundingBox.min, colModel.boundingBox.max, red);
 
 	for(i = 0; i < colModel.numSpheres; i++){
 		CVector center = mat * colModel.spheres[i].center;
-		RenderWireSphere(center, colModel.spheres[i].radius, magenta);
+		CDebugDraw::RenderWireSphere(center, colModel.spheres[i].radius, magenta);
 	}
 
 	for(i = 0; i < colModel.numBoxes; i++)
-		RenderWireBox(mat, colModel.boxes[i].min, colModel.boxes[i].max, white);
+		CDebugDraw::RenderWireBox(mat, colModel.boxes[i].min, colModel.boxes[i].max, white);
 
-	c = RWRGBAINT(cyan.red, cyan.green, cyan.blue, cyan.alpha);
 	for(i = 0; i < colModel.numLines; i++){
 		verts[0] = colModel.lines[i].p0;
 		verts[1] = colModel.lines[i].p1;
 		rw::V3d::transformPoints((rw::V3d*)verts, (rw::V3d*)verts, 2, &mat.m_matrix);
-		RenderOneLine(verts[0].x, verts[0].y, verts[0].z,
-			verts[1].x, verts[1].y, verts[1].z, c, c);
+		CDebugDraw::RenderLine(verts[0], verts[1], cyan, cyan);
 	}
 
 	for(i = 0; i < colModel.numTriangles; i++){
@@ -278,10 +442,10 @@ CCollision::DrawColModel(const CMatrix &mat, const CColModel &colModel)
 		verts[1] = colModel.vertices[colModel.triangles[i].b];
 		verts[2] = colModel.vertices[colModel.triangles[i].c];
 		rw::V3d::transformPoints((rw::V3d*)verts, (rw::V3d*)verts, 3, &mat.m_matrix);
-		RenderWireTri(verts, green);
+		CDebugDraw::RenderWireTri(verts, green);
 	}
 
-	RenderAndEmptyRenderBuffer();
+	CDebugDraw::RenderAndEmptyRenderBuffer();
 
 	rw::SetRenderState(rw::ZWRITEENABLE, 1);
 	rw::SetRenderState(rw::ZTESTENABLE, 1);
