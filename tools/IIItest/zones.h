@@ -1,3 +1,6 @@
+#ifndef _ZONES_H_
+#define _ZONES_H_
+
 //
 // Zones
 //
@@ -5,9 +8,21 @@
 enum eZoneType
 {
 	ZONE_AUDIO,
-	ZONE_TYPE1,
-	ZONE_TYPE2,
+	ZONE_TYPE1,	// this should be NAVIG
+	ZONE_TYPE2,	// this should be INFO...but all except MAPINFO get zoneinfo??
 	ZONE_MAPZONE,
+};
+
+enum eZoneAttribs
+{
+	ATTRZONE_CAMCLOSEIN		= 1,
+	ATTRZONE_STAIRS			= 2,
+	ATTRZONE_1STPERSON		= 4,
+	ATTRZONE_NORAIN			= 8,
+	ATTRZONE_NOPOLICE		= 0x10,
+	ATTRZONE_NOTCULLZONE		= 0x20,
+	ATTRZONE_DOINEEDCOLLISION	= 0x40,
+	ATTRZONE_SUBWAYVISIBLE		= 0x80,
 };
 
 enum eLevelName
@@ -148,3 +163,5 @@ public:
 	                        float minz, float maxz,
 	                        ushort flag, short wantedLevel);
 };
+
+#endif

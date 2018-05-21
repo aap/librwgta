@@ -1,3 +1,6 @@
+#ifndef _OBJECTDATA_H_
+#define _OBJECTDATA_H_
+
 struct ObjectInfo
 {
 	float mass;
@@ -18,3 +21,5 @@ class CObjectData
 public:
 	static void Initialise(const char *file);
 };
+
+#endif

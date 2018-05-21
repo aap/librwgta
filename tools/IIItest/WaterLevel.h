@@ -1,3 +1,6 @@
+#ifndef _WATERLEVEL_H_
+#define _WATERLEVEL_H_
+
 class CWaterLevel
 {
 	static int ms_nNoOfWaterLevels;
@@ -12,3 +15,5 @@ public:
 	static void RenderOneFlatSmallWaterPoly(float x, float y, float z, rw::RGBA const &color);
 	static void RenderOneFlatLargeWaterPoly(float x, float y, float z, rw::RGBA const &color);
 };
+
+#endif

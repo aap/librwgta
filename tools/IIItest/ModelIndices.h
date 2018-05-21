@@ -1,3 +1,6 @@
+#ifndef _MODELINDICES_H_
+#define _MODELINDICES_H_
+
 #define MODELINDICES \
 	X("fire_hydrant", MI_FIRE_HYDRANT) \
 	X("bagelstnd02", MI_BAGELSTAND2) \
@@ -206,3 +209,5 @@ enum
 
 void InitModelIndices(void);
 void MatchModelString(const char *name, short id);
+
+#endif

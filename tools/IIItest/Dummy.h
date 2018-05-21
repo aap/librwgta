@@ -1,3 +1,6 @@
+#ifndef _DUMMY_H_
+#define _DUMMY_H_
+
 class CDummy : public CEntity
 {
 	// disable allocation
@@ -13,3 +16,5 @@ public:
 	// from CPlaceable
 	~CDummy(void);
 };
+
+#endif

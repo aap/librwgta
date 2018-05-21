@@ -3,16 +3,6 @@
 AnimAssocDefinition *CAnimManager::ms_aAnimAssocDefinitions;
 int CAnimManager::ms_numAnimAssocDefinitions;
 
-//	char *name;
-//	char *blockName;
-//	int modelIndex;
-//	int animCount;
-//	char **animNames;
-//	struct {
-//		int animId;
-//		int flags;
-//	} *animInfoList;
-
 void
 CAnimManager::LoadAnimGroups(void)
 {

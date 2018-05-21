@@ -1,3 +1,6 @@
+#ifndef _BUILDING_H_
+#define _BUILDING_H_
+
 class CBuilding : public CEntity
 {
 public:
@@ -10,3 +13,5 @@ public:
 
 	virtual bool GetIsATreadable(void) { return false; }
 };
+
+#endif

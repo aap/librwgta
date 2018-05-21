@@ -1,3 +1,6 @@
+#ifndef _POOLS_H_
+#define _POOLS_H_
+
 typedef CPool<CBuilding, CBuilding> CBuildingPool;
 typedef CPool<CTreadable, CTreadable> CTreadablePool;
 typedef CPool<CDummy, CDummyPed> CDummyPool;
@@ -25,3 +28,5 @@ public:
 	static CDummyPool *GetDummyPool(void) { return ms_pDummyPool; }
 	static CPtrNodePool *GetPtrNodePool(void) { return ms_pPtrNodePool; }
 };
+
+#endif

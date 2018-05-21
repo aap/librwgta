@@ -1,9 +1,12 @@
+#ifndef _TIMER_H_
+#define _TIMER_H_
+
 class CTimer
 {
 public:
-	static int   m_snPreviousTimeInMilliseconds;
-	static int   m_snTimeInMilliseconds;
-	static uint  m_FrameCounter;
+	static uint32 m_snPreviousTimeInMilliseconds;
+	static uint32 m_snTimeInMilliseconds;
+	static uint32 m_FrameCounter;
 	static float ms_fTimeScale;
 	static float ms_fTimeStep;
 	static bool  m_UserPause;
@@ -19,3 +22,5 @@ public:
 	static void Update(void);
 	static void Stop(void);
 };
+
+#endif

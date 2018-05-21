@@ -1,3 +1,6 @@
+#ifndef _DUMMYPED_H_
+#define _DUMMYPED_H_
+
 class CDummyPed : public CDummy
 {
 public:
@@ -9,3 +12,5 @@ public:
 	// from CPlaceable
 	~CDummyPed(void);
 };
+
+#endif

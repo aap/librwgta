@@ -1,3 +1,6 @@
+#ifndef _GAME_H_
+#define _GAME_H_
+
 class CGame
 {
 public:
@@ -7,3 +10,4 @@ public:
 	static void Process(void);
 };
 
+#endif

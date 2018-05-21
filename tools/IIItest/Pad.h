@@ -1,3 +1,6 @@
+#ifndef _PAD_H_
+#define _PAD_H_
+
 // same as RW skeleton
 enum Key
 {
@@ -107,3 +110,5 @@ public:
 
 #define IsButtonJustDown(pad, btn) \
 	(!(pad)->OldState.btn && (pad)->NewState.btn)
+
+#endif

@@ -1,3 +1,6 @@
+#ifndef _VISIBILITYPLUGINS_H_
+#define _VISIBILITYPLUGINS_H_
+
 class CVisibilityPlugins
 {
 public:
@@ -64,3 +67,5 @@ public:
 
 	static bool PluginAttach(void);
 };
+
+#endif

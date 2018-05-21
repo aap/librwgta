@@ -1,3 +1,6 @@
+#ifndef _TEMPCOLMODELS_H_
+#define _TEMPCOLMODELS_H_
+
 class CTempColModels
 {
 public:
@@ -17,3 +20,5 @@ public:
 	static CColModel ms_colModelCutObj;
 	static CColModel ms_colModelBBox;
 };
+
+#endif

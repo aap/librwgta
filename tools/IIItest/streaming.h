@@ -1,3 +1,6 @@
+#ifndef _STREAMING_H_
+#define _STREAMING_H_
+
 extern int islandLODindust;
 extern int islandLODcomInd;
 extern int islandLODcomSub;
@@ -119,3 +122,5 @@ public:
 	static CStreamingInfo *Model(int n) { return &ms_aInfoForModel[MODELOFFSET+n]; };
 	static CStreamingInfo *Txd(int n) { return &ms_aInfoForModel[TXDOFFSET+n]; };
 };
+
+#endif

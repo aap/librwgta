@@ -1,8 +1,8 @@
 #include "III.h"
 
-int   CTimer::m_snPreviousTimeInMilliseconds;
-int   CTimer::m_snTimeInMilliseconds;
-uint  CTimer::m_FrameCounter;
+uint32   CTimer::m_snPreviousTimeInMilliseconds;
+uint32   CTimer::m_snTimeInMilliseconds;
+uint32  CTimer::m_FrameCounter;
 float CTimer::ms_fTimeScale;
 float CTimer::ms_fTimeStep;
 bool  CTimer::m_UserPause;

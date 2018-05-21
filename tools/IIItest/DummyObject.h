@@ -1,3 +1,6 @@
+#ifndef _DUMMYOBJECT_H_
+#define _DUMMYOBJECT_H_
+
 class CDummyObject : public CDummy
 {
 public:
@@ -9,3 +12,5 @@ public:
 	// from CPlaceable
 	~CDummyObject(void);
 };
+
+#endif

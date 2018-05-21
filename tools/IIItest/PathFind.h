@@ -1,3 +1,6 @@
+#ifndef _PATHFIND_H_
+#define _PATHFIND_H_
+
 class CPathFind
 {
 public:
@@ -11,3 +14,5 @@ public:
 
 	static bool DoesObjectHavePath(uint id);
 };
+
+#endif

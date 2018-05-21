@@ -1,3 +1,6 @@
+#ifndef _TXDSTORE_H_
+#define _TXDSTORE_H_
+
 struct TxdDef {
 	rw::TexDictionary *texDict;
 	int refCount;
@@ -28,3 +31,4 @@ public:
 	static bool isTxdLoaded(int slot);
 };
 
+#endif

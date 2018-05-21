@@ -1,3 +1,6 @@
+#ifndef _PLACEABLE_H_
+#define _PLACEABLE_H_
+
 class CPlaceable
 {
 	// disable allocation
@@ -12,3 +15,5 @@ public:
 	CMatrix &GetMatrix(void) { return m_matrix; }
 	void SetTransform(rw::Matrix *m) { m_matrix = CMatrix(m, false); }
 };
+
+#endif

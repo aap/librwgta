@@ -1,3 +1,6 @@
+#ifndef _TREADABLE_H_
+#define _TREADABLE_H_
+
 class CTreadable : public CBuilding
 {
 public:
@@ -11,3 +14,5 @@ public:
 	// from CBuilding
 	bool GetIsATreadable(void) { return true; }
 };
+
+#endif

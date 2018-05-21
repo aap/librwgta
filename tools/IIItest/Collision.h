@@ -1,3 +1,6 @@
+#ifndef _COLLISION_H_
+#define _COLLISION_H_
+
 struct CColSphere
 {
 	CVector center;
@@ -81,3 +84,5 @@ public:
 	static void LoadCollisionWhenINeedIt(bool changeLevel);
 	static void DrawColModel(const CMatrix &mat, const CColModel &colModel);
 };
+
+#endif

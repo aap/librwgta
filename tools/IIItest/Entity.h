@@ -1,3 +1,6 @@
+#ifndef _ENTITY_H_
+#define _ENTITY_H_
+
 enum eEntityType
 {
 	ENTITY_TYPE_NOTHING = 0,
@@ -107,3 +110,5 @@ public:
 	virtual void RemoveLighting(void);
 	// FlagToDestroyWhenNextProcessed
 };
+
+#endif

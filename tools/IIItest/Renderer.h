@@ -1,3 +1,6 @@
+#ifndef _RENDERER_H_
+#define _RENDERER_H_
+
 class CRenderer
 {
 public:
@@ -22,3 +25,5 @@ public:
 
 	static void RenderCollisionLines(void);
 };
+
+#endif

@@ -1,3 +1,6 @@
+#ifndef _MODELINFO_H_
+#define _MODELINFO_H_
+
 // temporary
 typedef void unknown;
 
@@ -244,3 +247,5 @@ public:
 		return ms_modelInfoPtrs[id];
 	}
 };
+
+#endif

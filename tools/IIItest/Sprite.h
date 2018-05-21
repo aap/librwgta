@@ -1,3 +1,6 @@
+#ifndef _SPRITE_H_
+#define _SPRITE_H_
+
 class Sprite2d
 {
 	static rw::RWDEVICE::Im2DVertex ma_vertices[4];
@@ -12,3 +15,5 @@ class Sprite
 public:
 	static float CalcHorizonCoors(void);
 };
+
+#endif

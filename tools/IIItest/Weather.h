@@ -1,3 +1,6 @@
+#ifndef _WEATHER_H_
+#define _WEATHER_H_
+
 class CWeather
 {
 public:
@@ -9,3 +12,5 @@ public:
 	static void Init(void);
 	static void Update(void);
 };
+
+#endif

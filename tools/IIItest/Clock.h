@@ -1,3 +1,6 @@
+#ifndef _CLOCK_H_
+#define _CLOCK_H_
+
 class CClock
 {
 public:
@@ -15,3 +18,5 @@ public:
 	static void Update(void);
 	static bool GetIsTimeInRange(uchar h1, uchar h2);
 };
+
+#endif

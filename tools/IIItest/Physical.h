@@ -1,3 +1,6 @@
+#ifndef _PHYSICAL_H_
+#define _PHYSICAL_H_
+
 class CPhysical : public CEntity
 {
 	// disable allocation
@@ -12,3 +15,5 @@ public:
 	// from CPlaceable
 	~CPhysical(void);
 };
+
+#endif

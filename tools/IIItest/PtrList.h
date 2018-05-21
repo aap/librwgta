@@ -1,3 +1,6 @@
+#ifndef _PTRLIST_H_
+#define _PTRLIST_H_
+
 class CPtrList
 {
 public:
@@ -39,3 +42,5 @@ public:
 		}
 	}
 };
+
+#endif

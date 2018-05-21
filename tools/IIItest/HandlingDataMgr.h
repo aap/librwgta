@@ -1,3 +1,6 @@
+#ifndef _HANDLINGDATAMGR_H_
+#define _HANDLINGDATAMGR_H_
+
 class cHandlingDataMgr
 {
 	// NOT reversed data, just read from file
@@ -43,3 +46,5 @@ public:
 	static void LoadHandlingData(void);
 	static int  GetHandlingData(const char *ident);
 };
+
+#endif

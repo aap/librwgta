@@ -1,3 +1,5 @@
+#ifndef _CLOUDS_H_
+#define _CLOUDS_H_
 
 class CClouds
 {
@@ -12,3 +14,5 @@ public:
 	static CRGBA ms_colourBottom;
 	static CRGBA ms_colourBkGrd;
 };
+
+#endif

@@ -1,3 +1,6 @@
+#ifndef _CAMERA_H_
+#define _CAMERA_H_
+
 class CCamera
 {
 public:
@@ -30,3 +33,5 @@ public:
 
 	CCamera(void);
 };
+
+#endif

@@ -1,3 +1,6 @@
+#ifndef _WORLD_H_
+#define _WORLD_H_
+
 /* Sectors span from -2000 to 2000 in x and y.
  * With 100x100 sectors, each is 40x40 units. */
 
@@ -38,3 +41,5 @@ public:
 	static int GetSectorIndexX(float f) { return (int)( (f + 2000.0f)/40.0f ); }
 	static int GetSectorIndexY(float f) { return (int)( (f + 2000.0f)/40.0f ); }
 };
+
+#endif

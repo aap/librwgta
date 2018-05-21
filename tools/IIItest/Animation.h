@@ -1,3 +1,6 @@
+#ifndef _ANIMATION_H_
+#define _ANIMATION_H_
+
 struct AnimAssocDefinition
 {
 	char *name;
@@ -20,3 +23,5 @@ public:
 	static AnimAssocDefinition *ms_aAnimAssocDefinitions; // 25 in III
 	static int ms_numAnimAssocDefinitions;
 };
+
+#endif

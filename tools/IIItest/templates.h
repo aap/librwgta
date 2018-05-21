@@ -1,3 +1,6 @@
+#ifndef _TEMPLATES_H_
+#define _TEMPLATES_H_
+
 template<typename T, int n>
 class CStore
 {
@@ -167,3 +170,5 @@ public:
 		return n;
 	}
 };
+
+#endif

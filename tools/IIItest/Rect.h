@@ -1,3 +1,6 @@
+#ifndef _RECT_H_
+#define _RECT_H_
+
 class CRect
 {
 public:
@@ -25,3 +28,5 @@ public:
 		if(v.y > top) top = v.y;
 	}
 };
+
+#endif

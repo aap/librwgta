@@ -1,3 +1,6 @@
+#ifndef _TIMECYCLE_H_
+#define _TIMECYCLE_H_
+
 class CTimeCycle {
 public:
 	static int   m_nAmbientRed[NUMHOURS][NUMWEATHERS];
@@ -87,3 +90,5 @@ public:
 	static void Initialise(void);
 	static void Update(void);
 };
+
+#endif

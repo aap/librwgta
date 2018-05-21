@@ -43,16 +43,8 @@ char *GetFrameNodeName(rw::Frame *f);
 #include "Pad.h"
 #include "templates.h"
 #include "config.h"
-#include "math/Vector.h"
-#include "math/Matrix.h"
+#include "BasicTypes.h"
 
-class CRGBA
-{
-public:
-	uint8 r, g, b, a;
-	CRGBA(void) { }
-	CRGBA(uint8 r, uint8 g, uint8 b, uint8 a) : r(r), g(g), b(b), a(a) { }
-};
 
 class C2dEffect
 {
