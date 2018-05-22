@@ -102,8 +102,8 @@ public:
 	static bool TestVerticalLineBox(const CColLine &line, const CColBox &box);
 	static bool TestLineTriangle(const CColLine &line, const CVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane);
 	static bool TestLineSphere(const CColLine &line, const CColSphere &sph);
+	static bool TestSphereTriangle(const CColSphere &sphere, const CVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane);
 	// LineOfSight
-	// SphereTriangle
 
 	static float DistToLine(const CVector *l0, const CVector *l1, const CVector *point);
 };

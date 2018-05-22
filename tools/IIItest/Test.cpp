@@ -42,8 +42,8 @@ void
 CTest::Update(void)
 {
 #ifdef COLTEST
-//	sphere1.center = TheCamera.m_target;
-	vline1.Set(TheCamera.m_target, CVector(TheCamera.m_target) + CVector(2.0f, 2.0f, 5.0f));
+	sphere1.center = TheCamera.m_target;
+//	vline1.Set(TheCamera.m_target, CVector(TheCamera.m_target) + CVector(2.0f, 2.0f, 5.0f));
 #endif
 }
 
@@ -68,19 +68,18 @@ CTest::Render(void)
 //	if(CCollision::TestLineSphere(vline1, sphere2))
 //	if(CCollision::TestVerticalLineBox(vline1, box1))
 //	if(CCollision::TestLineBox(vline1, box1))
-	if(CCollision::TestLineTriangle(vline1, verts, tri1, plane))
-		CDebugDraw::RenderLine(vline1.p0, vline1.p1, red, red);
-	else
-		CDebugDraw::RenderLine(vline1.p0, vline1.p1, white, white);
+//	if(CCollision::TestLineTriangle(vline1, verts, tri1, plane))
+//		CDebugDraw::RenderLine(vline1.p0, vline1.p1, red, red);
+//	else
+//		CDebugDraw::RenderLine(vline1.p0, vline1.p1, white, white);
 
-/*
-/*
+
 //	if(CCollision::TestSphereSphere(sphere1, sphere2))
-	if(CCollision::TestSphereBox(sphere1, box1))
+//	if(CCollision::TestSphereBox(sphere1, box1))
+	if(CCollision::TestSphereTriangle(sphere1, verts, tri1, plane))
 		CDebugDraw::RenderWireSphere(sphere1.center, sphere1.radius, red);
 	else
 		CDebugDraw::RenderWireSphere(sphere1.center, sphere1.radius, white);
-*/
 
 	CDebugDraw::RenderAndEmptyRenderBuffer();
 #endif

@@ -306,6 +306,60 @@ CCollision::TestLineSphere(const CColLine &line, const CColSphere &sph)
 	return f >= 0.0f && f <= 1.0f;
 }
 
+bool
+CCollision::TestSphereTriangle(const CColSphere &sphere, const CVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane)
+{
+	// If sphere and plane don't intersect, no collision
+	if(abs(plane.CalcPoint(sphere.center)) > sphere.radius)
+		return false;
+
+	const CVector &va = verts[tri.a];
+	const CVector &vb = verts[tri.b];
+	const CVector &vc = verts[tri.c];
+
+	// calculate two orthogonal basis vectors for the triangle
+	CVector vec2 = vb - va;
+	float len = vec2.Magnitude();
+	vec2 = vec2 * (1.0f/len);
+	CVector vec1 = CrossProduct(vec2, plane.normal);
+
+	// We know A has local coordinate [0,0] and B has [0,len].
+	// Now calculate coordinates on triangle for these two vectors:
+	CVector vac = vc - va;
+	CVector vas = sphere.center - va;
+	CVector2D b(0.0f, len);
+	CVector2D c(DotProduct(vec1, vac), DotProduct(vec2, vac));
+	CVector2D s(DotProduct(vec1, vas), DotProduct(vec2, vas));
+
+	// The three triangle lines partition the space into 6 sectors,
+	// find out in which the center lies.
+	int insideAB = CrossProduct2D(s, b) >= 0.0f;
+	int insideAC = CrossProduct2D(c, s) >= 0.0f;
+	int insideBC = CrossProduct2D(s-b, c-b) >= 0.0f;
+
+	int testcase = insideAB + insideAC + insideBC;
+	float dist = 0.0f;
+	if(testcase == 1){
+		// closest to a vertex
+		if(insideAB) dist = (sphere.center - vc).Magnitude();
+		else if(insideAC) dist = (sphere.center - vb).Magnitude();
+		else if(insideBC) dist = (sphere.center - va).Magnitude();
+		else assert(0);
+	}else if(testcase == 2){
+		// closest to an edge
+		if(!insideAB) dist = DistToLine(&va, &vb, &sphere.center);
+		else if(!insideAC) dist = DistToLine(&va, &vc, &sphere.center);
+		else if(!insideBC) dist = DistToLine(&vb, &vc, &sphere.center);
+		else assert(0);
+	}else if(testcase == 3){
+		// center is in triangle
+		return true;
+	}else
+		assert(0);	// front fell off
+
+	return dist < sphere.radius;
+}
+
 float
 CCollision::DistToLine(const CVector *l0, const CVector *l1, const CVector *point)
 {
