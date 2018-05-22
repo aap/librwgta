@@ -52,18 +52,18 @@ struct CColTrianglePlane
 	float CalcPoint(const CVector &v) const { return DotProduct(normal, v) - dist; };
 };
 
-//struct CColPoint
-//{
-//	rw::V3d point;
-//	int pad1;
-//	rw::V3d normal;
-//	int pad2;
-//	rw::uint8 surfaceTypeA;
-//	rw::uint8 pieceTypeA;
-//	rw::uint8 pieceTypeB;
-//	rw::uint8 surfaceTypeB;
-//	float depth;
-//};
+struct CColPoint
+{
+	CVector point;
+	int pad1;
+	CVector normal;
+	int pad2;
+	uint8 surfaceA;
+	uint8 pieceA;
+	uint8 surfaceB;
+	uint8 pieceB;
+	float depth;
+};
 
 struct CColModel
 {
@@ -104,6 +104,18 @@ public:
 	static bool TestLineSphere(const CColLine &line, const CColSphere &sph);
 	static bool TestSphereTriangle(const CColSphere &sphere, const CVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane);
 	// LineOfSight
+
+	static bool ProcessSphereSphere(const CColSphere &s1, const CColSphere &s2, CColPoint &point, float &r1sq);
+//	static bool ProcessSphereBox(CColSphere const&,CColBox const&,CColPoint &,float &);
+//	static bool ProcessLineBox(const CColLine &line, const CColBox &box, CColPoint &point, float &x);
+//	static bool ProcessVerticalLineTriangle(CColLine const&,CompressedVector const*,CColTriangle const&,CColTrianglePlane const&,CColPoint &,float &,CStoredCollPoly *);
+	static bool ProcessLineTriangle(const CColLine &line , const CVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane, CColPoint &point, float &t);
+	static bool ProcessLineSphere(const CColLine &line, const CColSphere &sphere, CColPoint &point, float &t);
+//	static bool ProcessSphereTriangle(CColSphere const&,CompressedVector const*,CColTriangle const&,CColTrianglePlane const&,CColPoint &,float &);
+
+//	static bool ProcessLineOfSight(CColLine const&,CMatrix const&,CColModel &,CColPoint &,float &,bool);
+//	static bool ProcessVerticalLine(CColLine const&,CMatrix const&,CColModel &,CColPoint &,float &,bool,CStoredCollPoly *);
+//	static bool ProcessColModels(CMatrix const&,CColModel &,CMatrix const&,CColModel &,CColPoint *,CColPoint *,float *);
 
 	static float DistToLine(const CVector *l0, const CVector *l1, const CVector *point);
 };

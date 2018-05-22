@@ -279,6 +279,8 @@ CCollision::TestLineTriangle(const CColLine &line, const CVector *verts, const C
 
 // Test if line segment intersects with sphere.
 // If the first point is inside the sphere this test does not register a collision!
+// The code is reversed from the original code and rather ugly, see Process for a clear version.
+// TODO: actually rewrite this mess
 bool
 CCollision::TestLineSphere(const CColLine &line, const CColSphere &sph)
 {
@@ -358,6 +360,140 @@ CCollision::TestSphereTriangle(const CColSphere &sphere, const CVector *verts, c
 		assert(0);	// front fell off
 
 	return dist < sphere.radius;
+}
+
+// Let s1 collide into s2.
+// r1sq is a squared second radius for s1, set to the new collision radius.
+// point is set to the point on s2, normal points from s2 to s1
+bool
+CCollision::ProcessSphereSphere(const CColSphere &s1, const CColSphere &s2, CColPoint &point, float &r1sq)
+{
+	CVector dist = s1.center - s2.center;
+	float d = dist.Magnitude() - s2.radius;	// distance from s1's center to s2
+	float dc = d < 0.0f ? 0.0f : d;		// clamp to zero, i.e. if s1's center is inside s2
+	// no collision if sphere is not close enough
+	if(r1sq <= dc*dc || s1.radius <= dc)
+		return false;
+	dist.Normalise();
+	point.point = s1.center - dist*dc;
+	point.normal = dist;
+	point.surfaceA = s1.surface;
+	point.pieceA = s1.piece;
+	point.surfaceB = s2.surface;
+	point.pieceB = s2.piece;
+	point.depth = s1.radius - d;	// sphere overlap
+	r1sq = dc*dc;			// radius with collision radius
+	return true;
+}
+
+// If line.p0 lies inside sphere, no collision is registered.
+// point.normal points from sphere center to collision point
+bool
+CCollision::ProcessLineSphere(const CColLine &line, const CColSphere &sphere, CColPoint &point, float &t)
+{
+	CVector v01 = line.p1 - line.p0;
+	CVector v0c = sphere.center - line.p0;
+	float linesq = v01.MagnitudeSqr();
+	// project v0c onto v01, scaled by |v01| this is the midpoint of the two intersections
+	float projline = DotProduct(v01, v0c);
+	// tangent of p0 to sphere, scaled by linesq just like projline^2
+	float tansq = (v0c.MagnitudeSqr() - sphere.radius*sphere.radius) * linesq;
+	// this works out to be the square of the distance between the midpoint and the intersections
+	float diffsq = projline*projline - tansq;
+	// no intersection
+	if(diffsq < 0.0f)
+		return false;
+	// point of first intersection, in range [0,1] between p0 and p1
+	float t0 = (projline - sqrt(diffsq)) / linesq;
+	// if not on line or beyond t, no intersection
+	if(t0 < 0.0f || t0 > 1.0f || t0 >= t)
+		return false;
+	point.point = line.p0 + v01*t0;
+	point.normal = point.point - sphere.center;
+	point.normal.Normalise();
+	point.surfaceA = 0;
+	point.pieceA = 0;
+	point.surfaceB = sphere.surface;
+	point.pieceB = sphere.piece;
+	t = t0;
+	return true;
+}
+
+bool
+CCollision::ProcessLineTriangle(const CColLine &line , const CVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane, CColPoint &point, float &t)
+{
+	float t0;
+	CVector normal;
+	plane.GetNormal(normal);
+
+	// if points are on the same side, no collision
+	if(plane.CalcPoint(line.p0) * plane.CalcPoint(line.p1) > 0.0f)
+		return false;
+
+	// intersection parameter on line
+	t0 = -plane.CalcPoint(line.p0) / DotProduct(line.p1 - line.p0, normal);
+	// early out if we're beyond t
+	if(t0 >= t)
+		return false;
+	// find point of intersection
+	CVector p = line.p0 + (line.p1-line.p0)*t0;
+
+	const CVector &va = verts[tri.a];
+	const CVector &vb = verts[tri.b];
+	const CVector &vc = verts[tri.c];
+	CVector2D vec1, vec2, vec3, vect;
+
+	switch(plane.dir){
+	case DIR_X_POS:
+		vec1.x = va.y; vec1.y = va.z;
+		vec2.x = vc.y; vec2.y = vc.z;
+		vec3.x = vb.y; vec3.y = vb.z;
+		vect.x = p.y; vect.y = p.z;
+		break;
+	case DIR_X_NEG:
+		vec1.x = va.y; vec1.y = va.z;
+		vec2.x = vb.y; vec2.y = vb.z;
+		vec3.x = vc.y; vec3.y = vc.z;
+		vect.x = p.y; vect.y = p.z;
+		break;
+	case DIR_Y_POS:
+		vec1.x = va.z; vec1.y = va.x;
+		vec2.x = vc.z; vec2.y = vc.x;
+		vec3.x = vb.z; vec3.y = vb.x;
+		vect.x = p.z; vect.y = p.x;
+		break;
+	case DIR_Y_NEG:
+		vec1.x = va.z; vec1.y = va.x;
+		vec2.x = vb.z; vec2.y = vb.x;
+		vec3.x = vc.z; vec3.y = vc.x;
+		vect.x = p.z; vect.y = p.x;
+		break;
+	case DIR_Z_POS:
+		vec1.x = va.x; vec1.y = va.y;
+		vec2.x = vc.x; vec2.y = vc.y;
+		vec3.x = vb.x; vec3.y = vb.y;
+		vect.x = p.x; vect.y = p.y;
+		break;
+	case DIR_Z_NEG:
+		vec1.x = va.x; vec1.y = va.y;
+		vec2.x = vb.x; vec2.y = vb.y;
+		vec3.x = vc.x; vec3.y = vc.y;
+		vect.x = p.x; vect.y = p.y;
+		break;
+	default:
+		assert(0);
+	}
+	if(CrossProduct2D(vec2-vec1, vect-vec1) < 0.0f) return false;
+	if(CrossProduct2D(vec3-vec1, vect-vec1) > 0.0f) return false;
+	if(CrossProduct2D(vec3-vec2, vect-vec2) < 0.0f) return false;
+	point.point = p;
+	point.normal = normal;
+	point.surfaceA = 0;
+	point.pieceA = 0;
+	point.surfaceB = tri.surface;
+	point.pieceB = 0;
+	t = t0;
+	return true;
 }
 
 float
