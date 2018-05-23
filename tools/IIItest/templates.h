@@ -144,7 +144,15 @@ public:
 		while(head.next != &tail)
 			Remove(head.next);
 	}
-	// Insert
+	CLink<T> *Insert(T const &item){
+		CLink<T> *node = freeHead.next;
+		if(node == &freeTail)
+			return nil;
+		node->item = item;
+		node->Remove();		// remove from free list
+		head.Insert(node);
+		return node;
+	}
 	CLink<T> *InsertSorted(T const &item){
 		CLink<T> *sort;
 		for(sort = head.next; sort != &tail; sort = sort->next)

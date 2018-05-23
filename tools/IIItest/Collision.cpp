@@ -14,6 +14,14 @@ enum Direction
 };
 
 eLevelName CCollision::ms_collisionInMemory;
+CLinkList<CColModel*> CCollision::ms_colModelCache;
+
+void
+CCollision::Init(void)
+{
+	ms_colModelCache.Init(NUMCOLCACHELINKS);
+	ms_collisionInMemory = LEVEL_NONE;
+}
 
 void
 CCollision::Update(void)
@@ -77,6 +85,12 @@ CCollision::LoadCollisionWhenINeedIt(bool changeLevel)
 		CTimer::Update();
 	}
 }
+
+
+//
+// Test
+//
+
 
 bool
 CCollision::TestSphereSphere(const CColSphere &s1, const CColSphere &s2)
@@ -362,6 +376,46 @@ CCollision::TestSphereTriangle(const CColSphere &sphere,
 
 	return dist < sphere.radius;
 }
+
+bool
+CCollision::TestLineOfSight(CColLine &line, const CMatrix &matrix, CColModel &model, bool ignoreSurf78)
+{
+	static CMatrix matTransform;
+	CColLine newline;
+	int i;
+
+	// transform line to model space
+	Invert(matrix, matTransform);
+	newline.Set(matTransform * line.p0, matTransform * line.p1);
+
+	// If we don't intersect with the bounding box, no chance on the rest
+	if(!TestLineBox(newline, model.boundingBox))
+		return false;
+
+	for(i = 0; i < model.numSpheres; i++)
+		if(!ignoreSurf78 || model.spheres[i].surface != 7 && model.spheres[i].surface != 8)
+			if(TestLineSphere(newline, model.spheres[i]))
+				return true;
+
+	for(i = 0; i < model.numBoxes; i++)
+		if(!ignoreSurf78 || model.boxes[i].surface != 7 && model.boxes[i].surface != 8)
+			if(TestLineBox(newline, model.boxes[i]))
+				return true;
+
+	CalculateTrianglePlanes(&model);
+	for(i = 0; i < model.numTriangles; i++)
+		if(!ignoreSurf78 || model.triangles[i].surface != 7 && model.triangles[i].surface != 8)
+			if(TestLineTriangle(newline, model.vertices, model.triangles[i], model.trianglePlanes[i]))
+				return true;
+
+	return false;
+}
+
+
+//
+// Process
+//
+
 
 // Let s1 collide into s2.
 // limit is a squared second radius for s1, set to the new collision radius.
@@ -709,7 +763,7 @@ CCollision::ProcessVerticalLineTriangle(const CColLine &line,
 		poly->verts[0] = va;
 		poly->verts[1] = vb;
 		poly->verts[2] = vc;
-		poly->b = true;
+		poly->valid = true;
 	}
 	limit = t;
 	return true;
@@ -867,6 +921,47 @@ CCollision::ProcessSphereTriangle(const CColSphere &sphere,
 	return true;
 }
 
+bool
+CCollision::ProcessLineOfSight(const CColLine &line,
+	const CMatrix &matrix, CColModel &model,
+	CColPoint &point, float &limit, bool ignoreSurf78)
+{
+	static CMatrix matTransform;
+	CColLine newline;
+	int i;
+
+	// transform line to model space
+	Invert(matrix, matTransform);
+	newline.Set(matTransform * line.p0, matTransform * line.p1);
+
+	// If we don't intersect with the bounding box, no chance on the rest
+	if(!TestLineBox(newline, model.boundingBox))
+		return false;
+
+	float coldist = limit;
+	for(i = 0; i < model.numSpheres; i++)
+		if(!ignoreSurf78 || model.spheres[i].surface != 7 && model.spheres[i].surface != 8)
+			ProcessLineSphere(newline, model.spheres[i], point, coldist);
+
+	for(i = 0; i < model.numBoxes; i++)
+		if(!ignoreSurf78 || model.boxes[i].surface != 7 && model.boxes[i].surface != 8)
+			ProcessLineBox(newline, model.boxes[i], point, coldist);
+
+	CalculateTrianglePlanes(&model);
+	for(i = 0; i < model.numTriangles; i++)
+		if(!ignoreSurf78 || model.triangles[i].surface != 7 && model.triangles[i].surface != 8)
+			ProcessLineTriangle(newline, model.vertices, model.triangles[i], model.trianglePlanes[i], point, coldist);
+
+	if(coldist < limit){
+		point.point = matrix * point.point;
+		point.normal = Multiply3x3(matrix, point.normal);
+		limit = coldist;
+		return true;
+	}
+	return false;
+}
+
+
 float
 CCollision::DistToLine(const CVector *l0, const CVector *l1, const CVector *point)
 {
@@ -881,6 +976,10 @@ CCollision::DistToLine(const CVector *l0, const CVector *l1, const CVector *poin
 	// distance to line
 	return sqrt((*point - *l0).MagnitudeSqr() - dot*dot/lensq);
 }
+
+//
+// Misc
+//
 
 // same as above but also return the point on the line
 float
@@ -899,6 +998,84 @@ CCollision::DistToLine(const CVector *l0, const CVector *l1, const CVector *poin
 	return (*point - closest).Magnitude();
 }
 
+void
+CCollision::CalculateTrianglePlanes(CColModel *model)
+{
+	if(model->numTriangles == 0)
+		return;
+
+	CLink<CColModel*> *lptr;
+	if(model->trianglePlanes){
+		// re-insert at front so it's not removed again soon
+		lptr = model->GetLinkPtr();
+		lptr->Remove();
+		lptr->Insert(&ms_colModelCache.head);
+	}else{
+		lptr = ms_colModelCache.Insert(model);
+		if(lptr == nil){
+			// make room if we have to, remove last in list
+			lptr = ms_colModelCache.tail.prev;
+			lptr->item->RemoveTrianglePlanes();
+			ms_colModelCache.Remove(lptr);
+			// now this cannot fail
+			lptr = ms_colModelCache.Insert(model);
+			assert(lptr);
+		}
+		model->CalculateTrianglePlanes();
+		model->SetLinkPtr(lptr);
+	}
+}
+
+void
+CCollision::DrawColModel(const CMatrix &mat, const CColModel &colModel)
+{
+	static rw::RGBA red = { 255, 0, 0, 255 };
+	static rw::RGBA green = { 0, 255, 0, 255 };
+	static rw::RGBA magenta = { 255, 0, 255, 255 };
+	static rw::RGBA cyan = { 0, 255, 255, 255 };
+	static rw::RGBA white = { 255, 255, 255, 255 };
+	int i;
+	CVector verts[3];
+
+	rw::SetRenderState(rw::ZWRITEENABLE, 1);
+	rw::SetRenderState(rw::VERTEXALPHA, 1);
+	rw::SetRenderState(rw::SRCBLEND, rw::BLENDSRCALPHA);
+	rw::SetRenderState(rw::DESTBLEND, rw::BLENDINVSRCALPHA);
+	rw::engine->imtexture = nil;
+
+	CDebugDraw::RenderWireBox(mat, colModel.boundingBox.min, colModel.boundingBox.max, red);
+
+	for(i = 0; i < colModel.numSpheres; i++){
+		CVector center = mat * colModel.spheres[i].center;
+		CDebugDraw::RenderWireSphere(center, colModel.spheres[i].radius, magenta);
+	}
+
+	for(i = 0; i < colModel.numBoxes; i++)
+		CDebugDraw::RenderWireBox(mat, colModel.boxes[i].min, colModel.boxes[i].max, white);
+
+	for(i = 0; i < colModel.numLines; i++){
+		verts[0] = colModel.lines[i].p0;
+		verts[1] = colModel.lines[i].p1;
+		rw::V3d::transformPoints((rw::V3d*)verts, (rw::V3d*)verts, 2, &mat.m_matrix);
+		CDebugDraw::RenderLine(verts[0], verts[1], cyan, cyan);
+	}
+
+	for(i = 0; i < colModel.numTriangles; i++){
+		verts[0] = colModel.vertices[colModel.triangles[i].a];
+		verts[1] = colModel.vertices[colModel.triangles[i].b];
+		verts[2] = colModel.vertices[colModel.triangles[i].c];
+		rw::V3d::transformPoints((rw::V3d*)verts, (rw::V3d*)verts, 3, &mat.m_matrix);
+		CDebugDraw::RenderWireTri(verts, green);
+	}
+
+	CDebugDraw::RenderAndEmptyRenderBuffer();
+
+	rw::SetRenderState(rw::ZWRITEENABLE, 1);
+	rw::SetRenderState(rw::ZTESTENABLE, 1);
+	rw::SetRenderState(rw::VERTEXALPHA, 0);
+	rw::SetRenderState(rw::SRCBLEND, rw::BLENDSRCALPHA);
+	rw::SetRenderState(rw::DESTBLEND, rw::BLENDINVSRCALPHA);
+}
 
 /*
  * ColModel code
@@ -960,74 +1137,73 @@ CColTrianglePlane::Set(const CVector *v, CColTriangle &tri)
 
 CColModel::CColModel(void)
 {
-	this->numSpheres = 0;
-	this->spheres = NULL;
-	this->numLines = 0;
-	this->lines = NULL;
-	this->numBoxes = 0;
-	this->boxes = NULL;
-	this->numTriangles = 0;
-	this->vertices = NULL;
-	this->triangles = NULL;
+	numSpheres = 0;
+	spheres = nil;
+	numLines = 0;
+	lines = nil;
+	numBoxes = 0;
+	boxes = nil;
+	numTriangles = 0;
+	vertices = nil;
+	triangles = nil;
+	trianglePlanes = nil;
+	level = CGame::currLevel;
+	ownsCollisionVolumes = true;
 }
 
 CColModel::~CColModel(void)
 {
-	delete[] this->spheres;
-	delete[] this->lines;
-	delete[] this->boxes;
-	delete[] this->vertices;
-	delete[] this->triangles;
+	RemoveCollisionVolumes();
+	RemoveTrianglePlanes();
 }
 
+void
+CColModel::RemoveCollisionVolumes(void)
+{
+	if(ownsCollisionVolumes){
+		rwFree(spheres);
+		rwFree(lines);
+		rwFree(boxes);
+		rwFree(vertices);
+		rwFree(triangles);
+	}
+	numSpheres = 0;
+	numLines = 0;
+	numBoxes = 0;
+	numTriangles = 0;
+	spheres = nil;
+	lines = nil;
+	boxes = nil;
+	vertices = nil;
+	triangles = nil;
+}
 
 void
-CCollision::DrawColModel(const CMatrix &mat, const CColModel &colModel)
+CColModel::CalculateTrianglePlanes(void)
 {
-	static rw::RGBA red = { 255, 0, 0, 255 };
-	static rw::RGBA green = { 0, 255, 0, 255 };
-	static rw::RGBA magenta = { 255, 0, 255, 255 };
-	static rw::RGBA cyan = { 0, 255, 255, 255 };
-	static rw::RGBA white = { 255, 255, 255, 255 };
-	int i;
-	CVector verts[3];
+	// HACK: allocate space for one more element to stuff the link pointer into
+	trianglePlanes = rwNewT(CColTrianglePlane, numTriangles+1, 0);
+	for(int i = 0; i < numTriangles; i++)
+		trianglePlanes[i].Set(vertices, triangles[i]);
+}
 
-	rw::SetRenderState(rw::ZWRITEENABLE, 1);
-	rw::SetRenderState(rw::VERTEXALPHA, 1);
-	rw::SetRenderState(rw::SRCBLEND, rw::BLENDSRCALPHA);
-	rw::SetRenderState(rw::DESTBLEND, rw::BLENDINVSRCALPHA);
-	rw::engine->imtexture = nil;
+void
+CColModel::RemoveTrianglePlanes(void)
+{
+	rwFree(trianglePlanes);
+	trianglePlanes = nil;
+}
 
-	CDebugDraw::RenderWireBox(mat, colModel.boundingBox.min, colModel.boundingBox.max, red);
+CLink<CColModel*>*
+CColModel::GetLinkPtr(void)
+{
+	assert(trianglePlanes);
+	return *(CLink<CColModel*>**)ALIGNPTR(&trianglePlanes[numTriangles]);
+}
 
-	for(i = 0; i < colModel.numSpheres; i++){
-		CVector center = mat * colModel.spheres[i].center;
-		CDebugDraw::RenderWireSphere(center, colModel.spheres[i].radius, magenta);
-	}
-
-	for(i = 0; i < colModel.numBoxes; i++)
-		CDebugDraw::RenderWireBox(mat, colModel.boxes[i].min, colModel.boxes[i].max, white);
-
-	for(i = 0; i < colModel.numLines; i++){
-		verts[0] = colModel.lines[i].p0;
-		verts[1] = colModel.lines[i].p1;
-		rw::V3d::transformPoints((rw::V3d*)verts, (rw::V3d*)verts, 2, &mat.m_matrix);
-		CDebugDraw::RenderLine(verts[0], verts[1], cyan, cyan);
-	}
-
-	for(i = 0; i < colModel.numTriangles; i++){
-		verts[0] = colModel.vertices[colModel.triangles[i].a];
-		verts[1] = colModel.vertices[colModel.triangles[i].b];
-		verts[2] = colModel.vertices[colModel.triangles[i].c];
-		rw::V3d::transformPoints((rw::V3d*)verts, (rw::V3d*)verts, 3, &mat.m_matrix);
-		CDebugDraw::RenderWireTri(verts, green);
-	}
-
-	CDebugDraw::RenderAndEmptyRenderBuffer();
-
-	rw::SetRenderState(rw::ZWRITEENABLE, 1);
-	rw::SetRenderState(rw::ZTESTENABLE, 1);
-	rw::SetRenderState(rw::VERTEXALPHA, 0);
-	rw::SetRenderState(rw::SRCBLEND, rw::BLENDSRCALPHA);
-	rw::SetRenderState(rw::DESTBLEND, rw::BLENDINVSRCALPHA);
+void
+CColModel::SetLinkPtr(CLink<CColModel*> *lptr)
+{
+	assert(trianglePlanes);
+	*(CLink<CColModel*>**)ALIGNPTR(&trianglePlanes[numTriangles]) = lptr;
 }

@@ -628,7 +628,7 @@ CFileLoader::LoadCollisionModel(CColModel *colmodel, rw::uint8 *buf)
 	colmodel->numSpheres = *(int16*)buf;
 	buf += 4;
 	if(colmodel->numSpheres){
-		colmodel->spheres = new CColSphere[colmodel->numSpheres];
+		colmodel->spheres = rwNewT(CColSphere, colmodel->numSpheres, 0);
 		for(int i = 0; i < colmodel->numSpheres; i++){
 			colmodel->spheres[i].Set(*(float*)buf, *(CVector*)(buf+4), buf[16], buf[17]);
 			buf += 20;
@@ -638,7 +638,7 @@ CFileLoader::LoadCollisionModel(CColModel *colmodel, rw::uint8 *buf)
 	colmodel->numLines = *(int16*)buf;
 	buf += 4;
 	if(colmodel->numLines){
-		colmodel->lines = new CColLine[colmodel->numLines];
+		colmodel->lines = rwNewT(CColLine, colmodel->numLines, 0);
 		for(int i = 0; i < colmodel->numLines; i++){
 			colmodel->lines[i].Set(*(CVector*)buf, *(CVector*)(buf+12));
 			buf += 24;
@@ -648,7 +648,7 @@ CFileLoader::LoadCollisionModel(CColModel *colmodel, rw::uint8 *buf)
 	colmodel->numBoxes = *(int16*)buf;
 	buf += 4;
 	if(colmodel->numBoxes){
-		colmodel->boxes = new CColBox[colmodel->numBoxes];
+		colmodel->boxes = rwNewT(CColBox, colmodel->numBoxes, 0);
 		for(int i = 0; i < colmodel->numBoxes; i++){
 			colmodel->boxes[i].Set(*(CVector*)buf, *(CVector*)(buf+12), buf[24], buf[25]);
 			buf += 28;
@@ -658,7 +658,7 @@ CFileLoader::LoadCollisionModel(CColModel *colmodel, rw::uint8 *buf)
 	int32 numVertices = *(int16*)buf;
 	buf += 4;
 	if(numVertices){
-		colmodel->vertices = new CVector[numVertices];
+		colmodel->vertices = rwNewT(CVector, numVertices, 0);
 		for(int i = 0; i < numVertices; i++){
 			colmodel->vertices[i] = *(CVector*)buf;
 			buf += 12;
@@ -668,7 +668,7 @@ CFileLoader::LoadCollisionModel(CColModel *colmodel, rw::uint8 *buf)
 	colmodel->numTriangles = *(int16*)buf;
 	buf += 4;
 	if(colmodel->numTriangles){
-		colmodel->triangles = new CColTriangle[colmodel->numTriangles];
+		colmodel->triangles = rwNewT(CColTriangle, colmodel->numTriangles, 0);
 		for(int i = 0; i < colmodel->numTriangles; i++){
 			colmodel->triangles[i].Set(*(int32*)buf, *(int32*)(buf+4), *(int32*)(buf+8), buf[12]);
 			buf += 16;

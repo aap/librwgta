@@ -18,9 +18,12 @@ using rw::int16;
 using rw::uint32;
 using rw::int32;
 using rw::bool32;
+typedef rw::uintptr uintptr;
 typedef unsigned int uint;
 typedef unsigned char uchar;
 typedef unsigned short ushort;
+
+#define ALIGNPTR(p) (void*)((((uintptr)(void*)p) + sizeof(void*)-1) & ~(sizeof(void*)-1))
 
 // taken from skeleton
 struct Globals

@@ -52,6 +52,7 @@ CGame::Initialise(void)
 	CPathFind::AllocatePathFindInfoMem(PATHNODESIZE);
 	CWeather::Init();
 	CCullZones::Init();
+	CCollision::Init();
 	CTheZones::Init();
 
 	cHandlingDataMgr::Initialise();

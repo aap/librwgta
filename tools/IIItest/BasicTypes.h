@@ -70,15 +70,23 @@ public:
 	}
 };
 
-inline float DotProduct(const CVector &v1, const CVector &v2) {
+inline float
+DotProduct(const CVector &v1, const CVector &v2)
+{
 	return v1.x*v2.x + v1.y*v2.y + v1.z*v2.z;
 }
-inline CVector CrossProduct(const CVector &v1, const CVector &v2) {
+
+inline CVector
+CrossProduct(const CVector &v1, const CVector &v2)
+{
 	return CVector(v1.y*v2.z - v1.z*v2.y,
 		v1.z*v2.x - v1.x*v2.z,
 		v1.x*v2.y - v1.y*v2.x);
 }
-inline float CrossProduct2D(const CVector2D &v1, const CVector2D &v2) {
+
+inline float
+CrossProduct2D(const CVector2D &v1, const CVector2D &v2)
+{
 	return v1.x*v2.y - v1.y*v2.x;
 }
 
@@ -158,6 +166,14 @@ public:
 	}
 };
 
+inline void
+Invert(const CMatrix &m1, CMatrix &m2)
+{
+	// GTA handles this as a raw 4x4 orthonormal(?) matrix
+	// and trashes the RW flags, let's not do that
+	rw::Matrix::invert(&m2.m_matrix, &m1.m_matrix);
+}
+
 inline CVector
 operator*(const CMatrix &mat, const CVector &vec)
 {
@@ -165,6 +181,15 @@ operator*(const CMatrix &mat, const CVector &vec)
 		mat.m_matrix.right.x * vec.x + mat.m_matrix.up.x * vec.y + mat.m_matrix.at.x * vec.z + mat.m_matrix.pos.x,
 		mat.m_matrix.right.y * vec.y + mat.m_matrix.up.y * vec.y + mat.m_matrix.at.y * vec.z + mat.m_matrix.pos.y,
 		mat.m_matrix.right.z * vec.z + mat.m_matrix.up.z * vec.y + mat.m_matrix.at.z * vec.z + mat.m_matrix.pos.z);
+}
+
+inline CVector
+Multiply3x3(const CMatrix &mat, const CVector &vec)
+{
+	return CVector(
+		mat.m_matrix.right.x * vec.x + mat.m_matrix.up.x * vec.y + mat.m_matrix.at.x * vec.z,
+		mat.m_matrix.right.y * vec.y + mat.m_matrix.up.y * vec.y + mat.m_matrix.at.y * vec.z,
+		mat.m_matrix.right.z * vec.z + mat.m_matrix.up.z * vec.y + mat.m_matrix.at.z * vec.z);
 }
 
 class CRGBA
