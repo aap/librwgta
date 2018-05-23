@@ -309,7 +309,8 @@ CCollision::TestLineSphere(const CColLine &line, const CColSphere &sph)
 }
 
 bool
-CCollision::TestSphereTriangle(const CColSphere &sphere, const CVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane)
+CCollision::TestSphereTriangle(const CColSphere &sphere,
+	const CVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane)
 {
 	// If sphere and plane don't intersect, no collision
 	if(abs(plane.CalcPoint(sphere.center)) > sphere.radius)
@@ -363,16 +364,16 @@ CCollision::TestSphereTriangle(const CColSphere &sphere, const CVector *verts, c
 }
 
 // Let s1 collide into s2.
-// r1sq is a squared second radius for s1, set to the new collision radius.
-// point is set to the point on s2, normal points from s2 to s1
+// limit is a squared second radius for s1, set to the new collision radius.
+// point is set to the point on s2
 bool
-CCollision::ProcessSphereSphere(const CColSphere &s1, const CColSphere &s2, CColPoint &point, float &r1sq)
+CCollision::ProcessSphereSphere(const CColSphere &s1, const CColSphere &s2, CColPoint &point, float &limit)
 {
 	CVector dist = s1.center - s2.center;
 	float d = dist.Magnitude() - s2.radius;	// distance from s1's center to s2
 	float dc = d < 0.0f ? 0.0f : d;		// clamp to zero, i.e. if s1's center is inside s2
 	// no collision if sphere is not close enough
-	if(r1sq <= dc*dc || s1.radius <= dc)
+	if(limit <= dc*dc || s1.radius <= dc)
 		return false;
 	dist.Normalise();
 	point.point = s1.center - dist*dc;
@@ -382,14 +383,220 @@ CCollision::ProcessSphereSphere(const CColSphere &s1, const CColSphere &s2, CCol
 	point.surfaceB = s2.surface;
 	point.pieceB = s2.piece;
 	point.depth = s1.radius - d;	// sphere overlap
-	r1sq = dc*dc;			// radius with collision radius
+	limit = dc*dc;			// collision radius
+	return true;
+}
+
+bool
+CCollision::ProcessSphereBox(const CColSphere &sph, const CColBox &box, CColPoint &point, float &limit)
+{
+	CVector p;
+	CVector dist;
+
+	// GTA's code is too complicated, uses a huge 3x3x3 if statement
+	// we can simplify the structure a lot
+
+	// first make sure we have a collision at all
+	if(sph.center.x + sph.radius < box.min.x) return false;
+	if(sph.center.x - sph.radius > box.max.x) return false;
+	if(sph.center.y + sph.radius < box.min.y) return false;
+	if(sph.center.y - sph.radius > box.max.y) return false;
+	if(sph.center.z + sph.radius < box.min.z) return false;
+	if(sph.center.z - sph.radius > box.max.z) return false;
+
+	// Now find out where the sphere center lies in relation to all the sides
+	int xpos = sph.center.x < box.min.x ? 1 :
+	           sph.center.x > box.max.x ? 2 :
+	           0;
+	int ypos = sph.center.y < box.min.y ? 1 :
+	           sph.center.y > box.max.y ? 2 :
+	           0;
+	int zpos = sph.center.z < box.min.z ? 1 :
+	           sph.center.z > box.max.z ? 2 :
+	           0;
+
+	if(xpos == 0 && ypos == 0 && zpos == 0){
+		// sphere is inside the box
+		p = (box.min + box.max)*0.5f;
+
+		dist = sph.center - p;
+		float lensq = dist.MagnitudeSqr();
+		if(lensq < limit){
+			point.normal = dist * (1.0f/sqrt(lensq));
+			point.point = sph.center - point.normal;
+			point.surfaceA = sph.surface;
+			point.pieceA = sph.piece;
+			point.surfaceB = box.surface;
+			point.pieceB = box.piece;
+
+			// find absolute distance to the closer side in each dimension
+			float dx = dist.x > 0.0f ?
+				box.max.x - sph.center.x :
+				sph.center.x - box.min.x;
+			float dy = dist.y > 0.0f ?
+				box.max.y - sph.center.y :
+				sph.center.y - box.min.y;
+			float dz = dist.z > 0.0f ?
+				box.max.z - sph.center.z :
+				sph.center.z - box.min.z;
+			// collision depth is maximum of that:
+			if(dx > dy && dx > dz)
+				point.depth = dx;
+			else if(dy > dz)
+				point.depth = dy;
+			else
+				point.depth = dz;
+			return true;
+		}
+	}else{
+		// sphere is outside.
+		// closest point on box:
+		p.x = xpos == 1 ? box.min.x :
+		      xpos == 2 ? box.max.x :
+		      sph.center.x;
+		p.y = ypos == 1 ? box.min.y :
+		      ypos == 2 ? box.max.y :
+		      sph.center.y;
+		p.z = zpos == 1 ? box.min.z :
+		      zpos == 2 ? box.max.z :
+		      sph.center.z;
+
+		dist = sph.center - p;
+		float lensq = dist.MagnitudeSqr();
+		if(lensq < limit){
+			float len = sqrt(lensq);
+			point.point = p;
+			point.normal = dist * (1.0f/len);
+			point.surfaceA = sph.surface;
+			point.pieceA = sph.piece;
+			point.surfaceB = box.surface;
+			point.pieceB = box.piece;
+			point.depth = sph.radius - len;
+			limit = lensq;
+			return true;
+		}
+	}
+	return false;
+}
+
+bool
+CCollision::ProcessLineBox(const CColLine &line, const CColBox &box, CColPoint &point, float &limit)
+{
+	float mint, t, x, y, z;
+	CVector normal;
+	CVector p;
+
+	mint = 1.0f;
+	// check if points are on opposite sides of min x plane
+	if((box.min.x - line.p1.x) * (box.min.x - line.p0.x) < 0.0f){
+		// parameter along line where we intersect
+		t = (box.min.x - line.p0.x) / (line.p1.x - line.p0.x);
+		// y of intersection
+		y = line.p0.y + (line.p1.y - line.p0.y)*t;
+		if(y > box.min.y && y < box.max.y){
+			// z of intersection
+			z = line.p0.z + (line.p1.z - line.p0.z)*t;
+			if(z > box.min.z && z < box.max.z)
+				if(t < mint){
+					mint = t;
+					p = CVector(box.min.x, y, z);
+					normal = CVector(-1.0f, 0.0f, 0.0f);
+				}
+		}
+	}
+
+	// max x plane
+	if((line.p1.x - box.max.x) * (line.p0.x - box.max.x) < 0.0f){
+		t = (line.p0.x - box.max.x) / (line.p0.x - line.p1.x);
+		y = line.p0.y + (line.p1.y - line.p0.y)*t;
+		if(y > box.min.y && y < box.max.y){
+			z = line.p0.z + (line.p1.z - line.p0.z)*t;
+			if(z > box.min.z && z < box.max.z)
+				if(t < mint){
+					mint = t;
+					p = CVector(box.max.x, y, z);
+					normal = CVector(1.0f, 0.0f, 0.0f);
+				}
+		}
+	}
+
+	// min y plne
+	if((box.min.y - line.p0.y) * (box.min.y - line.p1.y) < 0.0f){
+		t = (box.min.y - line.p0.y) / (line.p1.y - line.p0.y);
+		x = line.p0.x + (line.p1.x - line.p0.x)*t;
+		if(x > box.min.x && x < box.max.x){
+			z = line.p0.z + (line.p1.z - line.p0.z)*t;
+			if(z > box.min.z && z < box.max.z)
+				if(t < mint){
+					mint = t;
+					p = CVector(x, box.min.y, z);
+					normal = CVector(0.0f, -1.0f, 0.0f);
+				}
+		}
+	}
+
+	// max y plane
+	if((line.p0.y - box.max.y) * (line.p1.y - box.max.y) < 0.0f){
+		t = (line.p0.y - box.max.y) / (line.p0.y - line.p1.y);
+		x = line.p0.x + (line.p1.x - line.p0.x)*t;
+		if(x > box.min.x && x < box.max.x){
+			z = line.p0.z + (line.p1.z - line.p0.z)*t;
+			if(z > box.min.z && z < box.max.z)
+				if(t < mint){
+					mint = t;
+					p = CVector(x, box.max.y, z);
+					normal = CVector(0.0f, 1.0f, 0.0f);
+				}
+		}
+	}
+
+	// min z plne
+	if((box.min.z - line.p0.z) * (box.min.z - line.p1.z) < 0.0f){
+		t = (box.min.z - line.p0.z) / (line.p1.z - line.p0.z);
+		x = line.p0.x + (line.p1.x - line.p0.x)*t;
+		if(x > box.min.x && x < box.max.x){
+			y = line.p0.y + (line.p1.y - line.p0.y)*t;
+			if(y > box.min.y && y < box.max.y)
+				if(t < mint){
+					mint = t;
+					p = CVector(x, y, box.min.z);
+					normal = CVector(0.0f, 0.0f, -1.0f);
+				}
+		}
+	}
+
+	// max z plane
+	if((line.p0.z - box.max.z) * (line.p1.z - box.max.z) < 0.0f){
+		t = (line.p0.z - box.max.z) / (line.p0.z - line.p1.z);
+		x = line.p0.x + (line.p1.x - line.p0.x)*t;
+		if(x > box.min.x && x < box.max.x){
+			y = line.p0.y + (line.p1.y - line.p0.y)*t;
+			if(y > box.min.y && y < box.max.y)
+				if(t < mint){
+					mint = t;
+					p = CVector(x, y, box.max.z);
+					normal = CVector(0.0f, 0.0f, 1.0f);
+				}
+		}
+	}
+
+	if(mint >= limit)
+		return false;
+
+	point.point = p;
+	point.normal = normal;
+	point.surfaceA = 0;
+	point.pieceA = 0;
+	point.surfaceB = box.surface;
+	point.pieceB = box.piece;
+	limit = mint;
+
 	return true;
 }
 
 // If line.p0 lies inside sphere, no collision is registered.
-// point.normal points from sphere center to collision point
 bool
-CCollision::ProcessLineSphere(const CColLine &line, const CColSphere &sphere, CColPoint &point, float &t)
+CCollision::ProcessLineSphere(const CColLine &line, const CColSphere &sphere, CColPoint &point, float &limit)
 {
 	CVector v01 = line.p1 - line.p0;
 	CVector v0c = sphere.center - line.p0;
@@ -404,25 +611,116 @@ CCollision::ProcessLineSphere(const CColLine &line, const CColSphere &sphere, CC
 	if(diffsq < 0.0f)
 		return false;
 	// point of first intersection, in range [0,1] between p0 and p1
-	float t0 = (projline - sqrt(diffsq)) / linesq;
+	float t = (projline - sqrt(diffsq)) / linesq;
 	// if not on line or beyond t, no intersection
-	if(t0 < 0.0f || t0 > 1.0f || t0 >= t)
+	if(t < 0.0f || t > 1.0f || t >= limit)
 		return false;
-	point.point = line.p0 + v01*t0;
+	point.point = line.p0 + v01*t;
 	point.normal = point.point - sphere.center;
 	point.normal.Normalise();
 	point.surfaceA = 0;
 	point.pieceA = 0;
 	point.surfaceB = sphere.surface;
 	point.pieceB = sphere.piece;
-	t = t0;
+	limit = t;
 	return true;
 }
 
 bool
-CCollision::ProcessLineTriangle(const CColLine &line , const CVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane, CColPoint &point, float &t)
+CCollision::ProcessVerticalLineTriangle(const CColLine &line,
+	const CVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane,
+	CColPoint &point, float &limit, CStoredCollPoly *poly)
 {
-	float t0;
+	float t;
+	CVector normal;
+
+	const CVector &p0 = line.p0;
+	const CVector &va = verts[tri.a];
+	const CVector &vb = verts[tri.b];
+	const CVector &vc = verts[tri.c];
+
+	// early out bound rect test
+	if(p0.x < va.x && p0.x < vb.x && p0.x < vc.x) return false;
+	if(p0.x > va.x && p0.x > vb.x && p0.x > vc.x) return false;
+	if(p0.y < va.y && p0.y < vb.y && p0.y < vc.y) return false;
+	if(p0.y > va.y && p0.y > vb.y && p0.y > vc.y) return false;
+
+	plane.GetNormal(normal);
+	// if points are on the same side, no collision
+	if(plane.CalcPoint(p0) * plane.CalcPoint(line.p1) > 0.0f)
+		return false;
+
+	// intersection parameter on line
+	float h = (line.p1 - p0).z;
+	t = -plane.CalcPoint(p0) / (h * normal.z);
+	CVector p(p0.x, p0.y, p0.z + h*t);
+
+	CVector2D vec1, vec2, vec3, vect;
+	switch(plane.dir){
+	case DIR_X_POS:
+		vec1.x = va.y; vec1.y = va.z;
+		vec2.x = vc.y; vec2.y = vc.z;
+		vec3.x = vb.y; vec3.y = vb.z;
+		vect.x = p.y; vect.y = p.z;
+		break;
+	case DIR_X_NEG:
+		vec1.x = va.y; vec1.y = va.z;
+		vec2.x = vb.y; vec2.y = vb.z;
+		vec3.x = vc.y; vec3.y = vc.z;
+		vect.x = p.y; vect.y = p.z;
+		break;
+	case DIR_Y_POS:
+		vec1.x = va.z; vec1.y = va.x;
+		vec2.x = vc.z; vec2.y = vc.x;
+		vec3.x = vb.z; vec3.y = vb.x;
+		vect.x = p.z; vect.y = p.x;
+		break;
+	case DIR_Y_NEG:
+		vec1.x = va.z; vec1.y = va.x;
+		vec2.x = vb.z; vec2.y = vb.x;
+		vec3.x = vc.z; vec3.y = vc.x;
+		vect.x = p.z; vect.y = p.x;
+		break;
+	case DIR_Z_POS:
+		vec1.x = va.x; vec1.y = va.y;
+		vec2.x = vc.x; vec2.y = vc.y;
+		vec3.x = vb.x; vec3.y = vb.y;
+		vect.x = p.x; vect.y = p.y;
+		break;
+	case DIR_Z_NEG:
+		vec1.x = va.x; vec1.y = va.y;
+		vec2.x = vb.x; vec2.y = vb.y;
+		vec3.x = vc.x; vec3.y = vc.y;
+		vect.x = p.x; vect.y = p.y;
+		break;
+	default:
+		assert(0);
+	}
+	if(CrossProduct2D(vec2-vec1, vect-vec1) < 0.0f) return false;
+	if(CrossProduct2D(vec3-vec1, vect-vec1) > 0.0f) return false;
+	if(CrossProduct2D(vec3-vec2, vect-vec2) < 0.0f) return false;
+	point.point = p;
+	point.normal = normal;
+	point.surfaceA = 0;
+	point.pieceA = 0;
+	point.surfaceB = tri.surface;
+	point.pieceB = 0;
+	if(poly){
+		poly->verts[0] = va;
+		poly->verts[1] = vb;
+		poly->verts[2] = vc;
+		poly->b = true;
+	}
+	limit = t;
+	return true;
+}
+
+bool
+CCollision::ProcessLineTriangle(const CColLine &line ,
+	const CVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane,
+	CColPoint &point, float &limit)
+{
+	float t;
 	CVector normal;
 	plane.GetNormal(normal);
 
@@ -431,12 +729,12 @@ CCollision::ProcessLineTriangle(const CColLine &line , const CVector *verts, con
 		return false;
 
 	// intersection parameter on line
-	t0 = -plane.CalcPoint(line.p0) / DotProduct(line.p1 - line.p0, normal);
-	// early out if we're beyond t
-	if(t0 >= t)
+	t = -plane.CalcPoint(line.p0) / DotProduct(line.p1 - line.p0, normal);
+	// early out if we're beyond the limit
+	if(t >= limit)
 		return false;
 	// find point of intersection
-	CVector p = line.p0 + (line.p1-line.p0)*t0;
+	CVector p = line.p0 + (line.p1-line.p0)*t;
 
 	const CVector &va = verts[tri.a];
 	const CVector &vb = verts[tri.b];
@@ -492,14 +790,87 @@ CCollision::ProcessLineTriangle(const CColLine &line , const CVector *verts, con
 	point.pieceA = 0;
 	point.surfaceB = tri.surface;
 	point.pieceB = 0;
-	t = t0;
+	limit = t;
+	return true;
+}
+
+bool
+CCollision::ProcessSphereTriangle(const CColSphere &sphere,
+	const CVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane,
+	CColPoint &point, float &limit)
+{
+	// If sphere and plane don't intersect, no collision
+	float planedist = plane.CalcPoint(sphere.center);
+	float distsq = planedist*planedist;
+	if(abs(planedist) > sphere.radius || distsq > limit)
+		return false;
+
+	const CVector &va = verts[tri.a];
+	const CVector &vb = verts[tri.b];
+	const CVector &vc = verts[tri.c];
+
+	// calculate two orthogonal basis vectors for the triangle
+	CVector normal;
+	plane.GetNormal(normal);
+	CVector vec2 = vb - va;
+	float len = vec2.Magnitude();
+	vec2 = vec2 * (1.0f/len);
+	CVector vec1 = CrossProduct(vec2, normal);
+
+	// We know A has local coordinate [0,0] and B has [0,len].
+	// Now calculate coordinates on triangle for these two vectors:
+	CVector vac = vc - va;
+	CVector vas = sphere.center - va;
+	CVector2D b(0.0f, len);
+	CVector2D c(DotProduct(vec1, vac), DotProduct(vec2, vac));
+	CVector2D s(DotProduct(vec1, vas), DotProduct(vec2, vas));
+
+	// The three triangle lines partition the space into 6 sectors,
+	// find out in which the center lies.
+	int insideAB = CrossProduct2D(s, b) >= 0.0f;
+	int insideAC = CrossProduct2D(c, s) >= 0.0f;
+	int insideBC = CrossProduct2D(s-b, c-b) >= 0.0f;
+
+	int testcase = insideAB + insideAC + insideBC;
+	float dist = 0.0f;
+	CVector p;
+	if(testcase == 1){
+		// closest to a vertex
+		if(insideAB) p = vc;
+		else if(insideAC) p = vb;
+		else if(insideBC) p = va;
+		else assert(0);
+		dist = (sphere.center - p).Magnitude();
+	}else if(testcase == 2){
+		// closest to an edge
+		if(!insideAB) dist = DistToLine(&va, &vb, &sphere.center, p);
+		else if(!insideAC) dist = DistToLine(&va, &vc, &sphere.center, p);
+		else if(!insideBC) dist = DistToLine(&vb, &vc, &sphere.center, p);
+		else assert(0);
+	}else if(testcase == 3){
+		// center is in triangle
+		dist = planedist;
+		p = sphere.center - normal*dist;
+	}else
+		assert(0);	// front fell off
+
+	if(dist >= sphere.radius || dist*dist >= limit )
+		return false;
+
+	point.point = p;
+	point.normal = sphere.center - p;
+	point.surfaceA = sphere.surface;
+	point.pieceA = sphere.piece;
+	point.surfaceB = tri.surface;
+	point.pieceB = 0;
+	limit = dist*dist;
 	return true;
 }
 
 float
 CCollision::DistToLine(const CVector *l0, const CVector *l1, const CVector *point)
 {
-	float lensq = (*l0 - *l1).MagnitudeSqr();
+	float lensq = (*l1 - *l0).MagnitudeSqr();
 	float dot = DotProduct(*point - *l0, *l1 - *l0);
 	// Between 0 and len we're above the line.
 	// if not, calculate distance to endpoint
@@ -509,6 +880,23 @@ CCollision::DistToLine(const CVector *l0, const CVector *l1, const CVector *poin
 		return (*point - *l1).Magnitude();
 	// distance to line
 	return sqrt((*point - *l0).MagnitudeSqr() - dot*dot/lensq);
+}
+
+// same as above but also return the point on the line
+float
+CCollision::DistToLine(const CVector *l0, const CVector *l1, const CVector *point, CVector &closest)
+{
+	float lensq = (*l1 - *l0).MagnitudeSqr();
+	float dot = DotProduct(*point - *l0, *l1 - *l0);
+	// find out which point we're closest to
+	if(dot <= 0.0f)
+		closest = *l0;
+	else if(dot >= lensq)
+		closest = *l1;
+	else
+		closest = *l0 + (*l1 - *l0)*(dot/lensq);
+	// this is the distance
+	return (*point - closest).Magnitude();
 }
 
 

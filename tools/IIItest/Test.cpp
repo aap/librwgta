@@ -44,8 +44,9 @@ void
 CTest::Update(void)
 {
 #ifdef COLTEST
-//	sphere1.center = TheCamera.m_target;
-	line1.Set(TheCamera.m_target, CVector(TheCamera.m_target) + CVector(2.0f, 2.0f, 5.0f));
+	sphere1.center = TheCamera.m_target;
+//	line1.Set(TheCamera.m_target, CVector(TheCamera.m_target) + CVector(2.0f, 2.0f, 5.0f));
+//	line1.Set(TheCamera.m_target, CVector(TheCamera.m_target) + CVector(0.0f, 0.0f, 5.0f));
 #endif
 }
 
@@ -65,8 +66,8 @@ CTest::Render(void)
 
 	CDebugDraw::RenderWireTri(verts, tri1.a, tri1.b, tri1.c, white);
 	CColTrianglePlane plane;
-
 	plane.Set(verts, tri1);
+
 //	if(CCollision::TestLineSphere(line1, sphere2))
 //	if(CCollision::TestVerticalLineBox(line1, box1))
 //	if(CCollision::TestLineBox(line1, box1))
@@ -86,19 +87,23 @@ CTest::Render(void)
 	CColPoint point;
 	float t = 1.0f;
 //	if(CCollision::ProcessLineSphere(line1, sphere2, point, t)){
-	if(CCollision::ProcessLineTriangle(line1, verts, tri1, plane, point, t)){
-		CDebugDraw::RenderLine(line1.p0, line1.p1, red, red);
-		CDebugDraw::RenderWireSphere(point.point, 0.05f, blue);
-	}else
-		CDebugDraw::RenderLine(line1.p0, line1.p1, white, white);
-
-//	float r = sphere1.radius;
-//	if(CCollision::ProcessSphereSphere(sphere1, sphere2, point, r)){
-//		CDebugDraw::RenderWireSphere(sphere1.center, sphere1.radius, red);
-//		CDebugDraw::RenderWireSphere(sphere1.center, r, green);
+//	if(CCollision::ProcessLineTriangle(line1, verts, tri1, plane, point, t)){
+//	if(CCollision::ProcessVerticalLineTriangle(line1, verts, tri1, plane, point, t, nil)){
+//	if(CCollision::ProcessLineBox(line1, box1, point, t)){
+//		CDebugDraw::RenderLine(line1.p0, line1.p1, red, red);
 //		CDebugDraw::RenderWireSphere(point.point, 0.05f, blue);
 //	}else
-//		CDebugDraw::RenderWireSphere(sphere1.center, sphere1.radius, white);
+//		CDebugDraw::RenderLine(line1.p0, line1.p1, white, white);
+
+	float r = sphere1.radius*sphere1.radius;
+//	if(CCollision::ProcessSphereSphere(sphere1, sphere2, point, r)){
+//	if(CCollision::ProcessSphereBox(sphere1, box1, point, r)){
+	if(CCollision::ProcessSphereTriangle(sphere1, verts, tri1, plane, point, r)){
+		CDebugDraw::RenderWireSphere(sphere1.center, sphere1.radius, red);
+		CDebugDraw::RenderWireSphere(sphere1.center, sqrt(r), green);
+		CDebugDraw::RenderWireSphere(point.point, 0.05f, blue);
+	}else
+		CDebugDraw::RenderWireSphere(sphere1.center, sphere1.radius, white);
 
 	CDebugDraw::RenderAndEmptyRenderBuffer();
 #endif

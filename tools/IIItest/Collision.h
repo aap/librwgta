@@ -56,6 +56,7 @@ struct CColPoint
 {
 	CVector point;
 	int pad1;
+	// the surface normal on the surface of point
 	CVector normal;
 	int pad2;
 	uint8 surfaceA;
@@ -63,6 +64,12 @@ struct CColPoint
 	uint8 surfaceB;
 	uint8 pieceB;
 	float depth;
+};
+
+struct CStoredCollPoly
+{
+	CVector verts[3];
+	bool b;
 };
 
 struct CColModel
@@ -105,19 +112,20 @@ public:
 	static bool TestSphereTriangle(const CColSphere &sphere, const CVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane);
 	// LineOfSight
 
-	static bool ProcessSphereSphere(const CColSphere &s1, const CColSphere &s2, CColPoint &point, float &r1sq);
-//	static bool ProcessSphereBox(CColSphere const&,CColBox const&,CColPoint &,float &);
-//	static bool ProcessLineBox(const CColLine &line, const CColBox &box, CColPoint &point, float &x);
-//	static bool ProcessVerticalLineTriangle(CColLine const&,CompressedVector const*,CColTriangle const&,CColTrianglePlane const&,CColPoint &,float &,CStoredCollPoly *);
-	static bool ProcessLineTriangle(const CColLine &line , const CVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane, CColPoint &point, float &t);
-	static bool ProcessLineSphere(const CColLine &line, const CColSphere &sphere, CColPoint &point, float &t);
-//	static bool ProcessSphereTriangle(CColSphere const&,CompressedVector const*,CColTriangle const&,CColTrianglePlane const&,CColPoint &,float &);
+	static bool ProcessSphereSphere(const CColSphere &s1, const CColSphere &s2, CColPoint &point, float &limit);
+	static bool ProcessSphereBox(const CColSphere &sph, const CColBox &box, CColPoint &point, float &limit);
+	static bool ProcessLineBox(const CColLine &line, const CColBox &box, CColPoint &point, float &limit);
+	static bool ProcessVerticalLineTriangle(const CColLine &line, const CVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane, CColPoint &point, float &limit, CStoredCollPoly *poly);
+	static bool ProcessLineTriangle(const CColLine &line , const CVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane, CColPoint &point, float &limit);
+	static bool ProcessLineSphere(const CColLine &line, const CColSphere &sphere, CColPoint &point, float &limit);
+	static bool ProcessSphereTriangle(const CColSphere &sph, const CVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane, CColPoint &point, float &limit);
 
 //	static bool ProcessLineOfSight(CColLine const&,CMatrix const&,CColModel &,CColPoint &,float &,bool);
 //	static bool ProcessVerticalLine(CColLine const&,CMatrix const&,CColModel &,CColPoint &,float &,bool,CStoredCollPoly *);
 //	static bool ProcessColModels(CMatrix const&,CColModel &,CMatrix const&,CColModel &,CColPoint *,CColPoint *,float *);
 
 	static float DistToLine(const CVector *l0, const CVector *l1, const CVector *point);
+	static float DistToLine(const CVector *l0, const CVector *l1, const CVector *point, CVector &closest);
 };
 
 #endif
