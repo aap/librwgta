@@ -54,8 +54,9 @@ CTest::Update(void)
 {
 #ifdef COLTEST
 //	sphere1.center = TheCamera.m_target;
-	line1.Set(TheCamera.m_target, CVector(TheCamera.m_target) + CVector(2.0f, 2.0f, 5.0f));
+//	line1.Set(TheCamera.m_target, CVector(TheCamera.m_target) + CVector(2.0f, 2.0f, 5.0f));
 //	line1.Set(TheCamera.m_target, CVector(TheCamera.m_target) + CVector(0.0f, 0.0f, 5.0f));
+	line1.Set(CVector(TheCamera.m_target) + CVector(0.0f, 0.0f, 5.0f), TheCamera.m_target);
 //	modelmat.m_matrix.pos = TheCamera.m_target;
 #endif
 }
@@ -122,11 +123,12 @@ CTest::Render(void)
 //	else
 //		CDebugDraw::RenderLine(line1.p0, line1.p1, white, white);
 
-	if(CCollision::ProcessLineOfSight(line1, modelmat, *CModelInfo::GetModelInfo(105)->GetColModel(), point, t, false)){
+//	if(CCollision::ProcessLineOfSight(line1, modelmat, *CModelInfo::GetModelInfo(105)->GetColModel(), point, t, false)){
+	if(CCollision::ProcessVerticalLine(line1, modelmat, *CModelInfo::GetModelInfo(105)->GetColModel(), point, t, false, NULL)){
 		CDebugDraw::RenderLine(line1.p0, line1.p1, red, red);
 		CDebugDraw::RenderWireSphere(point.point, 0.05f, blue);
 	}else
-		CDebugDraw::RenderLine(line1.p0, line1.p1, white, white);
+		CDebugDraw::RenderLine(line1.p0, line1.p1, white, blue);
 
 	CDebugDraw::RenderAndEmptyRenderBuffer();
 #endif

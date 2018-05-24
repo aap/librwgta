@@ -416,18 +416,17 @@ CCollision::TestLineOfSight(CColLine &line, const CMatrix &matrix, CColModel &mo
 // Process
 //
 
+// For Spheres mindist is the squared distance to its center
+// For Lines mindist is between [0,1]
 
-// Let s1 collide into s2.
-// limit is a squared second radius for s1, set to the new collision radius.
-// point is set to the point on s2
 bool
-CCollision::ProcessSphereSphere(const CColSphere &s1, const CColSphere &s2, CColPoint &point, float &limit)
+CCollision::ProcessSphereSphere(const CColSphere &s1, const CColSphere &s2, CColPoint &point, float &mindistsq)
 {
 	CVector dist = s1.center - s2.center;
 	float d = dist.Magnitude() - s2.radius;	// distance from s1's center to s2
 	float dc = d < 0.0f ? 0.0f : d;		// clamp to zero, i.e. if s1's center is inside s2
 	// no collision if sphere is not close enough
-	if(limit <= dc*dc || s1.radius <= dc)
+	if(mindistsq <= dc*dc || s1.radius <= dc)
 		return false;
 	dist.Normalise();
 	point.point = s1.center - dist*dc;
@@ -437,12 +436,12 @@ CCollision::ProcessSphereSphere(const CColSphere &s1, const CColSphere &s2, CCol
 	point.surfaceB = s2.surface;
 	point.pieceB = s2.piece;
 	point.depth = s1.radius - d;	// sphere overlap
-	limit = dc*dc;			// collision radius
+	mindistsq = dc*dc;		// collision radius
 	return true;
 }
 
 bool
-CCollision::ProcessSphereBox(const CColSphere &sph, const CColBox &box, CColPoint &point, float &limit)
+CCollision::ProcessSphereBox(const CColSphere &sph, const CColBox &box, CColPoint &point, float &mindistsq)
 {
 	CVector p;
 	CVector dist;
@@ -475,7 +474,7 @@ CCollision::ProcessSphereBox(const CColSphere &sph, const CColBox &box, CColPoin
 
 		dist = sph.center - p;
 		float lensq = dist.MagnitudeSqr();
-		if(lensq < limit){
+		if(lensq < mindistsq){
 			point.normal = dist * (1.0f/sqrt(lensq));
 			point.point = sph.center - point.normal;
 			point.surfaceA = sph.surface;
@@ -517,7 +516,7 @@ CCollision::ProcessSphereBox(const CColSphere &sph, const CColBox &box, CColPoin
 
 		dist = sph.center - p;
 		float lensq = dist.MagnitudeSqr();
-		if(lensq < limit){
+		if(lensq < mindistsq){
 			float len = sqrt(lensq);
 			point.point = p;
 			point.normal = dist * (1.0f/len);
@@ -526,7 +525,7 @@ CCollision::ProcessSphereBox(const CColSphere &sph, const CColBox &box, CColPoin
 			point.surfaceB = box.surface;
 			point.pieceB = box.piece;
 			point.depth = sph.radius - len;
-			limit = lensq;
+			mindistsq = lensq;
 			return true;
 		}
 	}
@@ -534,7 +533,7 @@ CCollision::ProcessSphereBox(const CColSphere &sph, const CColBox &box, CColPoin
 }
 
 bool
-CCollision::ProcessLineBox(const CColLine &line, const CColBox &box, CColPoint &point, float &limit)
+CCollision::ProcessLineBox(const CColLine &line, const CColBox &box, CColPoint &point, float &mindist)
 {
 	float mint, t, x, y, z;
 	CVector normal;
@@ -634,7 +633,7 @@ CCollision::ProcessLineBox(const CColLine &line, const CColBox &box, CColPoint &
 		}
 	}
 
-	if(mint >= limit)
+	if(mint >= mindist)
 		return false;
 
 	point.point = p;
@@ -643,14 +642,14 @@ CCollision::ProcessLineBox(const CColLine &line, const CColBox &box, CColPoint &
 	point.pieceA = 0;
 	point.surfaceB = box.surface;
 	point.pieceB = box.piece;
-	limit = mint;
+	mindist = mint;
 
 	return true;
 }
 
 // If line.p0 lies inside sphere, no collision is registered.
 bool
-CCollision::ProcessLineSphere(const CColLine &line, const CColSphere &sphere, CColPoint &point, float &limit)
+CCollision::ProcessLineSphere(const CColLine &line, const CColSphere &sphere, CColPoint &point, float &mindist)
 {
 	CVector v01 = line.p1 - line.p0;
 	CVector v0c = sphere.center - line.p0;
@@ -666,8 +665,8 @@ CCollision::ProcessLineSphere(const CColLine &line, const CColSphere &sphere, CC
 		return false;
 	// point of first intersection, in range [0,1] between p0 and p1
 	float t = (projline - sqrt(diffsq)) / linesq;
-	// if not on line or beyond t, no intersection
-	if(t < 0.0f || t > 1.0f || t >= limit)
+	// if not on line or beyond mindist, no intersection
+	if(t < 0.0f || t > 1.0f || t >= mindist)
 		return false;
 	point.point = line.p0 + v01*t;
 	point.normal = point.point - sphere.center;
@@ -676,14 +675,14 @@ CCollision::ProcessLineSphere(const CColLine &line, const CColSphere &sphere, CC
 	point.pieceA = 0;
 	point.surfaceB = sphere.surface;
 	point.pieceB = sphere.piece;
-	limit = t;
+	mindist = t;
 	return true;
 }
 
 bool
 CCollision::ProcessVerticalLineTriangle(const CColLine &line,
 	const CVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane,
-	CColPoint &point, float &limit, CStoredCollPoly *poly)
+	CColPoint &point, float &mindist, CStoredCollPoly *poly)
 {
 	float t;
 	CVector normal;
@@ -707,6 +706,9 @@ CCollision::ProcessVerticalLineTriangle(const CColLine &line,
 	// intersection parameter on line
 	float h = (line.p1 - p0).z;
 	t = -plane.CalcPoint(p0) / (h * normal.z);
+	// early out if we're beyond the mindist
+	if(t >= mindist)
+		return false;
 	CVector p(p0.x, p0.y, p0.z + h*t);
 
 	CVector2D vec1, vec2, vec3, vect;
@@ -765,14 +767,14 @@ CCollision::ProcessVerticalLineTriangle(const CColLine &line,
 		poly->verts[2] = vc;
 		poly->valid = true;
 	}
-	limit = t;
+	mindist = t;
 	return true;
 }
 
 bool
 CCollision::ProcessLineTriangle(const CColLine &line ,
 	const CVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane,
-	CColPoint &point, float &limit)
+	CColPoint &point, float &mindist)
 {
 	float t;
 	CVector normal;
@@ -784,8 +786,8 @@ CCollision::ProcessLineTriangle(const CColLine &line ,
 
 	// intersection parameter on line
 	t = -plane.CalcPoint(line.p0) / DotProduct(line.p1 - line.p0, normal);
-	// early out if we're beyond the limit
-	if(t >= limit)
+	// early out if we're beyond the mindist
+	if(t >= mindist)
 		return false;
 	// find point of intersection
 	CVector p = line.p0 + (line.p1-line.p0)*t;
@@ -844,19 +846,19 @@ CCollision::ProcessLineTriangle(const CColLine &line ,
 	point.pieceA = 0;
 	point.surfaceB = tri.surface;
 	point.pieceB = 0;
-	limit = t;
+	mindist = t;
 	return true;
 }
 
 bool
 CCollision::ProcessSphereTriangle(const CColSphere &sphere,
 	const CVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane,
-	CColPoint &point, float &limit)
+	CColPoint &point, float &mindistsq)
 {
 	// If sphere and plane don't intersect, no collision
 	float planedist = plane.CalcPoint(sphere.center);
 	float distsq = planedist*planedist;
-	if(abs(planedist) > sphere.radius || distsq > limit)
+	if(abs(planedist) > sphere.radius || distsq > mindistsq)
 		return false;
 
 	const CVector &va = verts[tri.a];
@@ -908,7 +910,7 @@ CCollision::ProcessSphereTriangle(const CColSphere &sphere,
 	}else
 		assert(0);	// front fell off
 
-	if(dist >= sphere.radius || dist*dist >= limit )
+	if(dist >= sphere.radius || dist*dist >= mindistsq)
 		return false;
 
 	point.point = p;
@@ -917,14 +919,14 @@ CCollision::ProcessSphereTriangle(const CColSphere &sphere,
 	point.pieceA = sphere.piece;
 	point.surfaceB = tri.surface;
 	point.pieceB = 0;
-	limit = dist*dist;
+	mindistsq = dist*dist;
 	return true;
 }
 
 bool
 CCollision::ProcessLineOfSight(const CColLine &line,
 	const CMatrix &matrix, CColModel &model,
-	CColPoint &point, float &limit, bool ignoreSurf78)
+	CColPoint &point, float &mindist, bool ignoreSurf78)
 {
 	static CMatrix matTransform;
 	CColLine newline;
@@ -938,7 +940,7 @@ CCollision::ProcessLineOfSight(const CColLine &line,
 	if(!TestLineBox(newline, model.boundingBox))
 		return false;
 
-	float coldist = limit;
+	float coldist = mindist;
 	for(i = 0; i < model.numSpheres; i++)
 		if(!ignoreSurf78 || model.spheres[i].surface != 7 && model.spheres[i].surface != 8)
 			ProcessLineSphere(newline, model.spheres[i], point, coldist);
@@ -952,15 +954,212 @@ CCollision::ProcessLineOfSight(const CColLine &line,
 		if(!ignoreSurf78 || model.triangles[i].surface != 7 && model.triangles[i].surface != 8)
 			ProcessLineTriangle(newline, model.vertices, model.triangles[i], model.trianglePlanes[i], point, coldist);
 
-	if(coldist < limit){
+	if(coldist < mindist){
 		point.point = matrix * point.point;
 		point.normal = Multiply3x3(matrix, point.normal);
-		limit = coldist;
+		mindist = coldist;
 		return true;
 	}
 	return false;
 }
 
+bool
+CCollision::ProcessVerticalLine(const CColLine &line,
+	const CMatrix &matrix, CColModel &model,
+	CColPoint &point, float &mindist, bool ignoreSurf78, CStoredCollPoly *poly)
+{
+	static CStoredCollPoly TempStoredPoly;
+	CColLine newline;
+	int i;
+
+	// transform line to model space
+	// Why does the game seem to do this differently than above?
+	newline.Set(MultiplyInverse(matrix, line.p0), MultiplyInverse(matrix, line.p1));
+	newline.p1.x = newline.p0.x;
+	newline.p1.y = newline.p0.y;
+
+	if(!TestVerticalLineBox(newline, model.boundingBox))
+		return false;
+
+	float coldist = mindist;
+	for(i = 0; i < model.numSpheres; i++)
+		if(!ignoreSurf78 || model.spheres[i].surface != 7 && model.spheres[i].surface != 8)
+			ProcessLineSphere(newline, model.spheres[i], point, coldist);
+
+	for(i = 0; i < model.numBoxes; i++)
+		if(!ignoreSurf78 || model.boxes[i].surface != 7 && model.boxes[i].surface != 8)
+			ProcessLineBox(newline, model.boxes[i], point, coldist);
+
+	CalculateTrianglePlanes(&model);
+	TempStoredPoly.valid = false;
+	for(i = 0; i < model.numTriangles; i++)
+		if(!ignoreSurf78 || model.triangles[i].surface != 7 && model.triangles[i].surface != 8)
+			ProcessVerticalLineTriangle(newline, model.vertices, model.triangles[i], model.trianglePlanes[i], point, coldist, &TempStoredPoly);
+
+	if(coldist < mindist){
+		point.point = matrix * point.point;
+		point.normal = Multiply3x3(matrix, point.normal);
+		if(poly && TempStoredPoly.valid){
+			*poly = TempStoredPoly;
+			poly->verts[0] = matrix * poly->verts[0];
+			poly->verts[1] = matrix * poly->verts[1];
+			poly->verts[2] = matrix * poly->verts[2];
+		}
+		mindist = coldist;
+		return true;
+	}
+	return false;
+}
+
+// This checks model A's spheres and lines against model B's spheres, boxes and triangles.
+// Returns the number of A's spheres that collide.
+// Returned ColPoints are in world space.
+// NB: lines do not seem to be supported very well, use with caution
+int
+CCollision::ProcessColModels(const CMatrix &matrixA, CColModel &modelA,
+	const CMatrix &matrixB, CColModel &modelB,
+	CColPoint *spherepoints, CColPoint *linepoints, float *linedists)
+{
+	static int aSphereIndicesA[128];
+	static int aLineIndicesA[16];
+	static int aSphereIndicesB[128];
+	static int aBoxIndicesB[32];
+	static int aTriangleIndicesB[600];
+	static bool aCollided[16];
+	static CColSphere aSpheresA[128];
+	static CColLine aLinesA[16];
+	static CMatrix matAB, matBA;
+	CColSphere s;
+	int i, j;
+
+	assert(modelA.numSpheres <= 128);
+	assert(modelA.numLines <= 16);
+	assert(modelB.numSpheres <= 128);
+	assert(modelB.numBoxes <= 32);
+	assert(modelB.numTriangles <= 600);
+
+	// From model A space to model B space
+	matAB = Invert(matrixB, matAB) * matrixA;
+
+	CColSphere bsphereAB;	// bounding sphere of A in B space
+	bsphereAB.Set(modelA.boundingSphere.radius, matAB * modelA.boundingSphere.center);
+	if(!TestSphereBox(bsphereAB, modelB.boundingBox))
+		return 0;
+	// B to A space
+	matBA = Invert(matrixA, matBA) * matrixB;
+
+	// transform modelA's spheres and lines to B space
+	for(i = 0; i < modelA.numSpheres; i++){
+		CColSphere &s = modelA.spheres[i];
+		aSpheresA[i].Set(s.radius, matAB * s.center, s.surface, s.piece);
+	}
+	for(i = 0; i < modelA.numLines; i++)
+		aLinesA[i].Set(matAB * modelA.lines[i].p0, matAB * modelA.lines[i].p1);
+
+	// Test those against model B's bounding volumes
+	int numSpheresA = 0;
+	int numLinesA = 0;
+	for(i = 0; i < modelA.numSpheres; i++)
+		if(TestSphereBox(aSpheresA[i], modelB.boundingBox))
+			aSphereIndicesA[numSpheresA++] = i;
+	// no actual check???
+	for(i = 0; i < modelA.numLines; i++)
+		aLineIndicesA[numLinesA++] = i;
+	// No collision
+	if(numSpheresA == 0 && numLinesA == 0)
+		return 0;
+
+	// Check model B against A's bounding volumes
+	int numSpheresB = 0;
+	int numBoxesB = 0;
+	int numTrianglesB = 0;
+	for(i = 0; i < modelB.numSpheres; i++){
+		s.Set(modelB.spheres[i].radius, matBA * modelB.spheres[i].center);
+		if(TestSphereBox(s, modelA.boundingBox))
+			aSphereIndicesB[numSpheresB++] = i;
+	}
+	for(i = 0; i < modelB.numBoxes; i++)
+		if(TestSphereBox(bsphereAB, modelB.boxes[i]))
+			aBoxIndicesB[numBoxesB++] = i;
+	CalculateTrianglePlanes(&modelB);
+	for(i = 0; i < modelB.numTriangles; i++)
+		if(TestSphereTriangle(bsphereAB, modelB.vertices, modelB.triangles[i], modelB.trianglePlanes[i]))
+			aTriangleIndicesB[numTrianglesB++] = i;
+	// No collision
+	if(numSpheresB == 0 && numBoxesB == 0 && numTrianglesB == 0)
+		return 0;
+
+	// We now have the collision volumes in A and B that are worth processing.
+
+	// Process A's spheres against B's collision volumes
+	int numCollisions = 0;
+	for(i = 0; i < numSpheresA; i++){
+		float coldist = 1.0e24f;
+		bool hasCollided = false;
+
+		for(j = 0; j < numSpheresB; j++)
+			hasCollided |= ProcessSphereSphere(
+				aSpheresA[aSphereIndicesA[i]],
+				modelB.spheres[aSphereIndicesB[j]],
+				spherepoints[numCollisions], coldist);
+		for(j = 0; j < numBoxesB; j++)
+			hasCollided |= ProcessSphereBox(
+				aSpheresA[aSphereIndicesA[i]],
+				modelB.boxes[aBoxIndicesB[j]],
+				spherepoints[numCollisions], coldist);
+		for(j = 0; j < numTrianglesB; j++)
+			hasCollided |= ProcessSphereTriangle(
+				aSpheresA[aSphereIndicesA[i]],
+				modelB.vertices,
+				modelB.triangles[aTriangleIndicesB[j]],
+				modelB.trianglePlanes[aTriangleIndicesB[j]],
+				spherepoints[numCollisions], coldist);
+		if(hasCollided)
+			numCollisions++;
+	}
+	for(i = 0; i < numCollisions; i++){
+		spherepoints[i].point = matrixB * spherepoints[i].point;
+		spherepoints[i].normal = Multiply3x3(matrixB, spherepoints[i].normal);
+	}
+
+	// And the same thing for the lines in A
+	for(i = 0; i < numLinesA; i++){
+		aCollided[i] = false;
+
+		for(j = 0; j < numSpheresB; j++)
+			aCollided[i] |= ProcessLineSphere(
+				aLinesA[aLineIndicesA[i]],
+				modelB.spheres[aSphereIndicesB[j]],
+				linepoints[aLineIndicesA[i]],
+				linedists[aLineIndicesA[i]]);
+		for(j = 0; j < numBoxesB; j++)
+			aCollided[i] |= ProcessLineBox(
+				aLinesA[aLineIndicesA[i]],
+				modelB.boxes[aBoxIndicesB[j]],
+				linepoints[aLineIndicesA[i]],
+				linedists[aLineIndicesA[i]]);
+		for(j = 0; j < numTrianglesB; j++)
+			aCollided[i] |= ProcessLineTriangle(
+				aLinesA[aLineIndicesA[i]],
+				modelB.vertices,
+				modelB.triangles[aTriangleIndicesB[j]],
+				modelB.trianglePlanes[aTriangleIndicesB[j]],
+				linepoints[aLineIndicesA[i]],
+				linedists[aLineIndicesA[i]]);
+	}
+	for(i = 0; i < numLinesA; i++){
+		j = aLineIndicesA[i];
+		linepoints[j].point = matrixB * linepoints[j].point;
+		linepoints[j].normal = Multiply3x3(matrixB, linepoints[j].normal);
+	}
+
+	return numCollisions;	// sphere collisions
+}
+
+
+//
+// Misc
+//
 
 float
 CCollision::DistToLine(const CVector *l0, const CVector *l1, const CVector *point)
@@ -976,10 +1175,6 @@ CCollision::DistToLine(const CVector *l0, const CVector *l1, const CVector *poin
 	// distance to line
 	return sqrt((*point - *l0).MagnitudeSqr() - dot*dot/lensq);
 }
-
-//
-// Misc
-//
 
 // same as above but also return the point on the line
 float
@@ -1088,6 +1283,13 @@ CColSphere::Set(float radius, const CVector &center, uint8 surf, uint8 piece)
 	this->center = center;
 	this->surface = surf;
 	this->piece = piece;
+}
+
+void
+CColSphere::Set(float radius, const CVector &center)
+{
+	this->radius = radius;
+	this->center = center;
 }
 
 void

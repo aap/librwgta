@@ -166,12 +166,34 @@ public:
 	}
 };
 
-inline void
-Invert(const CMatrix &m1, CMatrix &m2)
+inline CMatrix&
+Invert(const CMatrix &src, CMatrix &dst)
 {
-	// GTA handles this as a raw 4x4 orthonormal(?) matrix
+	// GTA handles this as a raw 4x4 orthonormal matrix
 	// and trashes the RW flags, let's not do that
-	rw::Matrix::invert(&m2.m_matrix, &m1.m_matrix);
+	// actual copy of librw code:
+	rw::Matrix *d = &dst.m_matrix;
+	const rw::Matrix *s = &src.m_matrix;
+	d->right.x = s->right.x;
+	d->right.y = s->up.x;
+	d->right.z = s->at.x;
+	d->up.x = s->right.y;
+	d->up.y = s->up.y;
+	d->up.z = s->at.y;
+	d->at.x = s->right.z;
+	d->at.y = s->up.z;
+	d->at.z = s->at.z;
+	d->pos.x = -(s->pos.x*s->right.x +
+	               s->pos.y*s->right.y +
+	               s->pos.z*s->right.z);
+	d->pos.y = -(s->pos.x*s->up.x +
+	               s->pos.y*s->up.y +
+	               s->pos.z*s->up.z);
+	d->pos.z = -(s->pos.x*s->at.x +
+	               s->pos.y*s->at.y +
+	               s->pos.z*s->at.z);
+	d->flags = rw::Matrix::TYPEORTHONORMAL;
+	return dst;
 }
 
 inline CVector
@@ -181,6 +203,38 @@ operator*(const CMatrix &mat, const CVector &vec)
 		mat.m_matrix.right.x * vec.x + mat.m_matrix.up.x * vec.y + mat.m_matrix.at.x * vec.z + mat.m_matrix.pos.x,
 		mat.m_matrix.right.y * vec.y + mat.m_matrix.up.y * vec.y + mat.m_matrix.at.y * vec.z + mat.m_matrix.pos.y,
 		mat.m_matrix.right.z * vec.z + mat.m_matrix.up.z * vec.y + mat.m_matrix.at.z * vec.z + mat.m_matrix.pos.z);
+}
+
+inline CMatrix
+operator*(const CMatrix &m1, const CMatrix &m2)
+{
+	CMatrix out;
+	rw::Matrix *dst = &out.m_matrix;
+	const rw::Matrix *src1 = &m1.m_matrix;
+	const rw::Matrix *src2 = &m2.m_matrix;
+	dst->right.x = src1->right.x*src2->right.x + src1->right.y*src2->up.x + src1->right.z*src2->at.x;
+	dst->right.y = src1->right.x*src2->right.y + src1->right.y*src2->up.y + src1->right.z*src2->at.y;
+	dst->right.z = src1->right.x*src2->right.z + src1->right.y*src2->up.z + src1->right.z*src2->at.z;
+	dst->up.x    = src1->up.x*src2->right.x    + src1->up.y*src2->up.x    + src1->up.z*src2->at.x;
+	dst->up.y    = src1->up.x*src2->right.y    + src1->up.y*src2->up.y    + src1->up.z*src2->at.y;
+	dst->up.z    = src1->up.x*src2->right.z    + src1->up.y*src2->up.z    + src1->up.z*src2->at.z;
+	dst->at.x    = src1->at.x*src2->right.x    + src1->at.y*src2->up.x    + src1->at.z*src2->at.x;
+	dst->at.y    = src1->at.x*src2->right.y    + src1->at.y*src2->up.y    + src1->at.z*src2->at.y;
+	dst->at.z    = src1->at.x*src2->right.z    + src1->at.y*src2->up.z    + src1->at.z*src2->at.z;
+	dst->pos.x   = src1->pos.x*src2->right.x   + src1->pos.y*src2->up.x   + src1->pos.z*src2->at.x + src2->pos.x;
+	dst->pos.y   = src1->pos.x*src2->right.y   + src1->pos.y*src2->up.y   + src1->pos.z*src2->at.y + src2->pos.y;
+	dst->pos.z   = src1->pos.x*src2->right.z   + src1->pos.y*src2->up.z   + src1->pos.z*src2->at.z + src2->pos.z;
+	return out;
+}
+
+inline CVector
+MultiplyInverse(const CMatrix &mat, const CVector &vec)
+{
+	CVector v(vec.x - mat.m_matrix.pos.x, vec.y - mat.m_matrix.pos.y, vec.z - mat.m_matrix.pos.z);
+	return CVector(
+		mat.m_matrix.right.x * v.x + mat.m_matrix.right.y * v.y + mat.m_matrix.right.z * v.z,
+		mat.m_matrix.up.x * v.x + mat.m_matrix.up.y * v.y + mat.m_matrix.up.z * v.z,
+		mat.m_matrix.at.x * v.x + mat.m_matrix.at.y * v.y + mat.m_matrix.at.z * v.z);
 }
 
 inline CVector
