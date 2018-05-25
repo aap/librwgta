@@ -13,14 +13,3 @@ CTreadable::operator delete(void *p, size_t)
 {
 	CPools::GetTreadablePool()->Delete((CTreadable*)p);
 }
-
-
-CTreadable::CTreadable(void)
-{
-//	printf("CTreadable::CTreadable()\n");
-}
-
-CTreadable::~CTreadable(void)
-{
-//	printf("CTreadable::~CTreadable()\n");
-}

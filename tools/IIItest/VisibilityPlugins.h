@@ -24,19 +24,34 @@ public:
 	static void RenderFadingAtomic(rw::Atomic *atm, float dist);
 	static void RenderFadingEntities(void);
 
+	static void RenderVehicleHiDetailCB(rw::Atomic *atomic);
+	static void RenderVehicleHiDetailAlphaCB(rw::Atomic *atomic);
+	static void RenderVehicleHiDetailCB_BigVehicle(rw::Atomic *atomic);
+	static void RenderVehicleHiDetailAlphaCB_BigVehicle(rw::Atomic *atomic);
+	static void RenderVehicleHiDetailCB_Boat(rw::Atomic *atomic);
+	static void RenderVehicleLowDetailCB_BigVehicle(rw::Atomic *atomic);
+	static void RenderVehicleLowDetailAlphaCB_BigVehicle(rw::Atomic *atomic);
+	static void RenderVehicleReallyLowDetailCB(rw::Atomic *atomic);
+	static void RenderVehicleReallyLowDetailCB_BigVehicle(rw::Atomic *atomic);
+	static void RenderTrainHiDetailCB(rw::Atomic *atomic);
+	static void RenderTrainHiDetailAlphaCB(rw::Atomic *atomic);
+
 	//
 	// RW Plugins
 	//
 
 	union AtomicExt
 	{
-		CSimpleModelInfo *modelInfo;
-		int flags;
+		CSimpleModelInfo *modelInfo;	// used by SimpleModelInfo
+		int flags;			// used by ClumpModelInfo
 	};
 	static void SetAtomicModelInfo(rw::Atomic*, CSimpleModelInfo*);
 	static CSimpleModelInfo *GetAtomicModelInfo(rw::Atomic *atomic);
+	static void SetAtomicFlag(rw::Atomic*, int);
+	static void ClearAtomicFlag(rw::Atomic*, int);
+	static int GetAtomicId(rw::Atomic *atomic);
 //	this is a useless wrapper
-//	static void SetAtomicRenderCallback(rw::Atomic*, rw::Atomic::RenderCB);
+	static void SetAtomicRenderCallback(rw::Atomic*, rw::Atomic::RenderCB);
 
 	static void *AtomicConstructor(void *object, int32 offset, int32 len);
 	static void *AtomicDestructor(void *object, int32 offset, int32 len);

@@ -20,7 +20,7 @@ CBuilding::CBuilding(void)
 //	printf("CBuilding::CBuilding()\n");
 
 	m_type = ENTITY_TYPE_BUILDING;
-	m_doCollision = true;
+	bUsesCollision = true;
 }
 
 CBuilding::~CBuilding(void)

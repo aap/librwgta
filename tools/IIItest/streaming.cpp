@@ -460,7 +460,7 @@ CStreaming::HaveAllBigBuildingsLoaded(eLevelName level)
 	CBuildingPool &pool = *CPools::GetBuildingPool();
 	for(int i = 0; i < pool.GetSize(); i++){
 		CBuilding *b = pool.GetSlot(i);
-		if(b && b->m_isBigBuilding && b->m_level == level &&
+		if(b && b->bIsBIGBuilding && b->m_level == level &&
 		   Model(b->m_modelIndex)->m_loadState != STREAM_LOADED){
 			return;
 		}
@@ -476,7 +476,7 @@ CStreaming::RequestBigBuildings(eLevelName level)
 	CBuildingPool &pool = *CPools::GetBuildingPool();
 	for(int i = 0; i < pool.GetSize(); i++){
 		CBuilding *b = pool.GetSlot(i);
-		if(b && b->m_isBigBuilding && b->m_level == level)
+		if(b && b->bIsBIGBuilding && b->m_level == level)
 			RequestModel(b->m_modelIndex, STREAM_PRIORITY | STREAM_DONT_REMOVE);
 	}
 	RequestIslands(level);
@@ -489,7 +489,7 @@ CStreaming::RequestAllBuildings(eLevelName level)
 	CBuildingPool &pool = *CPools::GetBuildingPool();
 	for(int i = 0; i < pool.GetSize(); i++){
 		CBuilding *b = pool.GetSlot(i);
-		if(b && !b->m_isBigBuilding && b->m_level == level)
+		if(b && !b->bIsBIGBuilding && b->m_level == level)
 			RequestModel(b->m_modelIndex, STREAM_DONT_REMOVE);
 	}
 }
@@ -533,7 +533,7 @@ void
 DeleteIsland(CEntity *e)
 {
 	if(e == nil) return;
-	if(e->m_isBeingRendered)
+	if(e->bImBeingRendered)
 		debug("Didn't delete island because it was being rendered\n");
 	else{
 		e->DeleteRwObject();
@@ -572,9 +572,9 @@ CStreaming::RemoveBigBuildings(eLevelName level)
 	CBuildingPool &pool = *CPools::GetBuildingPool();
 	for(int i = 0; i < pool.GetSize(); i++){
 		CBuilding *b = pool.GetSlot(i);
-		if(b && b->m_isBigBuilding && b->m_level == level){
+		if(b && b->bIsBIGBuilding && b->m_level == level){
 			mi = CModelInfo::GetModelInfo(b->m_modelIndex);
-			if(!b->m_isBeingRendered){
+			if(!b->bImBeingRendered){
 				b->DeleteRwObject();
 				if(mi->m_refCount == 0)
 					RemoveModel(b->m_modelIndex);
@@ -593,7 +593,7 @@ CStreaming::RemoveBuildings(eLevelName level)
 		CBuilding *e = bpool.GetSlot(i);
 		if(e && e->m_level == level){
 			mi = CModelInfo::GetModelInfo(e->m_modelIndex);
-			if(!e->m_isBeingRendered){
+			if(!e->bImBeingRendered){
 				e->DeleteRwObject();
 				if(mi->m_refCount == 0)
 					RemoveModel(e->m_modelIndex);
@@ -606,7 +606,7 @@ CStreaming::RemoveBuildings(eLevelName level)
 		CTreadable *e = tpool.GetSlot(i);
 		if(e && e->m_level == level){
 			mi = CModelInfo::GetModelInfo(e->m_modelIndex);
-			if(!e->m_isBeingRendered){
+			if(!e->bImBeingRendered){
 				e->DeleteRwObject();
 				if(mi->m_refCount == 0)
 					RemoveModel(e->m_modelIndex);
@@ -634,7 +634,7 @@ CStreaming::RemoveBuildings(eLevelName level)
 		CDummy *e = dpool.GetSlot(i);
 		if(e && e->m_level == level){
 			mi = CModelInfo::GetModelInfo(e->m_modelIndex);
-			if(!e->m_isBeingRendered){
+			if(!e->bImBeingRendered){
 				e->DeleteRwObject();
 				if(mi->m_refCount == 0)
 					RemoveModel(e->m_modelIndex);

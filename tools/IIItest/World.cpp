@@ -12,7 +12,7 @@ CWorld::Add(CEntity *ent)
 //	   ent->m_type == ENTITY_TYPE_PED)
 //		; // do AUDIO stuff
 
-	if(ent->m_isBigBuilding)
+	if(ent->bIsBIGBuilding)
 		ms_bigBuildingsList[ent->m_level].InsertItem(ent);
 	else
 		ent->Add();

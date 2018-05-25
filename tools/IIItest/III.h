@@ -136,26 +136,33 @@ FILE *fopen_ci(const char *path, const char *mode);
 char *skipWhite(char *s);
 void convertTxd(rw::TexDictionary *txd);
 
+extern bool isRunning;
+extern CCamera TheCamera;
+CVector FindPlayerCoors(void);
 
-// misc
+// RW stuff
 struct GlobalScene
 {
 	rw::Camera *camera;
 	rw::World  *world;
 };
 extern GlobalScene Scene;
-extern rw::Light  *pAmbient;
-extern rw::Light  *pDirect;
-extern rw::Light  *pExtraDirectionals[4];
-extern bool isRunning;
-extern CCamera TheCamera;
-CVector FindPlayerCoors(void);
+extern rw::Light *pAmbient;
+extern rw::Light *pDirect;
+extern rw::Light *pExtraDirectionals[4];
+
 void SetLightsWithTimeOfDayColour(rw::World*);
 void LightsCreate(rw::World*);
+void SetAmbientAndDirectionalColours(float mult);
+void ReSetAmbientAndDirectionalColours(void);
+void DeActivateDirectional(void);
+void ActivateDirectional(void);
+void SetAmbientColours(void);
+void SetAmbientColoursForPedsCarsAndObjects(void);
+
+
 rw::Camera *CameraCreate(int width, int height, int z);
 void WindowResize(rw::Rect *r);
-void DeActivateDirectional(void);
-void SetAmbientColours(void);
 void DefinedState(void);
 
 extern CEntity *debugent;

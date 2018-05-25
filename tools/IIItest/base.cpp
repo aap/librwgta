@@ -96,28 +96,38 @@ FindPlayerCoors(void)
 	return TheCamera.m_position;
 }
 
-float AmbientLightColourForFrame[3];
-float DirectionalLightColourForFrame[3];
+//
+// Lights
+//
+
+rw::RGBAf AmbientLightColourForFrame;
+rw::RGBAf AmbientLightColourForFrame_PedsCarsAndObjects;
+rw::RGBAf DirectionalLightColourForFrame;
+rw::RGBAf AmbientLightColour;
+rw::RGBAf DirectionalLightColour;
 
 void
 SetLightsWithTimeOfDayColour(rw::World*)
 {
 	// TODO: CCoronas::LightsMult
-	AmbientLightColourForFrame[0] = CTimeCycle::m_fCurrentAmbientRed;
-	AmbientLightColourForFrame[1] = CTimeCycle::m_fCurrentAmbientGreen;
-	AmbientLightColourForFrame[2] = CTimeCycle::m_fCurrentAmbientBlue;
+	AmbientLightColourForFrame.red = CTimeCycle::m_fCurrentAmbientRed;
+	AmbientLightColourForFrame.green = CTimeCycle::m_fCurrentAmbientGreen;
+	AmbientLightColourForFrame.blue = CTimeCycle::m_fCurrentAmbientBlue;
+	AmbientLightColourForFrame_PedsCarsAndObjects.red = clamp(AmbientLightColourForFrame.red*1.3f);
+	AmbientLightColourForFrame_PedsCarsAndObjects.green = clamp(AmbientLightColourForFrame.green*1.3f);
+	AmbientLightColourForFrame_PedsCarsAndObjects.blue = clamp(AmbientLightColourForFrame.blue*1.3f);
 	// TODO: flash and rain etc.
-	pAmbient->setColor(AmbientLightColourForFrame[0],
-	                   AmbientLightColourForFrame[1],
-	                   AmbientLightColourForFrame[2]);
+	pAmbient->setColor(AmbientLightColourForFrame.red,
+	                   AmbientLightColourForFrame.green,
+	                   AmbientLightColourForFrame.blue);
 
 	// TODO: CCoronas::LightsMult
-	DirectionalLightColourForFrame[0] = CTimeCycle::m_fCurrentDirectionalRed;
-	DirectionalLightColourForFrame[1] = CTimeCycle::m_fCurrentDirectionalGreen;
-	DirectionalLightColourForFrame[2] = CTimeCycle::m_fCurrentDirectionalBlue;
-	pDirect->setColor(DirectionalLightColourForFrame[0],
-	                  DirectionalLightColourForFrame[1],
-	                  DirectionalLightColourForFrame[2]);
+	DirectionalLightColourForFrame.red = CTimeCycle::m_fCurrentDirectionalRed;
+	DirectionalLightColourForFrame.green = CTimeCycle::m_fCurrentDirectionalGreen;
+	DirectionalLightColourForFrame.blue = CTimeCycle::m_fCurrentDirectionalBlue;
+	pDirect->setColor(DirectionalLightColourForFrame.red,
+	                  DirectionalLightColourForFrame.green,
+	                  DirectionalLightColourForFrame.blue);
 	// TODO: transform
 }
 
@@ -149,6 +159,64 @@ LightsCreate(rw::World *world)
 		l->setFrame(rw::Frame::create());
 		world->addLight(l);
 	}
+}
+
+void
+SetAmbientAndDirectionalColours(float mult)
+{
+	AmbientLightColour.red = clamp(AmbientLightColourForFrame.red * mult);
+	AmbientLightColour.green = clamp(AmbientLightColourForFrame.green * mult);
+	AmbientLightColour.blue = clamp(AmbientLightColourForFrame.blue * mult);
+
+	DirectionalLightColour.red = clamp(DirectionalLightColourForFrame.red * mult);
+	DirectionalLightColour.green = clamp(DirectionalLightColourForFrame.green * mult);
+	DirectionalLightColour.blue = clamp(DirectionalLightColourForFrame.blue * mult);
+
+	pAmbient->setColor(AmbientLightColour.red,
+	                   AmbientLightColour.green,
+	                   AmbientLightColour.blue);
+	pDirect->setColor(DirectionalLightColour.red,
+	                  DirectionalLightColour.green,
+	                  DirectionalLightColour.blue);
+}
+
+void
+ReSetAmbientAndDirectionalColours(void)
+{
+	pAmbient->setColor(AmbientLightColourForFrame.red,
+	                   AmbientLightColourForFrame.green,
+	                   AmbientLightColourForFrame.blue);
+	pDirect->setColor(DirectionalLightColourForFrame.red,
+	                  DirectionalLightColourForFrame.green,
+	                  DirectionalLightColourForFrame.blue);
+}
+
+void
+DeActivateDirectional(void)
+{
+	pDirect->setFlags(0);
+}
+
+void
+ActivateDirectional(void)
+{
+	pDirect->setFlags(rw::Light::LIGHTATOMICS);
+}
+
+void
+SetAmbientColours(void)
+{
+	pAmbient->setColor(AmbientLightColourForFrame.red,
+	                   AmbientLightColourForFrame.green,
+	                   AmbientLightColourForFrame.blue);
+}
+
+void
+SetAmbientColoursForPedsCarsAndObjects(void)
+{
+	pAmbient->setColor(AmbientLightColourForFrame_PedsCarsAndObjects.red,
+	                   AmbientLightColourForFrame_PedsCarsAndObjects.green,
+	                   AmbientLightColourForFrame_PedsCarsAndObjects.blue);
 }
 
 rw::Camera*
@@ -184,20 +252,6 @@ WindowResize(rw::Rect *r)
 		cam->frameBuffer = Raster::create(r->w, r->h, 0, Raster::CAMERA);
 		cam->zBuffer = Raster::create(r->w, r->h, 0, Raster::ZBUFFER);
 	}
-}
-
-void
-DeActivateDirectional(void)
-{
-	pDirect->setFlags(0);
-}
-
-void
-SetAmbientColours(void)
-{
-	pAmbient->setColor(AmbientLightColourForFrame[0],
-	                   AmbientLightColourForFrame[1],
-	                   AmbientLightColourForFrame[2]);
 }
 
 void
@@ -330,7 +384,9 @@ TheGame(void)
 		SetLightsWithTimeOfDayColour(Scene.world);
 
 		CRenderer::ConstructRenderList();
+		// CRenderer::PreRender();
 
+		// get rid of this once we have the real camera
 		TheCamera.update();
 
 		// Set the planes before updating the RW cam. GTA (wrongly) does it afterwards.
@@ -343,6 +399,10 @@ TheGame(void)
 
 		RenderScene();
 		RenderDebugShit();
+
+		// RenderEffects
+		// motion blur
+		// Render2dStuff
 
 		DoRWStuffEndOfFrame();
 	}

@@ -128,10 +128,10 @@ public:
 	CClumpModelInfo(void) : CBaseModelInfo(CLUMPMODELINFO) {}
 	CClumpModelInfo(int id) : CBaseModelInfo(id) {}
 	~CClumpModelInfo() {}
-	void DeleteRwObject(void) {}
-	rw::Object *CreateInstance(void) { return nil; }
-	rw::Object *CreateInstance(rw::Matrix *) { return nil; }
-	rw::Object *GetRwObject(void) { return nil; }
+	void DeleteRwObject(void);
+	rw::Object *CreateInstance(void);
+	rw::Object *CreateInstance(rw::Matrix *);
+	rw::Object *GetRwObject(void) { return (rw::Object*)m_clump; }
 
 	virtual void SetClump(rw::Clump *);
 };
@@ -180,11 +180,18 @@ public:
 
 	CVehicleModelInfo(void) : CClumpModelInfo(VEHICLEMODELINFO) {}
 	~CVehicleModelInfo() {}
-	void DeleteRwObject(void) {}
-	rw::Object *CreateInstance(void) { return nil; }
-	void SetClump(rw::Clump *clump){
-		CClumpModelInfo::SetClump(clump);
-	}
+	void DeleteRwObject(void);
+	rw::Object *CreateInstance(void);
+	void SetClump(rw::Clump *clump);
+
+	void SetAtomicRenderCallbacks(void);
+
+	static void SetAtomicRenderer(rw::Atomic *atm, rw::Clump *clump);
+	static void SetAtomicRenderer_Boat(rw::Atomic *atm, rw::Clump *clump);
+	static void SetAtomicRenderer_Train(rw::Atomic *atm, rw::Clump *clump);
+	static void SetAtomicRenderer_Heli(rw::Atomic *atm, rw::Clump *clump);
+	static void SetAtomicRenderer_BigVehicle(rw::Atomic *atm, rw::Clump *clump);
+	static void HideDamagedAtomic(rw::Atomic *atm);
 };
 
 class CPedModelInfo : public CClumpModelInfo

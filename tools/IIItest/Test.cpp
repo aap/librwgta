@@ -6,6 +6,7 @@
 // to test various things, collisions right now
 
 //#define COLTEST
+//#define FOOTEST
 
 static CColSphere sphere1;
 static CColSphere sphere2;
@@ -21,9 +22,34 @@ static rw::RGBA blue = { 0, 0, 255, 255 };
 static CMatrix ident;
 static CMatrix modelmat;
 
+class CTestObject : public CPhysical
+{
+public:
+	void *operator new(size_t s) { return (void*)rwNewT(uint8, s, 0); };
+	void operator delete(void *p, size_t) { rwFree(p); }
+};
+
+static CTestObject *car;
+
 void
 CTest::Init(void)
 {
+#ifdef FOOTEST
+	car = new CTestObject;
+
+	// Set camera up into the sky
+	TheCamera.m_target.set(0.0f, 0.0f, 500.0f);
+	TheCamera.m_position.set(10.0f, 0.0f, 505.0f);
+
+	CStreaming::RequestModel(140, 1);
+	CStreaming::LoadAllRequestedModels();
+	car->SetModelIndex(140);
+	rw::Matrix mat;
+	rw::V3d pos = { 0.0f, 0.0f, 500.0f };
+	mat.translate(&pos, rw::COMBINEREPLACE);
+	car->SetTransform(&mat);
+#endif
+
 #ifdef COLTEST
 	// Set camera up into the sky
 	TheCamera.m_target.set(0.0f, 0.0f, 500.0f);
@@ -64,6 +90,11 @@ CTest::Update(void)
 void
 CTest::Render(void)
 {
+#ifdef FOOTEST
+	ActivateDirectional();
+	SetAmbientColoursForPedsCarsAndObjects();
+	car->Render();
+#endif
 #ifdef COLTEST
 	rw::SetRenderState(rw::ZWRITEENABLE, 1);
 	rw::SetRenderState(rw::VERTEXALPHA, 1);

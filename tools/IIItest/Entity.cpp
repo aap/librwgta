@@ -4,7 +4,8 @@ CEntity::CEntity(void)
 {
 	m_type = ENTITY_TYPE_NOTHING;
 	m_status = ENTITY_STATUS_4;
-	m_doCollision = 0;
+
+	bUsesCollision = 0;
 	m_flagA2 = 0;
 	m_flagA4 = 0;
 	m_flagA8 = 0;
@@ -15,12 +16,12 @@ CEntity::CEntity(void)
 
 	m_flagB1 = 0;
 	m_flagB2 = 0;
-	m_isVisible = 1;
+	bIsVisible = 1;
 	m_flagB8 = 0;
-	m_flagB10 = 0;
+	bIsScorched = 0;
 	m_flagB20 = 0;
-	m_isBigBuilding = 0;
-	m_drawDamaged = 0;
+	bIsBIGBuilding = 0;
+	bRenderDamaged = 0;
 
 	m_flagC1 = 0;
 	m_flagC2 = 0;
@@ -33,14 +34,14 @@ CEntity::CEntity(void)
 
 	m_flagD1 = 0;
 	m_flagD2 = 0;
-	m_isBeingRendered = 0;
+	bImBeingRendered = 0;
 	m_flagD8 = 0;
 	m_flagD10 = 0;
 	m_flagD20 = 0;
 	m_flagD40 = 0;
-	m_flagD80 = 0;
+	m_flagD80 = 0;	// tested in CObject::Render
 
-	m_isFading = 0;
+	bDistanceFade = 0;
 	m_flagE2 = 0;
 
 	m_scanCode = -1;
@@ -50,15 +51,17 @@ CEntity::CEntity(void)
 
 CEntity::~CEntity(void)
 {
+	DeleteRwObject();
+	// TODO: ResolveReferences
 }
 
 void
 CEntity::SetupBigBuilding(void)
 {
 	CSimpleModelInfo *mi = (CSimpleModelInfo*)CModelInfo::GetModelInfo(m_modelIndex);
-	m_isBigBuilding = 1;
+	bIsBIGBuilding = 1;
 	m_flagC20 = 1;
-	m_doCollision = 0;
+	bUsesCollision = 0;
 	m_level = CTheZones::GetLevelFromPosition(GetPosition());
 	if(m_level == LEVEL_NONE &&
 	   mi->GetTxdSlot() != CTxdStore::FindTxdSlot("generic")){
@@ -73,7 +76,7 @@ CEntity::SetupBigBuilding(void)
 bool
 CEntity::IsVisible(void)
 {
-	return (m_rwObject && m_isVisible) ? GetIsOnScreen() : false;
+	return (m_rwObject && bIsVisible) ? GetIsOnScreen() : false;
 }
 
 bool
@@ -163,6 +166,70 @@ CEntity::Add(void)
 		}
 }
 
+/* Removes an entity from all sectors of its type it belongs to */
+void
+CEntity::Remove(void)
+{
+	int x, xstart, xmid, xend;
+	int y, ystart, ymid, yend;
+	CSector *s;
+	CPtrList *list;
+	CPtrNode *node;
+
+	CRect bounds = GetBoundRect();
+	xstart = CWorld::GetSectorIndexX(bounds.left);
+	xend   = CWorld::GetSectorIndexX(bounds.right);
+	xmid   = CWorld::GetSectorIndexX((bounds.left + bounds.right)/2.0f);
+	ystart = CWorld::GetSectorIndexY(bounds.bottom);
+	yend   = CWorld::GetSectorIndexY(bounds.top);
+	ymid   = CWorld::GetSectorIndexY((bounds.bottom + bounds.top)/2.0f);
+	assert(xstart >= 0);
+	assert(xend < 100);
+	assert(ystart >= 0);
+	assert(yend < 100);
+
+	for(y = ystart; y <= yend; y++)
+		for(x = xstart; x <= xend; x++){
+			s = CWorld::GetSector(x, y);
+			if(x == xmid && y == ymid) switch(m_type){
+			case ENTITY_TYPE_BUILDING:
+				list = &s->m_buildings;
+				break;
+			case ENTITY_TYPE_VEHICLE:
+				list = &s->m_vehicles;
+				break;
+			case ENTITY_TYPE_PED:
+				list = &s->m_peds;
+				break;
+			case ENTITY_TYPE_OBJECT:
+				list = &s->m_objects;
+				break;
+			case ENTITY_TYPE_DUMMY:
+				list = &s->m_dummies;
+				break;
+			}else switch(m_type){
+			case ENTITY_TYPE_BUILDING:
+				list = &s->m_buildingsOverlap;
+				break;
+			case ENTITY_TYPE_VEHICLE:
+				list = &s->m_vehiclesOverlap;
+				break;
+			case ENTITY_TYPE_PED:
+				list = &s->m_pedsOverlap;
+				break;
+			case ENTITY_TYPE_OBJECT:
+				list = &s->m_objectsOverlap;
+				break;
+			case ENTITY_TYPE_DUMMY:
+				list = &s->m_dummiesOverlap;
+				break;
+			}
+			node = list->FindItem(this);
+			assert(node);
+			list->DeleteNode(node);
+		}
+}
+
 void
 CEntity::DeleteRwObject(void)
 {
@@ -222,12 +289,12 @@ void
 CEntity::Render(void)
 {
 	if(m_rwObject){
-		m_isBeingRendered = 1;
+		bImBeingRendered = 1;
 		if(m_rwObject->type == rw::Atomic::ID)
 			((rw::Atomic*)m_rwObject)->render();
 		else
 			((rw::Clump*)m_rwObject)->render();
-		m_isBeingRendered = 0;
+		bImBeingRendered = 0;
 	}
 }
 
@@ -236,9 +303,4 @@ CEntity::SetupLighting(void)
 {
 	DeActivateDirectional();
 	SetAmbientColours();
-}
-
-void
-CEntity::RemoveLighting(void)
-{
 }

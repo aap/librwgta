@@ -239,11 +239,191 @@ CTimeModelInfo::GetOtherModel(void)
 //
 
 void
+CClumpModelInfo::DeleteRwObject(void)
+{
+	if(m_clump){
+		m_clump->destroy();
+		m_clump = nil;
+		RemoveTexDictionaryRef();
+	}
+}
+
+rw::Object*
+CClumpModelInfo::CreateInstance(void)
+{
+	return m_clump ? (rw::Object*)m_clump->clone() : nil;
+}
+
+rw::Object*
+CClumpModelInfo::CreateInstance(rw::Matrix *mat)
+{
+	rw::Clump *clump;
+	if(m_clump == nil)
+		return nil;
+	clump = (rw::Clump*)CreateInstance();
+	clump->getFrame()->matrix = *mat;
+	return (rw::Object*)clump;
+}
+
+void
 CClumpModelInfo::SetClump(rw::Clump *clump)
 {
 	m_clump = clump;
 	AddTexDictionaryRef();
 	// TODO: more
+}
+
+//
+// CVehicleModelInfo
+//
+
+void
+CVehicleModelInfo::DeleteRwObject(void)
+{
+	// TODO: comps
+	CClumpModelInfo::DeleteRwObject();
+}
+
+rw::Object*
+CVehicleModelInfo::CreateInstance(void)
+{
+	rw::Clump *clump;
+	clump = (rw::Clump*)CClumpModelInfo::CreateInstance();
+	// TODO: comps
+	return (rw::Object*)clump;
+}
+
+void
+CVehicleModelInfo::SetClump(rw::Clump *clump)
+{
+	CClumpModelInfo::SetClump(clump);
+	SetAtomicRenderCallbacks();
+	// CClumpModelInfo::SetFrameIds
+	// CVehicleModelInfo::PreprocessHierarchy
+	// CVehicleModelInfo::FindEditableMaterialList
+	m_envMap = nil;
+	// CVehicleModelInfo::SetEnvironmentMap
+}
+
+static bool
+hasAlpha(rw::Geometry *g)
+{
+	for(int32 i = 0; i < g->matList.numMaterials; i++)
+		if(g->matList.materials[i]->color.alpha != 255)
+			return true;
+	return false;
+}
+
+void
+CVehicleModelInfo::SetAtomicRenderer(rw::Atomic *atm, rw::Clump *clump)
+{
+	char *name = GetFrameNodeName(atm->getFrame());
+	bool alpha = hasAlpha(atm->geometry);
+	if(strstr(name, "_hi") || strncmp(name, "extra", 5) == 0){
+		if(alpha || strncmp(name, "windscreen", 10) == 0)
+			CVisibilityPlugins::SetAtomicRenderCallback(atm, CVisibilityPlugins::RenderVehicleHiDetailAlphaCB);
+		else
+			CVisibilityPlugins::SetAtomicRenderCallback(atm, CVisibilityPlugins::RenderVehicleHiDetailCB);
+	}else if(strstr(name, "_lo")){
+		atm->removeFromClump();
+		atm->destroy();
+		return;
+	}else if(strstr(name, "_vlo"))
+		CVisibilityPlugins::SetAtomicRenderCallback(atm, CVisibilityPlugins::RenderVehicleReallyLowDetailCB);
+	else
+		CVisibilityPlugins::SetAtomicRenderCallback(atm, nil);
+	HideDamagedAtomic(atm);
+}
+
+void
+CVehicleModelInfo::SetAtomicRenderer_Boat(rw::Atomic *atm, rw::Clump *clump)
+{
+	char *name = GetFrameNodeName(atm->getFrame());
+	if(strcmp(name, "boat_hi") == 0 || strncmp(name, "extra", 5) == 0)
+		CVisibilityPlugins::SetAtomicRenderCallback(atm, CVisibilityPlugins::RenderVehicleHiDetailCB_Boat);
+	else if(strstr(name, "_hi"))
+		CVisibilityPlugins::SetAtomicRenderCallback(atm, CVisibilityPlugins::RenderVehicleHiDetailCB);
+	else if(strstr(name, "_lo")){
+		atm->removeFromClump();
+		atm->destroy();
+		return;
+	}else if(strstr(name, "_vlo"))
+		CVisibilityPlugins::SetAtomicRenderCallback(atm, CVisibilityPlugins::RenderVehicleReallyLowDetailCB_BigVehicle);
+	else
+		CVisibilityPlugins::SetAtomicRenderCallback(atm, nil);
+	HideDamagedAtomic(atm);
+}
+
+void
+CVehicleModelInfo::SetAtomicRenderer_Train(rw::Atomic *atm, rw::Clump *clump)
+{
+	char *name = GetFrameNodeName(atm->getFrame());
+	bool alpha = hasAlpha(atm->geometry);
+	if(strstr(name, "_hi")){
+		if(alpha)
+			CVisibilityPlugins::SetAtomicRenderCallback(atm, CVisibilityPlugins::RenderTrainHiDetailAlphaCB);
+		else
+			CVisibilityPlugins::SetAtomicRenderCallback(atm, CVisibilityPlugins::RenderTrainHiDetailCB);
+	}else if(strstr(name, "_vlo"))
+		CVisibilityPlugins::SetAtomicRenderCallback(atm, CVisibilityPlugins::RenderVehicleReallyLowDetailCB_BigVehicle);
+	else
+		CVisibilityPlugins::SetAtomicRenderCallback(atm, nil);
+	HideDamagedAtomic(atm);
+}
+
+void
+CVehicleModelInfo::SetAtomicRenderer_Heli(rw::Atomic *atm, rw::Clump *clump)
+{
+	CVisibilityPlugins::SetAtomicRenderCallback(atm, nil);
+}
+
+void
+CVehicleModelInfo::SetAtomicRenderer_BigVehicle(rw::Atomic *atm, rw::Clump *clump)
+{
+	char *name = GetFrameNodeName(atm->getFrame());
+	bool alpha = hasAlpha(atm->geometry);
+	if(strstr(name, "_hi") || strncmp(name, "extra", 5) == 0){
+		if(alpha)
+			CVisibilityPlugins::SetAtomicRenderCallback(atm, CVisibilityPlugins::RenderVehicleHiDetailAlphaCB_BigVehicle);
+		else
+			CVisibilityPlugins::SetAtomicRenderCallback(atm, CVisibilityPlugins::RenderVehicleHiDetailCB_BigVehicle);
+	}else if(strstr(name, "_lo")){
+		if(alpha)
+			CVisibilityPlugins::SetAtomicRenderCallback(atm, CVisibilityPlugins::RenderVehicleLowDetailAlphaCB_BigVehicle);
+		else
+			CVisibilityPlugins::SetAtomicRenderCallback(atm, CVisibilityPlugins::RenderVehicleLowDetailCB_BigVehicle);
+	}else if(strstr(name, "_vlo"))
+		CVisibilityPlugins::SetAtomicRenderCallback(atm, CVisibilityPlugins::RenderVehicleReallyLowDetailCB_BigVehicle);
+	else
+		CVisibilityPlugins::SetAtomicRenderCallback(atm, nil);
+	HideDamagedAtomic(atm);
+}
+
+void
+CVehicleModelInfo::HideDamagedAtomic(rw::Atomic *atm)
+{
+	char *name = GetFrameNodeName(atm->getFrame());
+	if(strstr(name, "_dam")){
+		atm->setFlags(0);
+		CVisibilityPlugins::SetAtomicFlag(atm, 2);
+	}else if(strstr(name, "_ok"))
+		CVisibilityPlugins::SetAtomicFlag(atm, 2);
+}
+
+void
+CVehicleModelInfo::SetAtomicRenderCallbacks(void)
+{
+	void (*f)(rw::Atomic*,rw::Clump*);
+	switch(m_vehicleType){
+	case Car:
+	default: f = SetAtomicRenderer; break;
+	case Boat: f = SetAtomicRenderer_Boat; break;
+	case Train: f = SetAtomicRenderer_Train; break;
+	case Heli: f = SetAtomicRenderer_Heli; break;
+	case Plane: f = SetAtomicRenderer_BigVehicle; break;
+	}
+	FORLIST(lnk, m_clump->atomics)
+		f(rw::Atomic::fromClump(lnk), m_clump);
 }
 
 //

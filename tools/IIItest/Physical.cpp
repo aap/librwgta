@@ -2,7 +2,7 @@
 
 CPhysical::CPhysical(void)
 {
-	m_doCollision = 1;
+	bUsesCollision = 1;
 }
 
 CPhysical::~CPhysical(void)

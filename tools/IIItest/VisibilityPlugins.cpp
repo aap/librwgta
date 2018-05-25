@@ -94,12 +94,12 @@ CVisibilityPlugins::RenderFadingEntities(void)
 			SetRenderState(rw::ZWRITEENABLE, 0);
 		}
 
-		if(e->m_isFading){
+		if(e->bDistanceFade){
 			DeActivateDirectional();
 			SetAmbientColours();
-			e->m_isBeingRendered = 1;
+			e->bImBeingRendered = 1;
 			RenderFadingAtomic((rw::Atomic*)e->m_rwObject, node->item.sort);
-			e->m_isBeingRendered = 0;
+			e->bImBeingRendered = 0;
 		}else
 			CRenderer::RenderOneNonRoad(e);
 
@@ -109,6 +109,75 @@ CVisibilityPlugins::RenderFadingEntities(void)
 		}
 	}
 }
+
+// TODO
+
+void
+CVisibilityPlugins::RenderVehicleHiDetailCB(rw::Atomic *atomic)
+{
+	rw::Atomic::defaultRenderCB(atomic);
+}
+
+void
+CVisibilityPlugins::RenderVehicleHiDetailAlphaCB(rw::Atomic *atomic)
+{
+	rw::Atomic::defaultRenderCB(atomic);
+}
+
+void
+CVisibilityPlugins::RenderVehicleHiDetailCB_BigVehicle(rw::Atomic *atomic)
+{
+	rw::Atomic::defaultRenderCB(atomic);
+}
+
+void
+CVisibilityPlugins::RenderVehicleHiDetailAlphaCB_BigVehicle(rw::Atomic *atomic)
+{
+	rw::Atomic::defaultRenderCB(atomic);
+}
+
+void
+CVisibilityPlugins::RenderVehicleHiDetailCB_Boat(rw::Atomic *atomic)
+{
+	rw::Atomic::defaultRenderCB(atomic);
+}
+
+void
+CVisibilityPlugins::RenderVehicleLowDetailCB_BigVehicle(rw::Atomic *atomic)
+{
+//	rw::Atomic::defaultRenderCB(atomic);
+}
+
+void
+CVisibilityPlugins::RenderVehicleLowDetailAlphaCB_BigVehicle(rw::Atomic *atomic)
+{
+//	rw::Atomic::defaultRenderCB(atomic);
+}
+
+void
+CVisibilityPlugins::RenderVehicleReallyLowDetailCB(rw::Atomic *atomic)
+{
+//	rw::Atomic::defaultRenderCB(atomic);
+}
+
+void
+CVisibilityPlugins::RenderVehicleReallyLowDetailCB_BigVehicle(rw::Atomic *atomic)
+{
+//	rw::Atomic::defaultRenderCB(atomic);
+}
+
+void
+CVisibilityPlugins::RenderTrainHiDetailCB(rw::Atomic *atomic)
+{
+	rw::Atomic::defaultRenderCB(atomic);
+}
+
+void
+CVisibilityPlugins::RenderTrainHiDetailAlphaCB(rw::Atomic *atomic)
+{
+	rw::Atomic::defaultRenderCB(atomic);
+}
+
 
 //
 // RW Plugins
@@ -181,6 +250,33 @@ CSimpleModelInfo*
 CVisibilityPlugins::GetAtomicModelInfo(rw::Atomic *atomic)
 {
 	return ATOMICEXT(atomic)->modelInfo;
+}
+
+void
+CVisibilityPlugins::SetAtomicFlag(rw::Atomic *atomic, int f)
+{
+	ATOMICEXT(atomic)->flags |= f;
+}
+
+void
+CVisibilityPlugins::ClearAtomicFlag(rw::Atomic *atomic, int f)
+{
+	ATOMICEXT(atomic)->flags &= ~f;
+}
+
+int
+CVisibilityPlugins::GetAtomicId(rw::Atomic *atomic)
+{
+	return ATOMICEXT(atomic)->flags;
+}
+
+// This is rather useless, but whatever
+void
+CVisibilityPlugins::SetAtomicRenderCallback(rw::Atomic *atomic, rw::Atomic::RenderCB cb)
+{
+	if(cb == nil)
+		cb = rw::Atomic::defaultRenderCB;
+	atomic->setRenderCB(cb);
 }
 
 //

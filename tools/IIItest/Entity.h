@@ -22,6 +22,7 @@ enum eEntityStatus
 	ENTITY_STATUS_4 = 4,
 };
 
+// NB: does not match actual game structure exactly
 class CEntity : public CPlaceable
 {
 	// disable allocation
@@ -34,7 +35,7 @@ public:
 	uint m_status : 5;
 
 	// flagsA
-	uint m_doCollision : 1;
+	uint bUsesCollision : 1;
 	uint m_flagA2 : 1;
 	uint m_flagA4 : 1;
 	uint m_flagA8 : 1;
@@ -46,13 +47,13 @@ public:
 	// flagsB
 	uint m_flagB1 : 1;
 	uint m_flagB2 : 1;
-	uint m_isVisible : 1;
+	uint bIsVisible : 1;
 	uint m_flagB8 : 1;
-	uint m_flagB10 : 1;
+	uint bIsScorched : 1;	//
 	uint m_flagB20 : 1;
-	uint m_isBigBuilding : 1;
+	uint bIsBIGBuilding : 1;
 	// VC inserts one more flag here: if drawdist <= 2000
-	uint m_drawDamaged : 1;
+	uint bRenderDamaged : 1;
 
 	// flagsC
 	uint m_flagC1 : 1;
@@ -67,7 +68,7 @@ public:
 	// flagsD
 	uint m_flagD1 : 1;
 	uint m_flagD2 : 1;
-	uint m_isBeingRendered : 1;
+	uint bImBeingRendered : 1;
 	uint m_flagD8 : 1;
 	uint m_flagD10 : 1;
 	uint m_flagD20 : 1;
@@ -75,7 +76,7 @@ public:
 	uint m_flagD80 : 1;
 
 	// flagsE
-	uint m_isFading : 1;
+	uint bDistanceFade : 1;
 	uint m_flagE2 : 1;
 
 	short m_scanCode;
@@ -94,21 +95,21 @@ public:
 	~CEntity(void);
 
 	virtual void Add(void);
-	// Remove
+	virtual void Remove(void);
 	virtual void SetModelIndexNoCreate(uint i) { m_modelIndex = i; }
-	// SetModelIndex
+	virtual void SetModelIndex(uint i) { m_modelIndex = i; CreateRwObject(); }
 	virtual void CreateRwObject(void);
 	virtual void DeleteRwObject(void);
 	virtual CRect GetBoundRect(void);
-	// ProcessControl
-	// ProcessCollision
-	// ProcessShift
-	// Teleport
+	virtual void ProcessControl(void) {}
+	virtual void ProcessCollision(void) {}
+	virtual void ProcessShift(void) {}
+	virtual void Teleport(CVector v) {}
 	// PreRender
 	virtual void Render(void);
 	virtual void SetupLighting(void);
-	virtual void RemoveLighting(void);
-	// FlagToDestroyWhenNextProcessed
+	virtual void RemoveLighting(void) {}
+	virtual void FlagToDestroyWhenNextProcessed(void) {}
 };
 
 #endif

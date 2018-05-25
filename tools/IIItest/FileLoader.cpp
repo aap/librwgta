@@ -534,7 +534,7 @@ CFileLoader::LoadObjectInstance(char *line)
 			if(simple->m_isSubway)
 				build->m_flagD10 = 1;
 			if(simple->GetLargestLodDistance() < 2.0f)
-				build->m_isVisible = 0;
+				build->bIsVisible = 0;
 		}
 		CWorld::Add(build);
 	}else{
@@ -551,7 +551,7 @@ CFileLoader::LoadObjectInstance(char *line)
 		   id == MI_GLASS6 ||
 		   id == MI_GLASS7 ||
 		   id == MI_GLASS8)
-			dummy->m_isVisible = 0;
+			dummy->bIsVisible = 0;
 		dummy->m_level = CTheZones::GetLevelFromPosition(dummy->GetPosition());
 	}
 	mat->destroy();
@@ -758,7 +758,7 @@ CFileLoader::LoadAtomicFile(rw::Stream *stream, int id)
 			atomic->removeFromClump();
 			atomic->setFrame(rw::Frame::create());
 			CVisibilityPlugins::SetAtomicModelInfo(atomic, modelinfo);
-			atomic->setRenderCB(nil);
+			CVisibilityPlugins::SetAtomicRenderCallback(atomic, nil);
 		}
 		clump->destroy();
 	}
@@ -837,7 +837,7 @@ CFileLoader::LoadModelFile(const char *filename)
 				atomic->removeFromClump();
 				atomic->setFrame(Frame::create());
 				CVisibilityPlugins::SetAtomicModelInfo(atomic, mi);
-				atomic->setRenderCB(nil);
+				CVisibilityPlugins::SetAtomicRenderCallback(atomic, nil);
 			}else
 				debug("Can't find Atomic %s\n", name);
 		}

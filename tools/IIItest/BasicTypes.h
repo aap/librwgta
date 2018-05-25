@@ -1,6 +1,8 @@
 #ifndef _BASICTYPES_H_
 #define _BASICTYPES_H_
 
+inline float clamp(float f) { return f > 1.0f ? 1.0f : f; }
+
 class CVector
 {
 public:

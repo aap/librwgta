@@ -254,7 +254,7 @@ CRenderer::SetupBigBuildingVisibility(CEntity *ent)
 			return false;
 		if(mi->m_drawLast){
 			CVisibilityPlugins::InsertEntityIntoSortedList(ent, dist);
-			ent->m_isFading = 0;
+			ent->bDistanceFade = 0;
 			return false;
 		}
 		return true;
@@ -325,7 +325,7 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 	if(LOD_DISTANCE + STREAM_DISTANCE < dist && dist < mi->GetLargestLodDistance())
 		dist = mi->GetLargestLodDistance();
 
-	if(ent->m_type == ENTITY_TYPE_OBJECT && ent->m_drawDamaged)
+	if(ent->m_type == ENTITY_TYPE_OBJECT && ent->bRenderDamaged)
 		mi->m_isDamaged = 1;
 
 	rw::Atomic *a = mi->GetAtomicFromDistance(dist);
@@ -340,7 +340,7 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 		if(a->geometry != rwobj->geometry)
 			rwobj->setGeometry(a->geometry, 0);
 		mi->IncreaseAlpha();
-		if(ent->m_rwObject == nil || !ent->m_isVisible)
+		if(ent->m_rwObject == nil || !ent->bIsVisible)
 			return VIS_INVISIBLE;
 
 		if(!ent->GetIsOnScreen()){
@@ -350,13 +350,13 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 
 		if(mi->m_alpha != 255){
 			CVisibilityPlugins::InsertEntityIntoSortedList(ent, dist);
-			ent->m_isFading = 1;
+			ent->bDistanceFade = 1;
 			return VIS_INVISIBLE;
 		}
 
 		if(mi->m_drawLast || ent->m_flagD20){
 			CVisibilityPlugins::InsertEntityIntoSortedList(ent, dist);
-			ent->m_isFading = 0;
+			ent->bDistanceFade = 0;
 			return VIS_INVISIBLE;
 		}
 		return VIS_VISIBLE;
@@ -390,14 +390,14 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 	if(a->geometry != rwobj->geometry)
 		rwobj->setGeometry(a->geometry, 0);
 	mi->IncreaseAlpha();
-	if(ent->m_rwObject == nil || !ent->m_isVisible)
+	if(ent->m_rwObject == nil || !ent->bIsVisible)
 		return VIS_INVISIBLE;
 
 	if(!ent->GetIsOnScreen())
 		mi->m_alpha = 255;
 	else{
 		CVisibilityPlugins::InsertEntityIntoSortedList(ent, dist);
-		ent->m_isFading = 1;
+		ent->bDistanceFade = 1;
 	}
 	return VIS_CULLED;
 }
