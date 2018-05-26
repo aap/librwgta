@@ -40,6 +40,24 @@ public:
 	CVector operator*(float t) const {
 		return CVector(x*t, y*t, z*t);
 	}
+	CVector &operator-=(const CVector &rhs) {
+		this->x -= rhs.x;
+		this->y -= rhs.y;
+		this->z -= rhs.z;
+		return *this;
+	}
+	CVector &operator+=(const CVector &rhs) {
+		this->x += rhs.x;
+		this->y += rhs.y;
+		this->z += rhs.z;
+		return *this;
+	}
+	CVector &operator*=(float t) {
+		this->x *= t;
+		this->y *= t;
+		this->z *= t;
+		return *this;
+	}
 };
 
 class CVector2D
@@ -139,8 +157,10 @@ public:
 		m_matrix = *m_attachment;
 	}
 	void UpdateRW(void){
-		if(m_attachment)
+		if(m_attachment){
 			*m_attachment = m_matrix;
+			m_attachment->update();
+		}
 	}
 	void operator=(CMatrix const &rhs){
 		m_matrix = rhs.m_matrix;
@@ -149,6 +169,9 @@ public:
 	}
 
 	CVector *GetPosition(void){ return (CVector*)&m_matrix.pos; }
+	CVector *GetLeft(void){ return (CVector*)&m_matrix.right; }
+	CVector *GetUp(void){ return (CVector*)&m_matrix.up; }
+	CVector *GetAt(void){ return (CVector*)&m_matrix.at; }
 	void SetScale(float s){
 		m_matrix.right.x = s;
 		m_matrix.right.y = 0.0f;
@@ -165,6 +188,16 @@ public:
 		m_matrix.pos.x = 0.0f;
 		m_matrix.pos.y = 0.0f;
 		m_matrix.pos.z = 0.0f;
+	}
+	void Reorthogonalise(void){
+		CVector &l = *GetLeft();
+		CVector &u = *GetUp();
+		CVector &a = *GetAt();
+		a = CrossProduct(l, u);
+		a.Normalise();
+		l = CrossProduct(u, a);
+		l.Normalise();
+		u = CrossProduct(a, l);
 	}
 };
 

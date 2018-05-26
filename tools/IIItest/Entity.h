@@ -90,6 +90,8 @@ public:
 	bool GetIsOnScreenComplex(void);
 	void GetBoundCenter(CVector &out);
 	float GetBoundRadius(void) { return CModelInfo::GetModelInfo(m_modelIndex)->GetColModel()->boundingSphere.radius; }
+	int GetModelIndex(void) { return m_modelIndex; }
+	void UpdateRwFrame(void);
 
 	// from CPlaceable
 	~CEntity(void);

@@ -27,27 +27,56 @@ class CTestObject : public CPhysical
 public:
 	void *operator new(size_t s) { return (void*)rwNewT(uint8, s, 0); };
 	void operator delete(void *p, size_t) { rwFree(p); }
+	CTestObject(int id);
+	void ProcessControl(void);
 };
 
 static CTestObject *car;
+
+CTestObject::CTestObject(int id)
+{
+	SetModelIndex(id);
+	CVehicleModelInfo *mi = (CVehicleModelInfo*)CModelInfo::GetModelInfo(GetModelIndex());
+	assert(mi->m_type == VEHICLEMODELINFO);
+	tHandlingData *handling = cHandlingDataMgr::GetHandlingData(mi->m_handlingId);
+	m_fMass = handling->fMass;
+	m_fTurnMass = handling->fTurnMass;
+	m_vecCentreOfMass = handling->CenterOfMass;
+	m_fAirResistance = handling->Dimensions.x * handling->Dimensions.z / m_fMass;
+}
+
+void
+CTestObject::ProcessControl(void)
+{
+	ApplyMoveSpeed();
+	ApplyTurnSpeed();
+	ApplyGravity();
+	ApplyFriction();
+	ApplyAirResistance();
+	m_matrix.Reorthogonalise();
+}
 
 void
 CTest::Init(void)
 {
 #ifdef FOOTEST
-	car = new CTestObject;
-
-	// Set camera up into the sky
-	TheCamera.m_target.set(0.0f, 0.0f, 500.0f);
-	TheCamera.m_position.set(10.0f, 0.0f, 505.0f);
-
-	CStreaming::RequestModel(140, 1);
+	int id = 105;	// cheetah
+	CStreaming::RequestModel(id, 1);
 	CStreaming::LoadAllRequestedModels();
-	car->SetModelIndex(140);
+
+	car = new CTestObject(id);
 	rw::Matrix mat;
 	rw::V3d pos = { 0.0f, 0.0f, 500.0f };
 	mat.translate(&pos, rw::COMBINEREPLACE);
 	car->SetTransform(&mat);
+
+//	car->m_vecMoveSpeed = CVector(0.0f, 0.01f, 0.0f);
+//	car->m_vecTurnSpeed = CVector(0.01f, 0.1f, 0.05f);
+//	car->ApplyTurnForce(1.0f, 0.0f, 0.0f, 0.0f, 900.0f, 0.0f);
+
+	// Set camera up into the sky
+	TheCamera.m_target.set(0.0f, 0.0f, 500.0f);
+	TheCamera.m_position.set(10.0f, 0.0f, 505.0f);
 #endif
 
 #ifdef COLTEST
@@ -78,6 +107,13 @@ CTest::Init(void)
 void
 CTest::Update(void)
 {
+#ifdef FOOTEST
+//	car->ApplyMoveForce(0.0f, 0.1f, 0.0f);
+
+	car->ProcessControl();
+	car->GetMatrix().UpdateRW();
+	car->UpdateRwFrame();
+#endif
 #ifdef COLTEST
 //	sphere1.center = TheCamera.m_target;
 //	line1.Set(TheCamera.m_target, CVector(TheCamera.m_target) + CVector(2.0f, 2.0f, 5.0f));

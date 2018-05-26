@@ -1,6 +1,6 @@
 #include "III.h"
 
-cHandlingDataMgr::Data cHandlingDataMgr::data[NUMHANDLINGS];
+tHandlingData cHandlingDataMgr::data[NUMHANDLINGS];
 
 void
 cHandlingDataMgr::Initialise(void)
@@ -19,15 +19,16 @@ cHandlingDataMgr::LoadHandlingData(void)
 	if(file = fopen("data/handling.cfg", "rb"), file == nil)
 		return;
 	int i = 0;
-	Data *d;
+	tHandlingData *d;
 	while(line = CFileLoader::LoadLine(file)){
 		if(line[0] == ';')
 			continue;
 		sscanf(line, "%s", name);
-		i = GetHandlingData(name);
+		i = GetHandlingId(name);
 		assert(i >= 0);
 		assert(i < NUMHANDLINGS);
 		d = &data[i];
+		// TODO: do this better
 		sscanf(line, "%s %f %f %f %f %f %f %f %d %f %f %f"
 		             "%c %f %f %c %c"
 		             "%f %f %d %f %f %f %f %f %d"
@@ -46,13 +47,26 @@ cHandlingDataMgr::LoadHandlingData(void)
 		d->trans.Flags = d->Flags = flags;
 		d->FrontLights = front;
 		d->RearLights = rear;
-		// TODO: convert to game units...and more
+		ConvertDataToGameUnits(d);
 	}
 	fclose(file);
 }
 
+void
+cHandlingDataMgr::ConvertDataToGameUnits(tHandlingData *d)
+{
+	d->trans.fEngineAcceleration /= 2500.0f;
+	d->trans.fMaxVelocity /= 180.0f;
+	d->fBrakeDeceleration /= 2500.0f;
+	d->fTurnMass = CVector2D(d->Dimensions).MagnitudeSqr() * d->fMass / 12.0f;
+	if(d->fTurnMass >= 10.0f)
+		d->fTurnMass *= 5.0f;
+	d->fInvMass = 1.0f/d->fMass;
+	// TODO: more
+}
+
 int
-cHandlingDataMgr::GetHandlingData(const char *ident)
+cHandlingDataMgr::GetHandlingId(const char *ident)
 {
 	static const char *idents[] = {
 		"LANDSTAL",

@@ -317,7 +317,7 @@ CFileLoader::LoadVehicleObject(char *line)
 	modelinfo->SetName(model);
 	modelinfo->SetTexDictionary(txd);
 	// TODO frq
-	modelinfo->m_handlingId = cHandlingDataMgr::GetHandlingData(handling);
+	modelinfo->m_handlingId = cHandlingDataMgr::GetHandlingId(handling);
 	modelinfo->m_vehicleType = StrAssoc::get(types, vehType);
 	modelinfo->m_vehicleClass = StrAssoc::get(classes, vehClass);
 	for(char *s = gameName; *s; s++)

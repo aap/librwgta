@@ -248,6 +248,17 @@ CEntity::DeleteRwObject(void)
 }
 
 void
+CEntity::UpdateRwFrame(void)
+{
+	if(m_rwObject){
+		if(m_rwObject->type == rw::Atomic::ID)
+			((rw::Atomic*)m_rwObject)->getFrame()->updateObjects();
+		else if(m_rwObject->type == rw::Clump::ID)
+			((rw::Clump*)m_rwObject)->getFrame()->updateObjects();
+	}
+}
+
+void
 CEntity::CreateRwObject(void)
 {
 	CBaseModelInfo *mi = CModelInfo::GetModelInfo(m_modelIndex);
