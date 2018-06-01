@@ -310,6 +310,14 @@ allocateExtraNormals(rw::Geometry *g)
 	return *extraNormals;
 }
 
+void
+freeExtraNormals(rw::Geometry *g)
+{
+	rw::V3d **extranormals = PLUGINOFFSET(rw::V3d*, g, extraNormalsOffset);
+	rwFree(*extranormals);
+	*extranormals = nil;
+}
+
 rw::V3d*
 getExtraNormals(rw::Geometry *g)
 {
@@ -326,9 +334,7 @@ createExtraNormals(void *object, int32 offset, int32)
 static void*
 destroyExtraNormals(void *object, int32 offset, int32)
 {
-	rw::V3d **extranormals = PLUGINOFFSET(rw::V3d*, object, offset);
-	rwFree(*extranormals);
-	*extranormals = nil;
+	freeExtraNormals((rw::Geometry*)object);
 	return object;
 }
 

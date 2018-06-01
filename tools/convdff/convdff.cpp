@@ -40,8 +40,75 @@ usage(void)
 	fprintf(stderr, "\t-o output platform. ps2, xbox, mobile, d3d8, d3d9\n");
 	fprintf(stderr, "\t--III2VCcar specmap. convert reflections from III to VC using specmap\n");
 	fprintf(stderr, "\t--ps2VCcar set up VC vehicle for use with PS2 and Xbox reflections\n");
+	fprintf(stderr, "\t--xboxbuilding convert SA Xbox building to something PS2 and PC understand\n");
 	fprintf(stderr, "\t--info dump some info about the file\n");
 	exit(1);
+}
+
+// Convert normals to extra colors
+// and extra normals to regular normals.
+void
+convertSAXboxBuilding(Atomic *atomic)
+{
+	uint32 id = gta::getPipelineID(atomic);
+	if(id != gta::RSPIPE_XBOX_CustomBuilding_PipeID &&
+	   id != gta::RSPIPE_XBOX_CustomBuildingDN_PipeID &&
+	   id != gta::RSPIPE_XBOX_CustomBuildingEnvMap_PipeID &&
+	   id != gta::RSPIPE_XBOX_CustomBuildingDNEnvMap_PipeID)
+		return;
+
+	Geometry *geo = atomic->geometry;
+
+	// this shouldn't happen
+	if((geo->flags & Geometry::PRELIT) == 0)
+		return;
+
+	// Normals to Extra colors
+	// Copy alpha from normal colors (these will be wet road alpha now)
+	if(geo->flags & Geometry::NORMALS){
+		RGBA *daycols = geo->colors;
+		if(gta::getExtraVertColors(atomic) == nil)
+			gta::allocateExtraVertColors(geo);
+		RGBA *nightcols = gta::getExtraVertColors(atomic);
+		V3d *normals = geo->morphTargets[0].normals;
+
+		int32 i;
+		for(i = 0; i < geo->numVertices; i++){
+			nightcols[i].red = normals[i].x*255;
+			nightcols[i].green = normals[i].y*255;
+			nightcols[i].blue = normals[i].z*255;
+			nightcols[i].alpha = daycols[i].alpha;
+		}
+	}
+
+	// Extra normals to normals
+	V3d *extranormals = gta::getExtraNormals(geo);
+	if(extranormals){
+		if((geo->flags & Geometry::NORMALS) == 0){
+			// Yikes! We have to allocate normals
+			assert(geo->numMorphTargets == 1);
+			// First save the old morph target from being deallocated
+			MorphTarget *mt = geo->morphTargets;
+			geo->morphTargets = nil;
+			geo->numMorphTargets = 0;
+			// Now allocate a new morph target with normals
+			geo->flags |= Geometry::NORMALS;
+			geo->addMorphTargets(1);
+			// Move over data
+			geo->morphTargets->boundingSphere = mt->boundingSphere;
+			memcpy(geo->morphTargets->vertices, mt->vertices, geo->numVertices*sizeof(V3d));
+			// finally free old data
+			rwFree(mt);
+		}
+		// Just copy and free old data
+		memcpy(geo->morphTargets->normals, extranormals, geo->numVertices*sizeof(V3d));
+		gta::freeExtraNormals(geo);
+	}else
+		geo->flags &= ~Geometry::NORMALS;	// in case we had colors in the normals
+
+	// Clear pipeline
+	gta::setPipelineID(atomic, 0);
+	atomic->pipeline = nil;
 }
 
 void
@@ -357,6 +424,7 @@ main(int argc, char *argv[])
 	int iiiToVcCar = 0;
 	const char *specmap = "reflection01";
 	int ps2vccar = 0;
+	int xboxbuild = 0;
 	int info = 0;
 
 	char *s, *longarg;
@@ -372,6 +440,7 @@ main(int argc, char *argv[])
 			iiiToVcCar++;
 			specmap = EARGF(usage());
 		}else if(strcmp_ci(longarg, "info") == 0) info++;
+		else if(strcmp_ci(longarg, "xboxbuilding") == 0) xboxbuild++;
 		else usage();
 		break;
 	case 'u':
@@ -580,6 +649,7 @@ main(int argc, char *argv[])
 				setupMatFX_VCPS2Xbox(m);
 			}
 		}
+
 	// Make sure we have all pipes attached for uninstance
 	FORLIST(lnk, c->atomics)
 		gta::attachCustomPipelines(Atomic::fromClump(lnk));;
@@ -599,6 +669,12 @@ main(int argc, char *argv[])
 
 	rw::platform = outplatform;
 	switchPipes(c, rw::platform);
+
+	if(xboxbuild)
+		FORLIST(lnk, c->atomics){
+			Atomic *a = Atomic::fromClump(lnk);
+			convertSAXboxBuilding(a);
+		}
 
 	if(instance)
 		FORLIST(lnk, c->atomics){

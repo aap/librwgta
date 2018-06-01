@@ -67,6 +67,7 @@ void registerBreakableModelPlugin(void);
 extern rw::int32 extraNormalsOffset;
 void registerExtraNormalsPlugin(void);
 rw::V3d *allocateExtraNormals(rw::Geometry *g);
+void freeExtraNormals(rw::Geometry *g);
 rw::V3d *getExtraNormals(rw::Geometry *g);
 
 // Extra vert colors (not on Xbox)
