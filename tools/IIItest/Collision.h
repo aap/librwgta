@@ -131,7 +131,7 @@ public:
 	static bool ProcessSphereTriangle(const CColSphere &sph, const CVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane, CColPoint &point, float &mindistsq);
 	static bool ProcessLineOfSight(const CColLine &line, const CMatrix &matrix, CColModel &model, CColPoint &point, float &mindist, bool ignoreSurf78);
 	static bool ProcessVerticalLine(const CColLine &line, const CMatrix &matrix, CColModel &model, CColPoint &point, float &mindist, bool ignoreSurf78, CStoredCollPoly *poly);
-	static int  ProcessColModels(const CMatrix &matrix1, CColModel &model1, const CMatrix &matrix2, CColModel &model2, CColPoint *point1, CColPoint *point2, float *xx);
+	static int32 ProcessColModels(const CMatrix &matrix1, CColModel &model1, const CMatrix &matrix2, CColModel &model2, CColPoint *point1, CColPoint *point2, float *linedists);
 
 	static float DistToLine(const CVector *l0, const CVector *l1, const CVector *point);
 	static float DistToLine(const CVector *l0, const CVector *l1, const CVector *point, CVector &closest);

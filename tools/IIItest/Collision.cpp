@@ -1015,7 +1015,7 @@ CCollision::ProcessVerticalLine(const CColLine &line,
 // Returns the number of A's spheres that collide.
 // Returned ColPoints are in world space.
 // NB: lines do not seem to be supported very well, use with caution
-int
+int32
 CCollision::ProcessColModels(const CMatrix &matrixA, CColModel &modelA,
 	const CMatrix &matrixB, CColModel &modelB,
 	CColPoint *spherepoints, CColPoint *linepoints, float *linedists)

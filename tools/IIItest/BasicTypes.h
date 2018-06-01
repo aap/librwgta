@@ -40,6 +40,9 @@ public:
 	CVector operator*(float t) const {
 		return CVector(x*t, y*t, z*t);
 	}
+	CVector operator/(float t) const {
+		return CVector(x/t, y/t, z/t);
+	}
 	CVector &operator-=(const CVector &rhs) {
 		this->x -= rhs.x;
 		this->y -= rhs.y;
@@ -56,6 +59,12 @@ public:
 		this->x *= t;
 		this->y *= t;
 		this->z *= t;
+		return *this;
+	}
+	CVector &operator/=(float t) {
+		this->x /= t;
+		this->y /= t;
+		this->z /= t;
 		return *this;
 	}
 };

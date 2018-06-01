@@ -35,6 +35,9 @@ static CTestObject *car;
 
 CTestObject::CTestObject(int id)
 {
+	m_type = ENTITY_TYPE_VEHICLE;
+	m_status = STATUS_SIMPLE;
+
 	SetModelIndex(id);
 	CVehicleModelInfo *mi = (CVehicleModelInfo*)CModelInfo::GetModelInfo(GetModelIndex());
 	assert(mi->m_type == VEHICLEMODELINFO);

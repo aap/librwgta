@@ -3,22 +3,22 @@
 CEntity::CEntity(void)
 {
 	m_type = ENTITY_TYPE_NOTHING;
-	m_status = ENTITY_STATUS_4;
+	m_status = STATUS_ABANDONED;
 
 	bUsesCollision = 0;
-	m_flagA2 = 0;
-	m_flagA4 = 0;
-	m_flagA8 = 0;
+	bCollisionProcessed = 0;
+	bIsStatic = 0;
+	bHasContacted = 0;
 	m_flagA10 = 0;
-	m_flagA20 = 0;
-	m_flagA40 = 0;
-	m_flagA80 = 0;
+	bIsStuck = 0;
+	bIsInSafePosition = 0;
+	bUseCollisionRecords = 0;
 
-	m_flagB1 = 0;
+	bWasPostponed = 0;
 	m_flagB2 = 0;
 	bIsVisible = 1;
-	m_flagB8 = 0;
-	bIsScorched = 0;
+	bHasCollided = 0;
+	bRenderScorched = 0;
 	m_flagB20 = 0;
 	bIsBIGBuilding = 0;
 	bRenderDamaged = 0;
@@ -32,12 +32,12 @@ CEntity::CEntity(void)
 	m_flagC40 = 0;
 	m_flagC80 = 0;
 
-	m_flagD1 = 0;
-	m_flagD2 = 0;
+	bRemoveFromWorld = 0;
+	bHasHitWall = 0;
 	bImBeingRendered = 0;
 	m_flagD8 = 0;
 	m_flagD10 = 0;
-	m_flagD20 = 0;
+	bDrawLast = 0;
 	m_flagD40 = 0;
 	m_flagD80 = 0;	// tested in CObject::Render
 
@@ -98,6 +98,16 @@ CEntity::GetIsOnScreenComplex(void)
 	return true;
 }
 
+bool
+CEntity::GetIsTouching(const CVector center, float radius)
+{
+	CVector c1;
+	float r1;
+	GetBoundCenter(c1);
+	r1 = GetBoundRadius();
+	return (center - c1).MagnitudeSqr() < sq(r1+radius);
+}
+
 void
 CEntity::GetBoundCenter(CVector &out)
 {
@@ -122,9 +132,9 @@ CEntity::Add(void)
 	yend   = CWorld::GetSectorIndexY(bounds.top);
 	ymid   = CWorld::GetSectorIndexY((bounds.bottom + bounds.top)/2.0f);
 	assert(xstart >= 0);
-	assert(xend < 100);
+	assert(xend < NUMSECTORS_X);
 	assert(ystart >= 0);
-	assert(yend < 100);
+	assert(yend < NUMSECTORS_Y);
 
 	for(y = ystart; y <= yend; y++)
 		for(x = xstart; x <= xend; x++){
@@ -184,9 +194,9 @@ CEntity::Remove(void)
 	yend   = CWorld::GetSectorIndexY(bounds.top);
 	ymid   = CWorld::GetSectorIndexY((bounds.bottom + bounds.top)/2.0f);
 	assert(xstart >= 0);
-	assert(xend < 100);
+	assert(xend < NUMSECTORS_X);
 	assert(ystart >= 0);
-	assert(yend < 100);
+	assert(yend < NUMSECTORS_Y);
 
 	for(y = ystart; y <= yend; y++)
 		for(x = xstart; x <= xend; x++){

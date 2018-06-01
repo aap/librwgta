@@ -3,7 +3,7 @@
 CPtrList CWorld::ms_bigBuildingsList[4];
 CPtrList CWorld::ms_listMovingEntityPtrs;
 CSector  CWorld::ms_aSectors[100][100];
-ushort CWorld::ms_nCurrentScanCode;
+uint16 CWorld::ms_nCurrentScanCode;
 
 void
 CWorld::Add(CEntity *ent)
@@ -19,7 +19,7 @@ CWorld::Add(CEntity *ent)
 
 	if(ent->m_type != ENTITY_TYPE_BUILDING &&
 	   ent->m_type != ENTITY_TYPE_DUMMY &&
-	   !ent->m_flagA4)
+	   !ent->bIsStatic)
 		((CPhysical*)ent)->AddToMovingList();
 }
 

@@ -29,13 +29,20 @@ class CWorld
 	static CPtrList ms_bigBuildingsList[4];
 	static CPtrList ms_listMovingEntityPtrs;
 	static CSector ms_aSectors[NUMSECTORS_X][NUMSECTORS_Y];
+	static uint16 ms_nCurrentScanCode;
 public:
-	static ushort ms_nCurrentScanCode;
 
 	static void Add(CEntity*);
 	static CSector *GetSector(int x, int y) { return &ms_aSectors[x][y]; }
 	static CPtrList &GetBigBuildingList(eLevelName i) { return ms_bigBuildingsList[i]; }
 	static CPtrList &GetMovingEntityList(void) { return ms_listMovingEntityPtrs; }
+	static uint16 GetCurrentScanCode(void) { return ms_nCurrentScanCode; }
+	static void AdvanceCurrentScanCode(void){
+		if(++CWorld::ms_nCurrentScanCode == 0){
+			CWorld::ClearScanCodes();
+			CWorld::ms_nCurrentScanCode = 1;
+		}
+	}
 	static void ClearScanCodes(void);
 
 	static int GetSectorIndexX(float f) { return (int)( (f + 2000.0f)/40.0f ); }

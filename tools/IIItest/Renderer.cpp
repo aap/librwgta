@@ -100,10 +100,7 @@ CRenderer::ScanWorld(void)
 
 	CVisibilityPlugins::InitAlphaEntityList();
 
-	if(++CWorld::ms_nCurrentScanCode == 0){
-		CWorld::ClearScanCodes();
-		CWorld::ms_nCurrentScanCode = 1;
-	}
+	CWorld::AdvanceCurrentScanCode();
 
 	if(cammatrix->at.z > 0.0f){
 		// looking up, bottom corners are further away
@@ -178,9 +175,9 @@ CRenderer::ScanSectorList(CSector *sect)
 	for(i = 0; i < 10; i++)
 		for(node = lists[i].first; node; node = node->next){
 			e = (CEntity*)node->item;
-			if(e->m_scanCode == CWorld::ms_nCurrentScanCode)
+			if(e->m_scanCode == CWorld::GetCurrentScanCode())
 				continue;
-			e->m_scanCode = CWorld::ms_nCurrentScanCode;
+			e->m_scanCode = CWorld::GetCurrentScanCode();
 			switch(SetupEntityVisibility(e)){
 			case VIS_INVISIBLE:
 				break;
@@ -354,7 +351,7 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 			return VIS_INVISIBLE;
 		}
 
-		if(mi->m_drawLast || ent->m_flagD20){
+		if(mi->m_drawLast || ent->bDrawLast){
 			CVisibilityPlugins::InsertEntityIntoSortedList(ent, dist);
 			ent->bDistanceFade = 0;
 			return VIS_INVISIBLE;

@@ -99,8 +99,7 @@ public:
 #include "Collision.h"
 #include "ModelInfo.h"
 #include "ModelIndices.h"
-#include "PtrNode.h"
-#include "PtrList.h"
+#include "Lists.h"
 #include "Placeable.h"
 #include "Entity.h"
 #include "Building.h"
@@ -128,6 +127,8 @@ public:
 
 inline float
 clamp(float v, float min, float max){ return v<min ? min : v>max ? max : v; }
+inline float
+sq(float x) { return x*x; }
 #define DEGTORAD(d) (d/180.0f*PI)
 
 
