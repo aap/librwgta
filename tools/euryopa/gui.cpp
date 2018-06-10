@@ -352,6 +352,8 @@ uiInstInfo(ObjectInst *inst)
 	strncpy(buf, obj->m_name, MODELNAMELEN);
 	ImGui::InputText("Model", buf, MODELNAMELEN);
 
+	ImGui::Text("IPL: %s", inst->m_file->name);
+
 	ImGui::Text("Translation: %.3f %.3f %.3f",
 		inst->m_translation.x,
 		inst->m_translation.y,
@@ -386,6 +388,11 @@ uiObjInfo(ObjectDef *obj)
 	ImGui::InputText("Model", buf, MODELNAMELEN);
 	strncpy(buf, txd->name, MODELNAMELEN);
 	ImGui::InputText("TXD", buf, MODELNAMELEN);
+
+	ImGui::Text("IDE: %s", obj->m_file->name);
+	if(obj->m_colModel && !obj->m_gotChildCol)
+		ImGui::Text("COL: %s", obj->m_colModel->file->name);
+
 	ImGui::Text("Draw dist:");
 	for(i = 0; i < obj->m_numAtomics; i++){
 		ImGui::SameLine();

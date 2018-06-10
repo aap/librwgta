@@ -45,6 +45,8 @@ struct DirEntry
 	// additional data
 	int filetype;
 	int overridden;
+
+	GameFile *file;
 };
 
 struct CdImage
@@ -115,11 +117,13 @@ AddDirEntry(CdImage *cdimg, DirEntry *de)
 		de->filetype = FILE_MODEL;
 	else if(rw::strncmp_ci(ext, "txd", 3) == 0)
 		de->filetype = FILE_TXD;
-	else if(rw::strncmp_ci(ext, "col", 3) == 0)
+	else if(rw::strncmp_ci(ext, "col", 3) == 0){
 		de->filetype = FILE_COL;
-	else if(rw::strncmp_ci(ext, "ipl", 3) == 0)
+		de->file = NewGameFile(de->name);
+	}else if(rw::strncmp_ci(ext, "ipl", 3) == 0){
 		de->filetype = FILE_IPL;
-	else{
+		de->file = NewGameFile(de->name);
+	}else{
 //		log("warning: unknown file extension: %s %s\n", ext, de->name);
 		return;
 	}
@@ -312,6 +316,18 @@ DecompressFile(uint8 *src, int *size)
 	if(size)
 		*size = sz;
 	return compressionBuf;
+}
+
+GameFile*
+GetGameFileFromImage(int i)
+{
+	int img;
+	CdImage *cdimg;
+	img = i>>24 & 0xFF;
+	i = i & 0xFFFFFF;
+	cdimg = &cdImages[img];
+	DirEntry *de = &cdimg->directory[i];
+	return de->file;
 }
 
 uint8*

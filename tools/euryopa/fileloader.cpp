@@ -1,8 +1,17 @@
 #include "euryopa.h"
 
+GameFile*
+NewGameFile(char *path)
+{
+	GameFile *f = new GameFile;
+	f->name = strdup(path);
+	return f;
+}
+
 namespace FileLoader {
 
-char *currentFile;	// IDE, IPL &c.
+//char *currentFile;	// IDE, IPL &c.
+GameFile *currentFile;
 
 void*
 DatDesc::get(DatDesc *desc, const char *name)
@@ -112,6 +121,8 @@ LoadObject(char *line)
 		obj->m_drawDist[n] = dist[n];
 	obj->SetFlags(flags);
 	obj->m_isTimed = false;
+
+	obj->m_file = currentFile;
 }
 
 void
@@ -164,6 +175,8 @@ LoadTimeObject(char *line)
 	obj->m_isTimed = true;
 	obj->m_timeOn = timeOn;
 	obj->m_timeOff = timeOff;
+
+	obj->m_file = currentFile;
 }
 
 void
@@ -186,6 +199,8 @@ LoadAnimatedObject(char *line)
 	obj->m_numAtomics = 1;	// to make the distance code simpler
 	obj->m_drawDist[0] = dist;
 	obj->SetFlags(flags);
+
+	obj->m_file = currentFile;
 }
 
 void LoadPathLine(char *line) { }
@@ -255,6 +270,8 @@ LoadObjectInstance(char *line)
 
 	if(isSA())
 		tmpInsts[numTmpInsts++] = inst;
+
+	inst->m_file = currentFile;
 }
 
 void
@@ -461,8 +478,10 @@ SetupBigBuildings(void)
 		if(lodinst == nil)
 			continue;
 		lodobj = GetObjectDef(lodinst->m_objectId);
-		if(lodinst->m_numChildren == 1 && obj->m_colModel)
+		if(lodinst->m_numChildren == 1 && obj->m_colModel){
 			lodobj->m_colModel = obj->m_colModel;
+			lodobj->m_gotChildCol = true;
+		}
 		assert(lodobj->m_colModel);
 		assert(obj->m_colModel);
 	}
@@ -553,9 +572,8 @@ LoadCollisionFile(const char *path)
 
 		obj = GetObjectDef(colfile.name, nil);
 		if(obj){
-//if(strstr(colfile.name, "seabed"))
-//	printf("loading COL %s\n", colfile.name);
 			CColModel *col = new CColModel;
+			col->file = currentFile;
 			obj->m_colModel = col;
 			switch(version){
 			case 1: ReadColModel(col, buffer, colfile.modelsize-24); break;
@@ -581,6 +599,7 @@ LoadLevel(const char *filename)
 {
 	FILE *file;
 	char *line;
+	char path[256];
 	rw::TexDictionary *curTxd;
 
 
@@ -603,7 +622,9 @@ LoadLevel(const char *filename)
 		}else if(strncmp(line, "COLFILE", 7) == 0){
 //			eLevelName currlevel = CGame::currLevel;
 //			sscanf(line+8, "%d", (int*)&CGame::currLevel);
-			LoadCollisionFile(line+10);
+			strncpy(path, line+10, 256);
+			currentFile = NewGameFile(path);
+			LoadCollisionFile(path);
 //			CGame::currLevel = currlevel;
 		}else if(strncmp(line, "MODELFILE", 9) == 0){
 			// TODO
@@ -614,8 +635,9 @@ LoadLevel(const char *filename)
 //			CFileLoader::LoadClumpFile(line+9);
 //			debug("HIERFILE\n");
 		}else if(strncmp(line, "IDE", 3) == 0){
-			currentFile = strdup(line+4);
-			LoadObjectTypes(currentFile);
+			strncpy(path, line+4, 256);
+			currentFile = NewGameFile(path);
+			LoadObjectTypes(path);
 		}else if(strncmp(line, "IPL", 3) == 0){
 			if(!haveFinishedDefinitions){
 				InitCdImages();
@@ -623,11 +645,14 @@ LoadLevel(const char *filename)
 				haveFinishedDefinitions = true;
 			}
 
-			currentFile = strdup(line+4);
-			LoadScene(currentFile);
+			strncpy(path, line+4, 256);
+			currentFile = NewGameFile(path);
+			LoadScene(path);
 		}else if(strncmp(line, "MAPZONE", 7) == 0){
 //			debug("MAPZONE\n");
-			LoadMapZones(line+8);
+			strncpy(path, line+8, 256);
+			currentFile = NewGameFile(path);
+			LoadMapZones(path);
 		}else if(strncmp(line, "SPLASH", 6) == 0){
 //			printf("[SPLASH %s]\n", line+7);
 		}else if(strncmp(line, "CDIMAGE", 7) == 0){

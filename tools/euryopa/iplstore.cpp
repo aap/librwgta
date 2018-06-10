@@ -64,6 +64,7 @@ LoadIpl(int slot)
 	int size;
 	uint8 *buffer;
 	FileObjectInstance *insts;
+	GameFile *file;
 
 	IplDef *ipl = GetIplDef(slot);
 
@@ -76,6 +77,7 @@ LoadIpl(int slot)
 	ObjectInst **instArray = GetInstArray(ipl->instArraySlot);
 
 	buffer = ReadFileFromImage(ipl->imageIndex, &size);
+	file = GetGameFileFromImage(ipl->imageIndex);
 	if(*(uint32*)buffer == 0x79726E62){	// bnry
 		int16 numInsts = *(int16*)(buffer+4);
 		insts = (FileObjectInstance*)(buffer + *(int32*)(buffer+0x1C));
@@ -89,6 +91,7 @@ LoadIpl(int slot)
 
 			ObjectInst *inst = AddInstance();
 			inst->Init(insts);
+			inst->m_file = file;
 
 			if(inst->m_lodId < 0)
 				inst->m_lod = nil;

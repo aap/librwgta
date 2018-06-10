@@ -107,6 +107,8 @@ struct CColTriangle
 //	float depth;
 //};
 
+struct GameFile;
+
 struct CColModel
 {
 	CSphere boundingSphere;
@@ -131,6 +133,8 @@ struct CColModel
 	uint8 flags;
 	uint8 allocFlag;
 	uint8 *rawdata;
+
+	GameFile *file;
 
 	CColModel(void);
 	~CColModel(void);

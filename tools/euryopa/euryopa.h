@@ -196,6 +196,13 @@ extern float weatherInterpolation;
 extern int extraColours;
 extern int currentArea;
 
+// TODO, this is a stub
+struct GameFile
+{
+	char *name;
+};
+GameFile *NewGameFile(char *path);
+
 bool IsHourInRange(int h1, int h2);
 void FindVersion(void);
 void LoadGame(void);
@@ -207,6 +214,7 @@ void DefinedState(void);
 void AddCdImage(const char *path);
 void InitCdImages(void);
 uint8 *ReadFileFromImage(int i, int *size);
+GameFile *GetGameFileFromImage(int i);
 void RequestObject(int id);
 void LoadAllRequestedObjects(void);
 
@@ -263,6 +271,7 @@ struct ObjectDef
 	int m_txdSlot;
 	int m_type;
 	CColModel *m_colModel;
+	bool m_gotChildCol;
 
 	// flags
 	bool m_normalCull;	// only III
@@ -312,6 +321,8 @@ struct ObjectDef
 	bool m_isHidden;
 	ObjectDef *m_relatedModel;
 	ObjectDef *m_relatedTimeModel;
+
+	GameFile *m_file;
 
 	float GetLargestDrawDist(void);
 	rw::Atomic *GetAtomicForDist(float dist);
@@ -368,6 +379,8 @@ struct ObjectInst
 	int32 m_id;	// to identify when picking
 	int m_selected;
 	int m_highlight;	// various ways to highlight this object
+
+	GameFile *m_file;
 
 	void UpdateMatrix(void);
 	void *CreateRwObject(void);
@@ -426,6 +439,8 @@ void LoadIpl(int i);
 // File Loader
 
 namespace FileLoader {
+
+extern GameFile *currentFile;
 
 struct DatDesc
 {

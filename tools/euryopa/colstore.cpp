@@ -59,6 +59,7 @@ LoadCol(int slot)
 	ColFileHeader *header;
 	int version;
 	ObjectDef *obj;
+	GameFile *file;
 	ColDef *col = GetColDef(slot);
 
 	if(col->imageIndex < 0){
@@ -67,6 +68,7 @@ LoadCol(int slot)
 	}
 
 	buffer = ReadFileFromImage(col->imageIndex, &size);
+	file = GetGameFileFromImage(col->imageIndex);
 	offset = 0;
 	while(offset < size){
 		header = (ColFileHeader*)(buffer+offset);
@@ -91,9 +93,8 @@ LoadCol(int slot)
 
 		obj = GetObjectDef(header->name, nil);
 		if(obj){
-//if(strstr(header->name, "seabed"))
-//	printf("loading COL %s\n", header->name);
 			CColModel *col = new CColModel;
+			col->file = file;
 			obj->m_colModel = col;
 			switch(version){
 			case 1: ReadColModel(col, buffer+offset, header->modelsize-24); break;
