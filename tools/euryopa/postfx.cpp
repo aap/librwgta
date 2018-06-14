@@ -17,42 +17,43 @@ CreateImmediateData(void)
 	Camera *cam = Scene.camera;
 	int w = sk::globals.width;
 	int h = sk::globals.height;
+	float recipZ = 1.0f/cam->nearPlane;
 
 	verts[0].setScreenX(0-0.5f);
 	verts[0].setScreenY(0-0.5f);
 	verts[0].setScreenZ(rw::im2d::GetNearZ());
 	verts[0].setCameraZ(cam->nearPlane);
-	verts[0].setRecipCameraZ(1.0f/cam->nearPlane);
+	verts[0].setRecipCameraZ(recipZ);
 	verts[0].setColor(255, 255, 255, 255);
-	verts[0].setU(0.0f);
-	verts[0].setV(0.0f);
+	verts[0].setU(0.0f, recipZ);
+	verts[0].setV(0.0f, recipZ);
 
 	verts[1].setScreenX(w-0.5f);
 	verts[1].setScreenY(0-0.5f);
 	verts[1].setScreenZ(rw::im2d::GetNearZ());
 	verts[1].setCameraZ(cam->nearPlane);
-	verts[1].setRecipCameraZ(1.0f/cam->nearPlane);
+	verts[1].setRecipCameraZ(recipZ);
 	verts[1].setColor(255, 255, 255, 255);
-	verts[1].setU(1.0f);
-	verts[1].setV(0.0f);
+	verts[1].setU(1.0f, recipZ);
+	verts[1].setV(0.0f, recipZ);
 
 	verts[2].setScreenX(0-0.5f);
 	verts[2].setScreenY(h-0.5f);
 	verts[2].setScreenZ(rw::im2d::GetNearZ());
 	verts[2].setCameraZ(cam->nearPlane);
-	verts[2].setRecipCameraZ(1.0f/cam->nearPlane);
+	verts[2].setRecipCameraZ(recipZ);
 	verts[2].setColor(255, 255, 255, 255);
-	verts[2].setU(0.0f);
-	verts[2].setV(1.0f);
+	verts[2].setU(0.0f, recipZ);
+	verts[2].setV(1.0f, recipZ);
 
 	verts[3].setScreenX(w-0.5f);
 	verts[3].setScreenY(h-0.5f);
 	verts[3].setScreenZ(rw::im2d::GetNearZ());
 	verts[3].setCameraZ(cam->nearPlane);
-	verts[3].setRecipCameraZ(1.0f/cam->nearPlane);
+	verts[3].setRecipCameraZ(recipZ);
 	verts[3].setColor(255, 255, 255, 255);
-	verts[3].setU(1.0f);
-	verts[3].setV(1.0f);
+	verts[3].setU(1.0f, recipZ);
+	verts[3].setV(1.0f, recipZ);
 }
 
 static void

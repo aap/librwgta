@@ -570,6 +570,7 @@ void
 setQuadVertices(float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3,
 	rw::RGBA c0, rw::RGBA c1, rw::RGBA c2, rw::RGBA c3)
 {
+	float recipZ = 1.0f/Scene.camera->nearPlane;
 	// This is what we draw:
 	// 3---2
 	// | / |
@@ -578,37 +579,37 @@ setQuadVertices(float x0, float y0, float x1, float y1, float x2, float y2, floa
 	quadverts[0].setScreenY(y2);
 	quadverts[0].setScreenZ(rw::im2d::GetNearZ());
 	quadverts[0].setCameraZ(Scene.camera->nearPlane);
-	quadverts[0].setRecipCameraZ(1.0f/Scene.camera->nearPlane);
+	quadverts[0].setRecipCameraZ(recipZ);
 	quadverts[0].setColor(c2.red, c2.green, c2.blue, c2.alpha);
-	quadverts[0].setU(0.0f);
-	quadverts[0].setV(0.0f);
+	quadverts[0].setU(0.0f, recipZ);
+	quadverts[0].setV(0.0f, recipZ);
 
 	quadverts[1].setScreenX(x3);
 	quadverts[1].setScreenY(y3);
 	quadverts[1].setScreenZ(rw::im2d::GetNearZ());
 	quadverts[1].setCameraZ(Scene.camera->nearPlane);
-	quadverts[1].setRecipCameraZ(1.0f/Scene.camera->nearPlane);
+	quadverts[1].setRecipCameraZ(recipZ);
 	quadverts[1].setColor(c3.red, c3.green, c3.blue, c3.alpha);
-	quadverts[1].setU(1.0f);
-	quadverts[1].setV(0.0f);
+	quadverts[1].setU(1.0f, recipZ);
+	quadverts[1].setV(0.0f, recipZ);
 
 	quadverts[2].setScreenX(x1);
 	quadverts[2].setScreenY(y1);
 	quadverts[2].setScreenZ(rw::im2d::GetNearZ());
 	quadverts[2].setCameraZ(Scene.camera->nearPlane);
-	quadverts[2].setRecipCameraZ(1.0f/Scene.camera->nearPlane);
+	quadverts[2].setRecipCameraZ(recipZ);
 	quadverts[2].setColor(c1.red, c1.green, c1.blue, c1.alpha);
-	quadverts[2].setU(1.0f);
-	quadverts[2].setV(1.0f);
+	quadverts[2].setU(1.0f, recipZ);
+	quadverts[2].setV(1.0f, recipZ);
 
 	quadverts[3].setScreenX(x0);
 	quadverts[3].setScreenY(y0);
 	quadverts[3].setScreenZ(rw::im2d::GetNearZ());
 	quadverts[3].setCameraZ(Scene.camera->nearPlane);
-	quadverts[3].setRecipCameraZ(1.0f/Scene.camera->nearPlane);
+	quadverts[3].setRecipCameraZ(recipZ);
 	quadverts[3].setColor(c0.red, c0.green, c0.blue, c0.alpha);
-	quadverts[3].setU(0.0f);
-	quadverts[3].setV(1.0f);
+	quadverts[3].setU(0.0f, recipZ);
+	quadverts[3].setV(1.0f, recipZ);
 }
 void
 renderQuad(float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3,

@@ -73,6 +73,8 @@ public:
 	void ProcessCollision(void);
 	void ProcessShift(void);
 
+	CVector GetSpeed(CVector &v);
+
 	void ApplyMoveSpeed(void);
 	void ApplyTurnSpeed(void);
 	void ApplyMoveForce(float x, float y, float z);

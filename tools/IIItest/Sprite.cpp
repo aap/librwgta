@@ -36,8 +36,8 @@ Sprite2d::SetVertices(CRect const &r, CRGBA const &c0, CRGBA const &c1, CRGBA co
 	ma_vertices[0].setCameraZ(z);
 	ma_vertices[0].setRecipCameraZ(recipz);
 	ma_vertices[0].setColor(c2.r, c2.g, c2.b, c2.a);
-	ma_vertices[0].setU(0.0f);
-	ma_vertices[0].setV(0.0f);
+	ma_vertices[0].setU(0.0f, recipz);
+	ma_vertices[0].setV(0.0f, recipz);
 
 	ma_vertices[1].setScreenX(r.right);
 	ma_vertices[1].setScreenY(r.bottom);
@@ -45,8 +45,8 @@ Sprite2d::SetVertices(CRect const &r, CRGBA const &c0, CRGBA const &c1, CRGBA co
 	ma_vertices[1].setCameraZ(z);
 	ma_vertices[1].setRecipCameraZ(recipz);
 	ma_vertices[1].setColor(c3.r, c3.g, c3.b, c3.a);
-	ma_vertices[1].setU(1.0f);
-	ma_vertices[1].setV(0.0f);
+	ma_vertices[1].setU(1.0f, recipz);
+	ma_vertices[1].setV(0.0f, recipz);
 
 	ma_vertices[2].setScreenX(r.right);
 	ma_vertices[2].setScreenY(r.top);
@@ -54,8 +54,8 @@ Sprite2d::SetVertices(CRect const &r, CRGBA const &c0, CRGBA const &c1, CRGBA co
 	ma_vertices[2].setCameraZ(z);
 	ma_vertices[2].setRecipCameraZ(recipz);
 	ma_vertices[2].setColor(c1.r, c1.g, c1.b, c1.a);
-	ma_vertices[2].setU(1.0f);
-	ma_vertices[2].setV(1.0f);
+	ma_vertices[2].setU(1.0f, recipz);
+	ma_vertices[2].setV(1.0f, recipz);
 
 	ma_vertices[3].setScreenX(r.left);
 	ma_vertices[3].setScreenY(r.top);
@@ -63,8 +63,8 @@ Sprite2d::SetVertices(CRect const &r, CRGBA const &c0, CRGBA const &c1, CRGBA co
 	ma_vertices[3].setCameraZ(z);
 	ma_vertices[3].setRecipCameraZ(recipz);
 	ma_vertices[3].setColor(c0.r, c0.g, c0.b, c0.a);
-	ma_vertices[3].setU(0.0f);
-	ma_vertices[3].setV(1.0f);
+	ma_vertices[3].setU(0.0f, recipz);
+	ma_vertices[3].setV(1.0f, recipz);
 }
 
 void

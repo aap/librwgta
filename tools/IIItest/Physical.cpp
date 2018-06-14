@@ -190,6 +190,12 @@ CPhysical::RemoveFromMovingList(void)
 	}
 }
 
+CVector
+CPhysical::GetSpeed(CVector &v)
+{
+	return m_vecMoveSpeed + m_vecMoveFriction + CrossProduct(m_vecTurnFriction + m_vecTurnSpeed, v);
+}
+
 void
 CPhysical::ApplyMoveSpeed(void)
 {
