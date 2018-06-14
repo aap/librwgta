@@ -81,6 +81,9 @@ public:
 	void ApplyMoveForce(const CVector &v) { ApplyMoveForce(v.x, v.y, v.z); }
 	void ApplyTurnForce(float x1, float y1, float z1, float x2, float y2, float z2);
 	void ApplyTurnForce(const CVector &v1, const CVector &v2) { ApplyTurnForce(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z); }
+	void ApplyFrictionMoveForce(float x, float y, float z);
+	void ApplyFrictionTurnForce(float x1, float y1, float z1, float x2, float y2, float z2);
+	void ApplySpringCollision(float f1, CVector &vec1, CVector &vec2, float f2, float f3);
 	void ApplyGravity(void);
 	void ApplyFriction(void);
 	void ApplyAirResistance(void);
@@ -94,6 +97,7 @@ public:
 	bool GetHasCollidedWith(CEntity *ent);
 	bool ProcessCollisionSectorList(CPtrList *lists);
 	bool ProcessCollisionSectorList_SimpleCar(CPtrList *lists);
+	bool ProcessShiftSectorList(CPtrList *lists);
 	bool CheckCollision(void);
 	bool CheckCollision_SimpleCar(void);
 

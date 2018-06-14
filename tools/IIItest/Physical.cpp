@@ -1,5 +1,7 @@
 #include "III.h"
 
+#define min(a,b) ((a) < (b) ? (a) : (b))
+
 CPhysical::CPhysical(void)
 {
 	m_vecMoveSpeed = CVector(0.0f, 0.0f, 0.0f);
@@ -226,6 +228,31 @@ CPhysical::ApplyTurnForce(float x1, float y1, float z1, float x2, float y2, floa
 }
 
 void
+CPhysical::ApplyFrictionMoveForce(float x, float y, float z)
+{
+	m_vecMoveFriction += CVector(x, y, z)*(1.0f/m_fMass);
+}
+
+void
+CPhysical::ApplyFrictionTurnForce(float x1, float y1, float z1, float x2, float y2, float z2)
+{
+	CVector com = Multiply3x3(m_matrix, m_vecCentreOfMass);
+	CVector turnf = CrossProduct(CVector(x2, y2, z2)-com, CVector(x1, y1, z1));
+	m_vecTurnFriction += turnf*(1.0f/m_fTurnMass);
+}
+
+void
+CPhysical::ApplySpringCollision(float f1, CVector &vec1, CVector &vec2, float f2, float f3)
+{
+	if(1.0f - f2 <= 0.0f)
+		return;
+	float step = min(CTimer::ms_fTimeStep, 3.0f);
+	float strength = -0.008f*m_fMass*2.0f*step * f1 * (1.0f-f2) * f3;
+	ApplyMoveForce(vec1.x*strength, vec1.y*strength, vec1.z*strength);
+	ApplyTurnForce(vec1.x*strength, vec1.y*strength, vec1.z*strength, vec2.x, vec2.y, vec2.z);
+}
+
+void
 CPhysical::ApplyGravity(void)
 {
 	if(bAffectedByGravity)
@@ -336,14 +363,21 @@ CPhysical::ProcessControl(void)
 bool
 CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 {
-	// TODO
+	// TODO, a ton of work
 	return false;
 }
 
 bool
 CPhysical::ProcessCollisionSectorList_SimpleCar(CPtrList *lists)
 {
-	// TODO
+	// TODO, quite a bit of work
+	return false;
+}
+
+bool
+CPhysical::ProcessShiftSectorList(CPtrList *lists)
+{
+	// TODO, quite a bit of work
 	return false;
 }
 
@@ -355,7 +389,7 @@ CPhysical::CheckCollision(void)
 	bCollisionProcessed = false;
 	CWorld::AdvanceCurrentScanCode();
 	for(node = m_entryInfoList.first; node; node = node->next)
-		if(ProcessCollisionSectorList(&node->sector->m_buildings))
+		if(ProcessCollisionSectorList(node->list))
 			return true;
 	return false;
 }
@@ -368,7 +402,7 @@ CPhysical::CheckCollision_SimpleCar(void)
 	bCollisionProcessed = false;
 	CWorld::AdvanceCurrentScanCode();
 	for(node = m_entryInfoList.first; node; node = node->next)
-		if(ProcessCollisionSectorList_SimpleCar(&node->sector->m_buildings))
+		if(ProcessCollisionSectorList_SimpleCar(node->list))
 			return true;
 	return false;
 }
@@ -499,5 +533,39 @@ CPhysical::ProcessCollision(void)
 void
 CPhysical::ProcessShift(void)
 {
-	// TODO
+	m_fDistanceTravelled = 0.0f;
+	if(m_status == STATUS_SIMPLE){
+		bIsStuck = false;
+		bIsInSafePosition = true;
+		RemoveAndAdd();
+		return;
+	}
+	CMatrix matrix(GetMatrix());
+	ApplyMoveSpeed();
+	ApplyTurnSpeed();
+	GetMatrix().Reorthogonalise();
+
+	CWorld::AdvanceCurrentScanCode();
+
+	if(IsVehicle())
+		m_unk2 = 1;
+
+	CEntryInfoNode *node;
+	bool hasshifted = false;	// whatever that means...
+	for(node = m_entryInfoList.first; node; node = node->next)
+		hasshifted |= ProcessShiftSectorList(node->list);
+	m_unk2 = 0;
+	if(hasshifted){
+		CWorld::AdvanceCurrentScanCode();
+		for(node = m_entryInfoList.first; node; node = node->next)
+			if(ProcessCollisionSectorList(node->list)){
+				GetMatrix() = matrix;
+				return;
+			}
+	}
+
+	bIsStuck = false;
+	bIsInSafePosition = true;
+	m_fDistanceTravelled = (*GetMatrix().GetPosition() - *matrix.GetPosition()).Magnitude();
+	RemoveAndAdd();
 }
