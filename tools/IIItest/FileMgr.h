@@ -12,9 +12,10 @@ public:
 	static void SetDir(const char *dir);
 	static FileHandle OpenFile(const char *filename, const char *mode);
 	static void CloseFile(FileHandle file);
-	static uint32 Read(FileHandle file, uint8 *buf, uint32 len);
-	static uint32 Write(FileHandle file, uint8 *buf, uint32 len);
+	static uint32 Read(FileHandle file, uint8 *buf, int32 len);
+	static uint32 Write(FileHandle file, uint8 *buf, int32 len);
 	static void Seek(FileHandle file, int32 offset, uint32 origin);
+	static int32 LoadFile(const char *filename, uint8 *buf, int32 len, const char *mode);
 };
 
 #endif

@@ -1,4 +1,5 @@
 #include "III.h"
+#include "SurfaceTable.h"
 
 #include "Test.h"
 
@@ -56,6 +57,7 @@ CGame::Initialise(void)
 	CTheZones::Init();
 
 	cHandlingDataMgr::Initialise();
+	CSurfaceTable::Initialise("SURFACE.DAT");
 	CAnimManager::LoadAnimGroups();	// not in III
 
 	InitModelIndices();

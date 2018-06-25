@@ -216,7 +216,13 @@ class CFileLoader
 	static DatDesc iplDesc[];
 	static DatDesc zoneDesc[];
 public:
+
 	static char *LoadLine(FileHandle f);
+	static char *NextLine(char *line);
+	static char *NextDelim(char *line);
+	static char *NextDelimNL(char *line);
+	static char *SkipDelim(char *line);
+
 	static void LoadLevel(const char *filename);
 	static void LoadObjectTypes(const char *filename);
 	static void LoadScene(const char *filename);

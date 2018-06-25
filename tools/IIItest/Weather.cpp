@@ -4,6 +4,7 @@ float CWeather::InterpolationValue;
 short CWeather::NewWeatherType;
 short CWeather::OldWeatherType;
 short CWeather::ForcedWeatherType;
+float CWeather::WetRoads;
 
 enum eWeather
 {

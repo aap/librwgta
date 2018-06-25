@@ -8,6 +8,7 @@ public:
 	static short NewWeatherType;
 	static short OldWeatherType;
 	static short ForcedWeatherType;
+	static float WetRoads;
 
 	static void Init(void);
 	static void Update(void);

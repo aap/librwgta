@@ -58,13 +58,13 @@ CFileMgr::CloseFile(FileHandle file)
 }
 
 uint32
-CFileMgr::Read(FileHandle file, uint8 *buf, uint32 len)
+CFileMgr::Read(FileHandle file, uint8 *buf, int32 len)
 {
 	return fread(buf, 1, len, file);
 }
 
 uint32
-CFileMgr::Write(FileHandle file, uint8 *buf, uint32 len)
+CFileMgr::Write(FileHandle file, uint8 *buf, int32 len)
 {
 	return fwrite(buf, 1, len, file);
 }
@@ -73,4 +73,18 @@ void
 CFileMgr::Seek(FileHandle file, int32 offset, uint32 origin)
 {
 	fseek(file, offset, origin);
+}
+
+int32
+CFileMgr::LoadFile(const char *filename, uint8 *buf, int32 len, const char *mode)
+{
+	FileHandle f;
+	f = OpenFile(filename, mode);
+	if(f == nil)
+		return -1;
+	len = Read(f, buf, len-1);
+	if(len >= 0)
+		buf[len] = '\0';
+	CloseFile(f);
+	return len;
 }

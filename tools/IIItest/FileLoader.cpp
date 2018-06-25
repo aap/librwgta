@@ -25,6 +25,58 @@ again:
 	return s;
 }
 
+// go to next line, comments introduced by ';'
+char*
+CFileLoader::NextLine(char *line)
+{
+	for(; *line != '\0'; line++){
+		if(*line == ' ' || *line == '\t' || *line == '\r')
+			;	// skip whitespace
+		else if(*line == ';'){
+			// skip comment line
+			while(*line != '\n' && *line != '\0')
+				line++;
+			if(*line == '\0')
+				return nil;
+		}else
+			return line;
+	}
+	return nil;
+}
+
+// skip to next delimiter
+char*
+CFileLoader::NextDelim(char *line)
+{
+	while(*line != '\0' && !(*line == ' ' || *line == '\t' || *line == ','))
+		line++;
+	if(*line == '\0')
+		return nil;
+	return line;
+}
+
+// skip to next delimiter or new line
+char*
+CFileLoader::NextDelimNL(char *line)
+{
+	while(*line != '\0' && !(*line == ' ' || *line == '\t' || *line == ',' || *line == '\n'))
+		line++;
+	if(*line == '\0')
+		return nil;
+	return line;
+}
+
+// skip delimeters to next word
+char*
+CFileLoader::SkipDelim(char *line)
+{
+	while(*line == ' ' || *line == '\t' || *line == ',')
+		line++;
+	if(*line == '\0')
+		return nil;
+	return line;
+}
+
 void
 CFileLoader::LoadLevel(const char *filename)
 {
