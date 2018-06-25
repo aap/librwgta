@@ -1,4 +1,5 @@
 #include "III.h"
+#include "FileMgr.h"
 
 #define WATERSTARTX -2048.0f
 #define WATERENDX 2048.0f
@@ -22,17 +23,20 @@ rw::Raster *gpWaterRaster;
 void
 CWaterLevel::Initialise(const char*)
 {
-	FILE *file;
+	FileHandle file;
 
 	ms_nNoOfWaterLevels = 0;
-	if(file = fopen_ci("DATA\\waterpro.dat", "rb"), file == nil)
+	CFileMgr::SetDir("DATA");
+	file = CFileMgr::OpenFile("WATERPRO.DAT", "rb");
+	CFileMgr::SetDir("");
+	if(file == nil)
 		return;
-	fread(&ms_nNoOfWaterLevels, 1, sizeof(ms_nNoOfWaterLevels), file);
-	fread(&ms_aWaterZs, 1, sizeof(ms_aWaterZs), file);
-	fread(&ms_aWaterRects, 1, sizeof(ms_aWaterRects), file);
-	fread(&aWaterBlockList, 1, sizeof(aWaterBlockList), file);
-	fread(&aWaterFineBlockList, 1, sizeof(aWaterFineBlockList), file);
-	fclose(file);
+	CFileMgr::Read(file, (uint8*)&ms_nNoOfWaterLevels, sizeof(ms_nNoOfWaterLevels));
+	CFileMgr::Read(file, (uint8*)&ms_aWaterZs, sizeof(ms_aWaterZs));
+	CFileMgr::Read(file, (uint8*)&ms_aWaterRects, sizeof(ms_aWaterRects));
+	CFileMgr::Read(file, (uint8*)&aWaterBlockList, sizeof(aWaterBlockList));
+	CFileMgr::Read(file, (uint8*)&aWaterFineBlockList, sizeof(aWaterFineBlockList));
+	CFileMgr::CloseFile(file);
 
 	CTxdStore::PushCurrentTxd();
 	int ptxd = CTxdStore::FindTxdSlot("particle");

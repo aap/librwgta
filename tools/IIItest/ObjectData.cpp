@@ -5,7 +5,7 @@ ObjectInfo CObjectData::ms_aObjectInfo[NUMOBJECTINFO];
 void
 CObjectData::Initialise(const char *file)
 {
-	FILE *f;
+	FileHandle f;
 	ObjectInfo *p;
 	int id;
 	char *line;
@@ -15,7 +15,7 @@ CObjectData::Initialise(const char *file)
 	int colResponse;
 	int camAvoid;
 
-	f = fopen_ci(file, "r");
+	f = CFileMgr::OpenFile(file, "r");
 	if(f == nil)
 		return;
 
@@ -41,5 +41,5 @@ CObjectData::Initialise(const char *file)
 		else
 			debug("CObjectData: Cannot find object %s\n", name);
 	}
-	fclose(f);
+	CFileMgr::CloseFile(f);
 }

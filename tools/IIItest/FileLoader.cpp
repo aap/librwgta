@@ -1,10 +1,12 @@
 #include "III.h"
+#include "FileMgr.h"
 
 char*
-CFileLoader::LoadLine(FILE *f)
+CFileLoader::LoadLine(FileHandle f)
 {
 	static char linebuf[1024];
 again:
+	// TODO: get rid of fgets
 	if(fgets(linebuf, 1024, f) == nil)
 		return nil;
 	// remove leading whitespace
@@ -26,10 +28,10 @@ again:
 void
 CFileLoader::LoadLevel(const char *filename)
 {
-	FILE *file;
+	FileHandle file;
 	char *line;
 	bool objdata = false;
-	if(file = fopen_ci(filename, "rb"), file == nil)
+	if(file = CFileMgr::OpenFile(filename, "rb"), file == nil)
 		return;
 	rw::TexDictionary *curTxd = rw::TexDictionary::getCurrent();
 	if(curTxd == nil){
@@ -74,7 +76,7 @@ CFileLoader::LoadLevel(const char *filename)
 		if(strncmp(line, "CDIMAGE", 7) == 0)
 			CdStream::addImage(line+8);
 	}
-	fclose(file);
+	CFileMgr::CloseFile(file);
 	rw::TexDictionary::setCurrent(curTxd);
 }
 
@@ -109,11 +111,11 @@ DatDesc CFileLoader::iplDesc[] = {
 void
 CFileLoader::LoadDataFile(const char *filename, DatDesc *desc)
 {
-	FILE *file;
+	FileHandle file;
 	char *line;
 	void (*handler)(char*) = nil;
 
-	if(file = fopen_ci(filename, "rb"), file == nil)
+	if(file = CFileMgr::OpenFile(filename, "rb"), file == nil)
 		return;
 	while(line = CFileLoader::LoadLine(file)){
 		if(line[0] == '#')
@@ -126,7 +128,7 @@ CFileLoader::LoadDataFile(const char *filename, DatDesc *desc)
 		if(handler)
 			handler(line);
 	}
-	fclose(file);
+	CFileMgr::CloseFile(file);
 }
 
 void
@@ -685,19 +687,18 @@ CFileLoader::LoadCollisionFile(const char *filename)
 		uint32 ident;
 		uint32 size;
 	} header;
-	FILE *file;
+	FileHandle file;
 	char name[24];
 	CBaseModelInfo *modelinfo;
 
 	debug("Loading collision file %s\n", filename);
-	// TODO: use CFileMgr
-	if(file = fopen_ci(filename, "rb"), file == nil)
+	if(file = CFileMgr::OpenFile(filename, "rb"), file == nil)
 		return;
 	while(1){
-		if(fread(&header, 8, 1, file) == 0 ||
+		if(CFileMgr::Read(file, (uint8*)&header, 8) == 0 ||
 		   header.ident != COLL)
 			return;
-		fread(work_buff, header.size, 1, file);
+		CFileMgr::Read(file, (uint8*)&work_buff, header.size);
 		memcpy(name, work_buff, 24);
 		modelinfo = CModelInfo::GetModelInfo(name, nil);
 		if(modelinfo){
@@ -712,7 +713,7 @@ CFileLoader::LoadCollisionFile(const char *filename)
 			}
 		}
 	}
-	fclose(file);
+	CFileMgr::CloseFile(file);
 }
 
 static void

@@ -1,6 +1,8 @@
 #ifndef _STREAMING_H_
 #define _STREAMING_H_
 
+#include "FileMgr.h"
+
 extern int islandLODindust;
 extern int islandLODcomInd;
 extern int islandLODcomSub;
@@ -17,7 +19,7 @@ class CdStream
 public:
 	static int numImages;
 	static char imageNames[NUMCDIMAGES][64];
-	static FILE *images[NUMCDIMAGES];
+	static FileHandle images[NUMCDIMAGES];
 
 	static void init();
 	static void addImage(const char *name);

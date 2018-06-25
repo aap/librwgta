@@ -87,9 +87,12 @@ int   CTimeCycle::m_nCurrentFogColourBlue;
 void
 CTimeCycle::Initialise(void)
 {
-	FILE *file;
+	FileHandle file;
 	char *line;
-	if(file = fopen_ci("data/timecyc.dat", "rb"), file == nil)
+	CFileMgr::SetDir("DATA");
+	file = CFileMgr::OpenFile("TIMECYC.DAT", "rb");
+	CFileMgr::SetDir("");
+	if(file == nil)
 		return;
 	int h = 0, w = 0;
 	while(line = CFileLoader::LoadLine(file)){
@@ -146,7 +149,7 @@ CTimeCycle::Initialise(void)
 		if(w == NUMWEATHERS)
 			break;
 	}
-	fclose(file);
+	CFileMgr::CloseFile(file);
 }
 
 #define INTERP(v) v[h1][w1]*c0 + v[h2][w1]*c1 + v[h1][w2]*c2 + v[h2][w2]*c3;

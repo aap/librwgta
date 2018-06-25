@@ -186,7 +186,7 @@ rastermodcustom(Raster *ras, float (*f)(float))
 			}
 			break;
 		default:
-			printf("unknown custom format %x\n", natras->format);
+			fprintf(stderr, "unknown custom format %x\n", natras->format);
 			break;
 		}
 
@@ -434,7 +434,7 @@ main(int argc, char *argv[])
 				goto found;
 			}
 		}
-		printf("unknown platform %s\n", s);
+		fprintf(stderr, "unknown platform %s\n", s);
 		outplatform = PLATFORM_D3D8;
 	found:
 		break;
@@ -462,7 +462,7 @@ main(int argc, char *argv[])
 
 	rw::StreamFile in;
 	if(in.open(argv[0], "rb") == NULL){
-		printf("couldn't open file %s\n", argv[1]);
+		fprintf(stderr, "couldn't open file %s\n", argv[1]);
 		return 1;
 	}
 	ChunkHeaderInfo header;

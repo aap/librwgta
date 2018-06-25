@@ -24,15 +24,6 @@ getPath(const char *path)
 	return cipath;
 }
 
-FILE*
-fopen_ci(const char *path, const char *mode)
-{
-	char cipath[1024];
-	strncpy(cipath, path, 1024);
-	rw::makePath(cipath);
-	return fopen(cipath, mode);
-}
-
 char*
 skipWhite(char *s)
 {
@@ -359,6 +350,12 @@ Initialise3D(void)
 
 
 	CGame::InitialiseRW();
+}
+
+void
+SystemInit(void)
+{
+	CFileMgr::Initialise();
 }
 
 void

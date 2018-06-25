@@ -28,7 +28,7 @@ CPedStats::Initialise(void)
 void
 CPedStats::LoadPedStats(void)
 {
-	FILE *file;
+	FileHandle file;
 	char *line;
 	char name[24];
 	float fleeDist, headingChangeRate;
@@ -36,7 +36,10 @@ CPedStats::LoadPedStats(void)
 	float attackStrength, defendWeakness;
 	int flags;
 
-	if(file = fopen_ci("data/pedstats.dat", "rb"), file == nil)
+	CFileMgr::SetDir("DATA");
+	file = CFileMgr::OpenFile("PEDSTATS.DAT", "rb");
+	CFileMgr::SetDir("");
+	if(file == nil)
 		return;
 	int i = 0;
 	while(line = CFileLoader::LoadLine(file)){
@@ -60,7 +63,7 @@ CPedStats::LoadPedStats(void)
 		s->flags = flags;
 		i++;
 	}
-	fclose(file);
+	CFileMgr::CloseFile(file);
 }
 
 int

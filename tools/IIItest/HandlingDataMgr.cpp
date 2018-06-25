@@ -1,4 +1,5 @@
 #include "III.h"
+#include "FileMgr.h"
 
 tHandlingData cHandlingDataMgr::data[NUMHANDLINGS];
 
@@ -13,10 +14,13 @@ void
 cHandlingDataMgr::LoadHandlingData(void)
 {
 	char name[14];
-	FILE *file;
+	FileHandle file;
 	char *line;
 	int abs, flags, front, rear;
-	if(file = fopen("data/handling.cfg", "rb"), file == nil)
+	CFileMgr::SetDir("DATA");
+	file = CFileMgr::OpenFile("HANDLING.CFG", "rb");
+	CFileMgr::SetDir("");
+	if(file == nil)
 		return;
 	int i = 0;
 	tHandlingData *d;
@@ -49,7 +53,7 @@ cHandlingDataMgr::LoadHandlingData(void)
 		d->RearLights = rear;
 		ConvertDataToGameUnits(d);
 	}
-	fclose(file);
+	CFileMgr::CloseFile(file);
 }
 
 void

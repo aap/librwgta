@@ -232,7 +232,11 @@ dumpMat(Material *m)
 //		m->color.blue = 255;
 //	}
 
-	printf("%s %3d %3d %3d %3d %-32s %f\n", inputfilename, m->color.red, m->color.green, m->color.blue, m->color.alpha, m->texture ? m->texture->name : "NULL", m->surfaceProps.specular);
+	printf("%s %3d %3d %3d %3d amb: %.3f diff: %.3f spec: %.3f %-32s \n",
+		inputfilename, m->color.red, m->color.green, m->color.blue, m->color.alpha,
+		m->surfaceProps.ambient, m->surfaceProps.diffuse, m->surfaceProps.specular,
+		m->texture ? m->texture->name : "NULL"
+		);
 	dumpMatFXData(m);
 }
 
@@ -426,6 +430,7 @@ main(int argc, char *argv[])
 	int ps2vccar = 0;
 	int xboxbuild = 0;
 	int info = 0;
+	int dumpmat = 0;
 
 	char *s, *longarg;
 	//char *seconddff = NULL;
@@ -460,6 +465,9 @@ main(int argc, char *argv[])
 		break;
 	case 'd':
 		dump++;
+		break;
+	case 't':
+		dumpmat++;
 		break;
 	case 'r':
 		surfprops++;
@@ -614,16 +622,15 @@ main(int argc, char *argv[])
 			}
 		}
 
-/*
-	FORLIST(lnk, c->atomics){
-		Geometry *g = Atomic::fromClump(lnk)->geometry;
-		for(int i = 0; i < g->matList.numMaterials; i++){
-			Material *m = g->matList.materials[i];
-			dumpMat(m);
-	//		dumpReflData(m);
+	if(dumpmat)
+		FORLIST(lnk, c->atomics){
+			Geometry *g = Atomic::fromClump(lnk)->geometry;
+			for(int i = 0; i < g->matList.numMaterials; i++){
+				Material *m = g->matList.materials[i];
+				dumpMat(m);
+		//		dumpReflData(m);
+			}
 		}
-	}
-*/
 
 	if(iiiToVcCar)
 		FORLIST(lnk, c->atomics){

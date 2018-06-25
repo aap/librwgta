@@ -2,7 +2,7 @@
 
 int CdStream::numImages;
 char CdStream::imageNames[NUMCDIMAGES][64];
-FILE *CdStream::images[NUMCDIMAGES];
+FileHandle CdStream::images[NUMCDIMAGES];
 
 void
 CdStream::init()
@@ -13,7 +13,7 @@ CdStream::init()
 void
 CdStream::addImage(const char *name)
 {
-	images[numImages] = fopen_ci(name, "rb");
+	images[numImages] = CFileMgr::OpenFile(name, "rb");
 	if(images[numImages])
 		// TODO: check bounds
 		strncpy(imageNames[numImages++], name, 64);
@@ -23,7 +23,7 @@ void
 CdStream::removeImages(void)
 {
 	for(int i = 0; i < numImages; i++)
-		fclose(images[i]);
+		CFileMgr::CloseFile(images[i]);
 	numImages = 0;
 }
 
@@ -32,8 +32,8 @@ CdStream::read(char *buf, uint pos, uint size)
 {
 	int imgsel = pos >> 24;
 	int position = (pos&0xFFFFFF)*2048;
-	fseek(images[imgsel], position, SEEK_SET);
-	fread(buf, 1, size*2048, images[imgsel]);
+	CFileMgr::Seek(images[imgsel], position, SEEK_SET);
+	CFileMgr::Read(images[imgsel], (uint8*)buf, size*2048);
 }
 
 CDirectory::CDirectory(int size)
@@ -216,12 +216,12 @@ CStreaming::LoadCdDirectory(const char *dirname, int n)
 	uint pos, size;
 	short lastID;
 	CDirectory::DirectoryInfo dirinfo;
-	FILE *f = fopen_ci(dirname, "rb");
+	FileHandle f = CFileMgr::OpenFile(dirname, "rb");
 	if(f == nil)
 		return;
 	n <<= 24;	// img selector
 	lastID = -1;
-	while(fread(&dirinfo, 1, sizeof(dirinfo), f) == sizeof(dirinfo)){
+	while(CFileMgr::Read(f, (uint8*)&dirinfo, sizeof(dirinfo)) == sizeof(dirinfo)){
 		if(dirinfo.size > ms_streamingBufferSize)
 			ms_streamingBufferSize = dirinfo.size;
 		ext = strrchr(dirinfo.name, '.');
@@ -261,7 +261,7 @@ CStreaming::LoadCdDirectory(const char *dirname, int n)
 		}
 		lastID = -1;
 	}
-	fclose(f);
+	CFileMgr::CloseFile(f);
 }
 
 void

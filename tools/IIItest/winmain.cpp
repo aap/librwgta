@@ -303,6 +303,8 @@ WinMain(HINSTANCE instance, HINSTANCE,
 	}
 	engineStartParams.window = win;
 
+	SystemInit();
+
 	GameInit();
 
 	TheGame();

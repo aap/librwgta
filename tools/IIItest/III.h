@@ -133,7 +133,6 @@ sq(float x) { return x*x; }
 
 
 char *getPath(const char *path);
-FILE *fopen_ci(const char *path, const char *mode);
 char *skipWhite(char *s);
 void convertTxd(rw::TexDictionary *txd);
 
@@ -168,6 +167,7 @@ void DefinedState(void);
 
 extern CEntity *debugent;
 
+void SystemInit(void);
 void GameInit(void);
 void TheGame(void);
 
@@ -216,7 +216,7 @@ class CFileLoader
 	static DatDesc iplDesc[];
 	static DatDesc zoneDesc[];
 public:
-	static char *LoadLine(FILE *f);
+	static char *LoadLine(FileHandle f);
 	static void LoadLevel(const char *filename);
 	static void LoadObjectTypes(const char *filename);
 	static void LoadScene(const char *filename);

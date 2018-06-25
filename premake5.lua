@@ -218,3 +218,6 @@ project "IIItest"
 	files { path.join("tools/IIItest/*") }
 	debugdir "C:/Users/aap/games/gta3"
 
+project "radaredit"
+	tool("radaredit")
+	kind "ConsoleApp"

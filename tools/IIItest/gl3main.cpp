@@ -251,6 +251,8 @@ main(int argc, char *argv[])
 	engineStartParams.height = 480;
 	engineStartParams.windowtitle = "III";
 
+	SystemInit();
+
 	GameInit();
 
 	TheGame();

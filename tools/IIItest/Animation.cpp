@@ -3,15 +3,16 @@
 AnimAssocDefinition *CAnimManager::ms_aAnimAssocDefinitions;
 int CAnimManager::ms_numAnimAssocDefinitions;
 
+// TODO: remove or ifdef this. GTA3 doesn't have it
 void
 CAnimManager::LoadAnimGroups(void)
 {
-	FILE *file;
+	FileHandle file;
 	char *line;
 	int state = 0;
 	int i = 0, j = 0;
 	char *names, *blockNames, *animNames;
-	if(file = fopen_ci("animgrp.dat", "rb"), file == nil)
+	if(file = CFileMgr::OpenFile("animgrp.dat", "rb"), file == nil)
 		return;
 	AnimAssocDefinition *assoc = nil;
 	while(line = CFileLoader::LoadLine(file)){
@@ -59,7 +60,7 @@ CAnimManager::LoadAnimGroups(void)
 			}
 		}
 	}
-	fclose(file);
+	CFileMgr::CloseFile(file);
 }
 
 char*
