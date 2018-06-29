@@ -1,5 +1,6 @@
 #include "III.h"
 #include "SurfaceTable.h"
+#include "References.h"
 
 #include "Test.h"
 
@@ -50,12 +51,14 @@ CGame::Initialise(void)
 	CTxdStore::SetCurrentTxd(gameTxdSlot);
 
 	printf("--Setup game variables\n");
+	CReferences::Init();
 	CPathFind::AllocatePathFindInfoMem(PATHNODESIZE);
 	CWeather::Init();
 	CCullZones::Init();
 	CCollision::Init();
 	CTheZones::Init();
 
+	CWorld::Initialise();
 	cHandlingDataMgr::Initialise();
 	CSurfaceTable::Initialise("SURFACE.DAT");
 	CAnimManager::LoadAnimGroups();	// not in III

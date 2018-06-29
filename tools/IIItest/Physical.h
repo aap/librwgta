@@ -15,6 +15,8 @@ class CPhysical : public CEntity
 	static void operator delete(void*, size_t) { assert(0); }
 
 public:
+	// TODO
+
 	uint32 m_nLastTimeCollided;
 	CVector m_vecMoveSpeed;
 	CVector m_vecTurnSpeed;
@@ -25,6 +27,7 @@ public:
 	float m_fMass;
 	float m_fTurnMass;
 	float m_fAirResistance;
+	float m_fElasticity;
 	CVector m_vecCentreOfMass;
 
 	CEntryInfoList m_entryInfoList;
@@ -36,16 +39,16 @@ public:
 	CEntity *m_aCollisionRecords[PHYSICAL_MAX_COLLISIONRECORDS];
 
 	float m_fDistanceTravelled;
-/*
-  float fCollisionPower;
-  float pPhysColliding;
-  CVector vecCollisionPower;
-  __int16 wComponentCol;
-*/
+
+	// damaged piece
+	float m_fCollisionImpulse;
+	CEntity *m_pCollidingEntity;
+	CVector m_vecCollisionDirection;
+	int16 m_nCollisionPieceType;
 
 	uint8 m_phy_flagA1 : 1;
 	uint8 bAffectedByGravity : 1;
-	uint8 m_phy_flagA4 : 1;
+	uint8 bInfiniteMass : 1;
 	uint8 m_phy_flagA8 : 1;
 	uint8 m_phy_flagA10 : 1;
 	uint8 m_phy_flagA20 : 1;
@@ -73,30 +76,48 @@ public:
 	void ProcessCollision(void);
 	void ProcessShift(void);
 
-	CVector GetSpeed(CVector &v);
+	// get speed of point p relative to entity center
+	CVector GetSpeed(CVector &p);
+	CVector GetSpeed(void) { return GetSpeed(CVector(0.0f, 0.0f, 0.0f)); }
+	void UnsetIsInSafePosition(void) {
+		m_vecMoveSpeed *= -1.0f;
+		m_vecTurnSpeed *= -1.0f;
+		ApplyTurnSpeed();
+		ApplyMoveSpeed();
+		m_vecMoveSpeed *= -1.0f;
+		m_vecTurnSpeed *= -1.0f;
+		bIsInSafePosition = false;	
+	}
 
 	void ApplyMoveSpeed(void);
 	void ApplyTurnSpeed(void);
 	void ApplyMoveForce(float x, float y, float z);
 	void ApplyMoveForce(const CVector &v) { ApplyMoveForce(v.x, v.y, v.z); }
-	void ApplyTurnForce(float x1, float y1, float z1, float x2, float y2, float z2);
-	void ApplyTurnForce(const CVector &v1, const CVector &v2) { ApplyTurnForce(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z); }
+	// v(x,y,z) is direction of force, p(x,y,z) is point relative to model center where force is applied
+	void ApplyTurnForce(float vx, float vy, float vz, float px, float py, float pz);
+	// v is direction of force, p is point relative to model center where force is applied
+	void ApplyTurnForce(const CVector &v, const CVector &p) { ApplyTurnForce(v.x, v.y, v.z, p.x, p.y, p.z); }
 	void ApplyFrictionMoveForce(float x, float y, float z);
-	void ApplyFrictionTurnForce(float x1, float y1, float z1, float x2, float y2, float z2);
-	void ApplySpringCollision(float f1, CVector &vec1, CVector &vec2, float f2, float f3);
+	void ApplyFrictionMoveForce(const CVector &v) { ApplyFrictionMoveForce(v.x, v.y, v.z); }
+	void ApplyFrictionTurnForce(float vx, float vy, float vz, float px, float py, float pz);
+	void ApplyFrictionTurnForce(const CVector &v, const CVector &p) { ApplyFrictionTurnForce(v.x, v.y, v.z, p.x, p.y, p.z); }
+	void ApplySpringCollision(float f1, CVector &v, CVector &p, float f2, float f3);
 	void ApplyGravity(void);
 	void ApplyFriction(void);
 	void ApplyAirResistance(void);
+	bool ApplyCollision(CPhysical *phys, CColPoint &colpoint, float &f1, float &f2);
+	bool ApplyFriction(CPhysical *B, float adhesiveLimit, CColPoint &colpoint);
 
 	void RemoveAndAdd(void);
 	void AddToMovingList(void);
 	void RemoveFromMovingList(void);
 
+	void SetDamagedPieceRecord(uint16 pieceType, float colImpulse, CEntity *colEntity, CVector colDirection); 
 	void AddCollisionRecord(CEntity *ent);
 	void AddCollisionRecord_Treadable(CEntity *ent);
 	bool GetHasCollidedWith(CEntity *ent);
 	bool ProcessCollisionSectorList(CPtrList *lists);
-	bool ProcessCollisionSectorList_SimpleCar(CPtrList *lists);
+	bool ProcessCollisionSectorList_SimpleCar(CSector *sector);
 	bool ProcessShiftSectorList(CPtrList *lists);
 	bool CheckCollision(void);
 	bool CheckCollision_SimpleCar(void);

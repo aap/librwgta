@@ -7,21 +7,26 @@
 #define NUMSECTORS_X 100
 #define NUMSECTORS_Y 100
 
+enum
+{
+	ENTITYLIST_BUILDINGS,
+	ENTITYLIST_BUILDINGS_OVERLAP,
+	ENTITYLIST_OBJECTS,
+	ENTITYLIST_OBJECTS_OVERLAP,
+	ENTITYLIST_VEHICLES,
+	ENTITYLIST_VEHICLES_OVERLAP,
+	ENTITYLIST_PEDS,
+	ENTITYLIST_PEDS_OVERLAP,
+	ENTITYLIST_DUMMIES,
+	ENTITYLIST_DUMMIES_OVERLAP,
+
+	NUMSECTORENTITYLISTS
+};
+
 class CSector
 {
 public:
-	// DON'T change, code assumes this is consecutive
-	// and it should probably be an array instead
-	CPtrList m_buildings;
-	CPtrList m_buildingsOverlap;
-	CPtrList m_objects;
-	CPtrList m_objectsOverlap;
-	CPtrList m_vehicles;
-	CPtrList m_vehiclesOverlap;
-	CPtrList m_peds;
-	CPtrList m_pedsOverlap;
-	CPtrList m_dummies;
-	CPtrList m_dummiesOverlap;
+	CPtrList m_lists[NUMSECTORENTITYLISTS];
 };
 
 class CWorld
@@ -32,6 +37,9 @@ class CWorld
 	static uint16 ms_nCurrentScanCode;
 public:
 
+	static bool bNoMoreCollisionTorque;
+
+	static void Initialise(void);
 	static void Add(CEntity*);
 	static CSector *GetSector(int x, int y) { return &ms_aSectors[x][y]; }
 	static CPtrList &GetBigBuildingList(eLevelName i) { return ms_bigBuildingsList[i]; }

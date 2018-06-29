@@ -6,7 +6,7 @@
 // to test various things, collisions right now
 
 //#define COLTEST
-//#define FOOTEST
+#define FOOTEST
 
 static CColSphere sphere1;
 static CColSphere sphere2;
@@ -53,7 +53,7 @@ CTestObject::ProcessControl(void)
 {
 	ApplyMoveSpeed();
 	ApplyTurnSpeed();
-	ApplyGravity();
+//	ApplyGravity();
 	ApplyFriction();
 	ApplyAirResistance();
 	m_matrix.Reorthogonalise();
@@ -73,9 +73,13 @@ CTest::Init(void)
 	mat.translate(&pos, rw::COMBINEREPLACE);
 	car->SetTransform(&mat);
 
+	car->GetMatrix().UpdateRW();
+	car->UpdateRwFrame();
+
 //	car->m_vecMoveSpeed = CVector(0.0f, 0.01f, 0.0f);
-//	car->m_vecTurnSpeed = CVector(0.01f, 0.1f, 0.05f);
-//	car->ApplyTurnForce(1.0f, 0.0f, 0.0f, 0.0f, 900.0f, 0.0f);
+//	car->m_vecTurnSpeed = CVector(0.0f, 0.0f, 0.0f);
+//	car->ApplyTurnForce(CVector(0.0f, 0.0f, 500.0f),
+//		CVector(0.0f, 1.0f, -0.3f));
 
 	// Set camera up into the sky
 	TheCamera.m_target.set(0.0f, 0.0f, 500.0f);

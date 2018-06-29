@@ -31,6 +31,7 @@ enum Config {
 	// Link list lengths
 	// TODO: alpha list
 	NUMCOLCACHELINKS = 200,
+	NUMREFERENCES = 800,
 
 	// Zones
 	NUMAUDIOZONES = 36,

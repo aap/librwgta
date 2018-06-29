@@ -1,4 +1,5 @@
 #include "III.h"
+#include "References.h"
 
 CEntity::CEntity(void)
 {
@@ -9,7 +10,7 @@ CEntity::CEntity(void)
 	bCollisionProcessed = 0;
 	bIsStatic = 0;
 	bHasContacted = 0;
-	m_flagA10 = 0;
+	bPedPhysics = 0;
 	bIsStuck = 0;
 	bIsInSafePosition = 0;
 	bUseCollisionRecords = 0;
@@ -47,12 +48,14 @@ CEntity::CEntity(void)
 	m_scanCode = -1;
 	m_modelIndex = -1;
 	m_rwObject = nil;
+
+	m_pFirstReference = nil;
 }
 
 CEntity::~CEntity(void)
 {
 	DeleteRwObject();
-	// TODO: ResolveReferences
+	ResolveReferences();
 }
 
 void
@@ -141,35 +144,35 @@ CEntity::Add(void)
 			s = CWorld::GetSector(x, y);
 			if(x == xmid && y == ymid) switch(m_type){
 			case ENTITY_TYPE_BUILDING:
-				list = &s->m_buildings;
+				list = &s->m_lists[ENTITYLIST_BUILDINGS];
 				break;
 			case ENTITY_TYPE_VEHICLE:
-				list = &s->m_vehicles;
+				list = &s->m_lists[ENTITYLIST_VEHICLES];
 				break;
 			case ENTITY_TYPE_PED:
-				list = &s->m_peds;
+				list = &s->m_lists[ENTITYLIST_PEDS];
 				break;
 			case ENTITY_TYPE_OBJECT:
-				list = &s->m_objects;
+				list = &s->m_lists[ENTITYLIST_OBJECTS];
 				break;
 			case ENTITY_TYPE_DUMMY:
-				list = &s->m_dummies;
+				list = &s->m_lists[ENTITYLIST_DUMMIES];
 				break;
 			}else switch(m_type){
 			case ENTITY_TYPE_BUILDING:
-				list = &s->m_buildingsOverlap;
+				list = &s->m_lists[ENTITYLIST_BUILDINGS_OVERLAP];
 				break;
 			case ENTITY_TYPE_VEHICLE:
-				list = &s->m_vehiclesOverlap;
+				list = &s->m_lists[ENTITYLIST_VEHICLES_OVERLAP];
 				break;
 			case ENTITY_TYPE_PED:
-				list = &s->m_pedsOverlap;
+				list = &s->m_lists[ENTITYLIST_PEDS_OVERLAP];
 				break;
 			case ENTITY_TYPE_OBJECT:
-				list = &s->m_objectsOverlap;
+				list = &s->m_lists[ENTITYLIST_OBJECTS_OVERLAP];
 				break;
 			case ENTITY_TYPE_DUMMY:
-				list = &s->m_dummiesOverlap;
+				list = &s->m_lists[ENTITYLIST_DUMMIES_OVERLAP];
 				break;
 			}
 			list->InsertItem(this);
@@ -203,35 +206,35 @@ CEntity::Remove(void)
 			s = CWorld::GetSector(x, y);
 			if(x == xmid && y == ymid) switch(m_type){
 			case ENTITY_TYPE_BUILDING:
-				list = &s->m_buildings;
+				list = &s->m_lists[ENTITYLIST_BUILDINGS];
 				break;
 			case ENTITY_TYPE_VEHICLE:
-				list = &s->m_vehicles;
+				list = &s->m_lists[ENTITYLIST_VEHICLES];
 				break;
 			case ENTITY_TYPE_PED:
-				list = &s->m_peds;
+				list = &s->m_lists[ENTITYLIST_PEDS];
 				break;
 			case ENTITY_TYPE_OBJECT:
-				list = &s->m_objects;
+				list = &s->m_lists[ENTITYLIST_OBJECTS];
 				break;
 			case ENTITY_TYPE_DUMMY:
-				list = &s->m_dummies;
+				list = &s->m_lists[ENTITYLIST_DUMMIES];
 				break;
 			}else switch(m_type){
 			case ENTITY_TYPE_BUILDING:
-				list = &s->m_buildingsOverlap;
+				list = &s->m_lists[ENTITYLIST_BUILDINGS_OVERLAP];
 				break;
 			case ENTITY_TYPE_VEHICLE:
-				list = &s->m_vehiclesOverlap;
+				list = &s->m_lists[ENTITYLIST_VEHICLES_OVERLAP];
 				break;
 			case ENTITY_TYPE_PED:
-				list = &s->m_pedsOverlap;
+				list = &s->m_lists[ENTITYLIST_PEDS_OVERLAP];
 				break;
 			case ENTITY_TYPE_OBJECT:
-				list = &s->m_objectsOverlap;
+				list = &s->m_lists[ENTITYLIST_OBJECTS_OVERLAP];
 				break;
 			case ENTITY_TYPE_DUMMY:
-				list = &s->m_dummiesOverlap;
+				list = &s->m_lists[ENTITYLIST_DUMMIES_OVERLAP];
 				break;
 			}
 			node = list->FindItem(this);
@@ -265,6 +268,62 @@ CEntity::UpdateRwFrame(void)
 			((rw::Atomic*)m_rwObject)->getFrame()->updateObjects();
 		else if(m_rwObject->type == rw::Clump::ID)
 			((rw::Clump*)m_rwObject)->getFrame()->updateObjects();
+	}
+}
+
+void
+CEntity::RegisterReference(CEntity **pent)
+{
+	if(IsBuilding())
+		return;
+	CReference *ref;
+	// check if already registered
+	for(ref = m_pFirstReference; ref; ref = ref->next)
+		if(ref->pentity == pent)
+			return;
+	// have to allocate new reference
+	ref = CReferences::pEmptyList.next;
+	if(ref){
+		CReferences::pEmptyList.next = ref->next;
+
+		ref->pentity = pent;
+		ref->next = m_pFirstReference;
+		m_pFirstReference = ref;
+	}
+}
+
+// Clear all references to this entity
+void
+CEntity::ResolveReferences(void)
+{
+	CReference *ref;
+	// clear pointers to this entity
+	for(ref = m_pFirstReference; ref; ref = ref->next)
+		if(*ref->pentity == this)
+			*ref->pentity = nil;
+	// free list
+	for(ref = m_pFirstReference; ref->next; ref = ref->next)
+		;
+	ref->next = CReferences::pEmptyList.next;
+	CReferences::pEmptyList.next = ref;
+	m_pFirstReference = nil;
+}
+
+// Free all references that no longer point to this entity
+void
+CEntity::PruneReferences(void)
+{
+	CReference *ref, *next, **lastnextp;
+	lastnextp = &m_pFirstReference;
+	for(ref = m_pFirstReference; ref; ref = next){
+		next = ref->next;
+		if(*ref->pentity == this)
+			lastnextp = &ref->next;
+		else{
+			*lastnextp = ref->next;
+			ref->next = CReferences::pEmptyList.next;
+			CReferences::pEmptyList.next = ref;
+		}
 	}
 }
 

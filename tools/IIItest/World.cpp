@@ -5,6 +5,14 @@ CPtrList CWorld::ms_listMovingEntityPtrs;
 CSector  CWorld::ms_aSectors[100][100];
 uint16 CWorld::ms_nCurrentScanCode;
 
+bool CWorld::bNoMoreCollisionTorque;
+
+void
+CWorld::Initialise(void)
+{
+	bNoMoreCollisionTorque = false;
+}
+
 void
 CWorld::Add(CEntity *ent)
 {
@@ -30,15 +38,15 @@ CWorld::ClearScanCodes(void)
 	for(int i = 0; i < 100; i++)
 	for(int j = 0; j < 100; j++){
 		CSector *s = &ms_aSectors[i][j];
-		for(node = s->m_buildings.first; node; node = node->next)
+		for(node = s->m_lists[ENTITYLIST_BUILDINGS].first; node; node = node->next)
 			((CEntity*)node->item)->m_scanCode = 0;
-		for(node = s->m_vehicles.first; node; node = node->next)
+		for(node = s->m_lists[ENTITYLIST_VEHICLES].first; node; node = node->next)
 			((CEntity*)node->item)->m_scanCode = 0;
-		for(node = s->m_peds.first; node; node = node->next)
+		for(node = s->m_lists[ENTITYLIST_PEDS].first; node; node = node->next)
 			((CEntity*)node->item)->m_scanCode = 0;
-		for(node = s->m_objects.first; node; node = node->next)
+		for(node = s->m_lists[ENTITYLIST_OBJECTS].first; node; node = node->next)
 			((CEntity*)node->item)->m_scanCode = 0;
-		for(node = s->m_dummies.first; node; node = node->next)
+		for(node = s->m_lists[ENTITYLIST_DUMMIES].first; node; node = node->next)
 			((CEntity*)node->item)->m_scanCode = 0;
 	}
 }

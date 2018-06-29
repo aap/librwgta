@@ -171,7 +171,7 @@ CRenderer::ScanSectorList(CSector *sect)
 	CEntity *e;
 	int i;
 
-	lists = &sect->m_buildings;
+	lists = sect->m_lists;
 	for(i = 0; i < 10; i++)
 		for(node = lists[i].first; node; node = node->next){
 			e = (CEntity*)node->item;

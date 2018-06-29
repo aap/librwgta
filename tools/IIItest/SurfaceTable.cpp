@@ -121,4 +121,3 @@ CSurfaceTable::GetAdhesiveLimit(CColPoint &colpoint)
 {
 	return ms_aAdhesiveLimitTable[GetAdhesionGroup(colpoint.surfaceB)][GetAdhesionGroup(colpoint.surfaceA)];
 }
-

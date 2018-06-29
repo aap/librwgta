@@ -32,6 +32,10 @@ enum eEntityStatus
 	//STATUS_SIMPLE_TRAILER
 };
 
+class CPed;
+class CVehicle;
+struct CReference;
+
 // NB: does not match actual game structure exactly
 class CEntity : public CPlaceable
 {
@@ -49,7 +53,7 @@ public:
 	uint32 bCollisionProcessed : 1;
 	uint32 bIsStatic : 1;
 	uint32 bHasContacted : 1;
-	uint32 m_flagA10 : 1;
+	uint32 bPedPhysics : 1;
 	uint32 bIsStuck : 1;
 	uint32 bIsInSafePosition : 1;
 	uint32 bUseCollisionRecords : 1;
@@ -92,6 +96,7 @@ public:
 	uint16 m_scanCode;
 	int16 m_modelIndex;
 	eLevelName m_level;	// int16
+	CReference *m_pFirstReference;
 
 	CEntity(void);
 	void SetupBigBuilding(void);
@@ -103,12 +108,17 @@ public:
 	float GetBoundRadius(void) { return CModelInfo::GetModelInfo(m_modelIndex)->GetColModel()->boundingSphere.radius; }
 	int GetModelIndex(void) { return m_modelIndex; }
 	void UpdateRwFrame(void);
+	void RegisterReference(CEntity **pent);
+	void ResolveReferences(void);
+	void PruneReferences(void);
 
 	bool IsBuilding(void) { return m_type == ENTITY_TYPE_BUILDING; }
 	bool IsVehicle(void) { return m_type == ENTITY_TYPE_VEHICLE; }
 	bool IsPed(void) { return m_type == ENTITY_TYPE_PED; }
 	bool IsObject(void) { return m_type == ENTITY_TYPE_OBJECT; }
 	bool IsDummy(void) { return m_type == ENTITY_TYPE_DUMMY; }
+	CPed *Ped(void) { return (CPed*)this; }
+	CVehicle *Vehicle(void) { return (CVehicle*)this; }
 
 	// from CPlaceable
 	~CEntity(void);
