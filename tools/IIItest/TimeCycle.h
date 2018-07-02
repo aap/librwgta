@@ -87,6 +87,9 @@ public:
 	static int   m_nCurrentFogColourGreen;
 	static int   m_nCurrentFogColourBlue;
 
+	static int m_CurrentStoredValue;
+	static CVector m_VectorToSun[16];
+
 	static void Initialise(void);
 	static void Update(void);
 };

@@ -210,16 +210,16 @@ CPhysical::GetSpeed(CVector &p)
 void
 CPhysical::ApplyMoveSpeed(void)
 {
-	*m_matrix.GetPosition() += m_vecMoveSpeed * CTimer::ms_fTimeStep;
+	GetPosition() += m_vecMoveSpeed * CTimer::ms_fTimeStep;
 }
 
 void
 CPhysical::ApplyTurnSpeed(void)
 {
 	CVector turnvec = m_vecTurnSpeed*CTimer::ms_fTimeStep;
-	*m_matrix.GetLeft() += CrossProduct(turnvec, *m_matrix.GetLeft());
-	*m_matrix.GetUp() += CrossProduct(turnvec, *m_matrix.GetUp());
-	*m_matrix.GetAt() += CrossProduct(turnvec, *m_matrix.GetAt());
+	GetRight() += CrossProduct(turnvec, GetRight());
+	GetForward() += CrossProduct(turnvec, GetForward());
+	GetUp() += CrossProduct(turnvec, GetUp());
 }
 
 void
@@ -342,7 +342,7 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 				}
 		}else{
 			}
-			CVector pointposA = colpoint.point - *A->GetMatrix().GetPosition();
+			CVector pointposA = colpoint.point - A->GetPosition();
 			speedA = DotProduct(A->GetSpeed(pointposA), colpoint.normal);
 			if(speedA < 0.0f){
 				if(B->IsObject()){
@@ -385,7 +385,7 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 		}else
 			return false;
 	}else if(A->bPedPhysics){
-		CVector pointposB = colpoint.point - *B->GetMatrix().GetPosition();
+		CVector pointposB = colpoint.point - B->GetPosition();
 		speedA = DotProduct(A->m_vecMoveSpeed, colpoint.normal);
 		speedB = DotProduct(B->GetSpeed(pointposB), colpoint.normal);
 
@@ -421,7 +421,7 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 		}else
 			return false;
 	}else if(B->bPedPhysics){
-		CVector pointposA = colpoint.point - *A->GetMatrix().GetPosition();
+		CVector pointposA = colpoint.point - A->GetPosition();
 		speedA = DotProduct(A->GetSpeed(pointposA), colpoint.normal);
 		speedB = DotProduct(B->m_vecMoveSpeed, colpoint.normal);
 
@@ -462,8 +462,8 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 		}else
 			return false;
 	}else{
-		CVector pointposA = colpoint.point - *A->GetMatrix().GetPosition();
-		CVector pointposB = colpoint.point - *B->GetMatrix().GetPosition();
+		CVector pointposA = colpoint.point - A->GetPosition();
+		CVector pointposB = colpoint.point - B->GetPosition();
 		speedA = DotProduct(A->GetSpeed(pointposA), colpoint.normal);
 		speedB = DotProduct(B->GetSpeed(pointposB), colpoint.normal);
 		float a = 1.0f /
@@ -844,7 +844,7 @@ CPhysical::ProcessCollision(void)
 
 			m_phy_flagA40 = false;
 			m_phy_flagA80 = false;
-			m_fDistanceTravelled = (*GetMatrix().GetPosition() - *matrix.GetPosition()).Magnitude();
+			m_fDistanceTravelled = (GetPosition() - *matrix.GetPosition()).Magnitude();
 		}
 	}
 
@@ -881,7 +881,7 @@ CPhysical::ProcessShift(void)
 					return;
 				}
 		}
-		m_fDistanceTravelled = (*GetMatrix().GetPosition() - *matrix.GetPosition()).Magnitude();
+		m_fDistanceTravelled = (GetPosition() - *matrix.GetPosition()).Magnitude();
 	}
 	bIsStuck = false;
 	bIsInSafePosition = true;

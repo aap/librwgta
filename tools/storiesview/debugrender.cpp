@@ -92,7 +92,7 @@ RenderDebugLines(void)
 {
 	int i;
 
-	rw::engine->imtexture = nil;
+	rw::SetRenderStatePtr(rw::TEXTURERASTER, nil);
 
 	for(i = 0; i < numDebugLines; i++)
 		RenderLine(debugLines[i].v1.x, debugLines[i].v1.y, debugLines[i].v1.z,
@@ -155,7 +155,7 @@ RenderDebugTris(void)
 {
 	int i;
 
-	rw::engine->imtexture = nil;
+	rw::SetRenderStatePtr(rw::TEXTURERASTER, nil);
 
 	for(i = 0; i < numDebugTris; i++)
 		RenderTriangle(debugTris[i].v1.x, debugTris[i].v1.y, debugTris[i].v1.z,

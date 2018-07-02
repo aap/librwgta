@@ -1236,7 +1236,7 @@ CCollision::DrawColModel(const CMatrix &mat, const CColModel &colModel)
 	rw::SetRenderState(rw::VERTEXALPHA, 1);
 	rw::SetRenderState(rw::SRCBLEND, rw::BLENDSRCALPHA);
 	rw::SetRenderState(rw::DESTBLEND, rw::BLENDINVSRCALPHA);
-	rw::engine->imtexture = nil;
+	rw::SetRenderStatePtr(rw::TEXTURERASTER, nil);
 
 	CDebugDraw::RenderWireBox(mat, colModel.boundingBox.min, colModel.boundingBox.max, red);
 

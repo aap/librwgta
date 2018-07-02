@@ -9,6 +9,10 @@ public:
 	static short OldWeatherType;
 	static short ForcedWeatherType;
 	static float WetRoads;
+	static float Wind;
+	static float CloudCoverage;
+	static float Foggyness;
+	static float Rainbow;
 
 	static void Init(void);
 	static void Update(void);

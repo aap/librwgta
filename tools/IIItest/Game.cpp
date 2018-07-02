@@ -1,6 +1,9 @@
 #include "III.h"
+#include "Camera.h"
 #include "SurfaceTable.h"
 #include "References.h"
+#include "Draw.h"
+#include "Coronas.h"
 
 #include "Test.h"
 
@@ -14,12 +17,6 @@ CGame::InitialiseRW(void)
 	Scene.camera = CameraCreate(640, 480, 1);
 	Scene.camera->setFarPlane(2000.0f);
 	Scene.camera->setNearPlane(0.9f);
-	TheCamera.m_rwcam = Scene.camera;
-	TheCamera.m_aspectRatio = (float)globals.width/globals.height;
-//	TheCamera.m_target.set(0.0f, 0.0f, 0.0f);
-//	TheCamera.m_position.set(-100.0f, -100.0f, 50.0f);
-	TheCamera.m_target.set(1155.0f, -190.0f, -18.0f);
-	TheCamera.m_position.set(1286.0f, -211.0f, 50.0f);
 
 	Scene.world = rw::World::create();
 	Scene.world->addCamera(Scene.camera);
@@ -52,6 +49,8 @@ CGame::Initialise(void)
 
 	printf("--Setup game variables\n");
 	CReferences::Init();
+	TheCamera.Init();
+	TheCamera.SetRwCamera(Scene.camera);
 	CPathFind::AllocatePathFindInfoMem(PATHNODESIZE);
 	CWeather::Init();
 	CCullZones::Init();
@@ -74,6 +73,7 @@ CGame::Initialise(void)
 
 	printf("--Setup water\n");
 	CWaterLevel::Initialise("DATA\\WATER.DAT");	// file is unused
+	CDraw::SetFOV(120.0f);
 
 	CTimeCycle::Initialise();
 
@@ -85,8 +85,12 @@ CGame::Initialise(void)
 	CStreaming::LoadAllRequestedModels();
 
 	printf("--Setup game variables\n");
+	CCoronas::Init();
+
+	printf("--Setup game variables\n");
 	CTimer::Initialise();
 	CClock::Initialise(1000);
+	CClouds::Init();
 
 	printf("--Load scene\n");
 	CCollision::ms_collisionInMemory = CGame::currLevel;
@@ -114,7 +118,9 @@ CGame::Process(void)
 		CWeather::Update();
 		CCollision::Update();
 		CTimeCycle::Update();
+		CClouds::Update();
 		TheCamera.Process();
+		CCoronas::DoSunAndMoon();
 
 		CTest::Update();
 	}

@@ -101,6 +101,7 @@ public:
 	CEntity(void);
 	void SetupBigBuilding(void);
 	bool IsVisible(void);
+	bool IsVisibleComplex(void);
 	bool GetIsOnScreen(void);
 	bool GetIsOnScreenComplex(void);
 	bool GetIsTouching(const CVector center, float radius);

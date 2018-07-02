@@ -1,237 +1,197 @@
 #include "III.h"
-
-#define PI 3.14159265359f
+#include "General.h"
+#include "Camera.h"
+#include "Draw.h"
 
 CCamera TheCamera;
 
-using rw::Quat;
-using rw::V3d;
+void
+CCamera::Init(void)
+{
+	memset(this, 0, sizeof(CCamera));
+
+	Cams[0].Init();
+	Cams[1].Init();
+	Cams[2].Init();
+	ActiveCam = 0;
+
+	LODDistMultiplier = 1.0f;
+
+	Cams[2].Source = CVector(1286.0f, -211.0f, 50.0f);
+	CVector target(1155.0f, -190.0f, -18.0f);
+	Cams[2].Front = target - Cams[2].Source;
+	Cams[2].m_fCameraDistance = Cams[2].Front.Magnitude();
+	Cams[2].Front.Normalise();
+	Cams[2].Up = CVector(0.0f, 0.0f, 1.0f);
+	ActiveCam = 2;
+	InitialiseCameraForDebugMode();
+}
+
+bool
+CCamera::IsSphereVisible(const CVector &center, float radius)
+{
+	CVector c = m_cameraMatrix * center;
+	if(c.y + radius < CDraw::GetNearClipZ()) return false;
+	if(c.y - radius > CDraw::GetFarClipZ()) return false;
+	if(c.x*m_vecFrustumNormals[0].x + c.y*m_vecFrustumNormals[0].y > radius) return false;
+	if(c.x*m_vecFrustumNormals[1].x + c.y*m_vecFrustumNormals[1].y > radius) return false;
+	if(c.y*m_vecFrustumNormals[2].y + c.z*m_vecFrustumNormals[2].z > radius) return false;
+	if(c.y*m_vecFrustumNormals[3].y + c.z*m_vecFrustumNormals[3].z > radius) return false;
+	return true;
+}
+
+void
+CCamera::SetRwCamera(rw::Camera *rwcam)
+{
+	m_pRwCamera = rwcam;
+	m_viewMatrix.Attach(&rwcam->viewMatrix, false);
+	// TODO: motion blur
+}
+
+void
+CCamera::CalculateDerivedValues(void)
+{
+	m_cameraMatrix = Invert(GetMatrix());
+
+	float hfov = DEGTORAD(CDraw::GetFOV()/2.0f);
+	float c = cos(hfov);
+	float s = sin(hfov);
+
+	// right plane
+	m_vecFrustumNormals[0] = CVector(c, -s, 0.0f);
+	// left plane
+	m_vecFrustumNormals[1] = CVector(-c, -s, 0.0f);
+
+	c *= (float)globals.height/globals.width;
+	s *= (float)globals.height/globals.width;
+	// bottom plane
+	m_vecFrustumNormals[2] = CVector(0.0f, -s, -c);
+	// top plane
+	m_vecFrustumNormals[3] = CVector(0.0f, -s, c);
+
+	if(GetForward().x != 0.0f || GetForward().y != 0.0f)
+		Orientation = atan2(GetForward().x, GetForward().y);
+	else
+		GetForward().x = 0.0001f;
+
+	CamFrontXNorm = GetForward().x;
+	CamFrontYNorm = GetForward().y;
+	float l = sqrt(sq(CamFrontXNorm) + sq(CamFrontYNorm));
+	if(l != 0.0f){
+		CamFrontXNorm /= l;
+		CamFrontYNorm /= l;
+	}else
+		CamFrontXNorm = 1.0f;
+}
 
 void
 CCamera::Process(void)
 {
-	float scale = CTimer::avgTimeStep/1000.0f*30.0f;
-	float sensitivity = 1.0f;
+	Scene.camera->setNearPlane(0.9f);
 
-	// Mouse
-	// first person
-	if(CPad::IsMButtonDown(1)){
-		if(CPad::IsAltDown() && CPad::IsCtrlDown()){
-			float dy = (CPad::oldMouseState.y - CPad::newMouseState.y);
-			dolly(dy*scale);
-		}else{
-			float dx = (CPad::oldMouseState.x - CPad::newMouseState.x);
-			float dy = (CPad::oldMouseState.y - CPad::newMouseState.y);
-			turn(DEGTORAD(dx)/2.0f*scale, DEGTORAD(dy)/2.0f*scale);
-		}
-	}
-	// roughly 3ds max controls
-	if(CPad::IsMButtonDown(2)){
-		if(CPad::IsAltDown() && CPad::IsCtrlDown()){
-			float dy = (CPad::oldMouseState.y - CPad::newMouseState.y);
-			zoom(dy*scale);
-		}else if(CPad::IsAltDown()){
-			float dx = (CPad::oldMouseState.x - CPad::newMouseState.x);
-			float dy = (CPad::oldMouseState.y - CPad::newMouseState.y);
-			orbit(DEGTORAD(dx)/2.0f*scale, -DEGTORAD(dy)/2.0f*scale);
-		}else{
-			float dx = (CPad::oldMouseState.x - CPad::newMouseState.x);
-			float dy = (CPad::oldMouseState.y - CPad::newMouseState.y);
-			float dist = distanceToTarget();
-			pan(dx*scale*dist/100.0f, -dy*scale*dist/100.0f);
-		}
-	}
+	Cams[ActiveCam].Process();
 
-	// Keyboard
+	// Update CCamera matrix with CCam values
+	GetPosition() = Cams[ActiveCam].Source;
+	GetForward() = Cams[ActiveCam].Front;
+	GetUp() = Cams[ActiveCam].Up;
+	GetRight() = CrossProduct(Cams[ActiveCam].Up, Cams[ActiveCam].Front);
+	CalculateDerivedValues();	// BUG: this is stupid here because the FOV isn't set yet
+	CDraw::SetFOV(Cams[ActiveCam].FOV);
+
+	// Copy CCamera matrix to RW matrix
+	rw::Matrix *camMatrix = &m_pRwCamera->getFrame()->matrix;
+	camMatrix->pos = *(rw::V3d*)&GetPosition();
+	camMatrix->at = *(rw::V3d*)&GetForward();
+	camMatrix->up = *(rw::V3d*)&GetUp();
+	camMatrix->right = *(rw::V3d*)&GetRight();
+	camMatrix->update();
+	m_pRwCamera->getFrame()->updateObjects();
+
+	CDraw::SetNearClipZ(m_pRwCamera->nearPlane);
+	CDraw::SetFarClipZ(m_pRwCamera->farPlane);
+}
+
+void
+CCam::Init(void)
+{
+	Front = CVector(0.0f, 0.0f, -1.0f);
+	Up = CVector(0.0f, 0.0f, 1.0f);
+}
+
+void
+CCam::GetVectorsReadyForRW(void)
+{
+	CVector right;
+	Up = CVector(0.0f, 0.0f, 1.0f);
+	Front.Normalise();
+	if(Front.x == 0.0f && Front.y == 0.0f){
+		Front.x = 0.0001f;
+		Front.y = 0.0001f;
+	}
+	right = CrossProduct(Front, Up);
+	right.Normalise();
+	Up = CrossProduct(right, Front);
+}
+
+void
+CCamera::InitialiseCameraForDebugMode(void)
+{
+	CVector nfront = Cams[ActiveCam].Front;
+	float groundDist = sqrt(sq(nfront.x) + sq(nfront.y));
+	Cams[2].Beta = 0.0f; //CGeneral::GetATanOfXY(nfront.x, nfront.y);
+	Cams[2].Alpha = 0.0f; //CGeneral::GetATanOfXY(groundDist, nfront.z);
+	while(Cams[2].Beta >= PI) Cams[2].Beta -= 2.0f*PI;
+	while(Cams[2].Beta < -PI) Cams[2].Beta += 2.0f*PI;
+	while(Cams[2].Alpha >= PI) Cams[2].Alpha -= 2.0f*PI;
+	while(Cams[2].Alpha < -PI) Cams[2].Alpha += 2.0f*PI;
+}
+
+void
+CCam::Process_Debug(void)
+{
 	static float speed = 0.0f;
-	if(CPad::IsKeyDown('W'))
+	static float panspeedX = 0.0f;
+	static float panspeedY = 0.0f;
+
+	float scale = CTimer::avgTimeStep/1000.0f*30.0f;
+	CPad *pad = CPad::GetPad(0);
+
+	FOV = 80.0f;
+
+	Alpha += DEGTORAD(1.0f)/50.0f * pad->NewState.getLeftY()*128.0f * scale;
+	Beta -= DEGTORAD(1.5f)/19.0f * pad->NewState.getLeftX()*128.0f * scale;
+
+	if(Alpha > DEGTORAD(89.5f)) Alpha = DEGTORAD(89.5f);
+	if(Alpha < DEGTORAD(-89.5f)) Alpha = DEGTORAD(-89.5f);
+
+	CVector vec;
+	vec.x = Source.x + cos(Beta) * cos(Alpha) * 3.0f;
+	vec.y = Source.y + sin(Beta) * cos(Alpha) * 3.0f;
+	vec.z = Source.z + sin(Alpha) * 3.0f;
+
+	if(pad->NewState.square)
 		speed += 0.1f;
-	else if(CPad::IsKeyDown('S'))
+	else if(pad->NewState.cross)
 		speed -= 0.1f;
 	else
 		speed = 0.0f;
-	if(speed > 70.0f) speed = 70.0f;
-	if(speed < -70.0f) speed = -70.0f;
-	dolly(speed*scale);
 
-	static float sidespeed = 0.0f;
-	if(CPad::IsKeyDown('A'))
-		sidespeed -= 0.1f;
-	else if(CPad::IsKeyDown('D'))
-		sidespeed += 0.1f;
-	else
-		sidespeed = 0.0f;
-	if(sidespeed > 70.0f) sidespeed = 70.0f;
-	if(sidespeed < -70.0f) sidespeed = -70.0f;
-	pan(sidespeed*scale, 0.0f);
+	Front = vec - Source;
+	Front.Normalise();
+	Source = Source + Front*speed;
 
+	CVector up = { 0.0f, 0.0f, 1.0f };
+	CVector right;
+	right = CrossProduct(Front, up);
+	up = CrossProduct(right, Front);
+	Source = Source + up*panspeedY + right*panspeedX;
 
-
-	// Pad
-	CPad *pad = CPad::GetPad(0);
-	sensitivity = 1.0f;
-	if(pad->NewState.r2){
-		sensitivity = 2.0f;
-		if(pad->NewState.l2)
-			sensitivity = 4.0f;
-	}else if(pad->NewState.l2)
-		sensitivity = 0.5f;
-	if(pad->NewState.square) zoom(0.4f*sensitivity*scale);
-	if(pad->NewState.cross) zoom(-0.4f*sensitivity*scale);
-	orbit(pad->NewState.getLeftX()/25.0f*sensitivity*scale,
-	                -pad->NewState.getLeftY()/25.0f*sensitivity*scale);
-	turn(-pad->NewState.getRightX()/25.0f*sensitivity*scale,
-	               pad->NewState.getRightY()/25.0f*sensitivity*scale);
-	if(pad->NewState.up)
-		dolly(2.0f*sensitivity*scale);
-	if(pad->NewState.down)
-		dolly(-2.0f*sensitivity*scale);
-
-
-	if(IsButtonJustDown(pad, start)){
-		printf("cam.position: %f, %f, %f\n", m_position.x, m_position.y, m_position.z);
-		printf("cam.target: %f, %f, %f\n", m_target.x, m_target.y, m_target.z);
-	}
+	GetVectorsReadyForRW();
 }
 
 void
-CCamera::update(void)
+CCam::Process(void)
 {
-	if(m_rwcam){
-		m_rwcam->setFOV(m_fov, m_aspectRatio);
-
-		rw::Frame *f = m_rwcam->getFrame();
-		if(f){
-			f->matrix.lookAt(sub(m_target, m_position),
-			                 m_up);
-			f->matrix.pos = m_position;
-			f->updateObjects();
-		}
-	}
+	Process_Debug();
 }
-
-void
-CCamera::setTarget(V3d target)
-{
-	m_position = sub(m_position, sub(m_target, target));
-	m_target = target;
-}
-
-float
-CCamera::getHeading(void)
-{
-	V3d dir = sub(m_target, m_position);
-	float a = atan2(dir.y, dir.x)-PI/2.0f;
-	return m_localup.z < 0.0f ? a-PI : a;
-}
-
-void
-CCamera::turn(float yaw, float pitch)
-{
-	V3d dir = sub(m_target, m_position);
-	V3d zaxis = { 0.0f, 0.0f, 1.0f };
-	Quat r = Quat::rotation(yaw, zaxis);
-	dir = rotate(dir, r);
-	m_localup = rotate(m_localup, r);
-
-	V3d right = normalize(cross(dir, m_localup));
-	r = Quat::rotation(pitch, right);
-	dir = rotate(dir, r);
-	m_localup = normalize(cross(right, dir));
-	if(m_localup.z >= 0.0) m_up.z = 1.0;
-	else m_up.z = -1.0f;
-
-	m_target = add(m_position, dir);
-}
-
-void
-CCamera::orbit(float yaw, float pitch)
-{
-	V3d dir = sub(m_target, m_position);
-	V3d zaxis = { 0.0f, 0.0f, 1.0f };
-	Quat r = Quat::rotation(yaw, zaxis);
-	dir = rotate(dir, r);
-	m_localup = rotate(m_localup, r);
-
-	V3d right = normalize(cross(dir, m_localup));
-	r = Quat::rotation(-pitch, right);
-	dir = rotate(dir, r);
-	m_localup = normalize(cross(right, dir));
-	if(m_localup.z >= 0.0) m_up.z = 1.0;
-	else m_up.z = -1.0f;
-
-	m_position = sub(m_target, dir);
-}
-
-void
-CCamera::dolly(float dist)
-{
-	V3d dir = setlength(sub(m_target, m_position), dist);
-	m_position = add(m_position, dir);
-	m_target = add(m_target, dir);
-}
-
-void
-CCamera::zoom(float dist)
-{
-	V3d dir = sub(m_target, m_position);
-	float curdist = length(dir);
-	if(dist >= curdist)
-		dist = curdist-0.01f;
-	dir = setlength(dir, dist);
-	m_position = add(m_position, dir);
-}
-
-void
-CCamera::pan(float x, float y)
-{
-	V3d dir = normalize(sub(m_target, m_position));
-	V3d right = normalize(cross(dir, m_up));
-	V3d localup = normalize(cross(right, dir));
-	dir = add(scale(right, x), scale(localup, y));
-	m_position = add(m_position, dir);
-	m_target = add(m_target, dir);
-}
-
-void
-CCamera::setDistanceFromTarget(float dist)
-{
-	V3d dir = sub(m_position, m_target);
-	dir = scale(normalize(dir), dist);
-	m_position = add(m_target, dir);
-}
-
-float
-CCamera::distanceTo(V3d v)
-{
-	return length(sub(m_position, v));
-}
-
-float
-CCamera::distanceToTarget(void)
-{
-	return length(sub(m_position, m_target));
-}
-
-bool
-CCamera::isSphereVisible(CVector &center, float radius)
-{
-	rw::Sphere sph;
-	sph.center = *(rw::V3d*)&center;
-	sph.radius = radius;
-	return m_rwcam->frustumTestSphere(&sph) != rw::Camera::SPHEREOUTSIDE;
-}
-
-CCamera::CCamera()
-{
-	m_position.set(0.0f, 6.0f, 0.0f);
-	m_target.set(0.0f, 0.0f, 0.0f);
-
-	m_up.set(0.0f, 0.0f, 1.0f);
-	m_localup = m_up;
-	m_fov = 70.0f;
-	m_aspectRatio = 1.0f;
-	m_rwcam = nil;
-	m_LODmult = 1.0f;
-}
-

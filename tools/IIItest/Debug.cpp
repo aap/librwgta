@@ -70,7 +70,7 @@ DrawDebugFrustum(void)
 		rw::SetRenderState(rw::FOGENABLE, 0);
 		rw::SetRenderState(rw::ZTESTENABLE, 1);
 		rw::SetRenderState(rw::ZWRITEENABLE, 1);
-		rw::engine->imtexture = nil;
+		rw::SetRenderStatePtr(rw::TEXTURERASTER, nil);
 
 		rw::im3d::Transform(vertices, 8, nil);
 		rw::im3d::RenderIndexed(rw::PRIMTYPETRILIST, indices, i);

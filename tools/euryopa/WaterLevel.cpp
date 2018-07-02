@@ -262,9 +262,9 @@ RenderWaterpro(void)
 {
 	int i, j;
 
+	rw::SetRenderStatePtr(rw::TEXTURERASTER, gpWaterTex->raster);
 	rw::SetRenderState(rw::VERTEXALPHA, 1);
 	rw::SetRenderState(rw::FOGENABLE, gEnableFog);
-	rw::engine->imtexture = gpWaterTex;
 
 	rw::RGBA color = { 255, 255, 255, 255 };
 	Timecycle::ColourSet *cs = &Timecycle::currentColours;
@@ -385,9 +385,9 @@ RenderWater(void)
 {
 	int i;
 
+	rw::SetRenderStatePtr(rw::TEXTURERASTER, gpWaterTex->raster);
 	rw::SetRenderState(rw::VERTEXALPHA, 1);
 	rw::SetRenderState(rw::FOGENABLE, gEnableFog);
-	rw::engine->imtexture = gpWaterTex;
 
 	for(i = 0; i < numWaterQuads; i++)
 		RenderWaterQuad(&waterQuads[i]);

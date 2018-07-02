@@ -178,9 +178,9 @@ public:
 	}
 
 	CVector *GetPosition(void){ return (CVector*)&m_matrix.pos; }
-	CVector *GetLeft(void){ return (CVector*)&m_matrix.right; }
-	CVector *GetUp(void){ return (CVector*)&m_matrix.up; }
-	CVector *GetAt(void){ return (CVector*)&m_matrix.at; }
+	CVector *GetRight(void) { return (CVector*)&m_matrix.right; }
+	CVector *GetForward(void) { return (CVector*)&m_matrix.up; }
+	CVector *GetUp(void) { return (CVector*)&m_matrix.at; }
 	void SetScale(float s){
 		m_matrix.right.x = s;
 		m_matrix.right.y = 0.0f;
@@ -199,14 +199,14 @@ public:
 		m_matrix.pos.z = 0.0f;
 	}
 	void Reorthogonalise(void){
-		CVector &l = *GetLeft();
+		CVector &r = *GetRight();
+		CVector &f = *GetForward();
 		CVector &u = *GetUp();
-		CVector &a = *GetAt();
-		a = CrossProduct(l, u);
-		a.Normalise();
-		l = CrossProduct(u, a);
-		l.Normalise();
-		u = CrossProduct(a, l);
+		u = CrossProduct(r, f);
+		u.Normalise();
+		r = CrossProduct(f, u);
+		r.Normalise();
+		f = CrossProduct(u, r);
 	}
 };
 
@@ -240,13 +240,20 @@ Invert(const CMatrix &src, CMatrix &dst)
 	return dst;
 }
 
+inline CMatrix
+Invert(const CMatrix &matrix)
+{
+	CMatrix inv;
+	return Invert(matrix, inv);
+}
+
 inline CVector
 operator*(const CMatrix &mat, const CVector &vec)
 {
 	return CVector(
 		mat.m_matrix.right.x * vec.x + mat.m_matrix.up.x * vec.y + mat.m_matrix.at.x * vec.z + mat.m_matrix.pos.x,
-		mat.m_matrix.right.y * vec.y + mat.m_matrix.up.y * vec.y + mat.m_matrix.at.y * vec.z + mat.m_matrix.pos.y,
-		mat.m_matrix.right.z * vec.z + mat.m_matrix.up.z * vec.y + mat.m_matrix.at.z * vec.z + mat.m_matrix.pos.z);
+		mat.m_matrix.right.y * vec.x + mat.m_matrix.up.y * vec.y + mat.m_matrix.at.y * vec.z + mat.m_matrix.pos.y,
+		mat.m_matrix.right.z * vec.x + mat.m_matrix.up.z * vec.y + mat.m_matrix.at.z * vec.z + mat.m_matrix.pos.z);
 }
 
 inline CMatrix
@@ -286,8 +293,8 @@ Multiply3x3(const CMatrix &mat, const CVector &vec)
 {
 	return CVector(
 		mat.m_matrix.right.x * vec.x + mat.m_matrix.up.x * vec.y + mat.m_matrix.at.x * vec.z,
-		mat.m_matrix.right.y * vec.y + mat.m_matrix.up.y * vec.y + mat.m_matrix.at.y * vec.z,
-		mat.m_matrix.right.z * vec.z + mat.m_matrix.up.z * vec.y + mat.m_matrix.at.z * vec.z);
+		mat.m_matrix.right.y * vec.x + mat.m_matrix.up.y * vec.y + mat.m_matrix.at.y * vec.z,
+		mat.m_matrix.right.z * vec.x + mat.m_matrix.up.z * vec.y + mat.m_matrix.at.z * vec.z);
 }
 
 class CRGBA

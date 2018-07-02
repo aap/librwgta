@@ -1,4 +1,6 @@
 #include "III.h"
+#include "Camera.h"
+#include "Draw.h"
 #include <cstdarg>
 
 #include "Test.h"
@@ -14,6 +16,17 @@ rw::Light  *pExtraDirectionals[4];
 bool isRunning;
 
 uchar work_buff[55000];
+
+
+static uint randseed = 0x3ef7d0;	// this seems to be just a random address in III
+void ps2_srand(uint s) { randseed = s; }
+int
+ps2_rand(void)
+{
+	randseed = randseed * 0x41c64e6d + 12345;
+	return randseed & 0x7FFFFFFF;
+}
+
 
 char*
 getPath(const char *path)
@@ -68,23 +81,42 @@ d3dToGl3(rw::Raster *raster)
 	return raster;
 }
 
+// Simple function to convert a raster to the current platform.
+// TODO: convert custom formats (DXT) properly.
+rw::Raster*
+convertTexRaster(rw::Raster *ras)
+{
+	rw::Image *img = ras->toImage();
+	img->unindex();
+	ras = rw::Raster::createFromImage(img);
+	img->destroy();
+	return ras;
+}
+
 void
 convertTxd(rw::TexDictionary *txd)
 {
+	rw::Texture *tex;
 	FORLIST(lnk, txd->textures){
-		rw::Texture *tex = rw::Texture::fromDict(lnk);
-		//debug("converting %s\n", tex->name);
-#ifdef RW_GL3
-		tex->raster = d3dToGl3(tex->raster);
-#endif
+		tex = rw::Texture::fromDict(lnk);
+		rw::Raster *ras = tex->raster;
+		if(ras && ras->platform != rw::platform){
+			if(!(ras->platform == rw::PLATFORM_D3D8 && rw::platform == rw::PLATFORM_D3D9 ||
+			     ras->platform == rw::PLATFORM_D3D9 && rw::platform == rw::PLATFORM_D3D8)){
+				tex->raster = convertTexRaster(ras);
+				ras->destroy();
+			}
+		}
+		tex->setFilter(rw::Texture::LINEAR);
 	}
+
 }
 
 
 CVector
 FindPlayerCoors(void)
 {
-	return TheCamera.m_position;
+	return TheCamera.GetPosition();
 }
 
 //
@@ -231,7 +263,6 @@ WindowResize(rw::Rect *r)
 
 	rw::Camera *cam = Scene.camera;
 	if(cam){
-		TheCamera.m_aspectRatio = (float)globals.width/globals.height;
 		if(cam->frameBuffer){
 			cam->frameBuffer->destroy();
 			cam->frameBuffer = nil;
@@ -248,6 +279,8 @@ WindowResize(rw::Rect *r)
 void
 DefinedState(void)
 {
+	SetRenderState(rw::TEXTUREADDRESS, rw::Texture::WRAP);
+	SetRenderState(rw::TEXTUREFILTER, rw::Texture::LINEAR);
 	SetRenderState(rw::ZTESTENABLE, 1);
 	SetRenderState(rw::ZWRITEENABLE, 1);
 	SetRenderState(rw::VERTEXALPHA, 0);
@@ -275,6 +308,7 @@ debug(const char *fmt, ...)
 void
 RenderScene(void)
 {
+	CClouds::Render();
 	CClouds::RenderHorizon();
 	CRenderer::RenderRoads();
 	SetRenderState(rw::FOGENABLE, 1);
@@ -299,10 +333,13 @@ void
 DoRWStuffStartOfFrame_Horizon(int16 topred, int16 topgreen, int16 topblue,
 	int16 botred, int16 botgreen, int16 botblue, int16 alpha)
 {
-	// TODO: more stuff
+	// GTA uses CameraSize here but it kinda sucks
+	Scene.camera->setFOV(CDraw::GetFOV(), (float)globals.width/globals.height);
+	// TODO: visibility
 	static rw::RGBA clearcol = { 0x40, 0x40, 0x40, 0xFF };
 	Scene.camera->clear(&clearcol, rw::Camera::CLEARIMAGE|rw::Camera::CLEARZ);
 	Scene.camera->beginUpdate();
+	TheCamera.m_viewMatrix.Update();
 	CClouds::RenderBackground(topred, topgreen, topblue, botred, botgreen, botblue, alpha);
 }
 
@@ -382,9 +419,6 @@ TheGame(void)
 
 		CRenderer::ConstructRenderList();
 		// CRenderer::PreRender();
-
-		// get rid of this once we have the real camera
-		TheCamera.update();
 
 		// Set the planes before updating the RW cam. GTA (wrongly) does it afterwards.
 		Scene.camera->setFarPlane(CTimeCycle::m_fCurrentFarClip);

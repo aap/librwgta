@@ -152,7 +152,7 @@ CWaterLevel_::RenderWater(void)
 
 	rw::SetRenderState(rw::VERTEXALPHA, 1);
 	rw::SetRenderState(rw::FOGENABLE, 1);
-	rw::engine->imtexture = gpWaterTex;
+	rw::SetRenderStatePtr(rw::TEXTURERASTER, gpWaterTex->raster);
 
 	rw::RGBA color = { 255, 255, 255, 255 };
 	color.red = pTimecycle->m_fCurrentWaterRed;

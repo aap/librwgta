@@ -1,37 +1,48 @@
 #ifndef _CAMERA_H_
 #define _CAMERA_H_
 
-class CCamera
+class CCam
 {
 public:
-	rw::Camera *m_rwcam;
-	rw::V3d m_position;
-	rw::V3d m_target;
-	rw::V3d m_up;
-	rw::V3d m_localup;
+	float Alpha;
+	float FOV;	
+	float Beta;
+	CVector Front;
+	CVector Source;
+	CVector Up;
+	float m_fCameraDistance;
 
-	float m_fov, m_aspectRatio;
+	void Init(void);
+	void Process(void);
+	void Process_Debug(void);
+	void GetVectorsReadyForRW(void);
+};
 
-	float m_LODmult;
+class CCamera : public CPlaceable
+{
+public:
+	uint8 ActiveCam;
+	float CamFrontXNorm;
+	float CamFrontYNorm;
+	float LODDistMultiplier;
+	float Orientation;
+	CCam Cams[3];
+	rw::Camera *m_pRwCamera;
+	CMatrix m_cameraMatrix;
+	CMatrix m_viewMatrix;
+	CVector m_vecFrustumNormals[4];	// frustum normals for left, right, bottom, top planes in camera space
 
+	void Init(void);
 	void Process(void);
 
-	void setTarget(rw::V3d target);
-	float getHeading(void);
+	CMatrix &GetCameraMatrix(void) { return m_cameraMatrix; }
 
-	void turn(float yaw, float pitch);
-	void orbit(float yaw, float pitch);
-	void dolly(float dist);
-	void zoom(float dist);
-	void pan(float x, float y);
-	void setDistanceFromTarget(float dist);
-
-	void update(void);
-	float distanceTo(rw::V3d v);
-	float distanceToTarget(void);
-	bool isSphereVisible(CVector &center, float radius);
-
-	CCamera(void);
+	void SetRwCamera(rw::Camera *rwcam);
+	void CalculateDerivedValues(void);
+	bool IsSphereVisible(const CVector &center, float radius);
+	void InitialiseCameraForDebugMode(void);
 };
+
+extern CCamera TheCamera;
 
 #endif

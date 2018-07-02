@@ -5,6 +5,10 @@ short CWeather::NewWeatherType;
 short CWeather::OldWeatherType;
 short CWeather::ForcedWeatherType;
 float CWeather::WetRoads;
+float CWeather::Wind;
+float CWeather::CloudCoverage;
+float CWeather::Foggyness;
+float CWeather::Rainbow;
 
 enum eWeather
 {

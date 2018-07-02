@@ -235,12 +235,12 @@ RenderSkyPolys(void)
 {
 	const float dist = 30.0f;
 
+	rw::SetRenderStatePtr(rw::TEXTURERASTER, nil);
 	rw::SetRenderState(rw::VERTEXALPHA, 0);
 	rw::SetRenderState(rw::FOGENABLE, 0);
 	rw::SetRenderState(rw::ZTESTENABLE, 0);
 	rw::SetRenderState(rw::ZWRITEENABLE, 0);
 	rw::SetRenderState(rw::CULLMODE, rw::CULLNONE);
-	rw::engine->imtexture = nil;
 
 	TempBufferVerticesStored = 0;
 	TempBufferIndicesStored = 0;

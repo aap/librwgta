@@ -616,9 +616,9 @@ renderQuad(float x0, float y0, float x1, float y1, float x2, float y2, float x3,
 	rw::RGBA c0, rw::RGBA c1, rw::RGBA c2, rw::RGBA c3)
 {
 	rw::SetRenderState(rw::VERTEXALPHA, c0.alpha != 255 || c1.alpha != 255 || c2.alpha != 255 || c3.alpha != 255);
+	rw::SetRenderStatePtr(rw::TEXTURERASTER, nil);
 	rw::SetRenderState(rw::ZTESTENABLE, 0);
 	rw::SetRenderState(rw::ZWRITEENABLE, 0);
-	rw::engine->imtexture = nil;
 	setQuadVertices(x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3);
 	rw::im2d::RenderIndexedPrimitive(rw::PRIMTYPETRILIST,
 		&quadverts, 4, &quadindices, 6);

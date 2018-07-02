@@ -38,6 +38,9 @@ extern Globals globals;
 extern  uchar work_buff[55000];
 void debug(const char *fmt, ...);
 
+void ps2_srand(uint s);
+int ps2_rand(void);
+
 // node name
 void NodeNamePluginAttach(void);
 char *GetFrameNodeName(rw::Frame *f);
@@ -108,7 +111,6 @@ public:
 #include "DummyObject.h"
 #include "DummyPed.h"
 #include "Physical.h"
-#include "Camera.h"
 #include "World.h"
 #include "Pools.h"
 #include "PathFind.h"
@@ -129,6 +131,7 @@ inline float
 clamp(float v, float min, float max){ return v<min ? min : v>max ? max : v; }
 inline float
 sq(float x) { return x*x; }
+#define PI M_PI
 #define DEGTORAD(d) (d/180.0f*PI)
 
 
@@ -137,7 +140,6 @@ char *skipWhite(char *s);
 void convertTxd(rw::TexDictionary *txd);
 
 extern bool isRunning;
-extern CCamera TheCamera;
 CVector FindPlayerCoors(void);
 
 // RW stuff

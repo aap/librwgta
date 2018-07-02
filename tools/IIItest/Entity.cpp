@@ -1,5 +1,6 @@
 #include "III.h"
 #include "References.h"
+#include "Camera.h"
 
 CEntity::CEntity(void)
 {
@@ -83,14 +84,19 @@ CEntity::IsVisible(void)
 }
 
 bool
+CEntity::IsVisibleComplex(void)
+{
+	return (m_rwObject && bIsVisible) ? GetIsOnScreenComplex() : false;
+}
+
+bool
 CEntity::GetIsOnScreen(void)
 {
 	CVector center;
 	float radius;
 	GetBoundCenter(center);
 	radius = GetBoundRadius();
-	// TODO: implement whatever GTA actually does
-	return TheCamera.isSphereVisible(center, radius);
+	return TheCamera.IsSphereVisible(center, radius);
 }
 
 bool
@@ -98,7 +104,7 @@ CEntity::GetIsOnScreenComplex(void)
 {
 	// TODO:
 	// this shouldn't be the same as GetIsOnScreen...
-	return true;
+	return GetIsOnScreen();
 }
 
 bool

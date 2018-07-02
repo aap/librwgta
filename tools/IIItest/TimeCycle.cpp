@@ -84,6 +84,9 @@ int   CTimeCycle::m_nCurrentFogColourRed;
 int   CTimeCycle::m_nCurrentFogColourGreen;
 int   CTimeCycle::m_nCurrentFogColourBlue;
 
+int CTimeCycle::m_CurrentStoredValue;
+CVector CTimeCycle::m_VectorToSun[16];
+
 void
 CTimeCycle::Initialise(void)
 {
@@ -218,4 +221,10 @@ CTimeCycle::Update(void)
 	m_nCurrentFogColourRed = (m_nCurrentSkyTopRed + 2*m_nCurrentSkyBottomRed)/3;
 	m_nCurrentFogColourGreen = (m_nCurrentSkyTopGreen + 2*m_nCurrentSkyBottomGreen)/3;
 	m_nCurrentFogColourBlue = (m_nCurrentSkyTopBlue + 2*m_nCurrentSkyBottomBlue)/3;
+
+	m_CurrentStoredValue = (m_CurrentStoredValue+1)&0xF;
+
+	float t = (CClock::ms_nGameClockMinutes + 60 * CClock::ms_nGameClockHours)/1440.0f * 2.0f*PI;
+	m_VectorToSun[m_CurrentStoredValue] = CVector(sin(t), 1.0f, 0.2f - cos(t));
+	m_VectorToSun[m_CurrentStoredValue].Normalise();
 }

@@ -1,4 +1,5 @@
 #include "III.h"
+#include "Camera.h"
 
 // have to put these somewhere
 int TempBufferIndicesStored;
@@ -32,7 +33,7 @@ CRenderer::ConstructRenderList(void)
 {
 	ms_nNoOfVisibleEntities = 0;
 	ms_nNoOfInVisibleEntities = 0;
-	ms_vecCameraPosition = TheCamera.m_position;
+	ms_vecCameraPosition = TheCamera.GetPosition();
 	ScanWorld();
 }
 
@@ -76,8 +77,8 @@ enum Corners
 void
 CRenderer::ScanWorld(void)
 {
-	float far = TheCamera.m_rwcam->farPlane;
-	rw::V2d vw = TheCamera.m_rwcam->viewWindow;
+	float far = TheCamera.m_pRwCamera->farPlane;
+	rw::V2d vw = TheCamera.m_pRwCamera->viewWindow;
 	rw::V3d vectors[9];
 	rw::Matrix *cammatrix;
 	rw::V2d poly[3];
@@ -96,7 +97,7 @@ CRenderer::ScanWorld(void)
 	vectors[CORNER_FAR_BOTLEFT].y = -vw.y * far;
 	vectors[CORNER_FAR_BOTLEFT].z = far;
 
-	cammatrix = &TheCamera.m_rwcam->getFrame()->matrix;
+	cammatrix = &TheCamera.m_pRwCamera->getFrame()->matrix;
 
 	CVisibilityPlugins::InitAlphaEntityList();
 
@@ -247,7 +248,7 @@ CRenderer::SetupBigBuildingVisibility(CEntity *ent)
 		// that of an atomic for another draw distance.
 		if(a->geometry != rwobj->geometry)
 			rwobj->setGeometry(a->geometry, 0);
-		if(!ent->IsVisible() || !ent->GetIsOnScreenComplex())
+		if(!ent->IsVisibleComplex())
 			return false;
 		if(mi->m_drawLast){
 			CVisibilityPlugins::InsertEntityIntoSortedList(ent, dist);
@@ -277,7 +278,7 @@ CRenderer::SetupBigBuildingVisibility(CEntity *ent)
 	rw::Atomic *rwobj = (rw::Atomic*)ent->m_rwObject;
 	if(a->geometry != rwobj->geometry)
 		rwobj->setGeometry(a->geometry, 0);
-	if(ent->IsVisible() && ent->GetIsOnScreenComplex())
+	if(ent->IsVisibleComplex())
 		CVisibilityPlugins::InsertEntityIntoSortedList(ent, dist);
 	return false;
 }

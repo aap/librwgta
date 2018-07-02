@@ -66,10 +66,10 @@ Sprite2d::DrawRect(CRect const &r, CRGBA const &c0, CRGBA const &c1, CRGBA const
 {
 	static short quadindices[] = { 0, 1, 2, 0, 2, 3 };
 	SetVertices(r, c0, c1, c2, c3, false);
+	rw::SetRenderStatePtr(rw::TEXTURERASTER, nil);
 	rw::SetRenderState(rw::VERTEXALPHA, 0);
 	rw::SetRenderState(rw::ZTESTENABLE, 0);
 	rw::SetRenderState(rw::ZWRITEENABLE, 0);
-	rw::engine->imtexture = nil;
 	rw::im2d::RenderIndexedPrimitive(rw::PRIMTYPETRILIST,
 		&ma_vertices, 4, &quadindices, 6);
 	rw::SetRenderState(rw::ZTESTENABLE, 1);
@@ -81,10 +81,10 @@ Sprite2d::DrawRectXLU(CRect const &r, CRGBA const &c0, CRGBA const &c1, CRGBA co
 {
 	static short quadindices[] = { 0, 1, 2, 0, 2, 3 };
 	SetVertices(r, c0, c1, c2, c3, false);
+	rw::SetRenderStatePtr(rw::TEXTURERASTER, nil);
 	rw::SetRenderState(rw::VERTEXALPHA, 1);
 	rw::SetRenderState(rw::ZTESTENABLE, 0);
 	rw::SetRenderState(rw::ZWRITEENABLE, 0);
-	rw::engine->imtexture = nil;
 	rw::im2d::RenderIndexedPrimitive(rw::PRIMTYPETRILIST,
 		&ma_vertices, 4, &quadindices, 6);
 	rw::SetRenderState(rw::ZTESTENABLE, 1);

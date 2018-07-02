@@ -1,4 +1,5 @@
 #include "III.h"
+#include "Camera.h"
 
 //
 // CBaseModelInfo
@@ -148,7 +149,7 @@ CSimpleModelInfo::GetLargestLodDistance(void)
 		d = m_lodDistances[m_furthest-1];
 	else
 		d = m_lodDistances[m_numAtomics-1];
-	return d * TheCamera.m_LODmult;
+	return d * TheCamera.LODDistMultiplier;
 }
 
 rw::Atomic*
@@ -160,7 +161,7 @@ CSimpleModelInfo::GetAtomicFromDistance(float dist)
 	if(m_isDamaged)
 		i = m_furthest;
 	for(; i < m_numAtomics; i++)
-		if(dist < m_lodDistances[i]*TheCamera.m_LODmult)
+		if(dist < m_lodDistances[i]*TheCamera.LODDistMultiplier)
 			return m_atomics[i];
 	return nil;
 }
@@ -190,7 +191,7 @@ CSimpleModelInfo::SetupBigBuilding(void)
 		FindRelatedModel();
 		related = GetRelatedModel();
 		if(related)
-			m_lodDistances[2] = related->GetLargestLodDistance()/TheCamera.m_LODmult;
+			m_lodDistances[2] = related->GetLargestLodDistance()/TheCamera.LODDistMultiplier;
 		else
 			m_lodDistances[2] = 100.0f;
 	}

@@ -62,13 +62,9 @@ InitPostFX(void)
 	if(backBuffer)
 		backBuffer->destroy();
 	backBuffer = Raster::create(sk::globals.width, sk::globals.height, 32, Raster::C888|Raster::CAMERATEXTURE);
-	if(backBufferTex == nil){
+	if(backBufferTex == nil)
 		backBufferTex = Texture::create(backBuffer);
-		backBufferTex->setFilter(Texture::FilterMode::LINEAR);
-		// we may want to blur later on
-		backBufferTex->setAddressU(Texture::Addressing::CLAMP);
-		backBufferTex->setAddressV(Texture::Addressing::CLAMP);
-	}else
+	else
 		backBufferTex->raster = backBuffer;
 }
 
@@ -183,7 +179,11 @@ RenderPostFX(void)
 	postfxvars[2] = 1.0f;		// render passes
 	d3ddevice->SetPixelShaderConstantF(2, (float*)postfxvars, 1);
 
-	rw::engine->imtexture = backBufferTex;
+	rw::SetRenderStatePtr(TEXTURERASTER, backBufferTex->raster);
+	rw::SetRenderState(rw::TEXTUREFILTER, Texture::LINEAR);
+	// we may want to blur later on
+	SetRenderState(TEXTUREADDRESS, Texture::CLAMP);
+
 	SetRenderState(VERTEXALPHA, 0);
 	SetRenderState(ZTESTENABLE, 0);
 	SetRenderState(ZWRITEENABLE, 0);

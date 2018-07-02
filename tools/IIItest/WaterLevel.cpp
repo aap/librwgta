@@ -158,9 +158,10 @@ CWaterLevel::RenderWater(void)
 {
 	int i, j;
 
-	rw::SetRenderState(rw::VERTEXALPHA, 0);
+	rw::SetRenderStatePtr(rw::TEXTURERASTER, gpWaterRaster);
 	rw::SetRenderState(rw::FOGENABLE, 1);
-	rw::engine->imtexture = gpWaterTex;
+	rw::SetRenderState(rw::SRCBLEND, rw::BLENDONE);
+	rw::SetRenderState(rw::DESTBLEND, rw::BLENDZERO);
 
 	rw::RGBA color = { 255, 255, 255, 255 };
 	color.red = (CTimeCycle::m_fCurrentAmbientRed + CTimeCycle::m_fCurrentDirectionalRed*0.5f)*255.0f;
@@ -205,4 +206,6 @@ CWaterLevel::RenderWater(void)
 		}
 */
 	RenderAndEmptyRenderBuffer();
+
+	DefinedState();
 }

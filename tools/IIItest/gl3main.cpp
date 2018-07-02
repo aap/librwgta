@@ -246,10 +246,15 @@ plAttachInput(void)
 int
 main(int argc, char *argv[])
 {
+	globals.width = 640;
+	globals.height = 480;
+	globals.windowtitle = "III test";
+	globals.quit = 0;
+
 	engineStartParams.window = &glfwwindow;
-	engineStartParams.width = 640;
-	engineStartParams.height = 480;
-	engineStartParams.windowtitle = "III";
+	engineStartParams.width = globals.width;
+	engineStartParams.height = globals.height;
+	engineStartParams.windowtitle = globals.windowtitle;
 
 	SystemInit();
 

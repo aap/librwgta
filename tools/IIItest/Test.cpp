@@ -6,7 +6,7 @@
 // to test various things, collisions right now
 
 //#define COLTEST
-#define FOOTEST
+//#define FOOTEST
 
 static CColSphere sphere1;
 static CColSphere sphere2;
