@@ -3,7 +3,7 @@ int32 findPlatform(Atomic *a);
 int32 findPlatform(Clump *c);
 void switchPipes(Atomic *a, int32 platform);
 void switchPipes(Clump *c, int32 platform);
-};
+}
 
 namespace gta {
 
