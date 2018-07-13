@@ -3,6 +3,8 @@ using namespace rw;
 
 #include "relocchunk.h"
 
+#include <cstdlib>
+
 void
 cReloctableChunk::Fixup(sChunkHeader &header, void *data)
 {
