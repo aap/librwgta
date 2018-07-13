@@ -202,7 +202,7 @@ CPhysical::RemoveFromMovingList(void)
 }
 
 CVector
-CPhysical::GetSpeed(CVector &p)
+CPhysical::GetSpeed(const CVector &p)
 {
 	return m_vecMoveSpeed + m_vecMoveFriction + CrossProduct(m_vecTurnFriction + m_vecTurnSpeed, p);
 }
