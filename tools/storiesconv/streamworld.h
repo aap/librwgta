@@ -147,7 +147,9 @@ struct sGeomInstance
 #endif
 	}
 };
+#ifndef RW_PS2
 static_assert(sizeof(sGeomInstance) == 0x50, "Placement: error");
+#endif
 
 struct Sector
 {
