@@ -1,3 +1,6 @@
+#ifndef _LIBRWGTA_RWGTA_H_
+#define _LIBRWGTA_RWGTA_H_
+
 namespace rw {
 int32 findPlatform(Atomic *a);
 int32 findPlatform(Clump *c);
@@ -194,3 +197,5 @@ rw::int32 findSAVertex(rw::Geometry *g, rw::uint32 flags[], rw::uint32 mask, SaV
 void registerPDSPipes(void);
 
 }
+
+#endif
