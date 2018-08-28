@@ -139,6 +139,7 @@ colmod565(uint8 *col, float (*f)(float))
 	*(uint16*)col = c;
 }
 
+#ifndef RW_D3D9
 #define MAKEFOURCC(ch0, ch1, ch2, ch3)                              \
             ((uint32)(uint8)(ch0) | ((uint32)(uint8)(ch1) << 8) |       \
             ((uint32)(uint8)(ch2) << 16) | ((uint32)(uint8)(ch3) << 24 ))
@@ -149,6 +150,7 @@ enum {
 	D3DFMT_DXT4                 = MAKEFOURCC('D', 'X', 'T', '4'),
 	D3DFMT_DXT5                 = MAKEFOURCC('D', 'X', 'T', '5'),
 };
+#endif
 
 void
 rastermodcustom(Raster *ras, float (*f)(float))

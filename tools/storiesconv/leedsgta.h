@@ -50,7 +50,9 @@ struct CompressedVector
 		return v;
 	}
 };
+#ifndef RW_PS2
 static_assert(sizeof(CompressedVector) == 6, "CompressedVector: error");
+#endif
 
 struct CSphere
 {
@@ -98,7 +100,9 @@ struct CColTriangle
 	int16 a, b, c;
 	uint8 mat;
 };
+#ifndef RW_PS2
 static_assert(sizeof(CColTriangle) == 8, "CColTriangle: error");
+#endif
 
 struct ColSection
 {

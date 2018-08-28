@@ -1,9 +1,12 @@
+#ifndef _LIBRWGTA_RWGTA_H_
+#define _LIBRWGTA_RWGTA_H_
+
 namespace rw {
 int32 findPlatform(Atomic *a);
 int32 findPlatform(Clump *c);
 void switchPipes(Atomic *a, int32 platform);
 void switchPipes(Clump *c, int32 platform);
-};
+}
 
 namespace gta {
 
@@ -29,7 +32,7 @@ enum
 	ID_ENVMAT           = MAKEPLUGINID(VEND_ROCKSTAR, 0xFC),
 	ID_BREAKABLE        = MAKEPLUGINID(VEND_ROCKSTAR, 0xFD),
 	ID_ANIMBLENDCLUMP   = MAKEPLUGINID(VEND_ROCKSTAR, 0xFD),
-	ID_NODENAME         = MAKEPLUGINID(VEND_ROCKSTAR, 0xFE),
+	ID_NODENAME         = MAKEPLUGINID(VEND_ROCKSTAR, 0xFE)
 };
 
 void attachPlugins(void);
@@ -152,7 +155,7 @@ enum
 	RSPIPE_XBOX_CustomBuildingDN_PipeID = MAKEPIPEID(VEND_ROCKSTAR, 0x96),
 	RSPIPE_XBOX_CustomBuildingEnvMap_PipeID = MAKEPIPEID(VEND_ROCKSTAR, 0xA0),
 	RSPIPE_XBOX_CustomBuildingDNEnvMap_PipeID = MAKEPIPEID(VEND_ROCKSTAR, 0xA2),
-	RSPIPE_XBOX_CustomCarEnvMap_PipeID = MAKEPIPEID(VEND_ROCKSTAR, 0x9A),	// same as PC!
+	RSPIPE_XBOX_CustomCarEnvMap_PipeID = MAKEPIPEID(VEND_ROCKSTAR, 0x9A)	// same as PC!
 };
 
 // Pipeline
@@ -194,3 +197,5 @@ rw::int32 findSAVertex(rw::Geometry *g, rw::uint32 flags[], rw::uint32 mask, SaV
 void registerPDSPipes(void);
 
 }
+
+#endif
