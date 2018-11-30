@@ -102,6 +102,8 @@ SetupAtomic(rw::Atomic *atm)
 
 	if(params.neoWorldPipe)
 		atm->pipeline = neoWorldPipe;
+	else if(params.leedsPipe)
+		atm->pipeline = leedsPipe;
 	else if(params.daynightPipe && IsBuildingPipeAttached(atm))
 		SetupBuildingPipe(atm);
 	else{
@@ -267,7 +269,7 @@ ObjectDef::SetupBigBuilding(void)
 			m_relatedModel = hqobj;
 			m_minDrawDist = hqobj->GetLargestDrawDist();
 		}else
-			m_minDrawDist = isIII() ? 100.0f : 0.0f;
+			m_minDrawDist = params.map == GAME_III ? 100.0f : 0.0f;
 	}
 }
 

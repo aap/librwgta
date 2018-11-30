@@ -20,11 +20,13 @@ using namespace rw;
 
 void panic(const char *fmt, ...);
 
+extern bool32 RslPSP;
 extern int32 atmOffset;
 extern bool32 unswizzle;
 TexDictionary *convertTXD(RslTexList *txd);
 RslElement *makeTextures(RslElement *atomic, void*);
 RslTexture *dumpTextureCB(RslTexture *texture, void*);
+Atomic *convertAtomic(RslElement *atomic);
 Atomic *convertAtomic(RslElement *atomic);
 Frame *convertFrame(RslNode *f);
 Clump *convertClump(RslElementGroup *c);

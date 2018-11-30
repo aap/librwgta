@@ -38,6 +38,8 @@ usage(void)
 	fprintf(stderr, "\t-m extract multiclump dff\n");
 	fprintf(stderr, "\t-v RW version, e.g. 33004 for 3.3.0.4\n");
 	fprintf(stderr, "\t-o output platform. ps2, xbox, mobile, d3d8, d3d9\n");
+	fprintf(stderr, "\t-b remove textures containing \"body\" on editable materials\n");
+	fprintf(stderr, "\t-bb remove textures containing \"body\" on all materials\n");
 	fprintf(stderr, "\t--III2VCcar specmap. convert reflections from III to VC using specmap\n");
 	fprintf(stderr, "\t--ps2VCcar set up VC vehicle for use with PS2 and Xbox reflections\n");
 	fprintf(stderr, "\t--xboxbuilding convert SA Xbox building to something PS2 and PC understand\n");
@@ -297,7 +299,7 @@ isSecondaryColor(RGBA *c)
 }
 
 void
-removeBodyTextures(Clump *clump)
+removeBodyTextures(Clump *clump, bool all)
 {
 	FORLIST(lnk, clump->atomics){
 		Geometry *g = Atomic::fromClump(lnk)->geometry;
@@ -305,7 +307,7 @@ removeBodyTextures(Clump *clump)
 			Material *m = g->matList.materials[i];
 			if(m->texture == nil) continue;
 			if(strstr(m->texture->name, "body") &&
-			   (isPrimaryColor(&m->color) || isSecondaryColor(&m->color))){
+			   all || (isPrimaryColor(&m->color) || isSecondaryColor(&m->color))){
 				m->texture->destroy();
 				m->texture = nil;
 			}
@@ -550,7 +552,7 @@ main(int argc, char *argv[])
 	if(surfprops)
 		resetSurfProps(c);
 	if(removebody)
-		removeBodyTextures(c);
+		removeBodyTextures(c, removebody == 1);
 
 	//Clump *colclump = NULL;
 	//if(seconddff){

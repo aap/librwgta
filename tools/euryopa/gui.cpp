@@ -329,6 +329,13 @@ uiRendering(void)
 		ImGui::RadioButton("PC##PCBUILD", &gBuildingPipeSwitch, PLATFORM_PC); ImGui::SameLine();
 		ImGui::RadioButton("Xbox##XBOXBUILD", &gBuildingPipeSwitch, PLATFORM_XBOX);
 	}
+	if(params.leedsPipe){
+		ImGui::Text("Building Pipe"); ImGui::SameLine();
+		ImGui::RadioButton("Default##NONE", &gBuildingPipeSwitch, PLATFORM_NULL); ImGui::SameLine();
+		ImGui::RadioButton("PSP##PSPBUILD", &gBuildingPipeSwitch, PLATFORM_PSP); ImGui::SameLine();
+		ImGui::RadioButton("PS2##PS2BUILD", &gBuildingPipeSwitch, PLATFORM_PS2); ImGui::SameLine();
+		ImGui::RadioButton("Mobile##MOBILEBUILD", &gBuildingPipeSwitch, PLATFORM_PC);
+	}
 	ImGui::Checkbox("Backface Culling", &gDoBackfaceCulling);
 	// TODO: not params
 	ImGui::Checkbox("PS2 Alpha test", &params.ps2AlphaTest);
@@ -398,6 +405,7 @@ uiObjInfo(ObjectDef *obj)
 		ImGui::SameLine();
 		ImGui::Text("%.0f", obj->m_drawDist[i]);
 	}
+	ImGui::Text("Min Draw dist: %.0f", obj->m_minDrawDist);
 
 	if(obj->m_isTimed){
 		ImGui::Text("Time: %d %d (visible now: %s)",

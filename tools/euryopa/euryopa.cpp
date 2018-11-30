@@ -77,6 +77,9 @@ InitParams(void)
 	static const char *weathersVC[] = {
 		"SUNNY", "CLOUDY", "RAINY", "FOGGY", "EXTRASUNNY", "RAINY", "EXTRACOLOURS"
 	};
+	static const char *weathersLCS[] = {
+		"SUNNY", "CLOUDY", "RAINY", "FOGGY", "EXTRASUNNY", "RAINY", "EXTRACOLOURS", "SNOW"
+	};
 	static const char *weathersSA[] = {
 		"EXTRASUNNY LA", "SUNNY LA", "EXTRASUNNY SMOG LA", "SUNNY SMOG LA",
 		"CLOUDY LA", "SUNNY SF", "EXTRASUNNY SF", "CLOUDY SF", "RAINY SF", "FOGGY SF",
@@ -91,10 +94,7 @@ InitParams(void)
 	params.alphaRefDefault = 2;
 	params.alphaRef = 2;
 	params.ps2AlphaTest = gameplatform == PLATFORM_PS2;
-	if(params.ps2AlphaTest){
-		params.alphaRefDefault = 128;
-		params.alphaRef = 128;
-	}
+	params.map = gameversion;
 
 	switch(gameversion){
 	case GAME_III:
@@ -184,7 +184,38 @@ InitParams(void)
 			params.alphaRef = 100;
 		}
 		break;
+	case GAME_LCS:
+		// TODO
+		params.map = GAME_III;
+		params.initcampos.set(970.8f, -497.3f, 36.8f);
+		params.initcamtarg.set(1092.5f, -417.3f, 3.8f);
+		params.objFlagset = GAME_VC;
+		params.numAreas = 19;
+		params.areaNames = areasVC;
+		params.timecycle = GAME_LCS;
+		params.numHours = 24;
+		params.numWeathers = 8;
+		params.extraColours = 6;
+		params.numExtraColours = 1;
+		params.weatherNames = weathersLCS;
+		params.water = GAME_III;
+		params.waterTex = "waterclear256";
+		params.waterStart.set(-2048.0f, -2048.0f);
+		params.waterEnd.set(2048.0f, 2048.0f);
+		params.backfaceCull = false;
+		params.ps2AlphaTest = true;
+
+		params.leedsPipe = 1;
+		gBuildingPipeSwitch = PLATFORM_PS2;
+		// can't do it correctly right now
+		gRenderPostFX = false;
+		break;
 	// more configs in the future (LCSPC, VCSPC, UG, ...)
+	}
+
+	if(params.ps2AlphaTest){
+		params.alphaRefDefault = 128;
+		params.alphaRef = 128;
 	}
 }
 
@@ -197,6 +228,9 @@ FindVersion(void)
 		gameversion = GAME_III;
 	else if(f = fopen_ci("data/gta_vc.dat", "r"), f)
 		gameversion = GAME_VC;
+	// This is wrong of course, but we'll use it as a hack
+	else if(f = fopen_ci("data/gta_lcs.dat", "r"), f)
+		gameversion = GAME_LCS;
 	else if(f = fopen_ci("data/gta.dat", "r"), f)
 		gameversion = GAME_SA;
 	else{
@@ -305,6 +339,8 @@ LoadGame(void)
 //	SetCurrentDirectory("F://gtasa_pc");
 //	SetCurrentDirectory("E://");
 //	SetCurrentDirectory("C:\\Users\\aap\\games\\gta3d_latest");
+//	SetCurrentDirectory("C:/Users/aap/games/lcsps2_test");
+//	SetCurrentDirectory("C:/Users/aap/games/lcs_test");
 //	SetCurrentDirectory("C:/Users/aap/games/lcspc");
 
 	FindVersion();
@@ -312,6 +348,7 @@ LoadGame(void)
 	case GAME_III: debug("found III!\n"); break;
 	case GAME_VC: debug("found VC!\n"); break;
 	case GAME_SA: debug("found SA!\n"); break;
+	case GAME_LCS: debug("found LCS!\n"); break;
 	default: panic("unknown game");
 	}
 	switch(gameplatform){
@@ -356,6 +393,7 @@ LoadGame(void)
 	case GAME_III: FileLoader::LoadLevel("data/gta3.dat"); break;
 	case GAME_VC: FileLoader::LoadLevel("data/gta_vc.dat"); break;
 	case GAME_SA: FileLoader::LoadLevel("data/gta.dat"); break;
+	case GAME_LCS: FileLoader::LoadLevel("data/gta_lcs.dat"); break;
 	}
 
 	InitSectors();
@@ -369,7 +407,7 @@ LoadGame(void)
 
 	// hide the islands
 	ObjectDef *obj;
-	if(isIII()){
+	if(params.map == GAME_III){
 		obj = GetObjectDef("IslandLODInd", nil);
 		if(obj) obj->m_isHidden = true;
 		obj = GetObjectDef("IslandLODcomIND", nil);
@@ -380,7 +418,7 @@ LoadGame(void)
 		if(obj) obj->m_isHidden = true;
 		obj = GetObjectDef("IslandLODsubCOM", nil);
 		if(obj) obj->m_isHidden = true;
-	}else if(isVC()){
+	}else if(params.map == GAME_VC){
 		obj = GetObjectDef("IslandLODmainland", nil);
 		if(obj) obj->m_isHidden = true;
 		obj = GetObjectDef("IslandLODbeach", nil);
@@ -484,7 +522,7 @@ Draw(void)
 	BuildRenderList();
 
 	// Has to be called for highlighting some objects
-	// but also can mess with some timecycle mid frame :/
+	// but also can mess with timecycle mid frame :/
 	gui();
 
 //	dogizmo();

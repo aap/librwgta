@@ -1256,8 +1256,9 @@ dumpBuildingGeom(sBuildingGeometry *building)
 void
 usage(void)
 {
-	fprintf(stderr, "%s [-v version] [-x] [-s] input [output.{txd|dff}]\n", argv0);
+	fprintf(stderr, "%s [-v version] [-p] [-x] [-s] input [output.{txd|dff}]\n", argv0);
 	fprintf(stderr, "\t-v RW version, e.g. 33004 for 3.3.0.4\n");
+	fprintf(stderr, "\t-p PSP format (not all files supported)\n");
 	fprintf(stderr, "\t-x extract textures to tga\n");
 	fprintf(stderr, "\t-s don't unswizzle textures\n");
 	fprintf(stderr, "\t-m dump data to find missing names in VCS\n");
@@ -1308,6 +1309,9 @@ main(int argc, char *argv[])
 		break;
 	case 'g':
 		gamename = EARGF(usage());
+		break;
+	case 'p':
+		RslPSP = true;
 		break;
 	default:
 		usage();

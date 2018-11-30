@@ -1,5 +1,16 @@
 #include "storiesconv.h"
 
+////////////
+////////////
+//////////// TODO: remove new
+////////////
+////////////
+
+// TODO: figure out the REAL scaling factors
+
+#define max(a,b) ((a) > (b) ? (a) : (b))
+#define min(a,b) ((a) < (b) ? (a) : (b))
+
 int32
 mapID(int32 id)
 {
@@ -79,10 +90,13 @@ convertFrame(RslNode *f)
 				sp++;
 			stack[sp] = i;
 			RslNode *ff = findNode(f, (uint8)ni->id);
+			assert(ff);
 			n->id = ff->nodeId;
 			if(n->id < 0){
 				ff = findNode(f, nodehier[n->parent].id);
+				assert(ff);
 				ff = findChild(ff);
+				assert(ff);
 				n->id = ff->nodeId = nextId++;
 			}
 			//printf("%d %s %d %d\n", i, ff->name, n->id, n->parent);
@@ -188,6 +202,238 @@ convertMaterial(RslMaterial *m)
 	return rwm;
 }
 
+void
+getWeightIndices(uint8 *w, int n, uint8 *indices)
+{
+	int i, j, m;
+
+	m = 0;
+	memset(indices, 0, n);
+	for(i = 0; i < n; i++){
+		for(j = 0; j < m; j++)
+			if(w[i] >= w[indices[j]]){
+				memmove(&indices[j+1], &indices[j], n-j-1);
+				m++;
+				indices[j] = i;
+				goto out;
+			}
+		indices[m++] = i;
+out:;
+	}
+}
+
+uint align(uint o, uint n) { return o+n-1 & ~(n-1); }
+
+void
+convertStripPSP(Geometry *rwg, RslGeometry *g, int32 si)
+{
+	sPspGeometry *header = (sPspGeometry*)(g+1);
+	sPspGeometryMesh *strip = (sPspGeometryMesh*)(header+1);
+	strip += si;
+	uint8 *p = (uint8*)header + header->offset + strip->offset;
+	Mesh *m = &rwg->meshHeader->getMeshes()[strip->matID];
+	ps2::Vertex v;
+	uint o;
+	uint16 col;
+	uint8 indices[8], *w;
+	int j;
+
+	int uvfmt = header->flags & 3;
+	int colfmt = header->flags>>2 & 7;
+	int normfmt = header->flags>>5 & 3;
+	int posfmt = header->flags>>7 & 3;
+	int wghtfmt = header->flags>>9 & 3;
+	int idxfmt = header->flags>>11 & 3;
+	int nwght = (header->flags>>14 & 7) + 1;
+	assert(idxfmt == 0);
+
+	uint32 mask = 0;
+	if(posfmt)	mask |= 0x1;
+	if(normfmt)	mask |= 0x10;
+	if(colfmt)	mask |= 0x100;
+	if(uvfmt)	mask |= 0x1000;
+	if(wghtfmt)	mask |= 0x10000;
+
+	bool firstStrip = m->numIndices == 0;
+	o = 0;
+	for(uint32 i = 0; i < strip->numTriangles+2; i++){
+		if(wghtfmt){
+			assert(wghtfmt == 1);
+			w = p+o;
+			o += nwght;
+			getWeightIndices(w, nwght, indices);
+			// /128.0f
+			for(j = 0; j < 4 && j < nwght; j++){
+				v.w[j] = w[indices[j]]/128.0f;
+				v.i[j] = strip->bonemap[indices[j]];
+			}
+			for(; j < 4; j++){
+				v.w[j] = 0.0f;
+				v.i[j] = 0;
+			}
+			for(; j < nwght; j++)
+				assert(w[indices[j]] == 0);
+		}
+
+		/* Tex coords */
+		switch(uvfmt){
+		case 0: break;
+		case 1:
+			v.t.u = *(uint8*)(p+o+0)/128.0f*strip->uvScale[0];
+			v.t.v = *(uint8*)(p+o+1)/128.0f*strip->uvScale[1];
+			o += 2;
+			break;
+		default:
+			assert(0 && "unsupported tex coord format");
+		}
+
+		/* Vertex colour */
+		switch(colfmt){
+		case 0: break;
+		case 5:
+			o = align(o, 2);
+			col = *(uint16*)(p+o);
+			o += 2;
+			v.c.red   = (col & 0x1f) * 255 / 0x1F;
+			v.c.green = (col>>5 & 0x1f) * 255 / 0x1F;
+			v.c.blue  = (col>>10 & 0x1f) * 255 / 0x1F;
+			v.c.alpha = col&0x8000 ? 0xFF : 0;
+			break;
+		default:
+			assert(0 && "unsupported colour format");
+		}
+
+		/* Normal */
+		switch(normfmt){
+		case 0: break;
+		case 1:
+			v.n.x = *(int8*)(p+o+0)/128.0f;
+			v.n.y = *(int8*)(p+o+1)/128.0f;
+			v.n.z = *(int8*)(p+o+2)/128.0f;
+			o += 3;
+			break;
+		default:
+			assert(0 && "unsupported normal format");
+		}
+
+		/* Vertex */
+		switch(posfmt){
+		case 1:
+			v.p.x = *(int8*)(p+o+0)/128.0f*header->scale[0] + header->pos[0];
+			v.p.y = *(int8*)(p+o+1)/128.0f*header->scale[1] + header->pos[1];
+			v.p.z = *(int8*)(p+o+2)/128.0f*header->scale[2] + header->pos[2];
+			o += 3;
+			break;
+		case 2:
+			o = align(o, 2);
+			v.p.x = *(int16*)(p+o+0)/32768.0f*header->scale[0] + header->pos[0];
+			v.p.y = *(int16*)(p+o+2)/32768.0f*header->scale[1] + header->pos[1];
+			v.p.z = *(int16*)(p+o+4)/32768.0f*header->scale[2] + header->pos[2];
+			o += 6;
+			break;
+		default:
+			assert(0 && "unsupported vertex format");
+		}
+
+		int32 idx = ps2::findVertexSkin(rwg, NULL, mask, &v);
+		if(idx < 0)
+			idx = rwg->numVertices++;
+
+		if(i == 0 && !firstStrip){
+			m->indices[m->numIndices++] = m->indices[m->numIndices-1];
+			m->indices[m->numIndices++] = idx;
+			if(m->numIndices % 2)
+				m->indices[m->numIndices++] = idx;
+		}
+
+		m->indices[m->numIndices++] = idx;
+		ps2::insertVertexSkin(rwg, idx, mask, &v);
+	}
+}
+
+Atomic*
+convertAtomicPSP(RslElement *atomic)
+{
+	Atomic *rwa = Atomic::create();
+	RslGeometry *g = atomic->geometry;
+	Geometry *rwg = Geometry::create(0, 0, 0);
+	rwa->geometry = rwg;
+
+	*PLUGINOFFSET(RslElement*, rwa, atmOffset) = atomic;
+
+	rwg->matList.numMaterials = g->matList.numMaterials;
+	rwg->matList.space = rwg->matList.numMaterials;
+	rwg->matList.materials = rwMallocT(Material*, rwg->matList.numMaterials, MEMDUR_EVENT | ID_MATERIAL);
+	for(int32 i = 0; i < rwg->matList.numMaterials; i++)
+		rwg->matList.materials[i] = convertMaterial(g->matList.materials[i]);
+
+	sPspGeometry *header = (sPspGeometry*)(g+1);
+	sPspGeometryMesh *strip = (sPspGeometryMesh*)(header+1);
+
+	// allocate empty meshes
+	rwg->allocateMeshes(rwg->matList.numMaterials, 0, 1);
+	rwg->meshHeader->flags = MeshHeader::TRISTRIP;
+	Mesh *meshes = rwg->meshHeader->getMeshes();
+
+	for(uint32 i = 0; i < header->numStrips; i++){
+		rwg->numVertices += strip[i].numTriangles+2;
+		meshes[strip[i].matID].numIndices += strip[i].numTriangles+2 +3;
+	}
+	for(uint32 i = 0; i < rwg->meshHeader->numMeshes; i++){
+		meshes[i].material = rwg->matList.materials[i];
+		rwg->meshHeader->totalIndices += meshes[i].numIndices;
+	}
+switch(header->flags){
+case 0x120: case 0x121: case 0x115: case 0x114: case 0xA1: case 0x1c321: break;
+default: printf("unknown format %X\n", header->flags); exit(0);
+}
+	rwg->flags = Geometry::TRISTRIP |
+	                Geometry::LIGHT;
+	if(rwg->hasColoredMaterial())
+		rwg->flags |= Geometry::MODULATE;
+	if((header->flags & 0x3) != 0){
+		rwg->flags |= Geometry::TEXTURED;
+		rwg->numTexCoordSets = 1;
+	}
+	if((header->flags & 0x1C) != 0)
+		rwg->flags |= Geometry::PRELIT;
+	if((header->flags & 0x60) != 0)
+		rwg->flags |= Geometry::NORMALS;
+	if((header->flags & 0x180) != 0)
+		rwg->flags |= Geometry::POSITIONS;
+
+	rwg->numTriangles = rwg->meshHeader->guessNumTriangles();
+	rwg->allocateData();
+	rwg->allocateMeshes(rwg->meshHeader->numMeshes, rwg->meshHeader->totalIndices, 0);
+	meshes = rwg->meshHeader->getMeshes();
+
+	Skin *skin = NULL;
+	if(header->flags>>9 & 3)
+		assert(g->skin);
+	if(g->skin){
+		skin = rwNewT(Skin, 1, MEMDUR_EVENT | ID_SKIN);
+		*PLUGINOFFSET(Skin*, rwg, skinGlobals.geoOffset) = skin;
+		skin->init(g->skin->numBones, g->skin->numBones, rwg->numVertices);
+		memcpy(skin->inverseMatrices, g->skin->invMatrices, skin->numBones*64);
+	}
+
+	for(uint32 i = 0; i < rwg->meshHeader->numMeshes; i++)
+		meshes[i].numIndices = 0;
+	rwg->meshHeader->totalIndices = rwg->numVertices = 0;
+	for(int32 i = 0; i < header->numStrips; i++)
+		convertStripPSP(rwg, g, i);
+	if(skin){
+		skin->findNumWeights(rwg->numVertices);
+		skin->findUsedBones(rwg->numVertices);
+	}
+	for(uint32 i = 0; i < rwg->meshHeader->numMeshes; i++)
+		rwg->meshHeader->totalIndices += meshes[i].numIndices;
+	rwg->calculateBoundingSphere();
+	rwg->generateTriangles();
+	rwg->removeUnusedMaterials();
+	return rwa;
+}
+
 static uint32
 unpackSize(uint32 unpack)
 {
@@ -205,15 +451,15 @@ skipUnpack(uint32 *p)
 }
 
 void
-convertMesh(Geometry *rwg, RslGeometry *g, int32 ii)
+convertStripPS2(Geometry *rwg, RslGeometry *g, int32 si)
 {
 	sPs2Geometry *resHeader = (sPs2Geometry*)(g+1);
-	sPs2GeometryMesh *inst = (sPs2GeometryMesh*)(resHeader+1);
-	int32 numInst = resHeader->size >> 20;
-	uint8 *p = (uint8*)(inst+numInst);
-	inst += ii;
-	p += inst->dmaPacket;
-	Mesh *m = &rwg->meshHeader->getMeshes()[inst->matID];
+	sPs2GeometryMesh *strip = (sPs2GeometryMesh*)(resHeader+1);
+	int32 numStrips = resHeader->size >> 20;
+	uint8 *p = (uint8*)(strip+numStrips);
+	strip += si;
+	p += strip->dmaPacket;
+	Mesh *m = &rwg->meshHeader->getMeshes()[strip->matID];
 	ps2::Vertex v;
 	uint32 mask = 0x1001;	// tex coords, vertices
 	if(rwg->flags & Geometry::NORMALS)
@@ -296,15 +542,19 @@ convertMesh(Geometry *rwg, RslGeometry *g, int32 ii)
 
 		/* Insert Data */
 		for(int32 i = 0; i < nvert; i++){
-			v.p.x = vuVerts[0]/32767.0f*resHeader->scale[0] + resHeader->pos[0];
-			v.p.y = vuVerts[1]/32767.0f*resHeader->scale[1] + resHeader->pos[1];
-			v.p.z = vuVerts[2]/32767.0f*resHeader->scale[2] + resHeader->pos[2];
-			v.t.u = vuTex[0]/128.0f*inst->uvScale[0];
-			v.t.v = vuTex[1]/128.0f*inst->uvScale[1];
+			// TODO: figure out the exact scaling here!!!
+			// mobile divides by 32767
+			v.p.x = vuVerts[0]/32767.5f*resHeader->scale[0] + resHeader->pos[0];
+			v.p.y = vuVerts[1]/32767.5f*resHeader->scale[1] + resHeader->pos[1];
+			v.p.z = vuVerts[2]/32767.5f*resHeader->scale[2] + resHeader->pos[2];
+			// mobile divides by 255
+			v.t.u = vuTex[0]/127.5f*strip->uvScale[0];
+			v.t.v = vuTex[1]/127.5f*strip->uvScale[1];
 			if(mask & 0x10){
-				v.n.x = vuNorms[0]/127.0f;
-				v.n.y = vuNorms[1]/127.0f;
-				v.n.z = vuNorms[2]/127.0f;
+				// mobile divides by 127
+				v.n.x = vuNorms[0]/128.0f;
+				v.n.y = vuNorms[1]/128.0f;
+				v.n.z = vuNorms[2]/128.0f;
 			}
 			if(mask & 0x100){
 				v.c.red   = (vuCols[0] & 0x1f) * 255 / 0x1F;
@@ -364,7 +614,7 @@ convertMesh(Geometry *rwg, RslGeometry *g, int32 ii)
 }
 
 Atomic*
-convertAtomic(RslElement *atomic)
+convertAtomicPS2(RslElement *atomic)
 {
 	Atomic *rwa = Atomic::create();
 	RslGeometry *g = atomic->geometry;
@@ -380,17 +630,17 @@ convertAtomic(RslElement *atomic)
 		rwg->matList.materials[i] = convertMaterial(g->matList.materials[i]);
 
 	sPs2Geometry *resHeader = (sPs2Geometry*)(g+1);
-	sPs2GeometryMesh *inst = (sPs2GeometryMesh*)(resHeader+1);
-	int32 numInst = resHeader->size >> 20;
+	sPs2GeometryMesh *strip = (sPs2GeometryMesh*)(resHeader+1);
+	int32 numStrips = resHeader->size >> 20;
 
 	// allocate empty meshes
 	rwg->allocateMeshes(rwg->matList.numMaterials, 0, 1);
 	rwg->meshHeader->flags = MeshHeader::TRISTRIP;
 	Mesh *meshes = rwg->meshHeader->getMeshes();
 
-	for(int32 i = 0; i < numInst; i++){
-		rwg->numVertices += inst[i].numTriangles+2;
-		meshes[inst[i].matID].numIndices += inst[i].numTriangles+2 +3;
+	for(int32 i = 0; i < numStrips; i++){
+		rwg->numVertices += strip[i].numTriangles+2;
+		meshes[strip[i].matID].numIndices += strip[i].numTriangles+2 +3;
 	}
 	for(uint32 i = 0; i < rwg->meshHeader->numMeshes; i++){
 		meshes[i].material = rwg->matList.materials[i];
@@ -404,11 +654,12 @@ convertAtomic(RslElement *atomic)
 		rwg->flags |= Geometry::POSITIONS;
 	if(resHeader->flags & 0x2)
 		rwg->flags |= Geometry::NORMALS;
-	if(resHeader->flags & 0x4)
+	if(resHeader->flags & 0x4){
 		rwg->flags |= Geometry::TEXTURED;
+		rwg->numTexCoordSets = 1;
+	}
 	if(resHeader->flags & 0x8)
 		rwg->flags |= Geometry::PRELIT;
-	rwg->numTexCoordSets = 1;
 
 	rwg->numTriangles = rwg->meshHeader->guessNumTriangles();
 	rwg->allocateData();
@@ -428,8 +679,8 @@ convertAtomic(RslElement *atomic)
 	for(uint32 i = 0; i < rwg->meshHeader->numMeshes; i++)
 		meshes[i].numIndices = 0;
 	rwg->meshHeader->totalIndices = rwg->numVertices = 0;
-	for(int32 i = 0; i < numInst; i++)
-		convertMesh(rwg, g, i);
+	for(int32 i = 0; i < numStrips; i++)
+		convertStripPS2(rwg, g, i);
 	for(uint32 i = 0; i < rwg->meshHeader->numMeshes; i++)
 		rwg->meshHeader->totalIndices += meshes[i].numIndices;
 	if(skin){
@@ -440,6 +691,15 @@ convertAtomic(RslElement *atomic)
 	rwg->generateTriangles();
 	rwg->removeUnusedMaterials();
 	return rwa;
+}
+
+Atomic*
+convertAtomic(RslElement *atomic)
+{
+	if(RslPSP)
+		return convertAtomicPSP(atomic);
+	else
+		return convertAtomicPS2(atomic);
 }
 
 RslElement*
@@ -550,17 +810,37 @@ moveAtomics(Frame *f)
 }
 
 uint8*
-getPalettePS2(RslRaster *raster)
+getTexelPSP(RslRasterPSP *raster, int32 n)
 {
-	uint32 f = raster->ps2.flags;
+	uint8 *data = raster->data;
+	uint32 w = 1 << raster->logWidth;
+	uint32 h = 1 << raster->logHeight;
+	while(n--){
+		w = max(w, raster->minWidth);
+		data += w*h*raster->depth/8;
+		w /= 2;
+		h /= 2;
+	}
+	return data;
+}
+
+uint8*
+getPalettePSP(RslRasterPSP *raster)
+{
+	if(raster->depth > 8)
+		return nil;
+	return getTexelPSP(raster, raster->mipmaps);
+}
+
+uint8*
+getTexelPS2(RslRasterPS2 *raster, int32 n)
+{
+	uint32 f = raster->flags;
 	uint32 w = 1 << (f & 0x3F);
 	uint32 h = 1 << (f>>6 & 0x3F);
 	uint32 d = f>>12 & 0x3F;
-	uint32 mip = f>>20 & 0xF;
-	uint8 *data = raster->ps2.data;
-	if(d > 8)
-		return NULL;
-	while(mip--){
+	uint8 *data = raster->data;
+	while(n--){
 		data += w*h*d/8;
 		w /= 2;
 		h /= 2;
@@ -569,19 +849,14 @@ getPalettePS2(RslRaster *raster)
 }
 
 uint8*
-getTexelPS2(RslRaster *raster, int32 n)
+getPalettePS2(RslRasterPS2 *raster)
 {
-	uint32 f = raster->ps2.flags;
-	uint32 w = 1 << (f & 0x3F);
-	uint32 h = 1 << (f>>6 & 0x3F);
+	uint32 f = raster->flags;
 	uint32 d = f>>12 & 0x3F;
-	uint8 *data = raster->ps2.data;
-	for(int32 i = 0; i < n; i++){
-		data += w*h*d/8;
-		w /= 2;
-		h /= 2;
-	}
-	return data;
+	uint32 mip = f>>20 & 0xF;
+	if(d > 8)
+		return NULL;
+	return getTexelPS2(raster, mip);
 }
 
 void
@@ -593,7 +868,7 @@ convertCLUT(uint8 *texels, uint32 w, uint32 h)
 }
 
 void
-unswizzle8(uint8 *dst, uint8 *src, uint32 w, uint32 h)
+unswizzle8PS2(uint8 *dst, uint8 *src, uint32 w, uint32 h)
 {
 	for (uint32 y = 0; y < h; y++)
 		for (uint32 x = 0; x < w; x++) {
@@ -607,66 +882,49 @@ unswizzle8(uint8 *dst, uint8 *src, uint32 w, uint32 h)
 		}
 }
 
-// This is NOT a PS2 swizzle algorithm, maybe PSP leftover?
+/* algorithm from PPSSPP */
 void
-unswizzle32_unk(uint32 *dst, uint32 *src, uint32 w, uint32 h)
+unswizzlePSP(uint32 *dst, uint32 *src, uint32 w, uint32 h, uint32 d)
 {
-	int x, y;
-	uint32 u, v;
+	uint32 stride = w * d / 8;
+	uint32 nbx = stride / 16;
+	uint32 nby = (h + 7) / 8;
+	stride >>= 2;
+	uint32 *row, *b;
 
-	int32 lw, lh;
-	for(lw = 1; 1<<lw < w; lw++);
-	for(lh = 1; 1<<lh < h; lh++);
-
-	// Not quite sure about the masks but it seems to work with the few textures there are
-	uint32 masku = 0;
-	uint32 maskv = 0;
-	uint32 n = 2;
-	uint32 sh = 0;
-	uint32 c;
-	do{
-		c = 0;
-		if(lw > 0){
-			n = n < lw ? n: lw;
-			masku |= ((1<<n)-1) << sh;
-			lw -= n;
-			sh += n;
-			n++;
-			c = 1;
+	/* walk by blocks in y and x, then block rows */
+	while(nby--){
+		row = dst;
+		for(uint32 x = 0; x < nbx; x++){
+			b = row;
+			for(uint32 n = 0; n < 8; n++){
+				memcpy(b, src, 16);
+				b += stride;
+				src += 4;
+			}
+			row += 4;
 		}
-		if(lh > 0){
-			n = n < lh ? n: lh;
-			maskv |= ((1<<n)-1) << sh;
-			lh -= n;
-			sh += n;
-			n++;
-			c = 1;
-		}
-	}while(c);
-
-	// standard unswizzling
-	v = 0;
-	for(y = 0; y < h; y++){
-		u = 0;
-		for(x = 0; x < w; x++){
-			dst[y*w + x] = src[u|v];
-			u = (u - masku) & masku;
-		}
-		v = (v - maskv) & maskv;
+		dst += stride * 8;
 	}
 }
 
 bool32 unswizzle = 1;
 
+/* A bit wasteful maybe, but we don't have to allocate */
+static uint8 mem[2*1024*1024];
+
+/* Again all this? */
 void
-convertTo32(uint8 *out, uint8 *pal, uint8 *tex,
+convertTo32_PS2(uint8 *out, uint8 *pal, uint8 *tex,
             uint32 w, uint32 h, uint32 d, bool32 swiz)
 {
 	uint32 x;
 	if(d == 32){
+		// assumes texture width isn't less than 4
 		uint32 *dat = new uint32[w*h];
 		if(swiz && unswizzle)
-			unswizzle32_unk(dat, (uint32*)tex, w, h);
+			// Yes, PSP. must be leftover
+			unswizzlePSP(dat, (uint32*)tex, w, h, d);
 		else
 			memcpy(dat, tex, w*h*4);
 		tex = (uint8*)dat;
@@ -678,11 +936,11 @@ convertTo32(uint8 *out, uint8 *pal, uint8 *tex,
 		}
 		delete[] dat;
 	}
-	if(d == 16) return;	// TODO
+	if(d == 16) assert(0); return;	// TODO
 	if(d == 8){
 		uint8 *dat = new uint8[w*h];
 		if(swiz && unswizzle)
-			unswizzle8(dat, tex, w, h);
+			unswizzle8PS2(dat, tex, w, h);
 		else
 			memcpy(dat, tex, w*h);
 		tex = dat;
@@ -705,7 +963,7 @@ convertTo32(uint8 *out, uint8 *pal, uint8 *tex,
 		}
 		if(swiz && unswizzle){
 			uint8 *tmp = new uint8[w*h];
-			unswizzle8(tmp, dat, w, h);
+			unswizzle8PS2(tmp, dat, w, h);
 			delete[] dat;
 			dat = tmp;
 		}
@@ -717,6 +975,55 @@ convertTo32(uint8 *out, uint8 *pal, uint8 *tex,
 				*out++ = pal[x*4+1];
 				*out++ = pal[x*4+2];
 				*out++ = pal[x*4+3]*255/128;
+			}
+		delete[] dat;
+	}
+}
+
+void
+convertTo32_PSP(uint8 *out, uint8 *pal, uint8 *tex,
+            uint32 w, uint32 h, uint32 d, uint32 minWidth)
+{
+	uint32 bufw;
+	uint32 x;
+
+	bufw = max(w, minWidth);
+	if(unswizzle)
+		unswizzlePSP((uint32*)mem, (uint32*)tex, bufw, h, d);
+	else
+		memcpy(mem, tex, bufw*h*d/8);
+	tex = mem;
+	switch(d){
+	case 32:
+		for(uint32 i = 0; i < w*h; i++){
+			out[i*4+0] = tex[i*4+1];
+			out[i*4+1] = tex[i*4+1];
+			out[i*4+2] = tex[i*4+2];
+			out[i*4+3] = tex[i*4+3];
+		}
+		break;
+	case 16: assert(0); return;
+	case 8:
+		for(uint32 i = 0; i < h; i++)
+			for(uint32 j = 0; j < w; j++){
+				x = *tex++;
+				*out++ = pal[x*4+0];
+				*out++ = pal[x*4+1];
+				*out++ = pal[x*4+2];
+				*out++ = pal[x*4+3];
+			}
+		break;
+	case 4:
+		uint8 *dat = new uint8[w*h];
+		rw::ps2::expandPSMT4(dat, tex, w, h, bufw);
+		tex = dat;
+		for(uint32 i = 0; i < h; i++)
+			for(uint32 j = 0; j < w; j++){
+				x = *tex++;
+				*out++ = pal[x*4+0];
+				*out++ = pal[x*4+1];
+				*out++ = pal[x*4+2];
+				*out++ = pal[x*4+3];
 			}
 		delete[] dat;
 	}
@@ -741,29 +1048,33 @@ dumpLevels(RslTexture *texture)
 	}
 }
 
-RslTexture *dumpTextureCB(RslTexture *texture, void*)
+RslTexture*
+dumpTextureCB(RslTexture *texture, void*)
 {
-	uint32 f = texture->raster->ps2.flags;
-	uint32 w = 1 << (f & 0x3F);
-	uint32 h = 1 << (f>>6 & 0x3F);
-	uint32 d = f>>12 & 0x3F;
-	uint32 mip = f>>20 & 0xF;
-	uint32 swizmask = f>>24;
-	uint8 *palette = getPalettePS2(texture->raster);
-	uint8 *texels = getTexelPS2(texture->raster, 0);
-
-//	dumpLevels(texture);
-//	return texture;
-//	uint32 myswiz = guessSwizzling__(w, h, d, mip);
-//	if(myswiz == swizmask)
-//		return texture;
-
-//	printf(" %x %x %x %x %x %s\n", w, h, d, mip, swizmask, texture->name);
-	if(d == 32)
-		printf("%s\n", texture->name);
-	Image *img = Image::create(w, h, 32);
-	img->allocate();
-	convertTo32(img->pixels, palette, texels, w, h, d, swizmask&1);
+	Image *img;
+	if(RslPSP){
+		RslRasterPSP *r = &texture->raster->psp;
+		uint32 w = 1 << r->logWidth;
+		uint32 h = 1 << r->logHeight;
+		uint8 *palette = getPalettePSP(r);
+		uint8 *texels = getTexelPSP(r, 0);
+		img = Image::create(w, h, 32);
+		img->allocate();
+		convertTo32_PSP(img->pixels, palette, texels, w, h, r->depth, r->minWidth);
+	}else{
+		RslRasterPS2 *r = &texture->raster->ps2;
+		uint32 f = r->flags;
+		uint32 w = 1 << (f & 0x3F);
+		uint32 h = 1 << (f>>6 & 0x3F);
+		uint32 d = f>>12 & 0x3F;
+		uint32 mip = f>>20 & 0xF;
+		uint32 swizmask = f>>24;
+		uint8 *palette = getPalettePS2(r);
+		uint8 *texels = getTexelPS2(r, 0);
+		img = Image::create(w, h, 32);
+		img->allocate();
+		convertTo32_PS2(img->pixels, palette, texels, w, h, d, swizmask&1);
+	}
 	char *name = new char[strlen(texture->name)+5];
 	strcpy(name, texture->name);
 	strcat(name, ".tga");
@@ -771,6 +1082,50 @@ RslTexture *dumpTextureCB(RslTexture *texture, void*)
 	img->destroy();
 	delete[] name;
 	return texture;
+}
+
+rw::Raster*
+convertRasterPSP(RslRasterPSP *ras)
+{
+	uint32 w, h, bufw;
+	uint8 *palette = getPalettePSP(ras);
+	uint8 *texels = getTexelPSP(ras, 0);
+
+	w = 1 << ras->logWidth;
+	h = 1 << ras->logHeight;
+	bufw = max(w, ras->minWidth);
+	if(unswizzle)
+		unswizzlePSP((uint32*)mem, (uint32*)texels, bufw, h, ras->depth);
+	else
+		memcpy(mem, texels, bufw*h*ras->depth/8);
+
+	rw::Image *img = rw::Image::create(w, h, ras->depth);
+	img->allocate();
+
+	switch(ras->depth){
+	case 4:
+		rw::ps2::expandPSMT4(img->pixels, mem, w, h, bufw);
+		memcpy(img->palette, palette, 16*4);
+		break;
+	case 8:
+		rw::ps2::copyPSMT8(img->pixels, mem, w, h, bufw);
+		memcpy(img->palette, palette, 256*4);
+		break;
+	case 16: assert(0);
+	case 32:
+		memcpy(img->pixels, mem, w*h*4);
+		break;
+
+	default: assert(0 && "unknown bit depth");
+	}
+
+//
+// TODO: don't ALWAYS do this
+//
+	img->unindex();
+	rw::Raster *rwras = rw::Raster::createFromImage(img);
+	img->destroy();
+	return rwras;
 }
 
 rw::Raster*
@@ -785,9 +1140,8 @@ convertRasterPS2(RslRasterPS2 *ras)
 	//uint32 mip = f>>20 & 0xF;
 	uint32 swizmask = f>>24;
 
-	uint8 *palette = getPalettePS2((RslRaster*)ras);
-	uint8 *texels = getTexelPS2((RslRaster*)ras, 0);
-
+	uint8 *palette = getPalettePS2(ras);
+	uint8 *texels = getTexelPS2(ras, 0);
 
 	uint8 *convtex = NULL;
 	if(d == 4){
@@ -800,14 +1154,14 @@ convertRasterPS2(RslRasterPS2 *ras)
 		}
 		if(swizmask & 1 && unswizzle){
 			uint8 *tmp = rwNewT(uint8, w*h, 0);
-			unswizzle8(tmp, convtex, w, h);
+			unswizzle8PS2(tmp, convtex, w, h);
 			rwFree(convtex);
 			convtex = tmp;
 		}
 	}else if(d == 8){
 		convtex = rwNewT(uint8, w*h, 0);
 		if(swizmask & 1 && unswizzle)
-			unswizzle8(convtex, texels, w, h);
+			unswizzle8PS2(convtex, texels, w, h);
 		else
 			memcpy(convtex, texels, w*h);
 		convertCLUT(convtex, w, h);
@@ -831,6 +1185,7 @@ convertRasterPS2(RslRasterPS2 *ras)
 
 	if(d == 32){
 		// texture is fucked, but pretend it isn't
+		// TODO: use PSP unswizzle for these cases
 		uint8 *p = img->pixels;
 		uint8 c[3];
 		for(uint32 i = 0; i < w*h; i++){
@@ -843,6 +1198,9 @@ convertRasterPS2(RslRasterPS2 *ras)
 			p[i*4+3] = p[i*4+3]*255/128;
 		}
 	}
+//
+// TODO: don't ALWAYS do this
+//
 	img->unindex();
 	rw::Raster *rwras = rw::Raster::createFromImage(img);
 	img->destroy();
@@ -850,121 +1208,28 @@ convertRasterPS2(RslRasterPS2 *ras)
 	return rwras;
 }
 
-// This function is VERY BAD
-// it was written when librw was younger. It should be
-// replaced by something similar to the above.
-RslTexture*
-convertTexturePS2(RslTexture *texture, void *pData)
+rw::Raster*
+convertRaster(RslRaster *ras)
 {
-	TexDictionary *rwtxd = (TexDictionary*)pData;
-	Texture *rwtex = Texture::create(NULL);
-	RslRasterPS2 *ras = &texture->raster->ps2;
+	if(RslPSP)
+		return convertRasterPSP(&ras->psp);
+	else
+		return convertRasterPS2(&ras->ps2);
+}
 
+RslTexture*
+convertNativeTexture(RslTexture *texture, void *data)
+{
+	TexDictionary *txd = (TexDictionary*)data;
+
+	Texture *rwtex = Texture::create(convertRaster(texture->raster));
 	strncpy(rwtex->name, texture->name, 32);
 	strncpy(rwtex->mask, texture->mask, 32);
-	rwtex->filterAddressing = 0x1102;
+	rwtex->setFilter(Texture::LINEAR);
+	rwtex->setAddressU(Texture::WRAP);
+	rwtex->setAddressV(Texture::WRAP);
 
-	uint32 f = ras->flags;
-	uint32 w = 1 << (f & 0x3F);
-	uint32 h = 1 << (f>>6 & 0x3F);
-	uint32 d = f>>12 & 0x3F;
-	//uint32 mip = f>>20 & 0xF;
-	uint32 swizmask = f>>24;
-	uint8 *palette = getPalettePS2(texture->raster);
-	uint8 *texels = getTexelPS2(texture->raster, 0);
-
-	int32 hasAlpha = 0;
-	uint8 *convtex = NULL;
-	if(d == 4){
-		convtex = new uint8[w*h];
-		for(uint32 i = 0; i < w*h/2; i++){
-			int32 a = texels[i] & 0xF;
-			int32 b = texels[i] >> 4;
-			if(palette[a*4+3] != 0x80)
-				hasAlpha = 1;
-			if(palette[b*4+3] != 0x80)
-				hasAlpha = 1;
-			convtex[i*2+0] = a;
-			convtex[i*2+1] = b;
-		}
-		if(swizmask & 1 && unswizzle){
-			uint8 *tmp = new uint8[w*h];
-			unswizzle8(tmp, convtex, w, h);
-			delete[] convtex;
-			convtex = tmp;
-		}
-	}else if(d == 8){
-		convtex = new uint8[w*h];
-		if(swizmask & 1 && unswizzle)
-			unswizzle8(convtex, texels, w, h);
-		else
-			memcpy(convtex, texels, w*h);
-		convertCLUT(convtex, w, h);
-		for(uint32 i = 0; i < w*h; i++)
-			if(palette[convtex[i]*4+3] != 0x80){
-				hasAlpha = 1;
-				break;
-			}
-	}
-
-	int32 format = 0;
-	switch(d){
-	case 4:
-	case 8:
-		format |= Raster::PAL8;
-		goto alpha32;
-
-	case 32:
-		for(uint32 i = 0; i < w*h; i++)
-			if(texels[i*4+3] != 0x80){
-				hasAlpha = 1;
-				break;
-			}
-	alpha32:
-		if(hasAlpha)
-			format |= Raster::C8888;
-		else
-			format |= Raster::C888;
-		break;
-	default:
-		fprintf(stderr, "unsupported depth %d\n", d);
-		return NULL;
-	}
-	Raster *rwras = Raster::create(w, h, d == 4 ? 8 : d, format | 4, PLATFORM_D3D8);
-	d3d::D3dRaster *d3dras = PLUGINOFFSET(d3d::D3dRaster, rwras, d3d::nativeRasterOffset);
-
-	int32 pallen = d == 4 ? 16 :
-	               d == 8 ? 256 : 0;
-	if(pallen){
-		uint8 *p = new uint8[256*4];
-		for(int32 i = 0; i < pallen; i++){
-			p[i*4+0] = palette[i*4+0];
-			p[i*4+1] = palette[i*4+1];
-			p[i*4+2] = palette[i*4+2];
-			p[i*4+3] = palette[i*4+3]*255/128;
-		}
-		memcpy(d3dras->palette, p, 256*4);
-		delete[] p;
-	}
-
-	uint8 *data = rwras->lock(0);
-	if(d == 4 || d == 8)
-		memcpy(data, convtex, w*h);
-	else if(d == 32){
-		// texture is fucked, but pretend it isn't
-		for(uint32 i = 0; i < w*h; i++){
-			data[i*4+2] = texels[i*4+0];
-			data[i*4+1] = texels[i*4+1];
-			data[i*4+0] = texels[i*4+2];
-			data[i*4+3] = texels[i*4+3]*255/128;
-		}
-	}else
-		memcpy(data, texels, w*h*d/8);
-	rwras->unlock(0);
-	rwtex->raster = rwras;
-	delete[] convtex;
-
-	rwtxd->add(rwtex);
+	txd->add(rwtex);
 	return texture;
 }
 
@@ -972,7 +1237,7 @@ TexDictionary*
 convertTXD(RslTexList *txd)
 {
 	TexDictionary *rwtxd = TexDictionary::create();
-	RslTexListForAllTextures(txd, convertTexturePS2, rwtxd);
+	RslTexListForAllTextures(txd, convertNativeTexture, rwtxd);
 	return rwtxd;
 }
 

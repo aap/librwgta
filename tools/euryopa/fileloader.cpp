@@ -10,7 +10,6 @@ NewGameFile(char *path)
 
 namespace FileLoader {
 
-//char *currentFile;	// IDE, IPL &c.
 GameFile *currentFile;
 
 void*

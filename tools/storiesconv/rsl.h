@@ -140,10 +140,12 @@ struct RslRasterPS2 {
 struct RslRasterPSP {
 	uint32 unk1;
 	uint8 *data;
-	uint16 flags1;
-	uint8  width;    // log of width
-	uint8  height;   // log of height
-	uint32 flags2;
+	int16  minWidth;
+	uint8  logWidth;
+	uint8  logHeight;
+	uint8  depth;
+	uint8  mipmaps;
+	uint16 unk2;	// like RW raster format?
 };
 
 struct RslPs2StreamRaster {
@@ -183,7 +185,7 @@ struct RslTexture {
 RslTexture *RslTextureCreate(RslRaster *raster);
 void RslTextureDestroy(RslTexture *texture);
 RslTexture *RslTextureStreamRead(rw::Stream *stream);
-RslTexture *RslReadNativeTexturePS2(rw::Stream *stream);
+RslTexture *RslReadNativeTexture(rw::Stream *stream);
 
 struct RslNode {
 	RslObject         object;
@@ -284,7 +286,7 @@ struct RslGeometry {
 	uint32          pad2;            // 0xAAAAAAAA
 };
 
-RslGeometry *RslGeometryCreatePS2(uint32 sz);
+RslGeometry *RslGeometryCreate(uint32 sz);
 RslGeometry *RslGeometryForAllMaterials(RslGeometry *geometry, RslMaterialCallBack fpCallBack, void *pData);
 
 struct RslMatFXEnv {
@@ -369,6 +371,35 @@ struct RslSkin {
 
 RslSkin *RslSkinStreamRead(rw::Stream *stream, RslGeometry *g);
 
+struct sPspGeometry {
+	uint32  size;		// of header + data
+	uint32  flags;		// PSP VTYPE
+	uint32  numStrips;
+	uint32  unk1;		// 0?
+	float32 bound[4];	// ???
+	float32 scale[3];
+	int32   numVerts;
+	float32 pos[3];
+	int32   unk2;
+	uint32  offset;		// from beginning of struct to vertices
+	float32 unk3;
+};
+static_assert(sizeof(sPspGeometry) == 0x48, "sPspGeometry: error");
+
+struct sPspGeometryMesh {
+	uint32  offset;		// into vertex data
+	uint16  numTriangles;
+	uint16  matID;
+	// This is less certain
+	float32 unk1;		// ??
+	float32 uvScale[2];	// ?
+	float32 unk2[4];	// ??
+	float32 unk3;		// ??
+
+	uint8 bonemap[8];
+};
+static_assert(sizeof(sPspGeometryMesh) == 0x30, "sPspGeometryMesh: error");
+
  // sPspGeometry but should be sPs2Geometry obviously...
 struct sPs2Geometry {
 	float32 bound[4];
@@ -376,9 +407,7 @@ struct sPs2Geometry {
 	int32   flags;
 	uint16  numVerts;	// according to gtamodding.ru
 	uint16  dmaOffset;	// offset from beginning of struct to DMA data
-	uint32  unk1;
-	uint32  unk2;
-	uint32  unk3;
+	uint16  boundBox[6];	// according to gtamodding.ru
 	float32 scale[3];
 	float32 pos[3];
 };

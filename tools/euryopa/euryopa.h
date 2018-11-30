@@ -145,10 +145,16 @@ enum eGame
 	GAME_III,
 	GAME_VC,
 	GAME_SA,
+	GAME_LCS,
+	GAME_VCS
 };
+using rw::PLATFORM_NULL;
 using rw::PLATFORM_PS2;
 using rw::PLATFORM_XBOX;
-enum { PLATFORM_PC = rw::PLATFORM_D3D8 };
+enum {
+	PLATFORM_PC = rw::PLATFORM_D3D8,
+	PLATFORM_PSP = 10
+};
 extern int gameversion;
 extern int gameplatform;
 inline bool isIII(void) { return gameversion == GAME_III; }
@@ -157,6 +163,7 @@ inline bool isSA(void) { return gameversion == GAME_SA; }
 
 struct Params
 {
+	int map;
 	rw::V3d initcampos;
 	rw::V3d initcamtarg;
 	int numAreas;
@@ -185,6 +192,8 @@ struct Params
 	bool txdFallbackGeneric;
 
 	int neoWorldPipe;
+
+	int leedsPipe;
 };
 extern Params params;
 
@@ -499,6 +508,10 @@ void GetBuildingEnvMatrix(rw::Atomic *atomic, rw::Frame *envframe, rw::RawMatrix
 extern rw::ObjPipeline *buildingPipe;
 extern rw::ObjPipeline *buildingDNPipe;
 void MakeCustomBuildingPipelines(void);
+
+// Leeds building pipeline
+extern rw::ObjPipeline *leedsPipe;
+void MakeLeedsPipe(void);
 
 void RenderInit(void);
 void BuildRenderList(void);

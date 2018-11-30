@@ -393,8 +393,12 @@ usage(void)
 	fprintf(stderr, "usage: %s [-v version] [-o platform] in.txd [out.txd]\n", argv0);
 	fprintf(stderr, "\t-v RW version, e.g. 33004 for 3.3.0.4\n");
 	fprintf(stderr, "\t-o output platform. ps2, xbox, mobile, d3d8, d3d9\n");
+	fprintf(stderr, "\t-x extract textures\n");
+	fprintf(stderr, "\t-l list textures\n");
+	fprintf(stderr, "\t-m (with -x) extracts masks separately\n");
 	fprintf(stderr, "\t-t convert palettized to 32 bit\n");
 	fprintf(stderr, "\t-s run script from stdin, see source code\n");
+	fprintf(stderr, "\t-g change gamma by 1.5 to make LCS/VCS style textures (only d3d8 textures)\n");
 	exit(1);
 }
 
@@ -413,6 +417,8 @@ main(int argc, char *argv[])
 	int extract = 0;
 	int separatemask = 0;
 	int unpalettize = 0;
+	int leedsgamma = 0;
+	int listtex = 0;
 
 	rw::Engine::init();
 	gta::attachPlugins();
@@ -450,6 +456,12 @@ main(int argc, char *argv[])
 	case 't':
 		unpalettize++;
 		break;
+	case 'g':
+		leedsgamma++;
+		break;
+	case 'l':
+		listtex++;
+		break;
 	default:
 		usage();
 	}ARGEND;
@@ -479,26 +491,32 @@ main(int argc, char *argv[])
 		rw::build = header.build;
 	}
 
-/*
-	FORLIST(lnk, txd->textures){
-		Texture *tex = Texture::fromDict(lnk);
-		Raster *ras = tex->raster;
-
-		// LCS gamma
-		gGamma = 1.5f;
-		rastermod(ras, changeGamma);
-
-		// brighten vehicle body
-//		gGamma = 1/2.0f;
-//		gAdd = 0.1f;
-//		gMult = 1.0f - gAdd;
-//		if(strstr(tex->name, "body"))
-//			rastermod(ras, gammaAndMap);
-
-		if((ras->format & 0xF00) == Raster::C1555)
-			printf("%s %s\n", argv[0], tex->name);
+	if(listtex){
+		FORLIST(lnk, txd->textures){
+			Texture *tex = Texture::fromDict(lnk);
+			printf("%d %d %d %s %s\n", tex->raster->width, tex->raster->height, tex->raster->depth, tex->name, tex->mask);
+		}
 	}
-*/
+
+	if(leedsgamma){
+		FORLIST(lnk, txd->textures){
+			Texture *tex = Texture::fromDict(lnk);
+			Raster *ras = tex->raster;
+
+			gGamma = 1.5f;
+			rastermod(ras, changeGamma);
+
+			// brighten vehicle body
+//			gGamma = 1/2.0f;
+//			gAdd = 0.1f;
+//			gMult = 1.0f - gAdd;
+//			if(strstr(tex->name, "body"))
+//				rastermod(ras, gammaAndMap);
+
+//			if((ras->format & 0xF00) == Raster::C1555)
+//				printf("%s %s\n", argv[0], tex->name);
+		}
+	}
 
 /*
 	FORLIST(lnk, txd->textures){

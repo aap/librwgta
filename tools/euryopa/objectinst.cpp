@@ -203,7 +203,7 @@ Sector outOfBoundsSector;
 void
 InitSectors(void)
 {
-	switch(gameversion){
+	switch(params.map){
 	case GAME_III:
 		numSectorsX = 100;
 		numSectorsY = 100;

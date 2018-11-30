@@ -1,5 +1,13 @@
 #include "storiesconv.h"
 
+////////////
+////////////
+//////////// TODO: remove new
+////////////
+////////////
+
+bool32 RslPSP;
+
 float
 halfFloatToFloat(uint16 half)
 {
@@ -259,18 +267,29 @@ RslElementStreamRead(Stream *stream, rslNodeList *framelist)
 	uint32 length;
 	int32 buf[4];
 	RslElement *a;
+	RslGeometry *g;
+
 	mustFindChunk(stream, ID_STRUCT, NULL, NULL);
 	stream->read(buf, 16);
 	a = RslElementCreate();
 	a->object.object.flags = buf[2];
 	mustFindChunk(stream, ID_GEOMETRY, NULL, NULL);
 
-	sPs2Geometry res, *rp;
-	stream->read(&res, sizeof(sPs2Geometry));
-	RslGeometry *g = RslGeometryCreatePS2(res.size & 0xFFFFF);
-	rp = (sPs2Geometry*)(g+1);
-	*rp++ = res;
-	stream->read(rp, (res.size&0xFFFFF)-sizeof(sPs2Geometry));
+	if(RslPSP){
+		sPspGeometry res, *rp;
+		stream->read(&res, sizeof(sPspGeometry));
+		g = RslGeometryCreate(res.size);
+		rp = (sPspGeometry*)(g+1);
+		*rp++ = res;
+		stream->read(rp, res.size-sizeof(sPspGeometry));
+	}else{
+		sPs2Geometry res, *rp;
+		stream->read(&res, sizeof(sPs2Geometry));
+		g = RslGeometryCreate(res.size & 0xFFFFF);
+		rp = (sPs2Geometry*)(g+1);
+		*rp++ = res;
+		stream->read(rp, (res.size&0xFFFFF)-sizeof(sPs2Geometry));
+	}
 
 	rslMaterialListStreamRead(stream, &g->matList);
 	a->geometry = g;
@@ -396,7 +415,7 @@ RslElementGroupGetNumElements(RslElementGroup *clump)
 }
 
 RslGeometry*
-RslGeometryCreatePS2(uint32 sz)
+RslGeometryCreate(uint32 sz)
 {
 	sz += sizeof(RslGeometry);
 	RslGeometry *g = (RslGeometry*)new uint8[sz];
@@ -663,7 +682,25 @@ guessSwizzling(uint32 w, uint32 h, uint32 d, uint32 mipmaps)
 	return swiz;
 }
 
-
+RslRaster*
+RslCreateRasterPSP(uint32 w, uint32 h, uint32 d, uint32 mipmaps, uint32 unknown)
+{
+	RslRasterPSP *r;
+	r = new RslRasterPSP;
+	uint32 tmp, logw = 0, logh = 0;
+	for(tmp = 1; tmp < w; tmp <<= 1)
+		logw++;
+	for(tmp = 1; tmp < h; tmp <<= 1)
+		logh++;
+	r->minWidth = 128/d;	// min 16 bytes
+	r->logWidth = logw;
+	r->logHeight = logh;
+	r->depth = d;
+	r->mipmaps = mipmaps;
+	r->unk2 = unknown;
+//	printf("%3d %3d %2d %d %4x\n", w, h, d, mipmaps, unknown);
+	return (RslRaster*)r;
+}
 
 RslRaster*
 RslCreateRasterPS2(uint32 w, uint32 h, uint32 d, uint32 mipmaps)
@@ -686,7 +723,7 @@ RslCreateRasterPS2(uint32 w, uint32 h, uint32 d, uint32 mipmaps)
 }
 
 RslTexture*
-RslReadNativeTexturePS2(Stream *stream)
+RslReadNativeTexture(Stream *stream)
 {
 	RslPs2StreamRaster rasterInfo;
 	uint32 len;
@@ -703,11 +740,19 @@ RslReadNativeTexturePS2(Stream *stream)
 	mustFindChunk(stream, ID_STRUCT, &len, NULL);
 	stream->read(&rasterInfo, sizeof(rasterInfo));
 	mustFindChunk(stream, ID_STRUCT, &len, NULL);
-	tex->raster = RslCreateRasterPS2(rasterInfo.width,
-		rasterInfo.height, rasterInfo.depth, rasterInfo.mipmaps);
-	tex->raster->ps2.data = new uint8[len];
-	stream->read(tex->raster->ps2.data, len);
-	(stream, ID_EXTENSION, &len, NULL);
+	if(RslPSP){
+		tex->raster = RslCreateRasterPSP(rasterInfo.width,
+			rasterInfo.height, rasterInfo.depth, rasterInfo.mipmaps,
+			rasterInfo.unused);
+		tex->raster->psp.data = new uint8[len];
+		stream->read(tex->raster->psp.data, len);
+	}else{
+		tex->raster = RslCreateRasterPS2(rasterInfo.width,
+			rasterInfo.height, rasterInfo.depth, rasterInfo.mipmaps);
+		tex->raster->ps2.data = new uint8[len];
+		stream->read(tex->raster->ps2.data, len);
+	}
+	mustFindChunk(stream, ID_EXTENSION, &len, NULL);
 	stream->seek(len);
 	return tex;
 }
@@ -720,7 +765,7 @@ RslTexListStreamRead(Stream *stream)
 	RslTexList *txd = RslTexListCreate();
 	for(int32 i = 0; i < numTex; i++){
 		mustFindChunk(stream, ID_TEXTURENATIVE, NULL, NULL);
-		RslTexture *tex = RslReadNativeTexturePS2(stream);
+		RslTexture *tex = RslReadNativeTexture(stream);
 		RslTexListAddTexture(txd, tex);
 	}
 	return txd;
