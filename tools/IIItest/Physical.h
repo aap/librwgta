@@ -77,7 +77,7 @@ public:
 	void ProcessShift(void);
 
 	// get speed of point p relative to entity center
-	CVector GetSpeed(CVector &p);
+	CVector GetSpeed(const CVector &p);
 	CVector GetSpeed(void) { return GetSpeed(CVector(0.0f, 0.0f, 0.0f)); }
 	void UnsetIsInSafePosition(void) {
 		m_vecMoveSpeed *= -1.0f;
