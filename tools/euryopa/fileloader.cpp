@@ -78,6 +78,8 @@ LoadDataFile(const char *filename, DatDesc *desc)
 
 void LoadNothing(char *line) { }
 
+static int firstID, lastID;
+
 void
 LoadObject(char *line)
 {
@@ -120,6 +122,8 @@ LoadObject(char *line)
 		obj->m_drawDist[n] = dist[n];
 	obj->SetFlags(flags);
 	obj->m_isTimed = false;
+	if(id > lastID) lastID = id;
+	if(id < firstID) firstID = id;
 
 	obj->m_file = currentFile;
 }
@@ -174,6 +178,8 @@ LoadTimeObject(char *line)
 	obj->m_isTimed = true;
 	obj->m_timeOn = timeOn;
 	obj->m_timeOff = timeOff;
+	if(id > lastID) lastID = id;
+	if(id < firstID) firstID = id;
 
 	obj->m_file = currentFile;
 }
@@ -411,11 +417,19 @@ void
 LoadObjectTypes(const char *filename)
 {
 	int i;
+	firstID = MAXINT;
+	lastID = -1;
 	LoadDataFile(filename, ideDesc);
 
-	for(i = 0; i < NUMOBJECTDEFS; i++)
+	/* Finding related models is done per file
+	 * but not yet in III */
+	if(isIII()){
+		firstID = 0;
+		lastID = NUMOBJECTDEFS;
+	}
+	for(i = firstID; i < lastID; i++)
 		if(GetObjectDef(i))
-			GetObjectDef(i)->SetupBigBuilding();
+			GetObjectDef(i)->SetupBigBuilding(firstID, lastID);
 }
 
 static void

@@ -209,6 +209,11 @@ extern int currentArea;
 struct GameFile
 {
 	char *name;
+	// types of files we want to have eventually:
+	//	IDE Definition
+	//	IPL Scene
+	//	COL ?
+	//	IMG ?
 };
 GameFile *NewGameFile(char *path);
 
@@ -342,7 +347,7 @@ struct ObjectDef
 	void SetAtomic(int n, rw::Atomic *atomic);
 	void SetClump(rw::Clump *clump);
 	void CantLoad(void);
-	void SetupBigBuilding(void);
+	void SetupBigBuilding(int first, int last);
 	void SetFlags(int flags);
 };
 ObjectDef *AddObjectDef(int id);

@@ -241,11 +241,11 @@ ObjectDef::SetClump(rw::Clump *clump)
 }
 
 static ObjectDef*
-FindRelatedObject(ObjectDef *obj)
+FindRelatedObject(ObjectDef *obj, int first, int last)
 {
 	ObjectDef *obj2;
 	int i;
-	for(i = 0; i < nelem(objdefs); i++){
+	for(i = first; i < last; i++){
 		obj2 = objdefs[i];
 		if(obj2 && obj2 != obj &&
 		   rw::strncmp_ci(obj->m_name+3, obj2->m_name+3, MODELNAMELEN) == 0)
@@ -255,7 +255,7 @@ FindRelatedObject(ObjectDef *obj)
 }
 
 void
-ObjectDef::SetupBigBuilding(void)
+ObjectDef::SetupBigBuilding(int first, int last)
 {
 	ObjectDef *hqobj;
 	if(m_drawDist[0] > LODDISTANCE)
@@ -263,7 +263,7 @@ ObjectDef::SetupBigBuilding(void)
 
 	// in SA level of detail is handled by instances
 	if(!isSA() && m_isBigBuilding && m_relatedModel == nil){
-		hqobj = FindRelatedObject(this);
+		hqobj = FindRelatedObject(this, first, last);
 		if(hqobj){
 			hqobj->m_relatedModel = this;
 			m_relatedModel = hqobj;

@@ -423,6 +423,11 @@ uiObjInfo(ObjectDef *obj)
 			IsHourInRange(obj->m_timeOn, obj->m_timeOff) ? "yes" : "no");
 	}
 
+	if(obj->m_relatedModel)
+		ImGui::Text("Related: %s\n", obj->m_relatedModel->m_name);
+	if(obj->m_relatedTimeModel)
+		ImGui::Text("Related timed: %s\n", obj->m_relatedTimeModel->m_name);
+
 	switch(params.objFlagset){
 	case GAME_III:
 		ImGui::Checkbox("Normal cull", &obj->m_normalCull);
@@ -501,6 +506,8 @@ uiObjInfo(ObjectDef *obj)
 static void
 uiEditorWindow(void)
 {
+	static char buf[256];
+
 	CPtrNode *p;
 	ObjectInst *inst;
 	ObjectDef *obj;
@@ -552,7 +559,9 @@ uiEditorWindow(void)
 					pop = true;
 				}
 				ImGui::PushID(inst);
-				ImGui::Selectable(obj->m_name);
+				sprintf(buf, "%-20s %8.2f %8.2f %8.2f", obj->m_name,
+					inst->m_translation.x, inst->m_translation.y, inst->m_translation.z);
+				ImGui::Selectable(buf);
 				ImGui::PopID();
 				if(ImGui::IsItemHovered()){
 					if(ImGui::IsMouseClicked(1))
