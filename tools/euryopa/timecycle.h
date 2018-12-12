@@ -27,7 +27,8 @@ namespace Timecycle
 		rw::RGBAf postfx1;	// also blur
 		rw::RGBAf postfx2;
 		float cloudAlpha;
-		float intensityLimit;
+		float radiosityLimit;
+		float radiosityIntensity;
 		float waterFogAlpha;
 		float dirMult;
 		// neo

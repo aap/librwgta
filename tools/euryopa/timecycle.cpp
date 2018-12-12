@@ -131,7 +131,8 @@ Interpolate(ColourSet *dst, ColourSet *a, ColourSet *b, float fa, float fb)
 	Interpolate(&dst->postfx1, &a->postfx1, &b->postfx1, fa, fb);
 	Interpolate(&dst->postfx2, &a->postfx2, &b->postfx2, fa, fb);
 	dst->cloudAlpha = fa * a->cloudAlpha + fb * b->cloudAlpha;
-	dst->intensityLimit = fa * a->intensityLimit + fb * b->intensityLimit;
+	dst->radiosityLimit = fa * a->radiosityLimit + fb * b->radiosityLimit;
+	dst->radiosityIntensity = fa * a->radiosityIntensity + fb * b->radiosityIntensity;
 	dst->waterFogAlpha = fa * a->waterFogAlpha + fb * b->waterFogAlpha;
 	dst->dirMult = fa * a->dirMult + fb * b->dirMult;
 	dst->lightMapIntensity = fa * a->lightMapIntensity + fb * b->lightMapIntensity;
@@ -362,12 +363,14 @@ static float tmpWaterRed[NUMTMP];
 static float tmpWaterGreen[NUMTMP];
 static float tmpWaterBlue[NUMTMP];
 static float tmpWaterAlpha[NUMTMP];
+static float tmpRadiosityIntensity[NUMTMP];
+static float tmpRadiosityLimit[NUMTMP];
 
 static void
 FillGaps(float *data)
 {
 	int w, hend, hprev, h1, h2;
-	int i, n;
+	int n;
 	float step;
 
 #define IX(w,h) ((h)*params.numWeathers + (w))
@@ -621,6 +624,231 @@ InitializeLCS(void)
 }
 
 static void
+InitializeVCS(void)
+{
+	int ambR, ambG, ambB;
+	int ambR_obj, ambG_obj, ambB_obj;
+	int ambR_bl, ambG_bl, ambB_bl;
+	int ambR_obj_bl, ambG_obj_bl, ambB_obj_bl;
+	int dirR, dirG, dirB;
+	int skyTopR, skyTopG, skyTopB;
+	int skyBotR, skyBotG, skyBotB;
+	int sunCoreR, sunCoreG, sunCoreB;
+	int sunCoronaR, sunCoronaG, sunCoronaB;
+	float sunSz, sprSz, sprBght;
+	int shad, lightShad, poleShad;
+	float farClp, fogSt, lightGnd;
+	int cloudR, cloudG, cloudB;
+	int fluffyTopR, fluffyTopG, fluffyTopB;
+	int fluffyBotR, fluffyBotG, fluffyBotB;
+	float blurR, blurG, blurB;
+	float waterR, waterG, waterB, waterA;
+	float radiosityIntensity, radiosityLimit;
+	float blurAlpha, blurOffset;
+	int i;
+
+	ColourSet *cs;
+
+	FILE *file;
+	char *line;
+	if(file = fopen_ci("data/timecyc.dat", "rb"), file == nil)
+		return;
+	int h = 0, w = 0;
+	while(line = FileLoader::LoadLine(file)){
+		if(line[0] == '/' && line[1] == '/')
+			continue;
+		sscanf(line, "%d %d %d  %d %d %d  %d %d %d  %d %d %d "
+		             "%d %d %d  %d %d %d  %d %d %d "
+		             "%d %d %d  %d %d %d  %f %f %f %d %d %d %f %f  %f %f  %f "
+		             "%d %d %d  %d %d %d  %d %d %d  %f %f %f  %f %f %f %f  %f %f",
+			&ambR, &ambG, &ambB,
+			 &ambR_obj, &ambG_obj, &ambB_obj,
+			 &ambR_bl, &ambG_bl, &ambB_bl,
+			 &ambR_obj_bl, &ambG_obj_bl, &ambB_obj_bl,
+			&dirR, &dirG, &dirB,
+			 &skyTopR, &skyTopG, &skyTopB,
+			 &skyBotR, &skyBotG, &skyBotB,
+			&sunCoreR, &sunCoreG, &sunCoreB,
+			 &sunCoronaR, &sunCoronaG, &sunCoronaB,
+			 &sunSz, &sprSz, &sprBght,
+			 &shad, &lightShad, &poleShad,
+			 &farClp, &fogSt, &radiosityIntensity, &radiosityLimit, &lightGnd,
+			&cloudR, &cloudG, &cloudB,
+			 &fluffyTopR, &fluffyTopG, &fluffyTopB,
+			 &fluffyBotR, &fluffyBotG, &fluffyBotB,
+			 &blurR, &blurG, &blurB,
+			 &waterR, &waterG, &waterB, &waterA,
+			 &blurAlpha, &blurOffset);
+
+		i = h*params.numWeathers + w;
+		tmpAmbientRed[i]	= ambR;
+		tmpAmbientGreen[i]	= ambG;
+		tmpAmbientBlue[i]	= ambB;
+		tmpAmbientObjRed[i]	= ambR_obj;
+		tmpAmbientObjGreen[i]	= ambG_obj;
+		tmpAmbientObjBlue[i]	= ambB_obj;
+		tmpAmbientBlRed[i]	= ambR_bl;
+		tmpAmbientBlGreen[i]	= ambG_bl;
+		tmpAmbientBlBlue[i]	= ambB_bl;
+		tmpAmbientObjBlRed[i]	= ambR_obj_bl;
+		tmpAmbientObjBlGreen[i]	= ambG_obj_bl;
+		tmpAmbientObjBlBlue[i]	= ambB_obj_bl;
+		tmpDirectionalRed[i]	= dirR;
+		tmpDirectionalGreen[i]	= dirG;
+		tmpDirectionalBlue[i]	= dirB;
+		tmpSkyTopRed[i]	= skyTopR;
+		tmpSkyTopGreen[i]	= skyTopG;
+		tmpSkyTopBlue[i]	= skyTopB;
+		tmpSkyBottomRed[i]	= skyBotR;
+		tmpSkyBottomGreen[i]	= skyBotG;
+		tmpSkyBottomBlue[i]	= skyBotB;
+		tmpSunCoreRed[i]	= sunCoreR;
+		tmpSunCoreGreen[i]	= sunCoreG;
+		tmpSunCoreBlue[i]	= sunCoreB;
+		tmpSunCoronaRed[i]	= sunCoronaR;
+		tmpSunCoronaGreen[i]	= sunCoronaG;
+		tmpSunCoronaBlue[i]	= sunCoronaB;
+		tmpSunSize[i]	= sunSz;
+		tmpSpriteSize[i]	= sprSz;
+		tmpSpriteBrightness[i]	= sprBght;
+		tmpShadow[i]	= shad;
+		tmpLightShadow[i]	= lightShad;
+		tmpPoleShadow[i]	= poleShad;
+		tmpFarClip[i]	= farClp;
+		tmpFogStart[i]	= fogSt;
+		tmpLightOnGround[i]	= lightGnd;
+		tmpCloudRed[i]	= cloudR;
+		tmpCloudGreen[i]	= cloudG;
+		tmpCloudBlue[i]	= cloudB;
+		tmpFluffyCloudTopRed[i]	= fluffyTopR;
+		tmpFluffyCloudTopGreen[i]	= fluffyTopG;
+		tmpFluffyCloudTopBlue[i]	= fluffyTopB;
+		tmpFluffyCloudBottomRed[i]	= fluffyBotR;
+		tmpFluffyCloudBottomGreen[i]	= fluffyBotG;
+		tmpFluffyCloudBottomBlue[i]	= fluffyBotB;
+		tmpBlurRed[i]	= blurR;
+		tmpBlurGreen[i]	= blurG;
+		tmpBlurBlue[i]	= blurB;
+		tmpWaterRed[i]	= waterR;
+		tmpWaterGreen[i]	= waterG;
+		tmpWaterBlue[i]	= waterB;
+		if(waterA < 200) waterA = 200;
+		tmpWaterAlpha[i]	= waterA;
+		tmpRadiosityIntensity[i] = radiosityIntensity;
+		tmpRadiosityLimit[i] = radiosityLimit;
+
+		h++;
+		if(h == params.numHours){
+			h = 0;
+			w++;
+		}
+		if(w == params.numWeathers)
+			break;
+	}
+	fclose(file);
+
+	FillGaps(tmpAmbientRed);
+	FillGaps(tmpAmbientGreen);
+	FillGaps(tmpAmbientBlue);
+	FillGaps(tmpAmbientObjRed);
+	FillGaps(tmpAmbientObjGreen);
+	FillGaps(tmpAmbientObjBlue);
+	FillGaps(tmpAmbientBlRed);
+	FillGaps(tmpAmbientBlGreen);
+	FillGaps(tmpAmbientBlBlue);
+	FillGaps(tmpAmbientObjBlRed);
+	FillGaps(tmpAmbientObjBlGreen);
+	FillGaps(tmpAmbientObjBlBlue);
+	FillGaps(tmpDirectionalRed);
+	FillGaps(tmpDirectionalGreen);
+	FillGaps(tmpDirectionalBlue);
+	FillGaps(tmpSkyTopRed);
+	FillGaps(tmpSkyTopGreen);
+	FillGaps(tmpSkyTopBlue);
+	FillGaps(tmpSkyBottomRed);
+	FillGaps(tmpSkyBottomGreen);
+	FillGaps(tmpSkyBottomBlue);
+	FillGaps(tmpSunCoreRed);
+	FillGaps(tmpSunCoreGreen);
+	FillGaps(tmpSunCoreBlue);
+	FillGaps(tmpSunCoronaRed);
+	FillGaps(tmpSunCoronaGreen);
+	FillGaps(tmpSunCoronaBlue);
+	FillGaps(tmpSunSize);
+	FillGaps(tmpSpriteSize);
+	FillGaps(tmpSpriteBrightness);
+	FillGaps(tmpShadow);
+	FillGaps(tmpLightShadow);
+	FillGaps(tmpPoleShadow);
+	FillGaps(tmpFarClip);
+	FillGaps(tmpFogStart);
+	FillGaps(tmpLightOnGround);
+	FillGaps(tmpCloudRed);
+	FillGaps(tmpCloudGreen);
+	FillGaps(tmpCloudBlue);
+	FillGaps(tmpFluffyCloudTopRed);
+	FillGaps(tmpFluffyCloudTopGreen);
+	FillGaps(tmpFluffyCloudTopBlue);
+	FillGaps(tmpFluffyCloudBottomRed);
+	FillGaps(tmpFluffyCloudBottomGreen);
+	FillGaps(tmpFluffyCloudBottomBlue);
+	FillGaps(tmpBlurRed);
+	FillGaps(tmpBlurGreen);
+	FillGaps(tmpBlurBlue);
+	FillGaps(tmpWaterRed);
+	FillGaps(tmpWaterGreen);
+	FillGaps(tmpWaterBlue);
+	FillGaps(tmpWaterAlpha);
+	FillGaps(tmpRadiosityIntensity);
+	FillGaps(tmpRadiosityLimit);
+
+	for(w = 0; w < params.numWeathers; w++)
+		for(h = 0; h < params.numHours; h++){
+			i = h*params.numWeathers + w;
+			cs = &GetColourSet(h, w);
+			cs->amb = rw::makeRGBAf(tmpAmbientRed[i]/255.0f,
+				tmpAmbientGreen[i]/255.0f, tmpAmbientBlue[i]/255.0f, 0);
+			cs->amb_obj = rw::makeRGBAf(tmpAmbientObjRed[i]/255.0f,
+				tmpAmbientObjGreen[i]/255.0f, tmpAmbientObjBlue[i]/255.0f, 0);
+			cs->amb_bl = rw::makeRGBAf(tmpAmbientBlRed[i]/255.0f,
+				tmpAmbientBlGreen[i]/255.0f, tmpAmbientBlBlue[i]/255.0f, 0);
+			cs->amb_obj_bl = rw::makeRGBAf(tmpAmbientObjBlRed[i]/255.0f,
+				tmpAmbientObjBlGreen[i]/255.0f, tmpAmbientObjBlBlue[i]/255.0f, 0);
+			cs->dir = rw::makeRGBAf(tmpDirectionalRed[i]/255.0f,
+				tmpDirectionalGreen[i]/255.0f, tmpDirectionalBlue[i]/255.0f, 0);
+			cs->skyTop = rw::makeRGBAf(tmpSkyTopRed[i]/255.0f,
+				tmpSkyTopGreen[i]/255.0f, tmpSkyTopBlue[i]/255.0f, 0);
+			cs->skyBottom = rw::makeRGBAf(tmpSkyBottomRed[i]/255.0f,
+				tmpSkyBottomGreen[i]/255.0f, tmpSkyBottomBlue[i]/255.0f, 0);
+			cs->sunCore = rw::makeRGBAf(tmpSunCoreRed[i]/255.0f,
+				tmpSunCoreGreen[i]/255.0f, tmpSunCoreBlue[i]/255.0f, 0);
+			cs->sunCorona = rw::makeRGBAf(tmpSunCoronaRed[i]/255.0f,
+				tmpSunCoronaGreen[i]/255.0f, tmpSunCoronaBlue[i]/255.0f, 0);
+			cs->sunSz = tmpSunSize[i];
+			cs->sprSz = tmpSpriteSize[i];
+			cs->sprBght = tmpSpriteBrightness[i];
+			cs->shdw = tmpShadow[i];
+			cs->lightShd = tmpLightShadow[i];
+			cs->poleShd = tmpPoleShadow[i];
+			cs->farClp = tmpFarClip[i];
+			cs->fogSt = tmpFogStart[i];
+			cs->lightOnGround = tmpLightOnGround[i];
+			cs->lowCloud = rw::makeRGBAf(tmpCloudRed[i]/255.0f,
+				tmpCloudGreen[i]/255.0f, tmpCloudBlue[i]/255.0f, 0);
+			cs->fluffyCloudTop = rw::makeRGBAf(tmpFluffyCloudTopRed[i]/255.0f,
+				tmpFluffyCloudTopGreen[i]/255.0f, tmpFluffyCloudTopBlue[i]/255.0f, 0);
+			cs->fluffyCloudBottom = rw::makeRGBAf(tmpFluffyCloudBottomRed[i]/255.0f,
+				tmpFluffyCloudBottomGreen[i]/255.0f, tmpFluffyCloudBottomBlue[i]/255.0f, 0);
+			cs->postfx1 = rw::makeRGBAf(tmpBlurRed[i]/255.0f,
+				tmpBlurGreen[i]/255.0f, tmpBlurBlue[i]/255.0f, 0);
+			cs->water = rw::makeRGBAf(tmpWaterRed[i]/255.0f, tmpWaterGreen[i]/255.0f,
+				tmpWaterBlue[i]/255.0f, tmpWaterAlpha[i]/255.0f);
+			cs->radiosityIntensity = tmpRadiosityIntensity[i];
+			cs->radiosityLimit = tmpRadiosityLimit[i];
+		}
+}
+
+static void
 InitializeSA(void)
 {
 	int ambR, ambG, ambB;
@@ -639,7 +867,7 @@ InitializeSA(void)
 	float postfx2R, postfx2G, postfx2B, postfx2A;
 	float waterR, waterG, waterB, waterA;
 	float cloudAlpha;
-	int intensityLimit, waterFogAlpha;
+	int radiosityLimit, waterFogAlpha;
 	float dirMult;
 
 	ColourSet *cs;
@@ -672,7 +900,7 @@ InitializeSA(void)
 			 &waterR, &waterG, &waterB, &waterA,
 			&postfx1A, &postfx1R, &postfx1G, &postfx1B,
 			 &postfx2A, &postfx2R, &postfx2G, &postfx2B,
-			 &cloudAlpha, &intensityLimit, &waterFogAlpha, &dirMult);
+			 &cloudAlpha, &radiosityLimit, &waterFogAlpha, &dirMult);
 
 		cs = &GetColourSet(h, w);
 		cs->amb = rw::makeRGBAf(ambR/255.0f, ambG/255.0f, ambB/255.0f, 0);
@@ -700,7 +928,8 @@ InitializeSA(void)
 		cs->postfx1 = rw::makeRGBAf(postfx1R/255.0f, postfx1G/255.0f, postfx1B/255.0f, postfx1A/255.0f);
 		cs->postfx2 = rw::makeRGBAf(postfx2R/255.0f, postfx2G/255.0f, postfx2B/255.0f, postfx2A/255.0f);
 		cs->cloudAlpha = cloudAlpha;
-		cs->intensityLimit = intensityLimit;
+		cs->radiosityLimit = radiosityLimit;
+		cs->radiosityIntensity = 35;
 		cs->waterFogAlpha = waterFogAlpha;
 		cs->dirMult = dirMult;
 
@@ -722,18 +951,11 @@ Initialize(void)
 	memset(timecycleData, 0, sizeof(ColourSet)*params.numHours*params.numWeathers);
 
 	switch(params.timecycle){
-	case GAME_III:
-		InitializeIII();
-		break;
-	case GAME_VC:
-		InitializeVC();
-		break;
-	case GAME_SA:
-		InitializeSA();
-		break;
-	case GAME_LCS:
-		InitializeLCS();
-		break;
+	case GAME_III:	InitializeIII(); break;
+	case GAME_VC:	InitializeVC(); break;
+	case GAME_SA:	InitializeSA(); break;
+	case GAME_LCS:	InitializeLCS(); break;
+	case GAME_VCS:	InitializeVCS(); break;
 	}
 }
 

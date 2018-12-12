@@ -284,3 +284,312 @@ LinkInstances(void)
 }
 
 #endif
+
+static void
+walkResources(void)
+{
+	int i;
+	drawLOD = 0;
+	Renderer::reset();
+	for(i = 0; i < gLevel->numSectors; i++)
+		RenderSector(&gLevel->sectors[i]);
+	drawLOD = 1;
+	Renderer::reset();
+	for(i = 0; i < gLevel->numSectors; i++)
+		RenderSector(&gLevel->sectors[i]);
+}
+
+void
+transformGeo(rw::Geometry *g, rw::Matrix *mat)
+{
+	rw::V3d::transformPoints(g->morphTargets[0].vertices, g->morphTargets[0].vertices, g->numVertices, mat);
+}
+
+rw::Geometry*
+makeGeo(rw::Geometry *ga, rw::Geometry *gb)
+{
+	using namespace rw;
+
+	Geometry *geo;
+	int i, j;
+	int voff, toff, moff;
+
+	voff = ga->numVertices;
+	toff = ga->numTriangles;
+	moff = ga->matList.numMaterials;
+	geo = Geometry::create(ga->numVertices + gb->numVertices,
+		ga->numTriangles + gb->numTriangles,
+		ga->flags);
+
+	memcpy(geo->morphTargets[0].vertices, ga->morphTargets[0].vertices, ga->numVertices*sizeof(V3d));
+	memcpy(geo->morphTargets[0].vertices+voff, gb->morphTargets[0].vertices, gb->numVertices*sizeof(V3d));
+	assert((gb->flags & Geometry::NORMALS) == 0);
+	if(ga->numTexCoordSets){
+		memcpy(geo->texCoords[0], ga->texCoords[0], ga->numVertices*sizeof(TexCoords));
+		memcpy(geo->texCoords[0]+voff, gb->texCoords[0], gb->numVertices*sizeof(TexCoords));
+	}
+	if(ga->flags & Geometry::PRELIT){
+		memcpy(geo->colors, ga->colors, ga->numVertices*sizeof(RGBA));
+		memcpy(geo->colors+voff, gb->colors, gb->numVertices*sizeof(RGBA));
+	}
+	memcpy(geo->triangles, ga->triangles, ga->numTriangles*sizeof(Triangle));
+	memcpy(geo->triangles+toff, gb->triangles, gb->numTriangles*sizeof(Triangle));
+	for(i = 0; i < gb->numTriangles; i++){
+		geo->triangles[i+toff].v[0] += voff;
+		geo->triangles[i+toff].v[1] += voff;
+		geo->triangles[i+toff].v[2] += voff;
+		geo->triangles[i+toff].matId += moff;
+	}
+	for(i = 0; i < ga->matList.numMaterials; i++)
+		geo->matList.appendMaterial(ga->matList.materials[i]);
+	for(i = 0; i < gb->matList.numMaterials; i++)
+		geo->matList.appendMaterial(gb->matList.materials[i]);
+
+	MeshHeader *ha, *hb, *h;
+	Mesh *ma, *mb, *m;
+	uint16 *indices;
+	ha = ga->meshHeader;
+	hb = gb->meshHeader;
+	geo->allocateMeshes(ha->numMeshes + hb->numMeshes,
+		ha->totalIndices + hb->totalIndices, 0);
+	h = geo->meshHeader;
+	h->flags = ha->flags;
+	assert(ha->flags == hb->flags);
+	ma = ha->getMeshes();
+	mb = hb->getMeshes();
+	m = h->getMeshes();
+	indices = m->indices;
+	for(i = 0; i < ha->numMeshes; i++){
+		m->material = ma->material;
+		m->numIndices = ma->numIndices;
+		m->indices = indices;
+		for(j = 0; j < m->numIndices; j++)
+			m->indices[j] = ma->indices[j];
+		indices += m->numIndices;
+		m++;
+		ma++;
+	}
+	for(i = 0; i < hb->numMeshes; i++){
+		m->material = mb->material;
+		m->numIndices = mb->numIndices;
+		m->indices = indices;
+		for(j = 0; j < m->numIndices; j++)
+			m->indices[j] = mb->indices[j] + voff;
+		indices += m->numIndices;
+		m++;
+		mb++;
+	}
+
+	geo->calculateBoundingSphere();
+
+	return geo;
+}
+
+rw::Geometry*
+cloneGeo(rw::Geometry *geo)
+{
+	using namespace rw;
+	Geometry *g;
+	g = Geometry::create(geo->numVertices, geo->numTriangles, geo->flags);
+	return g;
+}
+
+void
+dumpClump(rw::Clump *c)
+{
+	static char filename[256];
+	rw::StreamFile out;
+	char *name;
+
+	name = gta::getNodeName(c->getFrame());
+	sprintf(filename, "C:/vcstmp/mdl/%s.dff", name);
+	printf("%s\t%s\n", filename, name);
+
+	if(!out.open(filename, "wb")){
+		fprintf(stderr, "Error: couldn't open %s\n", filename);
+		return;
+	}
+	c->streamWrite(&out);
+	out.close();
+}
+
+void
+dumpCol(CBaseModelInfo *mi)
+{
+	static char filename[256];
+	char colname[24];
+	uint32 ident, size;
+	uint8 *buf;
+	rw::StreamFile stream;
+
+	ColEntry *c = &pColPool->items[mi->colModel->colStoreId];
+
+if(c->name[0]){
+	sprintf(filename, "C:/vcstmp/col/%s", c->name);
+	CreateDirectoryA(filename, nil);
+	sprintf(filename, "C:/vcstmp/col/%s/%s.col", c->name, mi->name);
+}else{
+	sprintf(filename, "C:/vcstmp/col/col%d", mi->colModel->colStoreId);
+	CreateDirectoryA(filename, nil);
+	sprintf(filename, "C:/vcstmp/col/col%d/%s.col", mi->colModel->colStoreId, mi->name);
+}
+//	sprintf(filename, "C:/vcstmp/col/%s.col", mi->name);
+
+	stream.open(filename, "wb");
+	ident = 0x4C4C4F43;
+	size = WriteCollisionFile(mi->colModel, &buf)+24;
+	stream.write(&ident, 4);
+	stream.write(&size, 4);
+	memset(colname, 0, 24);
+	strncpy(colname, mi->name, 24);
+	stream.write(colname, 24);
+	stream.write(buf, size-24);
+	rwFree(buf);
+	stream.close();
+}
+
+void
+DumpCollisions(void)
+{
+	int i;
+	CBaseModelInfo *mi;
+
+	for(i = 0; i < CModelInfo::msNumModelInfos; i++){
+		mi = CModelInfo::Get(i);
+		if(mi == nil) continue;
+		if(mi->colModel)
+			dumpCol(mi);
+	}
+}
+
+void
+DumpModels(void)
+{
+	int i;
+	CBaseModelInfo *mi;
+	BuildingExt *be;
+	BuildingExt::Model *mdl;
+	ModelInfoExt *mie;
+	CEntity *e;
+	EntityExt *ee;
+	Resource *res;
+	rw::Geometry *geoa, *geob;
+	rw::Frame *f;
+	rw::Atomic *a;
+	rw::Clump *c;
+
+	walkResources();
+
+	for(i = 0; i < CModelInfo::msNumModelInfos; i++){
+		mi = CModelInfo::Get(i);
+		mie = GetModelInfoExt(i);
+		if(mi == nil) continue;
+
+		e = mie->inst;
+		if(e == nil) continue;
+
+		ee = (EntityExt*)e->vtable;
+		if(ee->n != 1) continue;
+
+		be = ee->insts[0];
+		/* never more than 2 */
+		geoa = nil; geob = nil;
+		for(mdl = be->resources; mdl; mdl = mdl->next){
+			res = GetResource(mdl->resId);
+			assert(res->dmaChain);
+			if(geoa == nil)
+				geoa = (rw::Geometry*)res->dmaChain;
+			else if(geob == nil)
+				geob = (rw::Geometry*)res->dmaChain;
+			else
+				assert(0);
+		}
+
+		/* get matrix to transform vertices */
+		rw::Matrix m, inv;
+		m = *(rw::Matrix*)&e->placeable.matrix.matrix;
+		m.optimize();
+		rw::Matrix::invert(&inv, &m);
+		be->matrix.optimize();
+		m = be->matrix;
+		m.transform(&inv, rw::COMBINEPOSTCONCAT);
+		//rw::Matrix::mult(&m, &be->matrix, &inv);
+
+		if(geoa && geob)
+			geoa = makeGeo(geoa, geob);
+//		transformGeo(geoa, &be->matrix);
+		transformGeo(geoa, &m);
+		f = rw::Frame::create();
+		a = rw::Atomic::create();
+		c = rw::Clump::create();
+		strncpy(gta::getNodeName(f), mi->name, 23);
+		a->setFrame(f);
+		a->setGeometry(geoa, 0);
+		c->setFrame(f);
+		c->addAtomic(a);
+
+		dumpClump(c);
+	}
+
+	exit(0);
+}
+
+
+
+
+typedef struct NameDef NameDef;
+struct NameDef
+{
+	int type;	// needed?
+	char *gen;
+	char *pretty;
+	NameDef *next;
+};
+
+static NameDef *defs;
+
+void
+ReadDefFile(char *filename)
+{
+	static char *space = " \t\n\r";
+	static char line[256];
+	int type;
+	char *a, *b;
+	FILE *f;
+	NameDef *def;
+
+	f = fopen(filename, "r");
+	if(f == nil)
+		return;
+	while(fgets(line, 256, f)){
+		a = strtok(line, space);
+		b = strtok(nil, space);
+		if(a == nil || b == nil) continue;
+
+		if(strstr(a, "tex_") == a)
+			type = TexName;
+		else
+			continue;
+
+		def = rwNewT(NameDef, 1, 0);
+		def->type = type;
+		def->gen = strdup(a);
+		if(b[0] == '%') b++;
+		def->pretty = strdup(b);
+
+		def->next = defs;
+		defs = def;
+	}
+	fclose(f);
+}
+
+char*
+FindNameDef(int type, char *name)
+{
+	NameDef *def;
+	for(def = defs; def; def = def->next)
+		if(def->type == type &&
+		   strcmp(def->gen, name) == 0)
+			return def->pretty;
+	return name;
+}

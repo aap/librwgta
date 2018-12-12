@@ -184,8 +184,9 @@ saUninstanceCB(rw::ps2::MatPipeline *pipe, rw::Geometry *geo, uint32 flags[], rw
 	}
 	if(geo->numTexCoordSets > 0)
 		mask |= 0x1000;
-	if(geo->numTexCoordSets > 0 && hasTex2(id)){
-		mask |= 0x2000;
+	if(hasTex2(id)){
+		if(geo->numTexCoordSets > 1)
+			mask |= 0x2000;
 		tinc *= 2;
 	}
 	if(id == PDS_PS2_CustomSkinPed_MatPipeID)

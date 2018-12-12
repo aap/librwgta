@@ -130,7 +130,7 @@ leedsRenderCB_PSP(Atomic *atomic, d3d9::InstanceDataHeader *header)
 		surfprops[0] = inst->material->surfaceProps.ambient;
 		surfprops[1] = inst->material->surfaceProps.specular;
 		surfprops[2] = inst->material->surfaceProps.diffuse;
-		surfprops[3] = 1.0f;
+		surfprops[3] = 1.22f;
 		d3ddevice->SetVertexShaderConstantF(REG_surfProps, surfprops, 1);
 
 		if(params.ps2AlphaTest)

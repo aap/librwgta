@@ -148,7 +148,7 @@ struct sGeomInstance
 	}
 };
 #ifndef RW_PS2
-static_assert(sizeof(sGeomInstance) == 0x50, "Placement: error");
+static_assert(sizeof(sGeomInstance) == 0x50, "sGeomInstance: error");
 #endif
 
 struct Sector
@@ -156,16 +156,16 @@ struct Sector
 	OverlayResource *resources;
 	uint16           numResources;
 	uint16           unk1;
-	sGeomInstance   *sectionA;
-	sGeomInstance   *sectionB;
-	sGeomInstance   *sectionC;
-	sGeomInstance   *sectionD;
-	sGeomInstance   *sectionE;
-	sGeomInstance   *sectionF;
-	sGeomInstance   *sectionG;
+	sGeomInstance   *sectionA;	// super LODs
 #ifdef VCS
-	sGeomInstance   *sectionH;
+	sGeomInstance   *sectionB;	// under water LODs
 #endif
+	sGeomInstance   *sectionC;	// LODs
+	sGeomInstance   *sectionD;	// roads
+	sGeomInstance   *sectionE;	// normal HD objects
+	sGeomInstance   *sectionF;	// shadows? no z-write?
+	sGeomInstance   *sectionG;	// lights
+	sGeomInstance   *sectionH;	// Transparent
 	sGeomInstance   *sectionEnd;
 	int16            numTriggeredObjects;
 	uint16           unk3;
@@ -183,7 +183,7 @@ struct sLevelChunk	// leeds name
 
 #ifdef VCS
 	int32 numX;
-	void *xs;	// 28 bytess
+	void *xs;	// 28 bytes
 #endif
 	int32 numTriggeredObjects;
 	TriggerInfo *triggeredObjects;

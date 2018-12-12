@@ -93,9 +93,12 @@ GetBackbuffer(Raster *raster)
 
 static void *colourfilterIII_PS;
 static void *colourfilterVC_PS;
+static void *colourfilterLeedsPS2_PS;
+static void *colourfilterLeedsPSP_PS;
 static void *colourfilterSAPS2_PS;
 static void *colourfilterSAPC_PS;
 static void *radiosityPS;
+static void *radiosityLeedsPS;
 static bool shadersInitialized;
 
 static void
@@ -105,12 +108,18 @@ CreateShaders(void)
 	colourfilterIII_PS = createPixelShader(colourfilterIII_PS_cso);
 #include "d3d_shaders/colourfilterVC_PS.inc"
 	colourfilterVC_PS = createPixelShader(colourfilterVC_PS_cso);
+#include "d3d_shaders/colourfilterLeedsPS2_PS.inc"
+	colourfilterLeedsPS2_PS = createPixelShader(colourfilterLeedsPS2_PS_cso);
+#include "d3d_shaders/colourfilterLeedsPSP_PS.inc"
+	colourfilterLeedsPSP_PS = createPixelShader(colourfilterLeedsPSP_PS_cso);
 #include "d3d_shaders/colourfilterSAPS2_PS.inc"
 	colourfilterSAPS2_PS = createPixelShader(colourfilterSAPS2_PS_cso);
 #include "d3d_shaders/colourfilterSAPC_PS.inc"
 	colourfilterSAPC_PS = createPixelShader(colourfilterSAPC_PS_cso);
 #include "d3d_shaders/radiosityPS.inc"
 	radiosityPS = createPixelShader(radiosityPS_cso);
+#include "d3d_shaders/radiosityLeedsPS.inc"
+	radiosityLeedsPS = createPixelShader(radiosityLeedsPS_cso);
 
 	shadersInitialized = true;
 }
@@ -127,6 +136,22 @@ static void
 RenderColourFilterVC(void)
 {
 	setPixelShader(colourfilterVC_PS);
+	rw::im2d::RenderIndexedPrimitive(rw::PRIMTYPETRILIST,
+		&verts, 4, &indices, 6);
+}
+
+static void
+RenderColourFilterLeedsPS2(void)
+{
+	setPixelShader(colourfilterLeedsPS2_PS);
+	rw::im2d::RenderIndexedPrimitive(rw::PRIMTYPETRILIST,
+		&verts, 4, &indices, 6);
+}
+
+static void
+RenderColourFilterLeedsPSP(void)
+{
+	setPixelShader(colourfilterLeedsPSP_PS);
 	rw::im2d::RenderIndexedPrimitive(rw::PRIMTYPETRILIST,
 		&verts, 4, &indices, 6);
 }
@@ -155,6 +180,14 @@ RenderRadiosity(void)
 		&verts, 4, &indices, 6);
 }
 
+static void
+RenderRadiosityLeeds(void)
+{
+	setPixelShader(radiosityLeedsPS);
+	rw::im2d::RenderIndexedPrimitive(rw::PRIMTYPETRILIST,
+		&verts, 4, &indices, 6);
+}
+
 void
 RenderPostFX(void)
 {
@@ -174,8 +207,8 @@ RenderPostFX(void)
 	float postfxvars[4];
 	d3ddevice->SetPixelShaderConstantF(0, (float*)&Timecycle::currentColours.postfx1, 1);
 	d3ddevice->SetPixelShaderConstantF(1, (float*)&Timecycle::currentColours.postfx2, 1);
-	postfxvars[0] = Timecycle::currentColours.intensityLimit/255.0f;
-	postfxvars[1] = 35/255.0f;	// intensity
+	postfxvars[0] = Timecycle::currentColours.radiosityLimit/255.0f;
+	postfxvars[1] = Timecycle::currentColours.radiosityIntensity/255.0f;
 	postfxvars[2] = 1.0f;		// render passes
 	d3ddevice->SetPixelShaderConstantF(2, (float*)postfxvars, 1);
 
@@ -212,8 +245,33 @@ RenderPostFX(void)
 	if(gRadiosity){
 		if(changedBackbuf)
 			GetBackbuffer(backBuffer);
-		RenderRadiosity();
+		switch(params.timecycle){
+		case GAME_SA:
+			RenderRadiosity();
+			changedBackbuf = 1;
+			break;
+		case GAME_VCS:
+			RenderRadiosityLeeds();
+			changedBackbuf = 1;
+			break;
+		}
 	}
+
+	switch(params.timecycle)
+	case GAME_LCS:
+	case GAME_VCS:
+		if(gColourFilter == PLATFORM_PS2){
+			if(changedBackbuf)
+				GetBackbuffer(backBuffer);
+			RenderColourFilterLeedsPS2();
+			changedBackbuf = 1;
+		}else if(gColourFilter == PLATFORM_PSP){
+			if(changedBackbuf)
+				GetBackbuffer(backBuffer);
+			RenderColourFilterLeedsPSP();
+			changedBackbuf = 1;
+		}
+
 
 	d3ddevice->SetPixelShader(nil);
 }

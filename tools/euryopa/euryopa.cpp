@@ -80,6 +80,9 @@ InitParams(void)
 	static const char *weathersLCS[] = {
 		"SUNNY", "CLOUDY", "RAINY", "FOGGY", "EXTRASUNNY", "RAINY", "EXTRACOLOURS", "SNOW"
 	};
+	static const char *weathersVCS[] = {
+		"SUNNY", "CLOUDY", "RAINY", "FOGGY", "EXTRASUNNY", "RAINY", "EXTRACOLOURS", "ULTRASUNNY"
+	};
 	static const char *weathersSA[] = {
 		"EXTRASUNNY LA", "SUNNY LA", "EXTRASUNNY SMOG LA", "SUNNY SMOG LA",
 		"CLOUDY LA", "SUNNY SF", "EXTRASUNNY SF", "CLOUDY SF", "RAINY SF", "FOGGY SF",
@@ -207,8 +210,31 @@ InitParams(void)
 
 		params.leedsPipe = 1;
 		gBuildingPipeSwitch = PLATFORM_PS2;
-		// can't do it correctly right now
-		gRenderPostFX = false;
+		break;
+	case GAME_VCS:
+		// TODO
+		params.map = GAME_VC;
+		params.initcampos.set(131.5f, -1674.2f, 59.8f);
+		params.initcamtarg.set(67.9f, -1542.0f, 26.3f);
+		params.objFlagset = GAME_VC;
+		params.numAreas = 19;
+		params.areaNames = areasVC;
+		params.timecycle = GAME_VCS;
+		params.numHours = 24;
+		params.numWeathers = 8;
+		params.extraColours = 7;
+		params.numExtraColours = 1;
+		params.weatherNames = weathersVCS;
+		params.water = GAME_VC;
+		params.waterTex = "waterclear256";
+		params.waterStart.set(-2048.0f - 400.0f, -2048.0f);
+		params.waterEnd.set(2048.0f - 400.0f, 2048.0f);
+		params.backfaceCull = false;
+		params.ps2AlphaTest = true;
+
+		params.leedsPipe = 1;
+		gBuildingPipeSwitch = PLATFORM_PS2;
+		TheCamera.m_LODmult = 1.5f;
 		break;
 	// more configs in the future (LCSPC, VCSPC, UG, ...)
 	}
@@ -231,6 +257,8 @@ FindVersion(void)
 	// This is wrong of course, but we'll use it as a hack
 	else if(f = fopen_ci("data/gta_lcs.dat", "r"), f)
 		gameversion = GAME_LCS;
+	else if(f = fopen_ci("data/gta_vcs.dat", "r"), f)
+		gameversion = GAME_VCS;
 	else if(f = fopen_ci("data/gta.dat", "r"), f)
 		gameversion = GAME_SA;
 	else{
@@ -342,6 +370,7 @@ LoadGame(void)
 //	SetCurrentDirectory("C:/Users/aap/games/lcsps2_test");
 //	SetCurrentDirectory("C:/Users/aap/games/lcs_test");
 //	SetCurrentDirectory("C:/Users/aap/games/lcspc");
+//	SetCurrentDirectory("C:/Users/aap/games/vcs_test");
 
 	FindVersion();
 	switch(gameversion){
@@ -349,6 +378,7 @@ LoadGame(void)
 	case GAME_VC: debug("found VC!\n"); break;
 	case GAME_SA: debug("found SA!\n"); break;
 	case GAME_LCS: debug("found LCS!\n"); break;
+	case GAME_VCS: debug("found VCS!\n"); break;
 	default: panic("unknown game");
 	}
 	switch(gameplatform){
@@ -394,6 +424,7 @@ LoadGame(void)
 	case GAME_VC: FileLoader::LoadLevel("data/gta_vc.dat"); break;
 	case GAME_SA: FileLoader::LoadLevel("data/gta.dat"); break;
 	case GAME_LCS: FileLoader::LoadLevel("data/gta_lcs.dat"); break;
+	case GAME_VCS: FileLoader::LoadLevel("data/gta_vcs.dat"); break;
 	}
 
 	InitSectors();
@@ -532,6 +563,7 @@ Draw(void)
 	DefinedState();
 	Scene.camera->clear(&clearcol, rw::Camera::CLEARIMAGE|rw::Camera::CLEARZ);
 	if(gRenderBackground){
+		SetRenderState(rw::ALPHATESTREF, 0);
 		SetRenderState(rw::CULLMODE, rw::CULLNONE);
 		rw::RGBA skytop, skybot;
 		rw::convColor(&skytop, &Timecycle::currentColours.skyTop);
@@ -543,6 +575,7 @@ Draw(void)
 				skybot.red, skybot.green, skybot.blue, 255);
 			Clouds::RenderHorizon();
 		}
+		SetRenderState(rw::ALPHATESTREF, params.alphaRef);
 	}
 
 	rw::SetRenderState(rw::FOGENABLE, gEnableFog);

@@ -172,6 +172,9 @@ attachPlugins(void)
 	rw::registerMatFXPlugin();
 	rw::registerUVAnimPlugin();
 	rw::ps2::registerADCPlugin();
+
+	gta::registerNodeNamePlugin();
+
 	return true;
 }
 
@@ -365,13 +368,6 @@ GetIsTimeInRange(uint8 h1, uint8 h2)
 		return currentHour >= h1 && currentHour < h2;
 }
 
-RslTexture*
-dumpTexNames(RslTexture *texture, void *pData)
-{
-	printf("%s\n", texture->name);
-	return texture;
-}
-
 // from storiesconv
 void
 AssignModelNames(void)
@@ -390,12 +386,32 @@ AssignModelNames(void)
 		if(mi->hashKey == 0)
 			name = "null";
 		else if(name == nil){
-			snprintf(tmpname, 50, "hash:%x", mi->hashKey);
+			snprintf(tmpname, 50, "hash_%x", mi->hashKey);
 			name = strdup(tmpname);
 			mi->field0 = 0;
 		}
 		mi->name = name;
 	}
+
+#define LODNAMES
+#ifdef LODNAMES
+	// assign LOD names that match HD hashes
+	CSimpleModelInfo *smi;
+	for(i = 0; i < CModelInfo::msNumModelInfos; i++){
+		smi = (CSimpleModelInfo*)CModelInfo::Get(i);
+		if(smi == nil ||
+		   smi->type != MODELINFO_SIMPLE && smi->type != MODELINFO_TIME ||
+		   (smi->flags & 0x10) == 0)
+			continue;
+		if(smi->relatedObject == nil)
+			continue;
+		if(strncmp(smi->name, "hash_", 5) == 0){
+			assert(smi->relatedObject);
+			smi->name = strdup(smi->relatedObject->name);
+			strncpy((char*)smi->name, "LOD", 3);
+		}
+	}
+#endif
 }
 
 void
@@ -430,6 +446,18 @@ LoadColStore(void)
 	int32 sz;
 	uint32 colIds = pStreaming->GetColOffset();
 	int i;
+#ifdef VCS
+	strcpy(pColPool->items[1].name, "airport");
+	strcpy(pColPool->items[2].name, "airportn");
+	strcpy(pColPool->items[4].name, "bridge");
+	strcpy(pColPool->items[8].name, "downtows");
+	strcpy(pColPool->items[12].name, "islandsf");
+	strcpy(pColPool->items[13].name, "mall");		// ??
+	strcpy(pColPool->items[14].name, "littleha");
+	strcpy(pColPool->items[16].name, "nbeach");
+	strcpy(pColPool->items[19].name, "oceandn");
+	strcpy(pColPool->items[20].name, "oceandrv");
+#endif
 	for(i = 0; i < pColPool->size; i++){
 		if(pColPool->flags[i] & 0x80)
 			continue;
@@ -449,6 +477,11 @@ void
 InitGame(void)
 {
 	Zfile *zfile;
+
+#ifdef VCS
+	ReadDefFile("F:/vcs_def.txt");
+#endif
+
 	sk::args.argv++;
 	sk::args.argc--;
 	if(sk::args.argc > 0){
@@ -458,7 +491,7 @@ InitGame(void)
 			sk::args.argc--;
 		}
 	}
-	eLevel levelToLoad = (eLevel)1;
+	eLevel levelToLoad = (eLevel)2;
 	if(sk::args.argc > 0){
 		const char *levelname = *sk::args.argv;
 		int i;
@@ -509,6 +542,7 @@ found:
 	pStreaming = resimg->streaming_Inst;
 
 	AssignModelNames();
+	InitModelInfoExt();
 
 #ifdef LCS
 	gCdImage = fopen("MODELS\\GTA3PS2.IMG", "rb");
@@ -523,6 +557,8 @@ found:
 	AllocateStreamingBufer();
 
 	LoadColStore();
+//	DumpCollisions();
+//exit(0);
 
 //XX	openLogFile("C:/ipl_insts.txt");
 //XX	dumpIPLBoundingSpheres();
@@ -530,6 +566,7 @@ found:
 
 //XX	static char tmp[100];
 //XX	sprintf(tmp, "C:/world_insts_%d.txt", levelToLoad);
+//XX	sprintf(tmp, "C:/tmp.txt", levelToLoad);
 //XX	openLogFile(tmp);
 	LoadLevel(levelToLoad);
 	int i;
@@ -542,7 +579,6 @@ found:
 	for(i = 0; i < gLevel->chunk->numAreas; i++)
 		LoadArea(i);
 #endif
-//XX	closeLogFile();
 
 	for(i = 0; i < gLevel->numWorldSectors; i++)
 		LoadSectorInsts(&gLevel->sectors[i]);
@@ -553,6 +589,10 @@ found:
 	EntityExt::selection.init();
 
 	LinkInstances();
+
+//	DumpModels();
+
+//XX	closeLogFile();
 
 	printf("load done\n");
 }
@@ -926,9 +966,13 @@ Draw(void)
 //		renderSector(worldSectors[curSectX][curSectY]);
 		if(currentArea >= 0)
 			RenderSector(&gLevel->sectors[gLevel->chunk->interiors[currentArea].sectorId]);
-		else
+		else{
+			int ix, iy;
+			GetSectorForPosition(TheCamera.m_position.x, TheCamera.m_position.y, &ix, &iy);
+//			RenderSector(worldSectors[ix][iy]);
 			for(i = 0; i < gLevel->numWorldSectors; i++)
 				RenderSector(&gLevel->sectors[i]);
+		}
 	}
 
 	DefinedState();
@@ -1003,10 +1047,10 @@ AppEventHandler(sk::Event e, void *param)
 	switch(e){
 	case INITIALIZE:
 
-//		AllocConsole();
-//		freopen("CONIN$", "r", stdin);
-//		freopen("CONOUT$", "w", stdout);
-//		freopen("CONOUT$", "w", stderr);
+	//	AllocConsole();
+	//	freopen("CONIN$", "r", stdin);
+	//	freopen("CONOUT$", "w", stdout);
+	//	freopen("CONOUT$", "w", stderr);
 
 		Init();
 		plAttachInput();

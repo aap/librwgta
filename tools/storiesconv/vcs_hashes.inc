@@ -510,12 +510,15 @@
 	{ 0xa7a1a765, "pm_stallbase" },
 	{ 0x723229fb, "pm_lightramp" },
 	{ 0x4579aaab, "pm_tie_light" },
+	// VC names with different prefix
 	{ 0xa2d1499b, "pm_astagelight1" },
 	{ 0x3bd81821, "pm_astagelight2" },
 	{ 0xe36b3309, "pm_bcyclorama1" },
 	{ 0xf64b1460, "pm_gatesopen" },
 	{ 0x2a091de7, "pm_gatesclosed" },
 	{ 0x6b7abba7, "pm_gobo1" },
+	{ 0x052B6A1F, "pm_prop_group3" },
+	{ 0x9A82EC33, "ed_flatbed" },
 
 	{ 0xcdd87688, "pm_beacon_hot" },
 	{ 0x17ac99c3, "pm_majestic_hot" },

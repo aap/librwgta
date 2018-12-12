@@ -323,6 +323,16 @@ uiRendering(void)
 		ImGui::RadioButton("PC/Xbox##PCPOSTFX", &gColourFilter, PLATFORM_PC); ImGui::SameLine();
 		ImGui::Checkbox("Radiosity", &gRadiosity);
 	}
+	if(params.timecycle == GAME_LCS || params.timecycle == GAME_VCS){
+		ImGui::Text("Colour filter"); ImGui::SameLine();
+		ImGui::RadioButton("None##NOPOSTFX", &gColourFilter, 0); ImGui::SameLine();
+		ImGui::RadioButton("PS2##PS2POSTFX", &gColourFilter, PLATFORM_PS2); ImGui::SameLine();
+		ImGui::RadioButton("PSP##PCPOSTFX", &gColourFilter, PLATFORM_PSP);
+		if(params.timecycle == GAME_VCS){
+			 ImGui::SameLine();
+			ImGui::Checkbox("Radiosity", &gRadiosity);
+		}
+	}
 	if(params.daynightPipe){
 		ImGui::Text("Building Pipe"); ImGui::SameLine();
 		ImGui::RadioButton("PS2##PS2BUILD", &gBuildingPipeSwitch, PLATFORM_PS2); ImGui::SameLine();

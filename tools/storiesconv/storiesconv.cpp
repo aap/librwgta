@@ -169,7 +169,7 @@ LoadElementGroup(uint8 *data)
 	if(eg->object.type != 2)
 		return nil;
 	RslElementGroupForAllElements(eg, makeTextures, NULL);
-RslElementGroupForAllElements(eg, dumpElementCB, nil);
+	//RslElementGroupForAllElements(eg, dumpElementCB, nil);
 //	dumpNodeCB((RslNode*)eg->object.parent, NULL);
 	return convertClump(eg);
 }
@@ -475,6 +475,7 @@ assignModelNames(void)
 	const char *name;
 	char tmpname[50];
 	CBaseModelInfo *mi;
+	CSimpleModelInfo *smi;
 	for(i = 0; i < gamedata->numModelInfos; i++){
 		mi = gamedata->modelInfoPtrs[i];
 		if(mi == nil)
@@ -484,10 +485,26 @@ assignModelNames(void)
 		if(mi->hashKey == 0)
 			name = "null";
 		else if(name == nil){
-			snprintf(tmpname, 50, "hash:%x", mi->hashKey);
+			snprintf(tmpname, 50, "hash_%x", mi->hashKey);
 			name = strdup(tmpname);
 		}
 		mi->name = name;
+	}
+
+	// assign LOD names that match HD hashes
+	for(i = 0; i < gamedata->numModelInfos; i++){
+		smi = (CSimpleModelInfo*)gamedata->modelInfoPtrs[i];
+		if(smi == nil ||
+		   smi->type != MODELINFO_SIMPLE && smi->type != MODELINFO_TIME ||
+		   (smi->flags & 0x10) == 0)
+			continue;
+		if(smi->relatedObject == nil)
+			continue;
+		if(strncmp(smi->name, "hash_", 5) == 0){
+			assert(smi->relatedObject);
+			smi->name = strdup(smi->relatedObject->name);
+			strncpy((char*)smi->name, "LOD", 3);
+		}
 	}
 }
 
@@ -725,7 +742,8 @@ dumpInstances(CPool_entity *pool)
 		float sy = length(m.up);
 		float sz = length(m.at);
 		Quat q = RoundQuat(conj(m.getRotation()));
-		printf("%d %s %d, %f %f %f, %g %g %g, %g %g %g %g\n", e->modelIndex, mi->name, e->area,
+if(e->area == 0xAA) e->area = 0;
+		printf("%d, %s, %d, %f, %f, %f, %g, %g, %g, %g, %g, %g, %g\n", e->modelIndex, mi->name, e->area,
 			m.pos.x, m.pos.y, m.pos.z,
 			sx, sy, sz,
 			q.x, q.y, q.z, q.w);
@@ -1016,7 +1034,7 @@ extractResource(void)
 //	writeAllModelInfo();
 //	dump2dfx();
 
-	dumpTxdStore();
+//	dumpTxdStore();
 
 //	dumpVehicleData();
 //	extractMarkers();
@@ -1024,7 +1042,9 @@ extractResource(void)
 
 //	printf("inst\n");
 //	dumpInstances(gamedata->buildingPool);
+//	printf("\n");
 //	dumpInstances(gamedata->treadablePool);
+//	printf("\n");
 //	dumpInstances(gamedata->dummyPool);
 //	printf("end\n");
 
@@ -1100,9 +1120,9 @@ dumpSector(Sector *sector)
 	CVector max = { -10000000.0f, -10000000.0f, -10000000.0f };
 	sGeomInstance *inst;
 
-	printf("%x %s %p %p %p %p %p %p %p %p\n", sector->unk1, arg1,
-		sector->sectionA, sector->sectionB, sector->sectionC, sector->sectionD,
-		sector->sectionE, sector->sectionF, sector->sectionG, sector->sectionEnd);
+//	printf("%x %s %p %p %p %p %p %p %p %p\n", sector->unk1, arg1,
+//		sector->sectionA, sector->sectionB, sector->sectionC, sector->sectionD,
+//		sector->sectionE, sector->sectionF, sector->sectionG, sector->sectionEnd);
 	fflush(stdout);
 	// what is this?
 //	if((sector->unk1 & 2) == 0)	// this is wrong

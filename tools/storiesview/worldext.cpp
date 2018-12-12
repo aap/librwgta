@@ -153,3 +153,46 @@ EntityExt::JumpTo(void)
 	TheCamera.setTarget(center);
 	TheCamera.setDistanceFromTarget(TheCamera.minDistToSphere(sph->radius));
 }
+
+
+
+ModelInfoExt *pModelInfoExts;
+
+static void
+linkEntity(CEntity *e)
+{
+	ModelInfoExt *mie = GetModelInfoExt(e->modelIndex);
+	mie->inst = e;
+}
+
+void
+InitModelInfoExt(void)
+{
+	pModelInfoExts = rwNewT(ModelInfoExt, CModelInfo::msNumModelInfos, 0);
+	memset(pModelInfoExts, 0, sizeof(ModelInfoExt)*CModelInfo::msNumModelInfos);
+
+	CEntity *e;
+	int i, n;
+
+	n = pBuildingPool->GetSize();
+	for(i = 0; i < n; i++){
+		e = pBuildingPool->GetSlot(i);
+		if(e) linkEntity(e);
+	}
+	n = pTreadablePool->GetSize();
+	for(i = 0; i < n; i++){
+		e = pTreadablePool->GetSlot(i);
+		if(e) linkEntity(e);
+	}
+	n = pDummyPool->GetSize();
+	for(i = 0; i < n; i++){
+		e = pDummyPool->GetSlot(i);
+		if(e) linkEntity(e);
+	}
+}
+
+ModelInfoExt*
+GetModelInfoExt(int id)
+{
+	return &pModelInfoExts[id];
+}

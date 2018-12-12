@@ -104,6 +104,7 @@ rw::Raster *convertRasterPS2(RslRasterPS2 *ras);
 
 
 void LoadCollisionFile(int id, uint8 *data);
+int32 WriteCollisionFile(CColModel *colmodel, uint8 **bufp);
 void RenderColModelWire(CColModel *col, rw::Matrix *xform, bool onlyBounds);
 void RenderColBoxSolid(CColModel *col, rw::Matrix *xform, rw::RGBA c);
 void RenderColMeshSolid(CColModel *col, rw::Matrix *xform, rw::RGBA c);
@@ -136,6 +137,7 @@ struct BuildingExt
 		Model *next;
 	};
 	Model *resources;
+	rw::Matrix matrix;
 
 	Model *GetResourceInfo(int id);
 
@@ -180,6 +182,8 @@ struct LevelExt
 };
 extern LevelExt *gLevel;
 extern SectorExt *worldSectors[NUMSECTORSX][NUMSECTORSY];
+void GetSectorForPosition(float x, float y, int *ix, int *iy);
+Resource *GetResource(int id);
 void LoadLevel(eLevel lev);
 void LoadSector(int n, int interior);
 void LoadArea(int n);
@@ -211,6 +215,13 @@ struct EntityExt
 	void JumpTo(void);
 };
 
+struct ModelInfoExt
+{
+	CEntity *inst;	// a random instance
+};
+extern ModelInfoExt *pModelInfoExts;
+void InitModelInfoExt(void);
+ModelInfoExt *GetModelInfoExt(int id);
 
 typedef CPool<CBuilding, CBuilding> BuildingPool;
 typedef CPool<CTreadable, CTreadable> TreadablePool;
@@ -304,3 +315,12 @@ void dumpInstBS(int level, sGeomInstance *inst);
 CEntity *GetEntityById(int id);
 void LinkInstances(void);
 void WriteLinks(void);
+
+void DumpCollisions(void);
+void DumpModels(void);
+
+enum {
+	TexName = 1,
+};
+void ReadDefFile(char *filename);
+char *FindNameDef(int type, char *name);

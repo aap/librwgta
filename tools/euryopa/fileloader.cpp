@@ -612,7 +612,9 @@ LoadLevel(const char *filename)
 		if(strncmp(line, "EXIT", 4) == 0)
 			break;
 		else if(strncmp(line, "IMAGEPATH", 9) == 0){
-			debug("IMAGEPATH\n");
+			strcpy(path, line+10);
+			strcat(path, "/");
+			rw::Image::setSearchPath(path);
 		}else if(strncmp(line, "TEXDICTION", 10) == 0){
 			rw::TexDictionary *txd;
 			txd = LoadTexDictionary(line+11);

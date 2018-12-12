@@ -82,23 +82,23 @@ struct CBox
 struct CColSphere
 {
 	CSphere sph;
-	uint8 mat;
-	uint8 flag;
+	uint8 surface;
+	uint8 piece;
 	int32 pad[3];
 };
 
 struct CColBox
 {
 	CBox box;
-	uint8 mat;
-	uint8 flag;
+	uint8 surface;
+	uint8 piece;
 	int32 pad[3];
 };
 
 struct CColTriangle
 {
 	int16 a, b, c;
-	uint8 mat;
+	uint8 surface;
 };
 #ifndef RW_PS2
 static_assert(sizeof(CColTriangle) == 8, "CColTriangle: error");
