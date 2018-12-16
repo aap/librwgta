@@ -141,7 +141,7 @@ CClouds::Render(void)
 		for(i = cloudtype; i < 12; i += 3){
 			rw::SetRenderStatePtr(rw::TEXTURERASTER, gpCloudTex[cloudtype]->raster);
 			rw::V3d pos = { 800.0f*LowCloudsX[i], 800.0f*LowCloudsY[i], 60.0f*LowCloudsZ[i] };
-			rw::V3d worldpos = { campos.x + pos.x, campos.y + pos.y, pos.z };
+			rw::V3d worldpos = { campos.x + pos.x, campos.y + pos.y, 40.0f + pos.z };
 			if(CSprite::CalcScreenCoors(worldpos, &screenpos, &szx, &szy, false))
 				CSprite::RenderBufferedOneXLUSprite_Rotate_Dimension(screenpos.x, screenpos.y, screenpos.z,
 					szx*320.0f, szy*40.0f, r, g, b, 255, 1.0f/screenpos.z, ms_cameraRoll, 255);
@@ -187,8 +187,8 @@ CClouds::Render(void)
 		for(i = 0; i < 37; i++){
 			rw::V3d pos = { 2.0f*CoorsOffsetX[i], 2.0f*CoorsOffsetY[i], 40.0f*CoorsOffsetZ[i] + 40.0f };
 			rw::V3d worldpos = {
-				campos.x*rot_cos + campos.y*rot_sin + pos.x,
-				campos.x*rot_sin + campos.y*rot_cos + pos.y,
+				pos.x*rot_cos + pos.y*rot_sin + campos.x,
+				pos.x*rot_sin - pos.y*rot_cos + campos.y,
 				pos.z };
 
 				if(CSprite::CalcScreenCoors(worldpos, &screenpos, &szx, &szy, false)){

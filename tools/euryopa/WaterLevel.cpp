@@ -269,9 +269,9 @@ RenderWaterpro(void)
 	rw::RGBA color = { 255, 255, 255, 255 };
 	Timecycle::ColourSet *cs = &Timecycle::currentColours;
 	if(params.water == GAME_III){
-		color.red = (cs->amb.red + cs->dir.red)*255.0f;
-		color.green = (cs->amb.green + cs->dir.green)*255.0f;
-		color.blue = (cs->amb.blue + cs->dir.blue)*255.0f;
+		color.red = clamp(cs->amb.red + cs->dir.red, 0.0f, 1.0f)*255.0f;
+		color.green = clamp(cs->amb.green + cs->dir.green, 0.0f, 1.0f)*255.0f;
+		color.blue = clamp(cs->amb.blue + cs->dir.blue, 0.0f, 1.0f)*255.0f;
 	}else
 		rw::convColor(&color, &cs->water);
 	TEXTURE_ADDU = 0.0f;

@@ -39,7 +39,8 @@ void addToLogWindow(const char *fmt, va_list args);
 char *getPath(const char *path);
 FILE *fopen_ci(const char *path, const char *mode);
 bool doesFileExist(const char *path);
-float clampFloat(float f, float min, float max);
+inline float clamp(float v, float min, float max){ return v<min ? min : v>max ? max : v; }
+inline float sq(float x){ return x*x; }
 
 void plCapturePad(int arg);
 void plUpdatePad(CControllerState *state);
@@ -124,7 +125,8 @@ struct CRGBA
 #include "timecycle.h"
 #include "Sprite.h"
 
-namespace Zones {
+namespace Zones
+{
 void CreateZone(const char *name, int type, CBox box, int level, const char *text);
 void Render(void);
 void AddAttribZone(CBox box, int flags, int wantedLevelDrop);
@@ -161,6 +163,8 @@ inline bool isIII(void) { return gameversion == GAME_III; }
 inline bool isVC(void) { return gameversion == GAME_VC; }
 inline bool isSA(void) { return gameversion == GAME_SA; }
 
+struct WeatherInfo;
+
 struct Params
 {
 	int map;
@@ -176,7 +180,7 @@ struct Params
 	int numWeathers;
 	int extraColours;	// weather ID where extra colours start
 	int numExtraColours;	// number of extra colour blocks
-	const char **weatherNames;
+	WeatherInfo *weatherInfo;
 	int background;
 	int daynightPipe;
 
@@ -200,10 +204,31 @@ extern Params params;
 extern int gameTxdSlot;
 
 extern int currentHour, currentMinute;
-extern int oldWeather, newWeather;
-extern float weatherInterpolation;
 extern int extraColours;
 extern int currentArea;
+
+struct WeatherInfo
+{
+	char *name;
+	int flags;
+};
+
+namespace Weather
+{
+enum {
+	Sunny = 0x01,
+	Foggy = 0x02,
+	Extrasunny = 0x04,
+};
+
+extern int oldWeather, newWeather;
+extern float interpolation;
+extern float cloudCoverage;
+extern float foggyness;
+extern float extraSunnyness;
+
+void Update(void);
+};
 
 // TODO, this is a stub
 struct GameFile
@@ -452,7 +477,8 @@ void LoadIpl(int i);
 
 // File Loader
 
-namespace FileLoader {
+namespace FileLoader
+{
 
 extern GameFile *currentFile;
 
@@ -547,10 +573,16 @@ namespace WaterLevel
 
 namespace Clouds
 {
+	extern float CloudRotation;
+
+	void Init(void);
 	// III and VC
 	void RenderBackground(int16 topred, int16 topgreen, int16 topblue,
 		int16 botred, int16 botgreen, int16 botblue, int16 alpha);
 	void RenderHorizon(void);
+
+	void RenderLowClouds(void);
+	void RenderFluffyClouds(void);
 	// SA
 	void RenderSkyPolys(void);
 }

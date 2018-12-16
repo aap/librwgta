@@ -3,6 +3,10 @@
 namespace Clouds
 {
 
+rw::Texture *gpCloudTex[5];
+float CloudRotation;
+float IndividualRotation;
+
 #define SMALLSTRIPHEIGHT 4.0f
 #define HORIZSTRIPHEIGHT 32.0f	// Vice City, actually 48 in III
 
@@ -12,6 +16,25 @@ static CRGBA ms_colourTop;
 static CRGBA ms_colourBottom;
 // Vice City
 static CRGBA ms_colourBkGrd;
+
+void
+Init(void)
+{
+	TxdPush();
+	int ptxd = FindTxdSlot("particle");
+	TxdMakeCurrent(ptxd);
+	gpCloudTex[0] = rw::Texture::read("cloud1", nil);
+	gpCloudTex[1] = rw::Texture::read("cloud2", nil);
+	gpCloudTex[2] = rw::Texture::read("cloud3", nil);
+	if(params.timecycle == GAME_SA){
+		gpCloudTex[1] = gpCloudTex[0];
+		gpCloudTex[2] = gpCloudTex[0];
+	}
+	gpCloudTex[3] = rw::Texture::read("cloudhilit", nil);
+	gpCloudTex[4] = rw::Texture::read("cloudmasked", nil);
+	TxdPop();
+
+}
 
 bool
 UseDarkBackground(void)
@@ -32,6 +55,7 @@ RenderBackground(int16 topred, int16 topgreen, int16 topblue,
 //	ms_cameraRoll = acos(c);
 //	if(mat->right.z < 0.0f)
 //		ms_cameraRoll = -ms_cameraRoll;
+	ms_cameraRoll= 0.0f;
 
 	w = sk::globals.width;
 	h = sk::globals.height;
@@ -163,6 +187,152 @@ RenderHorizon(void)
 		ms_colourBkGrd, ms_colourBkGrd, ms_colourBkGrd, ms_colourBkGrd);
 }
 
+void
+RenderLowClouds(void)
+{
+	int i;
+	float intensity;
+	float szx, szy;
+	rw::V3d screenpos;
+
+	rw::SetRenderState(rw::ZWRITEENABLE, 0);
+	rw::SetRenderState(rw::ZTESTENABLE, 0);
+	rw::SetRenderState(rw::VERTEXALPHA, 1);
+	rw::SetRenderState(rw::SRCBLEND, rw::BLENDONE);
+	rw::SetRenderState(rw::DESTBLEND, rw::BLENDONE);
+	Sprite::InitSpriteBuffer();
+
+	rw::V3d campos = TheCamera.m_position;
+
+	static float LowCloudsX[12] = { 1.0f, 0.7f, 0.0f, -0.7f, -1.0f, -0.7f,
+		0.0f, 0.7f, 0.8f, -0.8f, 0.4f, -0.4f };
+	static float LowCloudsY[12] = { 0.0f, -0.7f, -1.0f, -0.7f, 0.0f, 0.7f,
+		1.0f, 0.7f, 0.4f, 0.4f, -0.8f, -0.8f };
+	static float LowCloudsZ[12] = { 0.0f, 1.0f, 0.5f, 0.0f, 1.0f, 0.3f,
+		0.9f, 0.4f, 1.3f, 1.4f, 1.2f, 1.7f };
+	intensity = 1.0f - max(max(Weather::foggyness,  Weather::cloudCoverage), Weather::extraSunnyness);
+	int r = Timecycle::currentColours.lowCloud.red*255 * intensity;
+	int g = Timecycle::currentColours.lowCloud.green*255 * intensity;
+	int b = Timecycle::currentColours.lowCloud.blue*255 * intensity;
+	for(int cloudtype = 0; cloudtype < 3; cloudtype++){
+		for(i = cloudtype; i < 12; i += 3){
+			rw::SetRenderStatePtr(rw::TEXTURERASTER, gpCloudTex[cloudtype]->raster);
+			rw::V3d pos = { 800.0f*LowCloudsX[i], 800.0f*LowCloudsY[i], 60.0f*LowCloudsZ[i] + 40.0f };
+			rw::V3d worldpos = { campos.x + pos.x, campos.y + pos.y, pos.z };
+			if(Sprite::CalcScreenCoors(worldpos, &screenpos, &szx, &szy, false))
+				Sprite::RenderBufferedOneXLUSprite_Rotate_Dimension(screenpos.x, screenpos.y, screenpos.z,
+					szx*320.0f, szy*40.0f, r, g, b, 255, 1.0f/screenpos.z, ms_cameraRoll, 255);
+		}
+		Sprite::FlushSpriteBuffer();
+	}
+
+	rw::SetRenderState(rw::VERTEXALPHA, 0);
+	rw::SetRenderState(rw::ZWRITEENABLE, 1);
+	rw::SetRenderState(rw::ZTESTENABLE, 1);
+	rw::SetRenderState(rw::SRCBLEND, rw::BLENDSRCALPHA);
+	rw::SetRenderState(rw::DESTBLEND, rw::BLENDINVSRCALPHA);
+}
+
+void
+RenderFluffyClouds(void)
+{
+	int i;
+	float szx, szy;
+	rw::V3d screenpos;
+
+	int fluffyalpha = 160 * (1.0f - max(Weather::foggyness, Weather::extraSunnyness));
+	if(fluffyalpha == 0)
+		return;
+
+	rw::SetRenderState(rw::ZWRITEENABLE, 0);
+	rw::SetRenderState(rw::ZTESTENABLE, 0);
+	rw::SetRenderState(rw::VERTEXALPHA, 1);
+	rw::SetRenderState(rw::SRCBLEND, rw::BLENDONE);
+	rw::SetRenderState(rw::DESTBLEND, rw::BLENDONE);
+	Sprite::InitSpriteBuffer();
+
+	rw::V3d campos = TheCamera.m_position;
+
+	float rot_sin = sin(CloudRotation);
+	float rot_cos = cos(CloudRotation);
+
+	static float CoorsOffsetX[37] = {
+		0.0f, 60.0f, 72.0f, 48.0f, 21.0f, 12.0f,
+		9.0f, -3.0f, -8.4f, -18.0f, -15.0f, -36.0f,
+		-40.0f, -48.0f, -60.0f, -24.0f, 100.0f, 100.0f,
+		100.0f, 100.0f, 100.0f, 100.0f, 100.0f, 100.0f,
+		100.0f, 100.0f, -30.0f, -20.0f, 10.0f, 30.0f,
+		0.0f, -100.0f, -100.0f, -100.0f, -100.0f, -100.0f, -100.0f
+	};
+	static float CoorsOffsetY[37] = {
+		100.0f, 100.0f, 100.0f, 100.0f, 100.0f, 100.0f,
+		100.0f, 100.0f, 100.0f, 100.0f, 100.0f, 100.0f,
+		100.0f, 100.0f, 100.0f, 100.0f, -30.0f, 10.0f,
+		-25.0f, -5.0f, 28.0f, -10.0f, 10.0f, 0.0f,
+		15.0f, 40.0f, -100.0f, -100.0f, -100.0f, -100.0f,
+		-100.0f, -40.0f, -20.0f, 0.0f, 10.0f, 30.0f, 35.0f
+	};
+	static float CoorsOffsetZ[37] = {
+		2.0f, 1.0f, 0.0f, 0.3f, 0.7f, 1.4f,
+		1.7f, 0.24f, 0.7f, 1.3f, 1.6f, 1.0f,
+		1.2f, 0.3f, 0.7f, 1.4f, 0.0f, 0.1f,
+		0.5f, 0.4f, 0.55f, 0.75f, 1.0f, 1.4f,
+		1.7f, 2.0f, 2.0f, 2.3f, 1.9f, 2.4f,
+		2.0f, 2.0f, 1.5f, 1.2f, 1.7f, 1.5f, 2.1f
+	};
+	static bool bCloudOnScreen[37];
+	float hilight;
+
+	rw::SetRenderState(rw::SRCBLEND, rw::BLENDSRCALPHA);
+	rw::SetRenderState(rw::DESTBLEND, rw::BLENDINVSRCALPHA);
+	rw::SetRenderStatePtr(rw::TEXTURERASTER, gpCloudTex[4]->raster);
+
+	for(i = 0; i < 37; i++){
+		rw::V3d pos = { 2.0f*CoorsOffsetX[i], 2.0f*CoorsOffsetY[i], 40.0f*CoorsOffsetZ[i] + 40.0f };
+		rw::V3d worldpos = {
+			pos.x*rot_cos + pos.y*rot_sin + campos.x,
+			pos.x*rot_sin - pos.y*rot_cos + campos.y,
+			pos.z };
+
+			if(Sprite::CalcScreenCoors(worldpos, &screenpos, &szx, &szy, false)){
+//				float sundist = sqrt(sq(screenpos.x-CCoronas::SunScreenX) + sq(screenpos.y-CCoronas::SunScreenY));
+				int tr = Timecycle::currentColours.fluffyCloudTop.red*255;
+				int tg = Timecycle::currentColours.fluffyCloudTop.green*255;
+				int tb = Timecycle::currentColours.fluffyCloudTop.blue*255;
+				int br = Timecycle::currentColours.fluffyCloudBottom.red*255;
+				int bg = Timecycle::currentColours.fluffyCloudBottom.green*255;
+				int bb = Timecycle::currentColours.fluffyCloudBottom.blue*255;
+//				if(sundist < sk::globals.width/2){
+//					hilight = (1.0f - coverage) * (1.0f - sundist/(sk::globals.width/2));
+//					tr = tr*(1.0f-hilight) + 255*hilight;
+//					tg = tg*(1.0f-hilight) + 190*hilight;
+//					tb = tb*(1.0f-hilight) + 190*hilight;
+//					br = br*(1.0f-hilight) + 255*hilight;
+//					bg = bg*(1.0f-hilight) + 190*hilight;
+//					bb = bb*(1.0f-hilight) + 190*hilight;
+//					if(sundist < sk::globals.width/10)
+//						CCoronas::SunBlockedByClouds = true;
+//				}else
+					hilight = 0.0f;
+				Sprite::RenderBufferedOneXLUSprite_Rotate_2Colours(screenpos.x, screenpos.y, screenpos.z,
+					szx*55.0f, szy*55.0f,
+					tr, tg, tb, br, bg, bb, 0.0f, -1.0f,
+					1.0f/screenpos.z,
+					IndividualRotation * 0.000095825199f + ms_cameraRoll,
+					fluffyalpha);
+				bCloudOnScreen[i] = true;
+			}else
+				bCloudOnScreen[i] = false;
+	}
+	Sprite::FlushSpriteBuffer();
+
+
+	rw::SetRenderState(rw::VERTEXALPHA, 0);
+	rw::SetRenderState(rw::ZWRITEENABLE, 1);
+	rw::SetRenderState(rw::ZTESTENABLE, 1);
+	rw::SetRenderState(rw::SRCBLEND, rw::BLENDSRCALPHA);
+	rw::SetRenderState(rw::DESTBLEND, rw::BLENDINVSRCALPHA);
+}
 
 #define TEMPBUFFERVERTSIZE 40
 #define TEMPBUFFERINDEXSIZE 60
@@ -251,7 +421,7 @@ RenderSkyPolys(void)
 	at = normalize(at);
 	rw::V3d right = { at.y*1.4f, -at.x*1.4f, 0.0f };
 	float f = (pos.z - 25.0f)/80.0f;	// below horizon fog
-	f = clampFloat(f, 0.0f, 1.0f);
+	f = clamp(f, 0.0f, 1.0f);
 
 	rw::RGBA skytop, skybot, belowhoriz;
 	rw::convColor(&skytop, &Timecycle::currentColours.skyTop);

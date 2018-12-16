@@ -9,8 +9,6 @@ int gameTxdSlot;
 
 int currentHour = 12;
 int currentMinute = 0;
-int oldWeather, newWeather;
-float weatherInterpolation;
 int extraColours = -1;
 int currentArea;
 
@@ -62,6 +60,67 @@ IsHourInRange(int h1, int h2)
 		return currentHour >= h1 && currentHour < h2;
 }
 
+static WeatherInfo weathersIII[] = {
+	{ "SUNNY", Weather::Sunny },
+	{ "CLOUDY", 0 },
+	{ "RAINY", 0 },
+	{ "FOGGY", Weather::Foggy }
+};
+static WeatherInfo weathersVC[] = {
+	{ "SUNNY", Weather::Sunny },
+	{ "CLOUDY", 0 },
+	{ "RAINY", 0 },
+	{ "FOGGY", Weather::Foggy },
+	{ "EXTRASUNNY", Weather::Sunny | Weather::Extrasunny },
+	{ "HURRICANE", 0 },
+	{ "EXTRACOLOURS", 0 }
+};
+static WeatherInfo weathersLCS[] = {
+	{ "SUNNY", Weather::Sunny },
+	{ "CLOUDY", 0 },
+	{ "RAINY", 0 },
+	{ "FOGGY", Weather::Foggy },
+	{ "EXTRASUNNY", Weather::Sunny | Weather::Extrasunny },
+	{ "HURRICANE", 0 },
+	{ "EXTRACOLOURS", 0 },
+	{ "SNOW", 0 }
+};
+static WeatherInfo weathersVCS[] = {
+	{ "SUNNY", Weather::Sunny },
+	{ "CLOUDY", 0 },
+	{ "RAINY", 0 },
+	{ "FOGGY", Weather::Foggy },
+	{ "EXTRASUNNY", Weather::Sunny | Weather::Extrasunny },
+	{ "HURRICANE", 0 },
+	{ "EXTRACOLOURS", 0 },
+	{ "ULTRASUNNY", Weather::Sunny | Weather::Extrasunny }
+};
+static WeatherInfo weathersSA[] = {
+	{ "EXTRASUNNY LA", Weather::Sunny | Weather::Extrasunny },
+	{ "SUNNY LA", Weather::Sunny },
+	{ "EXTRASUNNY SMOG LA", Weather::Sunny | Weather::Extrasunny },
+	{ "SUNNY SMOG LA", Weather::Sunny },
+	{ "CLOUDY LA", 0 },
+	{ "SUNNY SF", Weather::Sunny },
+	{ "EXTRASUNNY SF", Weather::Sunny | Weather::Extrasunny },
+	{ "CLOUDY SF", 0 },
+	{ "RAINY SF", 0 },
+	{ "FOGGY SF", Weather::Foggy },
+	{ "SUNNY VEGAS", Weather::Sunny },
+	{ "EXTRASUNNY VEGAS", Weather::Sunny | Weather::Extrasunny },
+	{ "CLOUDY VEGAS", 0 },
+	{ "EXTRASUNNY COUNTRYSIDE", Weather::Sunny | Weather::Extrasunny },
+	{ "SUNNY COUNTRYSIDE", Weather::Sunny },
+	{ "CLOUDY COUNTRYSIDE", 0 },
+	{ "RAINY COUNTRYSIDE", 0 },
+	{ "EXTRASUNNY DESERT", Weather::Sunny | Weather::Extrasunny },
+	{ "SUNNY DESERT", Weather::Sunny },
+	{ "SANDSTORM DESERT", Weather::Foggy },
+	{ "UNDERWATER", 0 },
+	{ "EXTRACOLOURS 1", 0 },
+	{ "EXTRACOLOURS 2", 0 }
+};
+
 void
 InitParams(void)
 {
@@ -70,25 +129,6 @@ InitParams(void)
 		"Lawyer", "Coffee shop", "Concert hall", "Studio", "Rifle range",
 		"Biker bar", "Police station", "Everywhere", "Dirt", "Blood", "Oval ring",
 		"Malibu", "Print works"
-	};
-	static const char *weathersIII[] = {
-		"SUNNY", "CLOUDY", "RAINY", "FOGGY"
-	};
-	static const char *weathersVC[] = {
-		"SUNNY", "CLOUDY", "RAINY", "FOGGY", "EXTRASUNNY", "RAINY", "EXTRACOLOURS"
-	};
-	static const char *weathersLCS[] = {
-		"SUNNY", "CLOUDY", "RAINY", "FOGGY", "EXTRASUNNY", "RAINY", "EXTRACOLOURS", "SNOW"
-	};
-	static const char *weathersVCS[] = {
-		"SUNNY", "CLOUDY", "RAINY", "FOGGY", "EXTRASUNNY", "RAINY", "EXTRACOLOURS", "ULTRASUNNY"
-	};
-	static const char *weathersSA[] = {
-		"EXTRASUNNY LA", "SUNNY LA", "EXTRASUNNY SMOG LA", "SUNNY SMOG LA",
-		"CLOUDY LA", "SUNNY SF", "EXTRASUNNY SF", "CLOUDY SF", "RAINY SF", "FOGGY SF",
-		"SUNNY VEGAS", "EXTRASUNNY VEGAS", "CLOUDY VEGAS", "EXTRASUNNY COUNTRYSIDE",
-		"SUNNY COUNTRYSIDE", "CLOUDY COUNTRYSIDE", "RAINY COUNTRYSIDE", "EXTRASUNNY DESERT",
-		"SUNNY DESERT", "SANDSTORM DESERT", "UNDERWATER", "EXTRACOLOURS 1", "EXTRACOLOURS 2"
 	};
 
 	params.initcampos.set(1356.0f, -1107.0f, 96.0f);
@@ -107,7 +147,7 @@ InitParams(void)
 		params.timecycle = GAME_III;
 		params.numHours = 24;
 		params.numWeathers = 4;
-		params.weatherNames = weathersIII;
+		params.weatherInfo = weathersIII;
 		params.water = GAME_III;
 		params.waterTex = "water_old";
 		params.waterStart.set(-2048.0f, -2048.0f);
@@ -139,7 +179,7 @@ InitParams(void)
 		params.numWeathers = 7;
 		params.extraColours = 6;
 		params.numExtraColours = 1;
-		params.weatherNames = weathersVC;
+		params.weatherInfo = weathersVC;
 		params.water = GAME_VC;
 		params.waterTex = "waterclear256";
 		params.waterStart.set(-2048.0f - 400.0f, -2048.0f);
@@ -171,7 +211,7 @@ InitParams(void)
 		params.numWeathers = 23;
 		params.extraColours = 21;
 		params.numExtraColours = 2;
-		params.weatherNames = weathersSA;
+		params.weatherInfo = weathersSA;
 		params.background = GAME_SA;
 		params.daynightPipe = true;
 		params.water = GAME_SA;
@@ -200,7 +240,7 @@ InitParams(void)
 		params.numWeathers = 8;
 		params.extraColours = 6;
 		params.numExtraColours = 1;
-		params.weatherNames = weathersLCS;
+		params.weatherInfo = weathersLCS;
 		params.water = GAME_III;
 		params.waterTex = "waterclear256";
 		params.waterStart.set(-2048.0f, -2048.0f);
@@ -224,7 +264,7 @@ InitParams(void)
 		params.numWeathers = 8;
 		params.extraColours = 7;
 		params.numExtraColours = 1;
-		params.weatherNames = weathersVCS;
+		params.weatherInfo = weathersVCS;
 		params.water = GAME_VC;
 		params.waterTex = "waterclear256";
 		params.waterStart.set(-2048.0f - 400.0f, -2048.0f);
@@ -363,7 +403,7 @@ LoadGame(void)
 //	SetCurrentDirectory("C:/Users/aap/games/gtasa");
 //	SetCurrentDirectory("F://gtasa");
 //	SetCurrentDirectory("F://gta3_xbox");
-//	SetCurrentDirectory("F://gtavc_xbox");
+//	SetCurrentDirectory("F://gtavc_xbox");per
 //	SetCurrentDirectory("F://gtasa_pc");
 //	SetCurrentDirectory("E://");
 //	SetCurrentDirectory("C:\\Users\\aap\\games\\gta3d_latest");
@@ -410,6 +450,7 @@ LoadGame(void)
 	if(params.neoWorldPipe)
 		Timecycle::InitNeoWorldTweak();
 	WaterLevel::Initialise();
+	Clouds::Init();
 
 	AddColSlot("generic");
 	AddIplSlot("generic");
@@ -528,6 +569,7 @@ Draw(void)
 	ImGui_ImplRW_NewFrame(timeStep);
 	ImGuizmo::BeginFrame();
 
+	Weather::Update();
 	Timecycle::Update();
 	Timecycle::SetLights();
 
@@ -568,11 +610,15 @@ Draw(void)
 		rw::RGBA skytop, skybot;
 		rw::convColor(&skytop, &Timecycle::currentColours.skyTop);
 		rw::convColor(&skybot, &Timecycle::currentColours.skyBottom);
-		if(params.background == GAME_SA)
+		if(params.background == GAME_SA){
 			Clouds::RenderSkyPolys();
-		else{
+			Clouds::RenderLowClouds();
+		}else{
 			Clouds::RenderBackground(skytop.red, skytop.green, skytop.blue,
 				skybot.red, skybot.green, skybot.blue, 255);
+			Clouds::RenderLowClouds();
+			if(params.timecycle != GAME_VCS)
+				Clouds::RenderFluffyClouds();
 			Clouds::RenderHorizon();
 		}
 		SetRenderState(rw::ALPHATESTREF, params.alphaRef);

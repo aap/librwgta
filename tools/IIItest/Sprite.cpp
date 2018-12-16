@@ -122,7 +122,7 @@ CSprite::CalcScreenCoors(const rw::V3d &in, rw::V3d *out, float *outw, float *ou
 	CVector viewvec = TheCamera.m_viewMatrix * in;
 	*out = *(rw::V3d*)&viewvec;
 	if(out->z <= CDraw::GetNearClipZ() + 1.0f) return false;
-	if(out->z >= CDraw::GetFarClipZ()) return false;
+	if(out->z >= CDraw::GetFarClipZ() && farclip) return false;
 	float recip = 1.0f/out->z;
 	out->x *= globals.width * recip;
 	out->y *= globals.height * recip;

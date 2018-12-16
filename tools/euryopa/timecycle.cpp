@@ -1047,17 +1047,17 @@ UpdateSA(void)
 	nextHour = hours[curHourSel+1];
 	float timeInterp = (time - curHour) / (float)(nextHour - curHour);
 
-	curOld = GetColourSet(curHourSel, oldWeather);
-	curNew = GetColourSet(curHourSel, newWeather);
-	nextOld = GetColourSet(nextHourSel, oldWeather);
-	nextNew = GetColourSet(nextHourSel, newWeather);
+	curOld = GetColourSet(curHourSel, Weather::oldWeather);
+	curNew = GetColourSet(curHourSel, Weather::newWeather);
+	nextOld = GetColourSet(nextHourSel, Weather::oldWeather);
+	nextNew = GetColourSet(nextHourSel, Weather::newWeather);
 
 	int bh = belowHoriz[curHourSel]*(1.0f-timeInterp) + belowHoriz[nextHourSel]*timeInterp;
 	belowHorizonColour = rw::makeRGBA(bh, bh, bh, 255);
 
 	Interpolate(&oldInterp, &curOld, &nextOld, 1.0f-timeInterp, timeInterp);
 	Interpolate(&newInterp, &curNew, &nextNew, 1.0f-timeInterp, timeInterp);
-	Interpolate(&currentColours, &oldInterp, &newInterp, 1.0f-weatherInterpolation, weatherInterpolation);
+	Interpolate(&currentColours, &oldInterp, &newInterp, 1.0f-Weather::interpolation, Weather::interpolation);
 
 	// TODO: lots of stuff that's not so important now
 
@@ -1113,14 +1113,14 @@ Update(void)
 	int curHourSel = currentHour;
 	int nextHourSel = (currentHour+1)%24;
 	float timeInterp = currentMinute/60.0f;
-	curOld = GetColourSet(curHourSel, oldWeather);
-	curNew = GetColourSet(curHourSel, newWeather);
-	nextOld = GetColourSet(nextHourSel, oldWeather);
-	nextNew = GetColourSet(nextHourSel, newWeather);
+	curOld = GetColourSet(curHourSel, Weather::oldWeather);
+	curNew = GetColourSet(curHourSel, Weather::newWeather);
+	nextOld = GetColourSet(nextHourSel, Weather::oldWeather);
+	nextNew = GetColourSet(nextHourSel, Weather::newWeather);
 
 	Interpolate(&oldInterp, &curOld, &nextOld, 1.0f-timeInterp, timeInterp);
 	Interpolate(&newInterp, &curNew, &nextNew, 1.0f-timeInterp, timeInterp);
-	Interpolate(&currentColours, &oldInterp, &newInterp, 1.0f-weatherInterpolation, weatherInterpolation);
+	Interpolate(&currentColours, &oldInterp, &newInterp, 1.0f-Weather::interpolation, Weather::interpolation);
 
 	if(extraColours >= 0)
 		currentColours = GetColourSet(extraColours % params.numHours, params.extraColours + extraColours / params.numHours);
@@ -1196,6 +1196,42 @@ RenderBoxes(void)
 		for(j = 0; j < 8; j++)
 			RenderLine(corners[j], corners[j+8], colin, colout);
 	}
+}
+
+}
+
+namespace Weather
+{
+
+int oldWeather, newWeather;
+float interpolation;
+float cloudCoverage;
+float foggyness;
+float extraSunnyness;
+
+void
+Update(void)
+{
+	if((params.weatherInfo[oldWeather].flags & Weather::Sunny) == 0)
+		cloudCoverage = 1.0f - interpolation;
+	else
+		cloudCoverage = 0.0f;
+	if((params.weatherInfo[newWeather].flags & Weather::Sunny) == 0)
+		cloudCoverage += interpolation;
+
+	if(params.weatherInfo[oldWeather].flags & Weather::Foggy)
+		foggyness = 1.0f - interpolation;
+	else
+		foggyness = 0.0f;
+	if(params.weatherInfo[newWeather].flags & Weather::Foggy)
+		foggyness += interpolation;
+
+	if(params.weatherInfo[oldWeather].flags & Weather::Extrasunny)
+		extraSunnyness = 1.0f - interpolation;
+	else
+		extraSunnyness = 0.0f;
+	if(params.weatherInfo[newWeather].flags & Weather::Extrasunny)
+		extraSunnyness += interpolation;
 }
 
 }

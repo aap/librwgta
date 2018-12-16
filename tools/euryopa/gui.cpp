@@ -151,11 +151,11 @@ uiHelpWindow(void)
 static void
 uiWeatherBox(const char *id, int *weather)
 {
-	if(ImGui::BeginCombo(id, params.weatherNames[*weather])){
+	if(ImGui::BeginCombo(id, params.weatherInfo[*weather].name)){
 		for(int n = 0; n < params.numWeathers; n++){
 			bool is_selected = n == *weather;
 			static char str[100];
-			sprintf(str, "%d - %s", n, params.weatherNames[n]);
+			sprintf(str, "%d - %s", n, params.weatherInfo[n].name);
 			if(ImGui::Selectable(str, is_selected))
 				*weather = n;
 			if(is_selected)
@@ -195,7 +195,7 @@ uiTimeWeather(void)
 	if(weatherWidth == 0){
 		int i, w;
 		for(i = 0; i < params.numWeathers; i++){
-			w = ImGui::CalcTextSize(params.weatherNames[i]).x;
+			w = ImGui::CalcTextSize(params.weatherInfo[i].name).x;
 			if(w > weatherWidth)
 				weatherWidth = w;
 		}
@@ -236,7 +236,7 @@ uiTimeWeather(void)
 	ImGui::PushItemWidth(weatherWidth);
 	ImGui::BeginGroup();
 	ImGui::Text("Weather A");
-	uiWeatherBox("##WeatherA", &oldWeather);
+	uiWeatherBox("##WeatherA", &Weather::oldWeather);
 	ImGui::EndGroup();
 	ImGui::PopItemWidth();
 
@@ -244,7 +244,7 @@ uiTimeWeather(void)
 
 	ImGui::BeginGroup();
 	ImGui::Text("");
-	ImGui::SliderFloat("##Interpolation", &weatherInterpolation, 0.0f, 1.0f, "%.2f");
+	ImGui::SliderFloat("##Interpolation", &Weather::interpolation, 0.0f, 1.0f, "%.2f");
 	ImGui::EndGroup();
 
 	ImGui::SameLine();
@@ -252,7 +252,7 @@ uiTimeWeather(void)
 	ImGui::PushItemWidth(weatherWidth);
 	ImGui::BeginGroup();
 	ImGui::Text("Weather B");
-	uiWeatherBox("##WeatherB", &newWeather);
+	uiWeatherBox("##WeatherB", &Weather::newWeather);
 	ImGui::EndGroup();
 	ImGui::PopItemWidth();
 	ImGui::PopItemWidth();
@@ -262,6 +262,8 @@ uiTimeWeather(void)
 
 	if(params.neoWorldPipe)
 		ImGui::SliderFloat("Neo Light map", &gNeoLightMapStrength, 0.0f, 1.0f, "%.2f");
+
+//	ImGui::SliderFloat("Cloud rotation", &Clouds::CloudRotation, 0.0f, 3.1415f, "%.2f");
 }
 
 static void

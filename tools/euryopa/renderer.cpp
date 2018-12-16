@@ -497,10 +497,10 @@ BuildRenderList(void)
 //		frustBox.inf.x, frustBox.inf.y, frustBox.inf.z, 
 //		frustBox.sup.x, frustBox.sup.y, frustBox.sup.z);
 	// clip to world boundaries
-	frustBox.inf.x = clampFloat(frustBox.inf.x, worldBounds.left, worldBounds.right-1.0f);
-	frustBox.inf.y = clampFloat(frustBox.inf.y, worldBounds.bottom, worldBounds.top-1.0f);
-	frustBox.sup.x = clampFloat(frustBox.sup.x, worldBounds.left, worldBounds.right-1.0f);
-	frustBox.sup.y = clampFloat(frustBox.sup.y, worldBounds.bottom, worldBounds.top-1.0f);
+	frustBox.inf.x = clamp(frustBox.inf.x, worldBounds.left, worldBounds.right-1.0f);
+	frustBox.inf.y = clamp(frustBox.inf.y, worldBounds.bottom, worldBounds.top-1.0f);
+	frustBox.sup.x = clamp(frustBox.sup.x, worldBounds.left, worldBounds.right-1.0f);
+	frustBox.sup.y = clamp(frustBox.sup.y, worldBounds.bottom, worldBounds.top-1.0f);
 
 	int x, xstart, xend;
 	int y, ystart, yend;

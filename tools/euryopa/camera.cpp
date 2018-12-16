@@ -115,8 +115,8 @@ CCamera::update(void)
 
 		rw::Frame *f = m_rwcam->getFrame();
 		if(f){
-			f->matrix.lookAt(sub(m_target, m_position),
-			                 m_up);
+			m_at = normalize(sub(m_target, m_position));
+			f->matrix.lookAt(m_at, m_up);
 			f->matrix.pos = m_position;
 			f->updateObjects();
 		}

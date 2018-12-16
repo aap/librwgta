@@ -7,6 +7,7 @@ public:
 	rw::V3d m_target;
 	rw::V3d m_up;
 	rw::V3d m_localup;
+	rw::V3d m_at;
 
 	float m_fov, m_aspectRatio;
 
