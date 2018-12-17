@@ -107,6 +107,7 @@ public:
 	void ApplyAirResistance(void);
 	bool ApplyCollision(CPhysical *phys, CColPoint &colpoint, float &f1, float &f2);
 	bool ApplyFriction(CPhysical *B, float adhesiveLimit, CColPoint &colpoint);
+	bool ApplyFriction(float adhesiveLimit, CColPoint &colpoint);
 
 	void RemoveAndAdd(void);
 	void AddToMovingList(void);

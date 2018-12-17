@@ -43,6 +43,7 @@ usage(void)
 	fprintf(stderr, "\t--III2VCcar specmap. convert reflections from III to VC using specmap\n");
 	fprintf(stderr, "\t--ps2VCcar set up VC vehicle for use with PS2 and Xbox reflections\n");
 	fprintf(stderr, "\t--xboxbuilding convert SA Xbox building to something PS2 and PC understand\n");
+	fprintf(stderr, "\t--ps2SAcar assign PS2 SA car pipelines to a model\n");
 	fprintf(stderr, "\t--info dump some info about the file\n");
 	exit(1);
 }
@@ -111,6 +112,34 @@ convertSAXboxBuilding(Atomic *atomic)
 	// Clear pipeline
 	gta::setPipelineID(atomic, 0);
 	atomic->pipeline = nil;
+}
+
+void
+assignPS2SAcarPipes(Atomic *atomic)
+{
+	int i;
+	Geometry *geo;
+	Material *mat;
+
+	geo = atomic->geometry;
+	if(geo->instData){
+		fprintf(stderr, "error: can't re-assign pipeline on pre-instanced geometry\n");
+		exit(1);
+	}
+	for(i = 0; i < geo->matList.numMaterials; i++){
+		mat = geo->matList.materials[i];
+		mat->pipeline = ps2::getPDSPipe(gta::PDS_PS2_CustomCar_MatPipeID);
+		if(MatFX::getEffects(mat) == MatFX::ENVMAP){
+			Texture *envtex = MatFX::get(mat)->getEnvTexture();
+			if(envtex){
+				if(envtex->name[0] == 'x' && geo->numTexCoordSets > 1)
+					mat->pipeline = ps2::getPDSPipe(gta::PDS_PS2_CustomCarEnvMapUV2_MatPipeID);
+				else
+					mat->pipeline = ps2::getPDSPipe(gta::PDS_PS2_CustomCarEnvMap_MatPipeID);
+			}
+		}
+	}
+	atomic->pipeline = (ObjPipeline*)ps2::getPDSPipe(gta::PDS_PS2_CustomCar_AtmPipeID);
 }
 
 void
@@ -431,6 +460,7 @@ main(int argc, char *argv[])
 	const char *specmap = "reflection01";
 	int ps2vccar = 0;
 	int xboxbuild = 0;
+	int ps2sacar = 0;
 	int info = 0;
 	int dumpmat = 0;
 
@@ -448,6 +478,7 @@ main(int argc, char *argv[])
 			specmap = EARGF(usage());
 		}else if(strcmp_ci(longarg, "info") == 0) info++;
 		else if(strcmp_ci(longarg, "xboxbuilding") == 0) xboxbuild++;
+		else if(strcmp_ci(longarg, "ps2sacar") == 0) ps2sacar++;
 		else usage();
 		break;
 	case 'u':
@@ -684,6 +715,12 @@ main(int argc, char *argv[])
 			Atomic *a = Atomic::fromClump(lnk);
 			convertSAXboxBuilding(a);
 		}
+	if(ps2sacar){
+		FORLIST(lnk, c->atomics){
+			Atomic *a = Atomic::fromClump(lnk);
+			assignPS2SAcarPipes(a);
+		}
+	}
 
 	if(instance)
 		FORLIST(lnk, c->atomics){
