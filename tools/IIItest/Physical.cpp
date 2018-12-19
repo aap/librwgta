@@ -201,10 +201,25 @@ CPhysical::RemoveFromMovingList(void)
 	}
 }
 
+/*
+ * Some quantities (german in parens):
+ *
+ * acceleration: distance/time^2: a
+ * velocity: distance/time: v	(GTA: speed)
+ * momentum (impuls): velocity*mass: p
+ * impulse (kraftstoss): delta momentum, force*time: J
+ *
+ * angular equivalents:
+ * velocity -> angular velocity	(GTA: turn speed)
+ * momentum -> angular momentum (drehimpuls): L = r cross p
+ * force -> torque (drehmoment): tau = r cross F
+ * mass -> moment of inertia, angular mass (drehmoment, drehmasse): I = L/omega	(GTA: turn mass)
+ */
+
 CVector
-CPhysical::GetSpeed(const CVector &p)
+CPhysical::GetSpeed(const CVector &r)
 {
-	return m_vecMoveSpeed + m_vecMoveFriction + CrossProduct(m_vecTurnFriction + m_vecTurnSpeed, p);
+	return m_vecMoveSpeed + m_vecMoveFriction + CrossProduct(m_vecTurnFriction + m_vecTurnSpeed, r);
 }
 
 void
@@ -216,6 +231,8 @@ CPhysical::ApplyMoveSpeed(void)
 void
 CPhysical::ApplyTurnSpeed(void)
 {
+	// Move the coordinate axes by their speed
+	// Note that this denormalizes the matrix
 	CVector turnvec = m_vecTurnSpeed*CTimer::ms_fTimeStep;
 	GetRight() += CrossProduct(turnvec, GetRight());
 	GetForward() += CrossProduct(turnvec, GetForward());
@@ -223,31 +240,31 @@ CPhysical::ApplyTurnSpeed(void)
 }
 
 void
-CPhysical::ApplyMoveForce(float x, float y, float z)
+CPhysical::ApplyMoveForce(float jx, float jy, float jz)
 {
-	m_vecMoveSpeed += CVector(x, y, z)*(1.0f/m_fMass);
+	m_vecMoveSpeed += CVector(jx, jy, jz)*(1.0f/m_fMass);
 }
 
 void
-CPhysical::ApplyTurnForce(float vx, float vy, float vz, float px, float py, float pz)
+CPhysical::ApplyTurnForce(float jx, float jy, float jz, float px, float py, float pz)
 {
 	CVector com = Multiply3x3(m_matrix, m_vecCentreOfMass);
-	CVector turnf = CrossProduct(CVector(px, py, pz)-com, CVector(vx, vy, vz));
-	m_vecTurnSpeed += turnf*(1.0f/m_fTurnMass);
+	CVector turnimpulse = CrossProduct(CVector(px, py, pz)-com, CVector(jx, jy, jz));
+	m_vecTurnSpeed += turnimpulse*(1.0f/m_fTurnMass);
 }
 
 void
-CPhysical::ApplyFrictionMoveForce(float x, float y, float z)
+CPhysical::ApplyFrictionMoveForce(float jx, float jy, float jz)
 {
-	m_vecMoveFriction += CVector(x, y, z)*(1.0f/m_fMass);
+	m_vecMoveFriction += CVector(jx, jy, jz)*(1.0f/m_fMass);
 }
 
 void
-CPhysical::ApplyFrictionTurnForce(float vx, float vy, float vz, float px, float py, float pz)
+CPhysical::ApplyFrictionTurnForce(float jx, float jy, float jz, float px, float py, float pz)
 {
 	CVector com = Multiply3x3(m_matrix, m_vecCentreOfMass);
-	CVector turnf = CrossProduct(CVector(px, py, pz)-com, CVector(vx, vy, vz));
-	m_vecTurnFriction += turnf*(1.0f/m_fTurnMass);
+	CVector turnimpulse = CrossProduct(CVector(px, py, pz)-com, CVector(jx, jy, jz));
+	m_vecTurnFriction += turnimpulse*(1.0f/m_fTurnMass);
 }
 
 void
@@ -298,6 +315,11 @@ CPhysical::ApplyAirResistance(void)
  *       This might catch some bugs
  *
  *************/
+
+/*
+ * Some general remarks:
+ * adhesivelimit is an acceleration
+ */
 
 // TODO
 bool
@@ -531,35 +553,84 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 }
 
 bool
+CPhysical::ApplyCollisionAlt(CEntity *B, CColPoint &colpoint, float &impulse, CVector &moveSpeed, CVector &turnSpeed)
+{
+	float normalSpeed;
+	float e;
+	CVector speed;
+	CVector vImpulse;
+
+	if(bPedPhysics){
+		normalSpeed = DotProduct(m_vecMoveSpeed, colpoint.normal);
+		if(normalSpeed < 0.0f){
+			impulse = -normalSpeed * m_fMass;
+			ApplyMoveForce(colpoint.normal * impulse);
+			return true;
+		}
+	}else{
+		CVector pointpos = colpoint.point - GetPosition();
+		speed = GetSpeed(pointpos);
+		normalSpeed = DotProduct(speed, colpoint.normal);
+		if(normalSpeed < 0.0f){
+			CVector xxx = CrossProduct(pointpos, colpoint.normal);
+			float minspeed = 0.0104f * CTimer::ms_fTimeStep;
+			if((IsObject() || IsVehicle() && GetUp().z < -0.3f)
+			   && abs(m_vecMoveSpeed.x) < minspeed
+			   && abs(m_vecMoveSpeed.y) < minspeed
+			   && abs(m_vecMoveSpeed.z) < minspeed*2.0f)
+				e = -1.0f;
+			else
+				e = -(m_fElasticity + 1.0f);
+			impulse = normalSpeed * e * 1.0f/(xxx.MagnitudeSqr()/m_fTurnMass + 1.0f/m_fMass);
+
+			// ApplyMoveForce
+			vImpulse = colpoint.normal*impulse;
+			if(IsVehicle() &&
+			   (!bHasHitWall ||
+			    !(m_vecMoveSpeed.MagnitudeSqr() > 0.1 || B->IsBuilding() || ((CPhysical*)B)->bInfiniteMass)))
+				moveSpeed += vImpulse * 1.2f * (1.0f/m_fMass);
+			else
+				moveSpeed += vImpulse * (1.0f/m_fMass);
+
+			// ApplyTurnForce
+			CVector com = Multiply3x3(m_matrix, m_vecCentreOfMass);
+			CVector turnimpulse = CrossProduct(pointpos-com, vImpulse);
+			turnSpeed += turnimpulse*(1.0f/m_fTurnMass);
+		}
+	}
+	return false;
+}
+
+bool
 CPhysical::ApplyFriction(CPhysical *B, float adhesiveLimit, CColPoint &colpoint)
 {
-	CVector moveSpeedA, moveSpeedB;
+	CVector speedA, speedB;
 	float normalSpeedA, normalSpeedB;
-	CVector otherSpeedA, otherSpeedB;
-	float magOtherSpeedA, magOtherSpeedB;
+	CVector vOtherSpeedA, vOtherSpeedB;
+	float fOtherSpeedA, fOtherSpeedB;
 	float speedSum;
 	CVector frictionDir;
 	float impulseA, impulseB;
-	float adhesiveLimitTime;
+	float impulseLimit;
 	CPhysical *A = this;
 
 	if(A->bPedPhysics && B->bPedPhysics){
 		normalSpeedA = DotProduct(A->m_vecMoveSpeed, colpoint.normal);
 		normalSpeedB = DotProduct(B->m_vecMoveSpeed, colpoint.normal);
-		otherSpeedA = A->m_vecMoveSpeed - colpoint.normal*normalSpeedA;
-		otherSpeedB = B->m_vecMoveSpeed - colpoint.normal*normalSpeedB;
+		vOtherSpeedA = A->m_vecMoveSpeed - colpoint.normal*normalSpeedA;
+		vOtherSpeedB = B->m_vecMoveSpeed - colpoint.normal*normalSpeedB;
 
-		magOtherSpeedA = otherSpeedA.Magnitude();
-		magOtherSpeedB = otherSpeedB.Magnitude();
+		fOtherSpeedA = vOtherSpeedA.Magnitude();
+		fOtherSpeedB = vOtherSpeedB.Magnitude();
 
-		frictionDir = otherSpeedA * (1.0f/magOtherSpeedA);
-		speedSum = (B->m_fMass*magOtherSpeedB + A->m_fMass*magOtherSpeedA)/(B->m_fMass + A->m_fMass);
-		if(magOtherSpeedA > speedSum){
-			impulseA = (speedSum - magOtherSpeedA) * A->m_fMass;
-			impulseB = (speedSum - magOtherSpeedB) * B->m_fMass;
-			adhesiveLimitTime = adhesiveLimit*CTimer::ms_fTimeStep;
-			if(impulseA < -adhesiveLimitTime) impulseA = -adhesiveLimitTime;
-			if(impulseB > adhesiveLimitTime) impulseB = adhesiveLimitTime;		// BUG: game has A's clamp again here, but this can't be right
+		frictionDir = vOtherSpeedA * (1.0f/fOtherSpeedA);
+		speedSum = (B->m_fMass*fOtherSpeedB + A->m_fMass*fOtherSpeedA)/(B->m_fMass + A->m_fMass);
+		if(fOtherSpeedA > speedSum){
+			impulseA = (speedSum - fOtherSpeedA) * A->m_fMass;
+			impulseB = (speedSum - fOtherSpeedB) * B->m_fMass;
+			impulseLimit = adhesiveLimit*CTimer::ms_fTimeStep;
+			if(impulseA < -impulseLimit) impulseA = -impulseLimit;
+			if(impulseB > impulseLimit) impulseB = impulseLimit;		// BUG: game has A's clamp again here, but this can't be right
 			A->ApplyFrictionMoveForce(frictionDir*impulseA);
 			B->ApplyFrictionMoveForce(frictionDir*impulseB);
 			return true;
@@ -568,25 +639,25 @@ CPhysical::ApplyFriction(CPhysical *B, float adhesiveLimit, CColPoint &colpoint)
 		if(B->IsVehicle())
 			return false;
 		CVector pointposB = colpoint.point - B->GetPosition();
-		moveSpeedB = B->GetSpeed(pointposB);
+		speedB = B->GetSpeed(pointposB);
 
 		normalSpeedA = DotProduct(A->m_vecMoveSpeed, colpoint.normal);
-		normalSpeedB = DotProduct(moveSpeedB, colpoint.normal);
-		otherSpeedA = A->m_vecMoveSpeed - colpoint.normal*normalSpeedA;
-		otherSpeedB = moveSpeedB - colpoint.normal*normalSpeedB;
+		normalSpeedB = DotProduct(speedB, colpoint.normal);
+		vOtherSpeedA = A->m_vecMoveSpeed - colpoint.normal*normalSpeedA;
+		vOtherSpeedB = speedB - colpoint.normal*normalSpeedB;
 
-		magOtherSpeedA = otherSpeedA.Magnitude();
-		magOtherSpeedB = otherSpeedB.Magnitude();
+		fOtherSpeedA = vOtherSpeedA.Magnitude();
+		fOtherSpeedB = vOtherSpeedB.Magnitude();
 
-		frictionDir = otherSpeedA * (1.0f/magOtherSpeedA);
+		frictionDir = vOtherSpeedA * (1.0f/fOtherSpeedA);
 		float massB = 1.0f/(CrossProduct(pointposB, frictionDir).MagnitudeSqr()/B->m_fTurnMass + 1.0f/B->m_fMass);
-		speedSum = (massB*magOtherSpeedB + A->m_fMass*magOtherSpeedA)/(massB + A->m_fMass);
-		if(magOtherSpeedA > speedSum){
-			impulseA = (speedSum - magOtherSpeedA) * A->m_fMass;
-			impulseB = (speedSum - magOtherSpeedB) * massB;
-			adhesiveLimitTime = adhesiveLimit*CTimer::ms_fTimeStep;
-			if(impulseA < -adhesiveLimitTime) impulseA = -adhesiveLimitTime;
-			if(impulseB > adhesiveLimitTime) impulseB = adhesiveLimitTime;
+		speedSum = (massB*fOtherSpeedB + A->m_fMass*fOtherSpeedA)/(massB + A->m_fMass);
+		if(fOtherSpeedA > speedSum){
+			impulseA = (speedSum - fOtherSpeedA) * A->m_fMass;
+			impulseB = (speedSum - fOtherSpeedB) * massB;
+			impulseLimit = adhesiveLimit*CTimer::ms_fTimeStep;
+			if(impulseA < -impulseLimit) impulseA = -impulseLimit;
+			if(impulseB > impulseLimit) impulseB = impulseLimit;
 			A->ApplyFrictionMoveForce(frictionDir*impulseA);
 			B->ApplyFrictionMoveForce(frictionDir*impulseB);
 			B->ApplyFrictionTurnForce(frictionDir*impulseB, pointposB);
@@ -596,25 +667,25 @@ CPhysical::ApplyFriction(CPhysical *B, float adhesiveLimit, CColPoint &colpoint)
 		if(A->IsVehicle())
 			return false;
 		CVector pointposA = colpoint.point - A->GetPosition();
-		moveSpeedA = A->GetSpeed(pointposA);
+		speedA = A->GetSpeed(pointposA);
 
-		normalSpeedA = DotProduct(moveSpeedA, colpoint.normal);
+		normalSpeedA = DotProduct(speedA, colpoint.normal);
 		normalSpeedB = DotProduct(B->m_vecMoveSpeed, colpoint.normal);
-		otherSpeedA = moveSpeedA - colpoint.normal*normalSpeedA;
-		otherSpeedB = B->m_vecMoveSpeed - colpoint.normal*normalSpeedB;
+		vOtherSpeedA = speedA - colpoint.normal*normalSpeedA;
+		vOtherSpeedB = B->m_vecMoveSpeed - colpoint.normal*normalSpeedB;
 
-		magOtherSpeedA = otherSpeedA.Magnitude();
-		magOtherSpeedB = otherSpeedB.Magnitude();
+		fOtherSpeedA = vOtherSpeedA.Magnitude();
+		fOtherSpeedB = vOtherSpeedB.Magnitude();
 
-		frictionDir = otherSpeedA * (1.0f/magOtherSpeedA);
+		frictionDir = vOtherSpeedA * (1.0f/fOtherSpeedA);
 		float massA = 1.0f/(CrossProduct(pointposA, frictionDir).MagnitudeSqr()/A->m_fTurnMass + 1.0f/A->m_fMass);
-		speedSum = (B->m_fMass*magOtherSpeedB + massA*magOtherSpeedA)/(B->m_fMass + massA);
-		if(magOtherSpeedA > speedSum){
-			impulseA = (speedSum - magOtherSpeedA) * massA;
-			impulseB = (speedSum - magOtherSpeedB) * B->m_fMass;
-			adhesiveLimitTime = adhesiveLimit*CTimer::ms_fTimeStep;
-			if(impulseA < -adhesiveLimitTime) impulseA = -adhesiveLimitTime;
-			if(impulseB > adhesiveLimitTime) impulseB = adhesiveLimitTime;
+		speedSum = (B->m_fMass*fOtherSpeedB + massA*fOtherSpeedA)/(B->m_fMass + massA);
+		if(fOtherSpeedA > speedSum){
+			impulseA = (speedSum - fOtherSpeedA) * massA;
+			impulseB = (speedSum - fOtherSpeedB) * B->m_fMass;
+			impulseLimit = adhesiveLimit*CTimer::ms_fTimeStep;
+			if(impulseA < -impulseLimit) impulseA = -impulseLimit;
+			if(impulseB > impulseLimit) impulseB = impulseLimit;
 			A->ApplyFrictionMoveForce(frictionDir*impulseA);
 			A->ApplyFrictionTurnForce(frictionDir*impulseA, pointposA);
 			B->ApplyFrictionMoveForce(frictionDir*impulseB);
@@ -623,27 +694,27 @@ CPhysical::ApplyFriction(CPhysical *B, float adhesiveLimit, CColPoint &colpoint)
 	}else{
 		CVector pointposA = colpoint.point - A->GetPosition();
 		CVector pointposB = colpoint.point - B->GetPosition();
-		moveSpeedA = A->GetSpeed(pointposA);
-		moveSpeedB = B->GetSpeed(pointposB);
+		speedA = A->GetSpeed(pointposA);
+		speedB = B->GetSpeed(pointposB);
 
-		normalSpeedA = DotProduct(moveSpeedA, colpoint.normal);
-		normalSpeedB = DotProduct(moveSpeedB, colpoint.normal);
-		otherSpeedA = moveSpeedA - colpoint.normal*normalSpeedA;
-		otherSpeedB = moveSpeedB - colpoint.normal*normalSpeedB;
+		normalSpeedA = DotProduct(speedA, colpoint.normal);
+		normalSpeedB = DotProduct(speedB, colpoint.normal);
+		vOtherSpeedA = speedA - colpoint.normal*normalSpeedA;
+		vOtherSpeedB = speedB - colpoint.normal*normalSpeedB;
 
-		magOtherSpeedA = otherSpeedA.Magnitude();
-		magOtherSpeedB = otherSpeedB.Magnitude();
+		fOtherSpeedA = vOtherSpeedA.Magnitude();
+		fOtherSpeedB = vOtherSpeedB.Magnitude();
 
-		frictionDir = otherSpeedA * (1.0f/magOtherSpeedA);
+		frictionDir = vOtherSpeedA * (1.0f/fOtherSpeedA);
 		float massA = 1.0f/(CrossProduct(pointposA, frictionDir).MagnitudeSqr()/A->m_fTurnMass + 1.0f/A->m_fMass);
 		float massB = 1.0f/(CrossProduct(pointposB, frictionDir).MagnitudeSqr()/B->m_fTurnMass + 1.0f/B->m_fMass);
-		speedSum = (massB*magOtherSpeedB + massA*magOtherSpeedA)/(massB + massA);
-		if(magOtherSpeedA > speedSum){
-			impulseA = (speedSum - magOtherSpeedA) * massA;
-			impulseB = (speedSum - magOtherSpeedB) * massB;
-			adhesiveLimitTime = adhesiveLimit*CTimer::ms_fTimeStep;
-			if(impulseA < -adhesiveLimitTime) impulseA = -adhesiveLimitTime;
-			if(impulseB > adhesiveLimitTime) impulseB = adhesiveLimitTime;
+		speedSum = (massB*fOtherSpeedB + massA*fOtherSpeedA)/(massB + massA);
+		if(fOtherSpeedA > speedSum){
+			impulseA = (speedSum - fOtherSpeedA) * massA;
+			impulseB = (speedSum - fOtherSpeedB) * massB;
+			impulseLimit = adhesiveLimit*CTimer::ms_fTimeStep;
+			if(impulseA < -impulseLimit) impulseA = -impulseLimit;
+			if(impulseB > impulseLimit) impulseB = impulseLimit;
 			A->ApplyFrictionMoveForce(frictionDir*impulseA);
 			A->ApplyFrictionTurnForce(frictionDir*impulseA, pointposA);
 			B->ApplyFrictionMoveForce(frictionDir*impulseB);
@@ -657,43 +728,44 @@ CPhysical::ApplyFriction(CPhysical *B, float adhesiveLimit, CColPoint &colpoint)
 bool
 CPhysical::ApplyFriction(float adhesiveLimit, CColPoint &colpoint)
 {
-	float normalSpeed;
-	CVector otherSpeed;
-	float magOtherSpeed;
-	CVector frictionDir;
-	float impulse;
-	float adhesiveLimitTime;
-	CVector force;
 	CVector speed;
+	float normalSpeed;
+	CVector vOtherSpeed;
+	float fOtherSpeed;
+	CVector frictionDir;
+	float fImpulse;
+	float impulseLimit;
 
 	if(bPedPhysics){
 		normalSpeed = DotProduct(m_vecMoveSpeed, colpoint.normal);
-		otherSpeed = m_vecMoveSpeed - colpoint.normal*normalSpeed;
+		vOtherSpeed = m_vecMoveSpeed - colpoint.normal*normalSpeed;
 
-		magOtherSpeed = otherSpeed.Magnitude();
-		if(magOtherSpeed > 0.0f){
-			frictionDir = otherSpeed * (1.0f/magOtherSpeed);
-			impulse = -magOtherSpeed;
-			adhesiveLimitTime = adhesiveLimit*CTimer::ms_fTimeStep;
-			if(impulse < -adhesiveLimitTime) impulse = -adhesiveLimitTime;
-			force = frictionDir*impulse;
-			m_vecMoveFriction += CVector(force.x, force.y, 0.0f);
+		fOtherSpeed = vOtherSpeed.Magnitude();
+		if(fOtherSpeed > 0.0f){
+			frictionDir = vOtherSpeed * (1.0f/fOtherSpeed);
+			// not really impulse but speed
+			// TODO? use ApplyFrictionMoveForce instead?
+			fImpulse = -fOtherSpeed;
+			impulseLimit = adhesiveLimit*CTimer::ms_fTimeStep / m_fMass;
+			if(fImpulse < -impulseLimit) fImpulse = -impulseLimit;
+			CVector vImpulse = frictionDir*fImpulse;
+			m_vecMoveFriction += CVector(vImpulse.x, vImpulse.y, 0.0f);
 			return true;
 		}
 	}else{
 		CVector pointpos = colpoint.point - GetPosition();
 		speed = GetSpeed(pointpos);
 		normalSpeed = DotProduct(speed, colpoint.normal);
-		otherSpeed = speed - colpoint.normal*normalSpeed;
+		vOtherSpeed = speed - colpoint.normal*normalSpeed;
 
-		magOtherSpeed = otherSpeed.Magnitude();
-		if(magOtherSpeed > 0.0f){
-			frictionDir = otherSpeed * (1.0f/magOtherSpeed);
-			impulse = -magOtherSpeed;
-			adhesiveLimitTime = adhesiveLimit*CTimer::ms_fTimeStep * 1.5;
-			if(impulse < -adhesiveLimitTime) impulse = -adhesiveLimitTime;
-			ApplyFrictionMoveForce(frictionDir*impulse);
-			ApplyFrictionTurnForce(frictionDir*impulse, pointpos);
+		fOtherSpeed = vOtherSpeed.Magnitude();
+		if(fOtherSpeed > 0.0f){
+			frictionDir = vOtherSpeed * (1.0f/fOtherSpeed);
+			fImpulse = -fOtherSpeed * m_fMass;
+			impulseLimit = adhesiveLimit*CTimer::ms_fTimeStep * 1.5f;
+			if(fImpulse < -impulseLimit) fImpulse = -impulseLimit;
+			ApplyFrictionMoveForce(frictionDir*fImpulse);
+			ApplyFrictionTurnForce(frictionDir*fImpulse, pointpos);
 			// TODO: particles
 			return true;
 		}
@@ -730,10 +802,6 @@ CPhysical::AddCollisionRecord(CEntity *ent)
 		if(m_nCollisionRecords < PHYSICAL_MAX_COLLISIONRECORDS)
 			m_aCollisionRecords[m_nCollisionRecords++] = ent;
 		m_nLastTimeCollided = CTimer::m_snTimeInMilliseconds;
-
-		if(bHasContacted){
-		}else{
-		}
 	}
 }
 

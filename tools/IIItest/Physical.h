@@ -18,14 +18,14 @@ public:
 	// TODO
 
 	uint32 m_nLastTimeCollided;
-	CVector m_vecMoveSpeed;
-	CVector m_vecTurnSpeed;
+	CVector m_vecMoveSpeed;		// velocity
+	CVector m_vecTurnSpeed;		// angular velocity
 	CVector m_vecMoveFriction;
 	CVector m_vecTurnFriction;
 	CVector m_vecMoveSpeedAvg;
 	CVector m_vecTurnSpeedAvg;
 	float m_fMass;
-	float m_fTurnMass;
+	float m_fTurnMass;	// moment of inertia
 	float m_fAirResistance;
 	float m_fElasticity;
 	CVector m_vecCentreOfMass;
@@ -77,7 +77,7 @@ public:
 	void ProcessShift(void);
 
 	// get speed of point p relative to entity center
-	CVector GetSpeed(const CVector &p);
+	CVector GetSpeed(const CVector &r);
 	CVector GetSpeed(void) { return GetSpeed(CVector(0.0f, 0.0f, 0.0f)); }
 	void UnsetIsInSafePosition(void) {
 		m_vecMoveSpeed *= -1.0f;
@@ -91,21 +91,23 @@ public:
 
 	void ApplyMoveSpeed(void);
 	void ApplyTurnSpeed(void);
-	void ApplyMoveForce(float x, float y, float z);
-	void ApplyMoveForce(const CVector &v) { ApplyMoveForce(v.x, v.y, v.z); }
+	// Force actually means Impulse here
+	void ApplyMoveForce(float jx, float jy, float jz);
+	void ApplyMoveForce(const CVector &j) { ApplyMoveForce(j.x, j.y, j.z); }
 	// v(x,y,z) is direction of force, p(x,y,z) is point relative to model center where force is applied
-	void ApplyTurnForce(float vx, float vy, float vz, float px, float py, float pz);
+	void ApplyTurnForce(float jx, float jy, float jz, float rx, float ry, float rz);
 	// v is direction of force, p is point relative to model center where force is applied
-	void ApplyTurnForce(const CVector &v, const CVector &p) { ApplyTurnForce(v.x, v.y, v.z, p.x, p.y, p.z); }
-	void ApplyFrictionMoveForce(float x, float y, float z);
-	void ApplyFrictionMoveForce(const CVector &v) { ApplyFrictionMoveForce(v.x, v.y, v.z); }
-	void ApplyFrictionTurnForce(float vx, float vy, float vz, float px, float py, float pz);
-	void ApplyFrictionTurnForce(const CVector &v, const CVector &p) { ApplyFrictionTurnForce(v.x, v.y, v.z, p.x, p.y, p.z); }
+	void ApplyTurnForce(const CVector &j, const CVector &p) { ApplyTurnForce(j.x, j.y, j.z, p.x, p.y, p.z); }
+	void ApplyFrictionMoveForce(float jx, float jy, float jz);
+	void ApplyFrictionMoveForce(const CVector &j) { ApplyFrictionMoveForce(j.x, j.y, j.z); }
+	void ApplyFrictionTurnForce(float jx, float jy, float jz, float rx, float ry, float rz);
+	void ApplyFrictionTurnForce(const CVector &j, const CVector &p) { ApplyFrictionTurnForce(j.x, j.y, j.z, p.x, p.y, p.z); }
 	void ApplySpringCollision(float f1, CVector &v, CVector &p, float f2, float f3);
 	void ApplyGravity(void);
 	void ApplyFriction(void);
 	void ApplyAirResistance(void);
-	bool ApplyCollision(CPhysical *phys, CColPoint &colpoint, float &f1, float &f2);
+	bool ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, float &impulseB);
+	bool ApplyCollisionAlt(CEntity *B, CColPoint &colpoint, float &impulse, CVector &moveSpeed, CVector &turnSpeed);
 	bool ApplyFriction(CPhysical *B, float adhesiveLimit, CColPoint &colpoint);
 	bool ApplyFriction(float adhesiveLimit, CColPoint &colpoint);
 
