@@ -26,6 +26,8 @@ static struct {
 char *argv0;
 char *inputfilename;
 
+void dumpjson(Clump*, const char *file);
+
 void
 usage(void)
 {
@@ -120,6 +122,7 @@ assignPS2SAcarPipes(Atomic *atomic)
 	int i;
 	Geometry *geo;
 	Material *mat;
+	gta::EnvMat *env;
 
 	geo = atomic->geometry;
 	if(geo->instData){
@@ -129,16 +132,20 @@ assignPS2SAcarPipes(Atomic *atomic)
 	for(i = 0; i < geo->matList.numMaterials; i++){
 		mat = geo->matList.materials[i];
 		mat->pipeline = ps2::getPDSPipe(gta::PDS_PS2_CustomCar_MatPipeID);
-		if(MatFX::getEffects(mat) == MatFX::ENVMAP){
+		// This should correspond to the logic used by the game to assign pipes.
+		// It's important to get this exactly right
+		env = gta::getEnvMat(mat);
+		if(env && env->shininess != 0 && MatFX::getEffects(mat) == MatFX::ENVMAP){
 			Texture *envtex = MatFX::get(mat)->getEnvTexture();
 			if(envtex){
-				if(envtex->name[0] == 'x' && geo->numTexCoordSets > 1)
+				if(envtex->name[0] == 'x')
 					mat->pipeline = ps2::getPDSPipe(gta::PDS_PS2_CustomCarEnvMapUV2_MatPipeID);
 				else
 					mat->pipeline = ps2::getPDSPipe(gta::PDS_PS2_CustomCarEnvMap_MatPipeID);
 			}
 		}
 	}
+	// Only obj pipe used by gta
 	atomic->pipeline = (ObjPipeline*)ps2::getPDSPipe(gta::PDS_PS2_CustomCar_AtmPipeID);
 }
 
@@ -290,27 +297,26 @@ dumpReflData(Material *m)
 {
 	using namespace gta;
 
-	MatFX *matfx = *PLUGINOFFSET(MatFX*, m, matFXGlobals.materialOffset);
+	MatFX *matfx = MatFX::get(m);
 	if(m->pipeline->pluginID != ID_PDS)
 		return;
-	printf("%x ", m->pipeline->pluginData & 0xf);
+	printf("%02x ", m->pipeline->pluginData & 0xff);
+
+	SpecMat *spec = getSpecMat(m);
+	if(spec)
+		printf("spec(%4.3f) ", spec->specularity);
+
+	EnvMat *env = getEnvMat(m);
+	if(env)
+		printf("env(%4.3f) ", env->getShininess());
+
 	if(matfx){
-		printf("matfx(");
-		int i = matfx->getEffectIndex(MatFX::ENVMAP);
-		Texture *tex = i >= 0 ? matfx->fx[i].env.tex : NULL;
-		printf("%d ", matfx->type);
+		printf("matfx(%d", matfx->type);
+		Texture *tex = matfx->getEnvTexture();
 		if(tex)
-			printf("%s ", tex->name);
+			printf(", %s", tex->name);
 		printf(") ");
 	}
-
-	SpecMat *spec = *PLUGINOFFSET(SpecMat*, m, specMatOffset);
-	if(spec)
-		printf("spec(%.3f) ", spec->specularity);
-
-	EnvMat *env = *PLUGINOFFSET(EnvMat*, m, envMatOffset);
-	if(env)
-		printf("env(%.3f) ", env->shininess/255.0f);
 
 	printf("\n");
 }
@@ -463,6 +469,8 @@ main(int argc, char *argv[])
 	int ps2sacar = 0;
 	int info = 0;
 	int dumpmat = 0;
+	int tristrip = 0;
+	int json = 0;
 
 	char *s, *longarg;
 	//char *seconddff = NULL;
@@ -502,6 +510,9 @@ main(int argc, char *argv[])
 	case 't':
 		dumpmat++;
 		break;
+	case 's':
+		tristrip++;
+		break;
 	case 'r':
 		surfprops++;
 		break;
@@ -516,6 +527,9 @@ main(int argc, char *argv[])
 		break;
 	case 'W':
 		setwhite++;
+		break;
+	case 'j':
+		json++;
 		break;
 	case 'o':
 		s = EARGF(usage());
@@ -578,6 +592,11 @@ main(int argc, char *argv[])
 	if(c == NULL){
 		fprintf(stderr, "Error: couldn't read clump\n");
 		return 1;
+	}
+
+	if(rw::version == 0){
+		rw::version = header.version;
+		rw::build = header.build;
 	}
 
 	if(surfprops)
@@ -660,8 +679,8 @@ main(int argc, char *argv[])
 			Geometry *g = Atomic::fromClump(lnk)->geometry;
 			for(int i = 0; i < g->matList.numMaterials; i++){
 				Material *m = g->matList.materials[i];
-				dumpMat(m);
-		//		dumpReflData(m);
+		//		dumpMat(m);
+				dumpReflData(m);
 			}
 		}
 
@@ -722,6 +741,22 @@ main(int argc, char *argv[])
 		}
 	}
 
+	removeUnusedMaterials(c);
+
+	if(correctWinding)
+		FORLIST(lnk, c->atomics){
+			Geometry *g = Atomic::fromClump(lnk)->geometry;
+			g->correctTristripWinding();
+			g->generateTriangles();
+		}
+
+	if(tristrip)
+		FORLIST(lnk, c->atomics){
+			Geometry *g = Atomic::fromClump(lnk)->geometry;
+			g->flags |= Geometry::TRISTRIP;
+			g->buildMeshes();
+		}
+
 	if(instance)
 		FORLIST(lnk, c->atomics){
 			Atomic *a = Atomic::fromClump(lnk);
@@ -730,9 +765,14 @@ main(int argc, char *argv[])
 			a->instance();
 		}
 
-	if(rw::version == 0){
-		rw::version = header.version;
-		rw::build = header.build;
+	if(json){
+		const char *file;
+		if(argc > 1)
+			file = argv[1];
+		else
+			file = "out.json";
+		dumpjson(c, file);
+		return 0;
 	}
 
 	if(info){
@@ -781,21 +821,6 @@ main(int argc, char *argv[])
 		if(output)
 			putchar('\n');
 	}
-
-	removeUnusedMaterials(c);
-
-	if(correctWinding)
-		FORLIST(lnk, c->atomics){
-			Geometry *g = Atomic::fromClump(lnk)->geometry;
-			g->correctTristripWinding();
-		}
-
-/*
-	FORLIST(lnk, c->atomics){
-		Geometry *g = Atomic::fromClump(lnk)->geometry;
-		g->buildMeshes();
-	}
-*/
 
 	StreamFile out;
 	const char *file;

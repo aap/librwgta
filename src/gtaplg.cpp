@@ -642,6 +642,12 @@ getSizeSpecMat(void *object, int32 offset, int32)
 	return spec ? (int)sizeof(SpecStream) : 0;
 }
 
+SpecMat*
+getSpecMat(rw::Material *mat)
+{
+	return *PLUGINOFFSET(SpecMat*, mat, specMatOffset);
+}
+
 void
 registerEnvSpecPlugin(void)
 {

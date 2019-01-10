@@ -576,6 +576,9 @@ ReadDefFile(char *filename)
 		def->gen = strdup(a);
 		if(b[0] == '%') b++;
 		def->pretty = strdup(b);
+		for(b = def->pretty; *b; b++)
+			if(*b == '^')
+				*b = ' ';
 
 		def->next = defs;
 		defs = def;

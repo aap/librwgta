@@ -200,10 +200,12 @@ saUninstanceCB(rw::ps2::MatPipeline *pipe, rw::Geometry *geo, uint32 flags[], rw
 		v.p.x = verts[0]*vertScale;
 		v.p.y = verts[1]*vertScale;
 		v.p.z = verts[2]*vertScale;
+//printf("v %04X %04X %04X %04X\n", verts[0], verts[1], verts[2], verts[3]);
 		if(mask & 0x10){
 			v.n.x = norms[0]/127.0f;
 			v.n.y = norms[1]/127.0f;
 			v.n.z = norms[2]/127.0f;
+//printf("n %02X %02X %02X\n", norms[0], norms[1], norms[2]);
 		}
 		if(mask & 0x200){
 			v.c.red    = colors[0];
@@ -214,19 +216,23 @@ saUninstanceCB(rw::ps2::MatPipeline *pipe, rw::Geometry *geo, uint32 flags[], rw
 			v.c1.green = colors[3];
 			v.c1.blue  = colors[5];
 			v.c1.alpha = colors[7];
+//printf("c2 %02X %02X %02X %02X %02X %02X %02X %02X\n", colors[0], colors[1], colors[2], colors[3], colors[4], colors[5], colors[6], colors[7]);
 		}else if(mask & 0x100){
 			v.c.red   = colors[0];
 			v.c.green = colors[1];
 			v.c.blue  = colors[2];
 			v.c.alpha = colors[3];
+//printf("c %02X %02X %02X %02X\n", colors[0], colors[1], colors[2], colors[3]);
 		}
 		if(mask & 0x1000){
 			v.t.u = texcoords[0]/4096.0f;
 			v.t.v = texcoords[1]/4096.0f;
+//printf("t %04X %04X\n", texcoords[0], texcoords[1]);
 		}
 		if(mask & 0x2000){
 			v.t1.u = texcoords[2]/4096.0f;
 			v.t1.v = texcoords[3]/4096.0f;
+//printf("t2 %04X %04X\n", texcoords[2], texcoords[3]);
 		}
 		if(mask & 0x10000){
 			for(int j = 0; j < 4; j++){
@@ -239,6 +245,7 @@ saUninstanceCB(rw::ps2::MatPipeline *pipe, rw::Geometry *geo, uint32 flags[], rw
 		int32 idx = findSAVertex(geo, flags, mask, &v);
 		if(idx < 0)
 			idx = geo->numVertices++;
+//printf("INDEX %d\n", idx);
 		mesh->indices[i] = idx;
 		adc[i] = !!verts[3];
 		flags[idx] = mask;
@@ -349,12 +356,12 @@ instanceSADualColors(rw::Geometry *g, rw::Mesh *m, uint8 *dst)
 		if(c1){
 			dst[1] = c1[j].red;
 			dst[3] = c1[j].green;
-			dst[6] = c1[j].blue;
+			dst[5] = c1[j].blue;
 			dst[7] = c1[j].alpha;
 		}else{
 			dst[1] = 0xFF;
 			dst[3] = 0xFF;
-			dst[6] = 0xFF;
+			dst[5] = 0xFF;
 			dst[7] = 0xFF;
 		}
 		dst += 8;
@@ -393,7 +400,7 @@ saInstanceCB(rw::ps2::MatPipeline *pipe, rw::Geometry *g, rw::Mesh *m, uint8 **d
 	for(uint32 i = 0; i < nelem(pipe->attribs); i++){
 		rw::ps2::PipeAttribute *a = pipe->attribs[i];
 		if(a == &saXYZADC)
-			instanceSAPositions(g, m, adc->adcFormatted ? adc->adcBits : nil,
+			instanceSAPositions(g, m, rw::ps2::getADCbitsForMesh(g, m),
 			                    (int16*)data[i], vertScale);
 		if(a == &saUV)
 			instanceSATex(g, m, (int16*)data[i]);
@@ -555,7 +562,7 @@ registerPS2VehiclePipes(void)
 	mpipe->attribs[0] = &saXYZADC;
 	mpipe->attribs[1] = &saUV;
 	mpipe->attribs[3] = &saNormal;
-	vertCount = rw::ps2::MatPipeline::getVertCount(rw::ps2::VU_Lights, 4, 3, 2);
+	vertCount = rw::ps2::MatPipeline::getVertCount(0x3CD, 4, 3, 2);
 	mpipe->setTriBufferSizes(4, vertCount);
 	mpipe->vifOffset = mpipe->inputStride*vertCount;
 	mpipe->instanceCB = saInstanceCB;
@@ -563,7 +570,7 @@ registerPS2VehiclePipes(void)
 	mpipe->uninstanceCB = saUninstanceCB;
 	rw::ps2::registerPDSPipe(mpipe);
 
-	pipe = new rw::ps2::ObjPipeline(rw::PLATFORM_PS2); // unused in DFFs
+	pipe = new rw::ps2::ObjPipeline(rw::PLATFORM_PS2); // unused in DFFs and game
 	pipe->pluginID = rw::ID_PDS;
 	pipe->pluginData = PDS_PS2_CustomCarEnvMap_AtmPipeID;
 	rw::ps2::registerPDSPipe(pipe);

@@ -3,6 +3,8 @@
 #include "leedsgta.h"
 #include "streamworld.h"
 
+#define LODNAMES
+
 char *argv0;
 char *arg1;
 int32 atmOffset;
@@ -491,6 +493,7 @@ assignModelNames(void)
 		mi->name = name;
 	}
 
+#ifdef LODNAMES
 	// assign LOD names that match HD hashes
 	for(i = 0; i < gamedata->numModelInfos; i++){
 		smi = (CSimpleModelInfo*)gamedata->modelInfoPtrs[i];
@@ -506,6 +509,7 @@ assignModelNames(void)
 			strncpy((char*)smi->name, "LOD", 3);
 		}
 	}
+#endif
 }
 
 void
@@ -1040,13 +1044,13 @@ extractResource(void)
 //	extractMarkers();
 //	writeWaterpro();
 
-//	printf("inst\n");
-//	dumpInstances(gamedata->buildingPool);
-//	printf("\n");
-//	dumpInstances(gamedata->treadablePool);
-//	printf("\n");
-//	dumpInstances(gamedata->dummyPool);
-//	printf("end\n");
+	printf("inst\n");
+	dumpInstances(gamedata->buildingPool);
+	printf("\n");
+	dumpInstances(gamedata->treadablePool);
+	printf("\n");
+	dumpInstances(gamedata->dummyPool);
+	printf("end\n");
 
 //	printf("zone\n");
 //	dumpZones();
@@ -1458,8 +1462,10 @@ main(int argc, char *argv[])
 	}else if(header.ident == TEX_IDENT){
 		txd = (RslTexList*)data;
 	writeTxd:
-		if(extract)
+		if(extract){
 			RslTexListForAllTextures(txd, dumpTextureCB, NULL);
+			return 0;
+		}
 		TexDictionary *rwtxd = convertTXD(txd);
 		if(stream.open(argc > 1 ? argv[1] : "out.txd", "wb") == nil)
 			panic("couldn't open file %s", argc > 1 ? argv[1] : "out.txd");

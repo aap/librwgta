@@ -393,7 +393,6 @@ AssignModelNames(void)
 		mi->name = name;
 	}
 
-#define LODNAMES
 #ifdef LODNAMES
 	// assign LOD names that match HD hashes
 	CSimpleModelInfo *smi;
@@ -557,7 +556,9 @@ found:
 	AllocateStreamingBufer();
 
 	LoadColStore();
-//	DumpCollisions();
+#ifdef DUMPCOLLISION
+	DumpCollisions();
+#endif
 //exit(0);
 
 //XX	openLogFile("C:/ipl_insts.txt");
@@ -590,7 +591,9 @@ found:
 
 	LinkInstances();
 
-//	DumpModels();
+#ifdef DUMPMODELS
+	DumpModels();
+#endif
 
 //XX	closeLogFile();
 

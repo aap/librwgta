@@ -115,6 +115,7 @@ struct SpecMat
 };
 
 extern rw::int32 specMatOffset;
+SpecMat *getSpecMat(rw::Material *mat);
 
 void registerEnvSpecPlugin(void);
 

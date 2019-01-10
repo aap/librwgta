@@ -1054,12 +1054,14 @@ dumpTextureCB(RslTexture *texture, void*)
 	Image *img;
 	if(RslPSP){
 		RslRasterPSP *r = &texture->raster->psp;
+		r->minWidth = 128/r->depth;	// min 16 bytes, somehow this isn't always right?
 		uint32 w = 1 << r->logWidth;
 		uint32 h = 1 << r->logHeight;
 		uint8 *palette = getPalettePSP(r);
 		uint8 *texels = getTexelPSP(r, 0);
 		img = Image::create(w, h, 32);
 		img->allocate();
+//printf("%-32s %d %d %d %d %X %X\n", texture->name, w, h, r->depth, r->mipmaps, r->unk1, r->unk2);
 		convertTo32_PSP(img->pixels, palette, texels, w, h, r->depth, r->minWidth);
 	}else{
 		RslRasterPS2 *r = &texture->raster->ps2;
@@ -1088,6 +1090,7 @@ rw::Raster*
 convertRasterPSP(RslRasterPSP *ras)
 {
 	uint32 w, h, bufw;
+	ras->minWidth = 128/ras->depth;	// min 16 bytes, somehow this isn't always right?
 	uint8 *palette = getPalettePSP(ras);
 	uint8 *texels = getTexelPSP(ras, 0);
 

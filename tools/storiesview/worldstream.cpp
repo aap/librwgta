@@ -533,7 +533,9 @@ makeWorldGeometry(sBuildingGeometry *bgeom)
 			sprintf(tmpname, "tex_%d_%04X", gLevel->levelid, matmap[i]);
 			strncpy(tex->name, FindNameDef(TexName, tmpname), 32);
 			tex->setFilter(rw::Texture::LINEAR);
-//writetex(tex);
+#ifdef DUMPTEXTURES
+writetex(tex);
+#endif
 			texres->dmaChain = tex;
 		}
 		geo->matList.materials[i]->setTexture((rw::Texture*)texres->dmaChain);

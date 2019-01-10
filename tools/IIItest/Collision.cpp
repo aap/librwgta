@@ -1204,7 +1204,7 @@ CCollision::CalculateTrianglePlanes(CColModel *model)
 		// re-insert at front so it's not removed again soon
 		lptr = model->GetLinkPtr();
 		lptr->Remove();
-		lptr->Insert(&ms_colModelCache.head);
+		ms_colModelCache.head.Insert(lptr);
 	}else{
 		lptr = ms_colModelCache.Insert(model);
 		if(lptr == nil){
