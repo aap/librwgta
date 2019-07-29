@@ -2,7 +2,7 @@
 
 CPtrList CWorld::ms_bigBuildingsList[4];
 CPtrList CWorld::ms_listMovingEntityPtrs;
-CSector  CWorld::ms_aSectors[100][100];
+CSector  CWorld::ms_aSectors[NUMSECTORS_Y][NUMSECTORS_X];
 uint16 CWorld::ms_nCurrentScanCode;
 
 bool CWorld::bNoMoreCollisionTorque;
@@ -35,8 +35,8 @@ void
 CWorld::ClearScanCodes(void)
 {
 	CPtrNode *node;
-	for(int i = 0; i < 100; i++)
-	for(int j = 0; j < 100; j++){
+	for(int i = 0; i < NUMSECTORS_Y; i++)
+	for(int j = 0; j < NUMSECTORS_X; j++){
 		CSector *s = &ms_aSectors[i][j];
 		for(node = s->m_lists[ENTITYLIST_BUILDINGS].first; node; node = node->next)
 			((CEntity*)node->item)->m_scanCode = 0;

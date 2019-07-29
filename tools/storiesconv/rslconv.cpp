@@ -46,6 +46,28 @@ struct Node {
 	int32 parent;
 };
 
+static int32 *remainingNodeIds;
+void assignNodeIds(RslNode *f);
+void
+assignNodeIdsChild(RslNode *f)
+{
+	if(f->next)
+		assignNodeIdsChild(f->next);
+	assignNodeIds(f);
+}
+void
+assignNodeIds(RslNode *f)
+{
+	// Let's hope frame an hanim hierarchy are in synch!
+	f->nodeId = *remainingNodeIds++;
+	if(f->nodeId == -1){
+		f->nodeId = nextId++;
+		remainingNodeIds[-1] = f->nodeId;
+	}
+	if(f->child)
+		assignNodeIdsChild(f->child);
+}
+
 Frame*
 convertFrame(RslNode *f)
 {
@@ -116,7 +138,6 @@ convertFrame(RslNode *f)
 	}
 #else
 	HAnimData *hanim = PLUGINOFFSET(HAnimData, rwf, hAnimOffset);
-	hanim->id = -1;
 	if(f->hier){
 		int32 numNodes = f->hier->numNodes;
 		int32 *nodeFlags = new int32[numNodes];
@@ -127,31 +148,17 @@ convertFrame(RslNode *f)
 		int32 stack[100];
 		int32 sp = 0;
 		stack[sp] = -1;
-		// Match up nodes with frames to fix and assign IDs
-		// NOTE: assignment can only work reliably when not more
-		//       than one child node needs an ID
+
 		for(int32 i = 0; i < numNodes; i++){
 			RslTAnimNodeInfo *ni = &f->hier->pNodeInfo[i];
-			printf("%d %d %d %p\n", ni->id, ni->index, ni->flags, ni->frame);
-			//Node *n = &nodehier[i];
-			//n->parent = stack[sp];
-			if(ni->flags & HAnimHierarchy::PUSH)
-				sp++;
-			stack[sp] = i;
-			//RslNode *ff = findNode(f, (uint8)ni->id);
-			//n->id = ff->nodeId;
-			//if(n->id < 0){
-			//	ff = findNode(f, nodehier[n->parent].id);
-			//	ff = findChild(ff);
-			//	n->id = ff->nodeId = nextId++;
-			//}
-			//printf("%d %s %d %d\n", i, ff->name, n->id, n->parent);
-			if(ni->flags & HAnimHierarchy::POP)
-				sp--;
-
+		//	printf("%d %d %d %p\n", ni->id, ni->index, ni->flags, ni->frame);
 			nodeFlags[i] = ni->flags;
-			nodeIDs[i] = ni->id; //n->id;
+			nodeIDs[i] = ni->id;
 		}
+		// Frames have no IDs at all in VCS,
+		// so just walk the hierarchy and hope topologies match
+		remainingNodeIds = nodeIDs;
+		assignNodeIds(f);
 
 #ifdef LCS
 		int kfsz = f->hier->maxKeyFrameSize
@@ -165,6 +172,7 @@ convertFrame(RslNode *f)
 		delete[] nodeIDs;
 		delete[] nodehier;
 	}
+	hanim->id = f->nodeId;
 #endif
 	return rwf;
 }
@@ -564,8 +572,9 @@ convertStripPS2(Geometry *rwg, RslGeometry *g, int32 si)
 			}
 			if(mask & 0x10000){
 				for(int j = 0; j < 4; j++){
-					((uint32*)v.w)[j] = vuSkin[j] & ~0x3FF;
-					v.i[j] = vuSkin[j] >> 2;
+					// not sure how many bits are an index, 10 is too much for VCS
+					((uint32*)v.w)[j] = vuSkin[j] & ~0xFF;
+					v.i[j] = (vuSkin[j] >> 2) & 0x3F;
 					//if(v.i[j]) v.i[j]--;
 					if(v.w[j] == 0.0f) v.i[j] = 0;
 				}
@@ -721,6 +730,10 @@ convertClump(RslElementGroup *c)
 	rwc = Clump::create();
 	rslNodeListInitialize(&frameList, (RslNode*)c->object.parent);
 	Frame **rwframes = new Frame*[frameList.numNodes];
+#ifdef VCS
+	for(int32 i = 0; i < frameList.numNodes; i++)
+		frameList.frames[i]->nodeId = -1;
+#endif
 	for(int32 i = 0; i < frameList.numNodes; i++){
 		rwf = convertFrame(frameList.frames[i]);
 		rwframes[i] = rwf;
@@ -1187,19 +1200,20 @@ convertRasterPS2(RslRasterPS2 *ras)
 		memcpy(img->pixels, texels, w*h*d/8);
 
 	if(d == 32){
-		// texture is fucked, but pretend it isn't
-		// TODO: use PSP unswizzle for these cases
-		uint8 *p = img->pixels;
-		uint8 c[3];
+		uint32 *dat = new uint32[w*h];
+		if(swizmask & 1 && unswizzle)
+			// Yes, PSP. must be leftover
+			unswizzlePSP(dat, (uint32*)texels, w, h, d);
+		else
+			memcpy(dat, texels, w*h*4);
+		texels = (uint8*)dat;
 		for(uint32 i = 0; i < w*h; i++){
-			c[0] = p[i*4+0];
-			c[1] = p[i*4+1];
-			c[2] = p[i*4+2];
-			p[i*4+2] = c[0];
-			p[i*4+1] = c[1];
-			p[i*4+0] = c[2];
-			p[i*4+3] = p[i*4+3]*255/128;
+			img->pixels[i*4+0] = texels[i*4+0];
+			img->pixels[i*4+1] = texels[i*4+1];
+			img->pixels[i*4+2] = texels[i*4+2];
+			img->pixels[i*4+3] = texels[i*4+3]*255/128;
 		}
+		delete[] dat;
 	}
 //
 // TODO: don't ALWAYS do this

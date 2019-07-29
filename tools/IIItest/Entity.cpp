@@ -243,9 +243,7 @@ CEntity::Remove(void)
 				list = &s->m_lists[ENTITYLIST_DUMMIES_OVERLAP];
 				break;
 			}
-			node = list->FindItem(this);
-			assert(node);
-			list->DeleteNode(node);
+			list->RemoveItem(this);
 		}
 }
 
@@ -288,9 +286,9 @@ CEntity::RegisterReference(CEntity **pent)
 		if(ref->pentity == pent)
 			return;
 	// have to allocate new reference
-	ref = CReferences::pEmptyList.next;
+	ref = CReferences::pEmptyList;
 	if(ref){
-		CReferences::pEmptyList.next = ref->next;
+		CReferences::pEmptyList = ref->next;
 
 		ref->pentity = pent;
 		ref->next = m_pFirstReference;
@@ -308,11 +306,13 @@ CEntity::ResolveReferences(void)
 		if(*ref->pentity == this)
 			*ref->pentity = nil;
 	// free list
-	for(ref = m_pFirstReference; ref->next; ref = ref->next)
-		;
-	ref->next = CReferences::pEmptyList.next;
-	CReferences::pEmptyList.next = ref;
-	m_pFirstReference = nil;
+	if(m_pFirstReference){
+		for(ref = m_pFirstReference; ref->next; ref = ref->next)
+			;
+		ref->next = CReferences::pEmptyList;
+		CReferences::pEmptyList = ref;
+		m_pFirstReference = nil;
+	}
 }
 
 // Free all references that no longer point to this entity
@@ -327,8 +327,8 @@ CEntity::PruneReferences(void)
 			lastnextp = &ref->next;
 		else{
 			*lastnextp = ref->next;
-			ref->next = CReferences::pEmptyList.next;
-			CReferences::pEmptyList.next = ref;
+			ref->next = CReferences::pEmptyList;
+			CReferences::pEmptyList = ref;
 		}
 	}
 }

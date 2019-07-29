@@ -490,7 +490,7 @@ InitGame(void)
 			sk::args.argc--;
 		}
 	}
-	eLevel levelToLoad = (eLevel)2;
+	eLevel levelToLoad = (eLevel)3;
 	if(sk::args.argc > 0){
 		const char *levelname = *sk::args.argv;
 		int i;
@@ -992,7 +992,7 @@ Draw(void)
 	drawHorizon();
 
 //	if(drawCubes)
-//		Renderer::renderPathNodes();
+		Renderer::renderPathNodes();
 //	renderCubesSector(curSectX, curSectY);
 
 	gui();

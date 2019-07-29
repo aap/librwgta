@@ -153,6 +153,10 @@ InitParams(void)
 		params.waterStart.set(-2048.0f, -2048.0f);
 		params.waterEnd.set(2048.0f, 2048.0f);
 		params.backfaceCull = false;
+		params.checkColModels = true;
+		params.maxNumColBoxes = 32;
+		params.maxNumColSpheres = 128;
+		params.maxNumColTriangles = 600;
 		switch(gameplatform){
 		case PLATFORM_PS2:
 			break;
@@ -399,7 +403,7 @@ void
 LoadGame(void)
 {
 //	SetCurrentDirectory("C:/Users/aap/games/gta3");
-	SetCurrentDirectory("C:/Users/aap/games/gtavc");
+//	SetCurrentDirectory("C:/Users/aap/games/gtavc");
 //	SetCurrentDirectory("C:/Users/aap/games/gtasa");
 //	SetCurrentDirectory("F://gtasa");
 //	SetCurrentDirectory("F://gta3_xbox");

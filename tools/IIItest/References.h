@@ -5,15 +5,15 @@ class CEntity;
 
 struct CReference
 {
-	CEntity **pentity;
 	CReference *next;
+	CEntity **pentity;
 };
 
 class CReferences
 {
 	static CReference aRefs[NUMREFERENCES];
 public:
-	static CReference pEmptyList;
+	static CReference *pEmptyList;
 	static void Init(void);
 };
 

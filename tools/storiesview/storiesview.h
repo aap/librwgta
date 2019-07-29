@@ -26,10 +26,11 @@ typedef uint16 float16;
 #include <streamworld.h>
 
 //#define EDIT_LINKS
-//#define LODNAMES
-//#define DUMPMODELS
-//#define DUMPCOLLISION
-//#define DUMPTEXTURES
+#define LODNAMES
+
+#define DUMPMODELS
+#define DUMPCOLLISION
+#define DUMPTEXTURES
 
 
 const char *lookupHashKey(uint32 key);

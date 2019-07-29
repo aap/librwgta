@@ -52,6 +52,14 @@ public:
 		RemoveNode(node);
 		delete node;
 	}
+	void RemoveItem(void *item){
+		CPtrNode *node, *next;
+		for(node = first; node; node = next){
+			next = node->next;
+			if(node->item == item)
+				DeleteNode(node);
+		}
+	}
 	void Flush(void){
 		CPtrNode *node, *next;
 		for(node = first; node; node = next){

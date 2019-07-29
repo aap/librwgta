@@ -4,6 +4,7 @@
 #include "CarCtrl.h"
 
 #define min(a,b) ((a) < (b) ? (a) : (b))
+#define max(a,b) ((a) > (b) ? (a) : (b))
 
 CPhysical::CPhysical(void)
 {
@@ -325,6 +326,7 @@ CPhysical::ApplyAirResistance(void)
 bool
 CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, float &impulseB)
 {
+	float eA, eB;
 	CPhysical *A = this;
 
 	bool ispedcontactA = false;
@@ -370,8 +372,8 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 						A->ApplyMoveForce(colpoint.normal*(1.0f + A->m_fElasticity)*impulseA);
 					return true;
 				}
-		}else{
 			}
+		}else{
 			CVector pointposA = colpoint.point - A->GetPosition();
 			speedA = DotProduct(A->GetSpeed(pointposA), colpoint.normal);
 			if(speedA < 0.0f){
@@ -396,14 +398,14 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 	}
 
 	// B is not static
+
 	if(A->bPedPhysics && B->bPedPhysics){
 		// negative if A is moving towards B
 		speedA = DotProduct(A->m_vecMoveSpeed, colpoint.normal);
 		// positive if B is moving towards A
-		speedB = DotProduct(B->m_vecMoveSpeed, colpoint.normal);
 		// not interested in how much B moves into A apparently?
 		// only interested in cases where A collided into B
-		if(speedB > 0.0f) speedB = 0.0f;
+		speedB = max(0.0f, DotProduct(B->m_vecMoveSpeed, colpoint.normal));
 		// A has moved into B
 		if(speedA < speedB){
 			if(!A->bHasHitWall)
@@ -419,32 +421,32 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 		speedB = DotProduct(B->GetSpeed(pointposB), colpoint.normal);
 
 		float a = A->m_fMass*timestepA;
-		float b = 1.0f /
-			(CrossProduct(pointposB, colpoint.normal).MagnitudeSqr()/(B->m_fTurnMass*timestepB) +
-				1.0f/(B->m_fMass*timestepB));
+		float b = B->GetMassTime(pointposB, colpoint.normal, timestepB);
 		float speedSum = (b*speedB + a*speedA)/(a + b);
 		if(speedA < speedSum){
-			float sA = speedSum;
-			float sB = speedSum;
 			if(A->bHasHitWall)
-				sA -= (speedA - speedSum) * (A->m_fElasticity+B->m_fElasticity)/2.0f;
+				eA = speedSum;
+			else
+				eA = speedSum - (speedA - speedSum) * (A->m_fElasticity+B->m_fElasticity)/2.0f;
 			if(B->bHasHitWall)
-				sB -= (speedB - speedSum) * (A->m_fElasticity+B->m_fElasticity)/2.0f;
-			impulseA = (sA - speedA) * a;
-			impulseB = (sB - speedB) * b;
+				eB = speedSum;
+			else
+				eB = speedSum - (speedB - speedSum) * (A->m_fElasticity+B->m_fElasticity)/2.0f;
+			impulseA = (eA - speedA) * a;
+			impulseB = -(eB - speedB) * b;
+			CVector fA = colpoint.normal*(impulseA/timestepA);
+			CVector fB = colpoint.normal*(-impulseB/timestepB);
 			if(!A->bInfiniteMass){
-				CVector f = colpoint.normal*(impulseA/timestepA);
-				if(f.z < 0.0f) f.z = 0.0f;
+				if(fA.z < 0.0f) fA.z = 0.0f;
 				if(ispedcontactB){
-					f.x *= 2.0f;
-					f.y *= 2.0f;
+					fA.x *= 2.0f;
+					fA.y *= 2.0f;
 				}
-				A->ApplyMoveForce(f);
+				A->ApplyMoveForce(fA);
 			}
 			if(!B->bInfiniteMass && !ispedcontactB){
-				CVector f = colpoint.normal*(-impulseB/timestepB);
-				B->ApplyMoveForce(f);
-				B->ApplyTurnForce(f, pointposB);
+				B->ApplyMoveForce(fB);
+				B->ApplyTurnForce(fB, pointposB);
 			}
 			return true;
 		}
@@ -453,38 +455,38 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 		speedA = DotProduct(A->GetSpeed(pointposA), colpoint.normal);
 		speedB = DotProduct(B->m_vecMoveSpeed, colpoint.normal);
 
-		float a = 1.0f /
-			(CrossProduct(pointposA, colpoint.normal).MagnitudeSqr()/(A->m_fTurnMass*timestepA) +
-				1.0f/(A->m_fMass*timestepA));
+		float a = A->GetMassTime(pointposA, colpoint.normal, timestepA);
 		float b = B->m_fMass*timestepB;
 		float speedSum = (b*speedB + a*speedA)/(a + b);
 		if(speedA < speedSum){
-			float sA = speedSum;
-			float sB = speedSum;
 			if(A->bHasHitWall)
-				sA -= (speedA - speedSum) * (A->m_fElasticity+B->m_fElasticity)/2.0f;
+				eA = speedSum;
+			else
+				eA = speedSum - (speedA - speedSum) * (A->m_fElasticity+B->m_fElasticity)/2.0f;
 			if(B->bHasHitWall)
-				sB -= (speedB - speedSum) * (A->m_fElasticity+B->m_fElasticity)/2.0f;
-			impulseA = (sA - speedA) * a;
-			impulseB = (sB - speedB) * b;
+				eB = speedSum;
+			else
+				eB = speedSum - (speedB - speedSum) * (A->m_fElasticity+B->m_fElasticity)/2.0f;
+			impulseA = (eA - speedA) * a;
+			impulseB = -(eB - speedB) * b;
+			CVector fA = colpoint.normal*(impulseA/timestepA);
+			CVector fB = colpoint.normal*(-impulseB/timestepB);
 			if(!A->bInfiniteMass && !ispedcontactA){
-				CVector f = colpoint.normal*(impulseA/timestepA);
-				if(f.z < 0.0f) f.z = 0.0f;
-				A->ApplyMoveForce(f);
-				A->ApplyTurnForce(f, pointposA);
+				if(fA.z < 0.0f) fA.z = 0.0f;
+				A->ApplyMoveForce(fA);
+				A->ApplyTurnForce(fA, pointposA);
 			}
 			if(!B->bInfiniteMass){
-				CVector f = colpoint.normal*(-impulseB/timestepB);
-				if(f.z < 0.0f){
-					f.z = 0.0f;
-					if(abs(speedA) < 0.01f)
-						f *= 0.5f;
+				if(fB.z < 0.0f){
+					fB.z = 0.0f;
+					if(fabs(speedA) < 0.01f)
+						fB *= 0.5f;
 				}
 				if(ispedcontactA){
-					f.x *= 2.0f;
-					f.y *= 2.0f;
+					fB.x *= 2.0f;
+					fB.y *= 2.0f;
 				}
-				B->ApplyMoveForce(f);
+				B->ApplyMoveForce(fB);
 			}
 			return true;
 		}
@@ -493,22 +495,20 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 		CVector pointposB = colpoint.point - B->GetPosition();
 		speedA = DotProduct(A->GetSpeed(pointposA), colpoint.normal);
 		speedB = DotProduct(B->GetSpeed(pointposB), colpoint.normal);
-		float a = 1.0f /
-			(CrossProduct(pointposA, colpoint.normal).MagnitudeSqr()/(A->m_fTurnMass*timestepA) +
-				1.0f/(A->m_fMass*timestepA));
-		float b = 1.0f /
-			(CrossProduct(pointposB, colpoint.normal).MagnitudeSqr()/(B->m_fTurnMass*timestepB) +
-				1.0f/(B->m_fMass*timestepB));
+		float a = A->GetMassTime(pointposA, colpoint.normal, timestepA);
+		float b = B->GetMassTime(pointposB, colpoint.normal, timestepB);
 		float speedSum = (b*speedB + a*speedA)/(a + b);
 		if(speedA < speedSum){
-			float sA = speedSum;
-			float sB = speedSum;
 			if(A->bHasHitWall)
-				sA -= (speedA - speedSum) * (A->m_fElasticity+B->m_fElasticity)/2.0f;
+				eA = speedSum;
+			else
+				eA = speedSum - (speedA - speedSum) * (A->m_fElasticity+B->m_fElasticity)/2.0f;
 			if(B->bHasHitWall)
-				sB -= (speedB - speedSum) * (A->m_fElasticity+B->m_fElasticity)/2.0f;
-			impulseA = (sA - speedA) * a;
-			impulseB = (sB - speedB) * b;
+				eB = speedSum;
+			else
+				eB = speedSum - (speedB - speedSum) * (A->m_fElasticity+B->m_fElasticity)/2.0f;
+			impulseA = (eA - speedA) * a;
+			impulseB = -(eB - speedB) * b;
 			CVector fA = colpoint.normal*(impulseA/timestepA);
 			CVector fB = colpoint.normal*(-impulseB/timestepB);
 			if(A->IsVehicle() && !A->bHasHitWall){
@@ -574,10 +574,11 @@ CPhysical::ApplyCollisionAlt(CEntity *B, CColPoint &colpoint, float &impulse, CV
 		if(normalSpeed < 0.0f){
 			CVector xxx = CrossProduct(pointpos, colpoint.normal);
 			float minspeed = 0.0104f * CTimer::ms_fTimeStep;
-			if((IsObject() || IsVehicle() && GetUp().z < -0.3f)
-			   && abs(m_vecMoveSpeed.x) < minspeed
-			   && abs(m_vecMoveSpeed.y) < minspeed
-			   && abs(m_vecMoveSpeed.z) < minspeed*2.0f)
+			if((IsObject() || IsVehicle() && GetUp().z < -0.3f) &&
+			   !bHasContacted &&
+			   fabs(m_vecMoveSpeed.x) < minspeed &&
+			   fabs(m_vecMoveSpeed.y) < minspeed &&
+			   fabs(m_vecMoveSpeed.z) > minspeed*2.0f)
 				e = -1.0f;
 			else
 				e = -(m_fElasticity + 1.0f);
@@ -587,7 +588,7 @@ CPhysical::ApplyCollisionAlt(CEntity *B, CColPoint &colpoint, float &impulse, CV
 			vImpulse = colpoint.normal*impulse;
 			if(IsVehicle() &&
 			   (!bHasHitWall ||
-			    !(m_vecMoveSpeed.MagnitudeSqr() > 0.1 || B->IsBuilding() || ((CPhysical*)B)->bInfiniteMass)))
+			    !(m_vecMoveSpeed.MagnitudeSqr() > 0.1 || !(B->IsBuilding() || ((CPhysical*)B)->bInfiniteMass))))
 				moveSpeed += vImpulse * 1.2f * (1.0f/m_fMass);
 			else
 				moveSpeed += vImpulse * (1.0f/m_fMass);
@@ -596,6 +597,8 @@ CPhysical::ApplyCollisionAlt(CEntity *B, CColPoint &colpoint, float &impulse, CV
 			CVector com = Multiply3x3(m_matrix, m_vecCentreOfMass);
 			CVector turnimpulse = CrossProduct(pointpos-com, vImpulse);
 			turnSpeed += turnimpulse*(1.0f/m_fTurnMass);
+
+			return true;
 		}
 	}
 	return false;
@@ -848,17 +851,19 @@ CPhysical::ProcessControl(void)
 			m_vecTurnSpeedAvg = (m_vecTurnSpeedAvg + m_vecTurnSpeed)/2.0f;
 			float step = CTimer::ms_fTimeStep * 0.003;
 			if(m_vecMoveSpeedAvg.MagnitudeSqr() < step*step &&
-			   m_vecTurnSpeedAvg.MagnitudeSqr() < step*step)
+			   m_vecTurnSpeedAvg.MagnitudeSqr() < step*step){
+				m_nStaticFrames++;
+				if(m_nStaticFrames > 10){
+					m_nStaticFrames = 10;
+					bIsStatic = true;
+					m_vecMoveSpeed = CVector(0.0f, 0.0f, 0.0f);
+					m_vecTurnSpeed = CVector(0.0f, 0.0f, 0.0f);
+					m_vecMoveFriction = m_vecMoveSpeed;
+					m_vecTurnFriction = m_vecTurnSpeed;
+					return;
+				}
+			}else 
 				m_nStaticFrames = 0;
-			else if(m_nStaticFrames++ > 10){
-				m_nStaticFrames = 10;
-				bIsStatic = true;
-				m_vecMoveFriction = m_vecMoveSpeed;
-				m_vecTurnFriction = m_vecTurnSpeed;
-				m_vecMoveSpeed = CVector(0.0f, 0.0f, 0.0f);
-				m_vecTurnSpeed = CVector(0.0f, 0.0f, 0.0f);
-				return;
-			}
 		}
 	}
 	ApplyGravity();

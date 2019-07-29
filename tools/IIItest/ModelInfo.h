@@ -1,9 +1,6 @@
 #ifndef _MODELINFO_H_
 #define _MODELINFO_H_
 
-// temporary
-typedef void unknown;
-
 enum ModelInfoType
 {
 	SIMPLEMODELINFO    = 1,
@@ -32,7 +29,7 @@ public:
 
 	CBaseModelInfo(int type);
 	virtual ~CBaseModelInfo() {}
-	virtual unknown Shutdown(void) {}
+	virtual void Shutdown(void) {}
 	virtual void DeleteRwObject(void) = 0;
 	virtual rw::Object *CreateInstance(void) = 0;
 	virtual rw::Object *CreateInstance(rw::Matrix *) = 0;
@@ -52,7 +49,7 @@ public:
 	void AddTexDictionaryRef(void);
 	void RemoveTexDictionaryRef(void);
 	void Add2dEffect(C2dEffect *fx);
-	bool IsSimple(void) { return m_type == 1 || m_type == 3; }
+	bool IsSimple(void) { return m_type == SIMPLEMODELINFO || m_type == TIMEMODELINFO; }
 };
 
 class CSimpleModelInfo : public CBaseModelInfo
@@ -64,7 +61,7 @@ public:
 	float m_lodDistances[3];
 	uchar m_numAtomics;
 	uchar m_alpha;
-	uint  m_furthest      : 3; // 0: numAtomics-1 is furthest visible
+	uint  m_furthest      : 2; // 0: numAtomics-1 is furthest visible
 	                         // 1: atomic 0 is furthest
 	                         // 2: atomic 1 is furthest
 	uint  m_normalCull    : 1;
@@ -89,6 +86,7 @@ public:
 	void IncreaseAlpha(void) { if(m_alpha >= 0xEF) m_alpha = 0xFF; else m_alpha += 0x10; }
 	void SetAtomic(int n, rw::Atomic *atomic);
 	void SetLodDistances(float *dist);
+	// TODO: no LOD multiplier here? */
 	float GetLodDistance(int i) { return m_lodDistances[i]; }
 	float GetNearDistance(void) { return m_lodDistances[2]; }
 	float GetLargestLodDistance(void);
@@ -223,7 +221,7 @@ public:
 	int m_unk;
 
 	~CXtraCompsModelInfo() {}
-	unknown Shutdown(void) {}
+	void Shutdown(void) {}
 	rw::Object *CreateInstance(void) { return nil; }
 	void SetClump(rw::Clump *clump){
 		CClumpModelInfo::SetClump(clump);

@@ -198,6 +198,11 @@ struct Params
 	int neoWorldPipe;
 
 	int leedsPipe;
+
+	bool checkColModels;
+	int maxNumColSpheres;
+	int maxNumColBoxes;
+	int maxNumColTriangles;
 };
 extern Params params;
 

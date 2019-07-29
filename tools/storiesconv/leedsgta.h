@@ -713,23 +713,36 @@ struct CPathNode
 {
 #ifdef LCS
 	// from VC, but seems to work for LCS too
-	uint32 Flags;
+	int16 unk1;
+	int16 nextIndex;
 	int16 x;
 	int16 y;
 	int16 z;
 	int16 unknown;
-	int16 linkId;
-	uint8 width;
-	uint8 NodeType;
-	uint8 flagsA_numLinks;
-	uint8 flagsB;
-	uint8 flagsC;
+	int16 firstLink;
+	int8 width;
+	int8 group;
+	int8 numLinks : 4;
+	int8 bDeadEnd : 1;
+	int8 bTurnedOff : 1;	// flag 8 in node info
+	int8 flagA40 : 1;	// flag 20 in node info
+	int8 flagA80 : 1;	// flag 4 in node info
+	int8 flagB1 : 1;	// flag 10 in node info
+	int8 flagB2 : 1;	// flag 2 in node info
+	int8 flagB4 : 1;
+	int8 speedLimit : 2;
+	int8 flagB20 : 1;
+	int8 flagB40 : 1;
+	int8 flagB80 : 1;
+	int8 spawnRate : 4;
+	int8 flagsC : 4;
 #else
-	// this is just guessing...
 	int16 x;
 	int16 y;
 	int16 z;
-	int16 blah[2];
+	// this is just guessing...
+	int16 unk1;
+	int16 unk2;	// flags? seems to be 0x8002 quite often
 #endif
 };
 
@@ -743,22 +756,22 @@ struct CPathFind
 #ifdef LCS
 	CPathNode *pathNodes;
 	CNaviNode *naviNodes;
-	uint16 *linksTo;     // numLinks
-	uint8 *distanceTo;   // numLinks
-	uint16 *data1;
+	uint16 *linksTo;	// numLinks
+	uint8 *distTo;		// numLinks
+	uint16 *naviLinks;	// numLinks
 
 	int32 numPathNodes;
 	int32 numCarNodes;
 	int32 numPedNodes;
-	int16 count2;
+	int16 numMapObjects;	// ??
 	int16 numLinks;
-	int16 count3;	// numData1?
+	int16 numNaviNodes;	// ??
 	int16 pad;
-	int32 numNaviNodes;
+	int32 unk;		// or numnavinodes ??
 #else
 	CPathNode *pathNodes;
-	void *data1;
-	uint16 *linksTo;     // numLinks
+	void *naviNodes;	// ??
+	uint16 *linksTo;	// numLinks
 
 	int32 numPathNodes;
 	int32 numCarNodes;

@@ -33,7 +33,7 @@ class CWorld
 {
 	static CPtrList ms_bigBuildingsList[4];
 	static CPtrList ms_listMovingEntityPtrs;
-	static CSector ms_aSectors[NUMSECTORS_X][NUMSECTORS_Y];
+	static CSector ms_aSectors[NUMSECTORS_Y][NUMSECTORS_X];
 	static uint16 ms_nCurrentScanCode;
 public:
 
@@ -41,7 +41,7 @@ public:
 
 	static void Initialise(void);
 	static void Add(CEntity*);
-	static CSector *GetSector(int x, int y) { return &ms_aSectors[x][y]; }
+	static CSector *GetSector(int x, int y) { return &ms_aSectors[y][x]; }
 	static CPtrList &GetBigBuildingList(eLevelName i) { return ms_bigBuildingsList[i]; }
 	static CPtrList &GetMovingEntityList(void) { return ms_listMovingEntityPtrs; }
 	static uint16 GetCurrentScanCode(void) { return ms_nCurrentScanCode; }

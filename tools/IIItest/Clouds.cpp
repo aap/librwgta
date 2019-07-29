@@ -259,7 +259,8 @@ CClouds::Render(void)
 			if(CSprite::CalcScreenCoors(worldpos, &screenpos, &szx, &szy, false))
 				CSprite::RenderBufferedOneXLUSprite(screenpos.x, screenpos.y, screenpos.z,
 					2.0f*szx, 50.0*szy,
-					BowRed[i], BowGreen[i], BowBlue[i], 255, 1.0f/screenpos.z, 255);
+					BowRed[i]*CWeather::Rainbow, BowGreen[i]*CWeather::Rainbow, BowBlue[i]*CWeather::Rainbow,
+					255, 1.0f/screenpos.z, 255);
 
 		}
 		CSprite::FlushSpriteBuffer();

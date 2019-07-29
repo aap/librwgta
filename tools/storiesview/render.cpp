@@ -264,8 +264,8 @@ renderPathNodes(void)
 	rw::Frame *f = atomic->getFrame();
 	for(i = 0; i < gpThePaths->numPathNodes; i++){
 		CPathNode *pn = &gpThePaths->pathNodes[i];
-//		if(i >= 0 && i < gpThePaths->numCarNodes)
-//			continue;
+		if(i >= 0 && i < gpThePaths->numCarNodes)
+			continue;
 
 		rw::V3d pos;
 		pos.x = pn->x/8.0f;

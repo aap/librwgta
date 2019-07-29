@@ -21,7 +21,7 @@ public:
 			y *= invsqrt;
 			z *= invsqrt;
 		}else
-			x = 0.0f;
+			x = 1.0f;
 	}
 	rw::V3d ToRW(void){
 		return rw::makeV3d(x, y, z);
@@ -263,18 +263,18 @@ operator*(const CMatrix &m1, const CMatrix &m2)
 	rw::Matrix *dst = &out.m_matrix;
 	const rw::Matrix *src1 = &m1.m_matrix;
 	const rw::Matrix *src2 = &m2.m_matrix;
-	dst->right.x = src1->right.x*src2->right.x + src1->right.y*src2->up.x + src1->right.z*src2->at.x;
-	dst->right.y = src1->right.x*src2->right.y + src1->right.y*src2->up.y + src1->right.z*src2->at.y;
-	dst->right.z = src1->right.x*src2->right.z + src1->right.y*src2->up.z + src1->right.z*src2->at.z;
-	dst->up.x    = src1->up.x*src2->right.x    + src1->up.y*src2->up.x    + src1->up.z*src2->at.x;
-	dst->up.y    = src1->up.x*src2->right.y    + src1->up.y*src2->up.y    + src1->up.z*src2->at.y;
-	dst->up.z    = src1->up.x*src2->right.z    + src1->up.y*src2->up.z    + src1->up.z*src2->at.z;
-	dst->at.x    = src1->at.x*src2->right.x    + src1->at.y*src2->up.x    + src1->at.z*src2->at.x;
-	dst->at.y    = src1->at.x*src2->right.y    + src1->at.y*src2->up.y    + src1->at.z*src2->at.y;
-	dst->at.z    = src1->at.x*src2->right.z    + src1->at.y*src2->up.z    + src1->at.z*src2->at.z;
-	dst->pos.x   = src1->pos.x*src2->right.x   + src1->pos.y*src2->up.x   + src1->pos.z*src2->at.x + src2->pos.x;
-	dst->pos.y   = src1->pos.x*src2->right.y   + src1->pos.y*src2->up.y   + src1->pos.z*src2->at.y + src2->pos.y;
-	dst->pos.z   = src1->pos.x*src2->right.z   + src1->pos.y*src2->up.z   + src1->pos.z*src2->at.z + src2->pos.z;
+	dst->right.x = src1->right.x*src2->right.x + src1->up.x*src2->right.y + src1->at.x*src2->right.z;
+	dst->right.y = src1->right.y*src2->right.x + src1->up.y*src2->right.y + src1->at.y*src2->right.z;
+	dst->right.z = src1->right.z*src2->right.x + src1->up.z*src2->right.y + src1->at.z*src2->right.z;
+	dst->up.x    = src1->right.x*src2->up.x    + src1->up.x*src2->up.y    + src1->at.x*src2->up.z;
+	dst->up.y    = src1->right.y*src2->up.x    + src1->up.y*src2->up.y    + src1->at.y*src2->up.z;
+	dst->up.z    = src1->right.z*src2->up.x    + src1->up.z*src2->up.y    + src1->at.z*src2->up.z;
+	dst->at.x    = src1->right.x*src2->at.x    + src1->up.x*src2->at.y    + src1->at.x*src2->at.z;
+	dst->at.y    = src1->right.y*src2->at.x    + src1->up.y*src2->at.y    + src1->at.y*src2->at.z;
+	dst->at.z    = src1->right.z*src2->at.x    + src1->up.z*src2->at.y    + src1->at.z*src2->at.z;
+	dst->pos.x   = src1->right.x*src2->pos.x   + src1->up.x*src2->pos.y   + src1->at.x*src2->pos.z + src1->pos.x;
+	dst->pos.y   = src1->right.y*src2->pos.x   + src1->up.y*src2->pos.y   + src1->at.y*src2->pos.z + src1->pos.y;
+	dst->pos.z   = src1->right.z*src2->pos.x   + src1->up.z*src2->pos.y   + src1->at.z*src2->pos.z + src1->pos.z;
 	return out;
 }
 

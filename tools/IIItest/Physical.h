@@ -79,6 +79,14 @@ public:
 	// get speed of point p relative to entity center
 	CVector GetSpeed(const CVector &r);
 	CVector GetSpeed(void) { return GetSpeed(CVector(0.0f, 0.0f, 0.0f)); }
+	float GetMass(const CVector &pos, const CVector &dir) {
+		return 1.0f / (CrossProduct(pos, dir).MagnitudeSqr()/m_fTurnMass +
+		               1.0f/m_fMass);
+	}
+	float GetMassTime(const CVector &pos, const CVector &dir, float t) {
+		return 1.0f / (CrossProduct(pos, dir).MagnitudeSqr()/(m_fTurnMass*t) +
+		               1.0f/(m_fMass*t));
+	}
 	void UnsetIsInSafePosition(void) {
 		m_vecMoveSpeed *= -1.0f;
 		m_vecTurnSpeed *= -1.0f;

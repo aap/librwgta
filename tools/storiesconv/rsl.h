@@ -201,8 +201,8 @@ struct RslNode {
 #ifdef LCS
 	int32              nodeId;
 #else
-	int32		nodeId;
-	int32		nodeId2;
+	int32		nodeId;	// always 0?
+	int32		unk;	// 0 or uninitialized?
 #endif
 	RslTAnimTree      *hier;
 	// R* Node name

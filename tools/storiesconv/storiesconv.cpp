@@ -100,7 +100,7 @@ RslNode *dumpNodeCB(RslNode *frame, void *data)
 #ifdef LCS
 	printf("%08x %p %s %d\n", frame->nodeId, frame->hier, frame->name, frame->hierId);
 #else
-	printf("%08x %08x %p %s %d\n", frame->nodeId, frame->nodeId2, frame->hier, frame->name, frame->hierId);
+	printf("%08x %08x %p %s %d\n", frame->nodeId, frame->unk, frame->hier, frame->name, frame->hierId);
 #endif
 //	printf(" frm: %x %s %x\n", frame->nodeId, frame->name, frame->hierId);
 	RslNodeForAllChildren(frame, dumpNodeCB, data);
@@ -132,7 +132,7 @@ RslElement *dumpElementCB(RslElement *atomic, void*)
 }
 
 Clump*
-LoadSimple(uint8 *data, const char *name, int nElements)
+LoadSimple(uint8 *data, uint32 dataSize, const char *name, int nElements)
 {
 	int i;
 	Clump *c;
@@ -141,10 +141,16 @@ LoadSimple(uint8 *data, const char *name, int nElements)
 	RslElement **e;
 	char *nodename;
 
+	if(nElements == 0)
+		return nil;
+
 	e = (RslElement**)data;
-	for(i = 0; i < nElements; i++)
+	for(i = 0; i < nElements; i++){
+		if((uint8*)e[i] < data || (uint8*)e[i] >= data+dataSize)
+			return nil;
 		if(e[i]->object.object.type != 1)
 			return nil;
+	}
 
 	c = Clump::create();
 	root = Frame::create();
@@ -172,7 +178,7 @@ LoadElementGroup(uint8 *data)
 		return nil;
 	RslElementGroupForAllElements(eg, makeTextures, NULL);
 	//RslElementGroupForAllElements(eg, dumpElementCB, nil);
-//	dumpNodeCB((RslNode*)eg->object.parent, NULL);
+	//dumpNodeCB((RslNode*)eg->object.parent, NULL);
 	return convertClump(eg);
 }
 
@@ -240,6 +246,13 @@ LoadVehicle(uint8 *data)
 			"ped_left_entry",
 			"ped_mid_entry",
 			"ped_right_entry",
+		};
+		static const char *dummynamesHeli[] = {
+			"headlights",
+			"taillights",
+			"",
+			"",
+			"ped_frontseat",
 		};
 		static const char *dummynamesPlane[] = {
 #ifdef LCS
@@ -325,7 +338,7 @@ LoadVehicle(uint8 *data)
 			dummynamesJetski,
 #endif
 			dummynamesTrain,
-			nil,	// no heli dummies
+			dummynamesHeli,
 			dummynamesPlane,
 			dummynamesBike,
 			dummynamesFerry,
@@ -388,7 +401,7 @@ Clump*
 LoadAny(sChunkHeader &header, uint8 *data, const char *name)
 {
 	Clump *c;
-	c = LoadSimple(data, "object", header.numFuncs);
+	c = LoadSimple(data, header.dataSize, "object", header.numFuncs);
 	if(c) return c;
 	c = LoadElementGroup(data);
 	if(c) return c;
@@ -396,6 +409,7 @@ LoadAny(sChunkHeader &header, uint8 *data, const char *name)
 	if(c) return c;
 	c = LoadPed(data);
 	if(c) return c;
+	fprintf(stderr, "can't load model %s\n", name);
 	return nil;
 }
 
@@ -1435,7 +1449,7 @@ main(int argc, char *argv[])
 	}else if(header.ident == MDL_IDENT){
 		switch(mdltype){
 		case MDL_SIMPLE:
-			rwc = LoadSimple(data, "object", header.numFuncs);
+			rwc = LoadSimple(data, header.dataSize, "object", header.numFuncs);
 			break;
 		case MDL_ELEMENTGROUP:
 			rwc = LoadElementGroup(data);

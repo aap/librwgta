@@ -150,6 +150,31 @@ assignPS2SAcarPipes(Atomic *atomic)
 }
 
 void
+assignPS2SAbuildingPipes(Atomic *atomic)
+{
+	int i;
+	Geometry *geo;
+	Material *mat;
+	gta::EnvMat *env;
+
+	geo = atomic->geometry;
+	if(geo->instData){
+		fprintf(stderr, "error: can't re-assign pipeline on pre-instanced geometry\n");
+		exit(1);
+	}
+
+	// Don't give building pipe to skinned geometry
+	if(atomic->pipeline->pluginID == ID_SKIN)
+		return;
+
+	// not quite sure how to handle matfx
+	if(atomic->pipeline->pluginID = ID_MATFX)
+		for(i = 0; i < geo->matList.numMaterials; i++){
+			mat = geo->matList.materials[i];
+		}
+}
+
+void
 dumpUVAnim(Animation *anim)
 {
 	UVAnimCustomData *cust = (UVAnimCustomData*)anim->customData;
@@ -190,7 +215,7 @@ getFrameName(Frame *f)
 }
 
 void
-dumpFrameHier(Frame *frame, int ind = 0)
+dumpFrameHier(Frame *frame, int dumpMat, int ind = 0)
 {
 	for(int i = 0; i < ind; i++)
 		printf("  ");
@@ -203,9 +228,9 @@ dumpFrameHier(Frame *frame, int ind = 0)
 			name = h->nodeInfo[i].frame ? getFrameName(h->nodeInfo[i].frame) : "";
 			printf("\t\t%d %d\t%p %s\n", h->nodeInfo[i].id, h->nodeInfo[i].flags, h->nodeInfo[i].frame, name);
 
-			if(0){
-			rw::Matrix *mat = h->nodeInfo[i].frame->getLTM();
-		//	rw::Matrix *mat = &h->nodeInfo[i].frame->matrix;
+			if(dumpMat){
+		//	rw::Matrix *mat = h->nodeInfo[i].frame->getLTM();
+			rw::Matrix *mat = &h->nodeInfo[i].frame->matrix;
 			printf("[ [ %8.4f, %8.4f, %8.4f, %8.4f ]\n"
 			       "  [ %8.4f, %8.4f, %8.4f, %8.4f ]\n"
 			       "  [ %8.4f, %8.4f, %8.4f, %8.4f ]\n"
@@ -221,7 +246,29 @@ dumpFrameHier(Frame *frame, int ind = 0)
 	}
 	for(Frame *child = frame->child;
 	    child; child = child->next)
-		dumpFrameHier(child, ind+1);
+		dumpFrameHier(child, dumpMat, ind+1);
+}
+
+void
+dumpBoneMatrices(Skin *skin, HAnimHierarchy *hier)
+{
+	int i;
+	Matrix *mat;
+
+	for(i = 0; i < skin->numBones; i++){
+		mat = (Matrix*)&skin->inverseMatrices[i*16];
+		printf("node %s\n", gta::getNodeName(hier->nodeInfo[i].frame));
+		printf("[ [ %8.4f, %8.4f, %8.4f, %8.4f ]\n"
+		       "  [ %8.4f, %8.4f, %8.4f, %8.4f ]\n"
+		       "  [ %8.4f, %8.4f, %8.4f, %8.4f ]\n"
+		       "  [ %8.4f, %8.4f, %8.4f, %8.4f ] ]\n"
+			"  %08x == flags\n",
+			mat->right.x, mat->up.x, mat->at.x, mat->pos.x,
+			mat->right.y, mat->up.y, mat->at.y, mat->pos.y,
+			mat->right.z, mat->up.z, mat->at.z, mat->pos.z,
+			0.0f, 0.0f, 0.0f, 1.0f,
+			mat->flags);
+	}
 }
 
 void
@@ -645,7 +692,15 @@ main(int argc, char *argv[])
 		HAnimHierarchy *hier = HAnimHierarchy::find(c->getFrame());
 		if(hier)
 			hier->attach();
-		dumpFrameHier(c->getFrame());
+		dumpFrameHier(c->getFrame(), dump > 1);
+
+		if(dump > 2)
+			FORLIST(lnk, c->atomics){
+				Atomic *a = Atomic::fromClump(lnk);
+				Geometry *g = a->geometry;
+				if(Skin::get(g))
+					dumpBoneMatrices(Skin::get(g), hier);
+			}
 	}
 
 	//if(currentUVAnimDictionary){

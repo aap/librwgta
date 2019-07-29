@@ -586,6 +586,7 @@ LoadCollisionFile(const char *path)
 		obj = GetObjectDef(colfile.name, nil);
 		if(obj){
 			CColModel *col = new CColModel;
+			strncpy(col->name, colfile.name, 24);
 			col->file = currentFile;
 			obj->m_colModel = col;
 			switch(version){

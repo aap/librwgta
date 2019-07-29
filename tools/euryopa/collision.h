@@ -134,6 +134,7 @@ struct CColModel
 	uint8 allocFlag;
 	uint8 *rawdata;
 
+	char name[24];
 	GameFile *file;
 
 	CColModel(void);

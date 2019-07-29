@@ -905,8 +905,8 @@ CCollision::ProcessSphereTriangle(const CColSphere &sphere,
 		else assert(0);
 	}else if(testcase == 3){
 		// center is in triangle
-		dist = planedist;
-		p = sphere.center - normal*dist;
+		dist = abs(planedist);
+		p = sphere.center - normal*planedist;
 	}else
 		assert(0);	// front fell off
 
@@ -915,10 +915,12 @@ CCollision::ProcessSphereTriangle(const CColSphere &sphere,
 
 	point.point = p;
 	point.normal = sphere.center - p;
+	point.normal.Normalise();
 	point.surfaceA = sphere.surface;
 	point.pieceA = sphere.piece;
 	point.surfaceB = tri.surface;
 	point.pieceB = 0;
+	point.depth = sphere.radius - dist;
 	mindistsq = dist*dist;
 	return true;
 }
@@ -1056,7 +1058,7 @@ CCollision::ProcessColModels(const CMatrix &matrixA, CColModel &modelA,
 	for(i = 0; i < modelA.numLines; i++)
 		aLinesA[i].Set(matAB * modelA.lines[i].p0, matAB * modelA.lines[i].p1);
 
-	// Test those against model B's bounding volumes
+	// Test them against model B's bounding volumes
 	int numSpheresA = 0;
 	int numLinesA = 0;
 	for(i = 0; i < modelA.numSpheres; i++)
@@ -1147,11 +1149,12 @@ CCollision::ProcessColModels(const CMatrix &matrixA, CColModel &modelA,
 				linepoints[aLineIndicesA[i]],
 				linedists[aLineIndicesA[i]]);
 	}
-	for(i = 0; i < numLinesA; i++){
-		j = aLineIndicesA[i];
-		linepoints[j].point = matrixB * linepoints[j].point;
-		linepoints[j].normal = Multiply3x3(matrixB, linepoints[j].normal);
-	}
+	for(i = 0; i < numLinesA; i++)
+		if(aCollided[i]){
+			j = aLineIndicesA[i];
+			linepoints[j].point = matrixB * linepoints[j].point;
+			linepoints[j].normal = Multiply3x3(matrixB, linepoints[j].normal);
+		}
 
 	return numCollisions;	// sphere collisions
 }
@@ -1334,7 +1337,7 @@ CColTrianglePlane::Set(const CVector *v, CColTriangle &tri)
 	else if(an.y > an.z)
 		dir = normal.y < 0.0f ? DIR_Y_NEG : DIR_Y_POS;
 	else
-		dir = normal.z < 0.0f ? DIR_Z_NEG : DIR_Z_POS;;
+		dir = normal.z < 0.0f ? DIR_Z_NEG : DIR_Z_POS;
 }
 
 CColModel::CColModel(void)

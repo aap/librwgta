@@ -48,6 +48,9 @@ ReadColModel(CColModel *colmodel, rw::uint8 *buf, int size)
 	colmodel->numSpheres = *(int16*)buf;
 	buf += 4;
 	if(colmodel->numSpheres){
+		if(params.checkColModels && colmodel->numSpheres > params.maxNumColSpheres)
+			debug("warning: %d spheres in col model %s %s\n",
+				colmodel->numSpheres, colmodel->name, colmodel->file->name);
 		colmodel->spheres = rwNewT(CColSphere, colmodel->numSpheres, 0);
 		for(int i = 0; i < colmodel->numSpheres; i++){
 			colmodel->spheres[i].Set(*(float*)buf, (rw::V3d*)(buf+4), buf[16], buf[17], buf[19]);
@@ -58,6 +61,7 @@ ReadColModel(CColModel *colmodel, rw::uint8 *buf, int size)
 	colmodel->numLines = *(int16*)buf;
 	buf += 4;
 	if(colmodel->numLines){
+		// lines aren't really used...
 		colmodel->lines = rwNewT(CColLine, colmodel->numLines, 0);
 		for(int i = 0; i < colmodel->numLines; i++){
 			colmodel->lines[i].Set((rw::V3d*)buf, (rw::V3d*)(buf+12));
@@ -68,6 +72,9 @@ ReadColModel(CColModel *colmodel, rw::uint8 *buf, int size)
 	colmodel->numBoxes = *(int16*)buf;
 	buf += 4;
 	if(colmodel->numBoxes){
+		if(params.checkColModels && colmodel->numBoxes > params.maxNumColBoxes)
+			debug("warning: %d boxes in col model %s %s\n",
+				colmodel->numBoxes, colmodel->name, colmodel->file->name);
 		colmodel->boxes = rwNewT(CColBox, colmodel->numBoxes, 0);
 		for(int i = 0; i < colmodel->numBoxes; i++){
 			colmodel->boxes[i].Set((rw::V3d*)buf, (rw::V3d*)(buf+12), buf[24], buf[25], buf[27]);
@@ -88,6 +95,9 @@ ReadColModel(CColModel *colmodel, rw::uint8 *buf, int size)
 	colmodel->numTriangles = *(int16*)buf;
 	buf += 4;
 	if(colmodel->numTriangles){
+		if(params.checkColModels && colmodel->numTriangles > params.maxNumColTriangles)
+			debug("warning: %d triangles in col model %s %s\n", colmodel->numTriangles,
+				colmodel->name, colmodel->file->name);
 		colmodel->triangles = rwNewT(CColTriangle, colmodel->numTriangles, 0);
 		for(int i = 0; i < colmodel->numTriangles; i++){
 			colmodel->triangles[i].Set(*(int32*)buf, *(int32*)(buf+4), *(int32*)(buf+8), buf[12], buf[15]);

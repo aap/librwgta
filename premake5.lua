@@ -194,6 +194,10 @@ project "gtaclumpview"
 	removeplatforms { "*null" }
 	removeplatforms { "ps2" } -- for now
 
+project "convifp"
+	tool("convifp")
+	kind "ConsoleApp"
+	removeplatforms { "*gl3", "*d3d9" }
 
 project "coltest"
 	tool("coltest")

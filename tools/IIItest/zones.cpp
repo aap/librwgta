@@ -113,8 +113,8 @@ CTheZones::CreateZone(char *name, eZoneType type,
 	zone->maxz = maxz;
 	zone->level = level;
 	if(type == ZONE_AUDIO || type == ZONE_TYPE1 || type == ZONE_TYPE2){
-		zone->zoneinfoNight = TotalNumberOfZoneInfos++;
 		zone->zoneinfoDay = TotalNumberOfZoneInfos++;
+		zone->zoneinfoNight = TotalNumberOfZoneInfos++;
 	}
 }
 
@@ -375,7 +375,7 @@ CCullZones::AddCullZone(CVector const &position,
 		cull->unk2 = 0;
 		cull->unk3 = 0;
 		cull->unk4 = 0;
-		cull->unk1 = 0;
+		cull->m_indexStart = 0;
 	}
 	if(flag & ~0x20){
 		attrib = &aAttributeZones[NumAttributeZones++];

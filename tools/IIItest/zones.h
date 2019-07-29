@@ -120,11 +120,13 @@ public:
 	float maxy;
 	float minz;
 	float maxz;
-	int unk1;
-	short unk2;
-	short unk3;
-	short unk4;
-	int unk5;
+	int32 m_indexStart;
+	int16 unk2;
+	int16 unk3;
+	int16 unk4;
+	int16 m_numBuildings;
+	int16 m_numTreadablesPlus10m;
+	int16 m_numTreadables;
 };
 
 struct CAttributeZone

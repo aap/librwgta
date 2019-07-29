@@ -3,9 +3,9 @@
 CLinkList<CVisibilityPlugins::AlphaObjectInfo> CVisibilityPlugins::m_alphaList;
 CLinkList<CVisibilityPlugins::AlphaObjectInfo> CVisibilityPlugins::m_alphaEntityList;
 
-int32 CVisibilityPlugins::ms_atomicPluginOffset;
-int32 CVisibilityPlugins::ms_framePluginOffset;
-int32 CVisibilityPlugins::ms_clumpPluginOffset;
+int32 CVisibilityPlugins::ms_atomicPluginOffset = -1;
+int32 CVisibilityPlugins::ms_framePluginOffset = -1;
+int32 CVisibilityPlugins::ms_clumpPluginOffset = -1;
 
 void
 CVisibilityPlugins::Initialise(void)
