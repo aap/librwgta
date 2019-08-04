@@ -28,9 +28,9 @@ typedef uint16 float16;
 //#define EDIT_LINKS
 #define LODNAMES
 
-#define DUMPMODELS
-#define DUMPCOLLISION
-#define DUMPTEXTURES
+//#define DUMPMODELS
+//#define DUMPCOLLISION
+//#define DUMPTEXTURES
 
 
 const char *lookupHashKey(uint32 key);
@@ -84,9 +84,11 @@ extern CCamera TheCamera;
 //extern bool drawCubes;
 extern bool drawCol;
 extern bool drawBounds;
+extern bool drawCurrentSector;
 extern bool drawLOD;
 extern bool drawDummies;
 extern bool drawWorld;
+extern bool drawPathNodes;
 extern bool drawUnnamed;
 extern bool drawUnmatched;
 extern int frameCounter;
@@ -193,7 +195,7 @@ void LoadLevel(eLevel lev);
 void LoadSector(int n, int interior);
 void LoadArea(int n);
 void LoadSectorInsts(SectorExt *se);
-void RenderSector(SectorExt*);
+void RenderSector(SectorExt*, bool sectorDrawLOD);
 void RenderCubesSector(SectorExt*);
 BuildingExt *GetBuildingExt(int id);
 BuildingExt *FindBuildingExt(int id);

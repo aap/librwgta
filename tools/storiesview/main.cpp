@@ -26,9 +26,11 @@ rw::Light *pAmbient;
 //bool drawCubes;
 bool drawCol;
 bool drawBounds;
+bool drawCurrentSector = false;
 bool drawLOD = true;
 bool drawDummies = false;
 bool drawWorld = true;
+bool drawPathNodes;
 bool drawUnnamed;
 bool drawUnmatched;
 int frameCounter = -1;
@@ -490,7 +492,7 @@ InitGame(void)
 			sk::args.argc--;
 		}
 	}
-	eLevel levelToLoad = (eLevel)3;
+	eLevel levelToLoad = (eLevel)1;
 	if(sk::args.argc > 0){
 		const char *levelname = *sk::args.argv;
 		int i;
@@ -968,13 +970,18 @@ Draw(void)
 	if(drawWorld){
 //		renderSector(worldSectors[curSectX][curSectY]);
 		if(currentArea >= 0)
-			RenderSector(&gLevel->sectors[gLevel->chunk->interiors[currentArea].sectorId]);
+			RenderSector(&gLevel->sectors[gLevel->chunk->interiors[currentArea].sectorId], drawLOD);
 		else{
-			int ix, iy;
-			GetSectorForPosition(TheCamera.m_position.x, TheCamera.m_position.y, &ix, &iy);
-//			RenderSector(worldSectors[ix][iy]);
-			for(i = 0; i < gLevel->numWorldSectors; i++)
-				RenderSector(&gLevel->sectors[i]);
+			if(drawCurrentSector){
+				int ix, iy;
+				GetSectorForPosition(TheCamera.m_position.x, TheCamera.m_position.y, &ix, &iy);
+				RenderSector(worldSectors[ix][iy], true);
+				frameCounter++;	// models won't be drawn in the second pass otherwise
+				RenderSector(worldSectors[ix][iy], false);
+			}else{
+				for(i = 0; i < gLevel->numWorldSectors; i++)
+					RenderSector(&gLevel->sectors[i], drawLOD);
+			}
 		}
 	}
 
@@ -991,7 +998,7 @@ Draw(void)
 	drawBackground();
 	drawHorizon();
 
-//	if(drawCubes)
+	if(drawPathNodes)
 		Renderer::renderPathNodes();
 //	renderCubesSector(curSectX, curSectY);
 

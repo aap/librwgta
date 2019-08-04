@@ -37,6 +37,7 @@ usage(void)
 	fprintf(stderr, "\t-f don't flip frame hierarchy\n");
 	fprintf(stderr, "\t-d dump frame and hanim hierarchy\n");
 	fprintf(stderr, "\t-w correct face winding of tristrips\n");
+	fprintf(stderr, "\t-s make output tristrips\n");
 	fprintf(stderr, "\t-m extract multiclump dff\n");
 	fprintf(stderr, "\t-v RW version, e.g. 33004 for 3.3.0.4\n");
 	fprintf(stderr, "\t-o output platform. ps2, xbox, mobile, d3d8, d3d9\n");
@@ -46,6 +47,8 @@ usage(void)
 	fprintf(stderr, "\t--ps2VCcar set up VC vehicle for use with PS2 and Xbox reflections\n");
 	fprintf(stderr, "\t--xboxbuilding convert SA Xbox building to something PS2 and PC understand\n");
 	fprintf(stderr, "\t--ps2SAcar assign PS2 SA car pipelines to a model\n");
+	fprintf(stderr, "\t--ps2SAbuilding assign PS2 SA building pipelines to a model\n");
+	fprintf(stderr, "\t--ps2SAped assign PS2 SA ped pipeline to a model\n");
 	fprintf(stderr, "\t--info dump some info about the file\n");
 	exit(1);
 }
@@ -155,7 +158,7 @@ assignPS2SAbuildingPipes(Atomic *atomic)
 	int i;
 	Geometry *geo;
 	Material *mat;
-	gta::EnvMat *env;
+	uint32 fx;
 
 	geo = atomic->geometry;
 	if(geo->instData){
@@ -164,14 +167,46 @@ assignPS2SAbuildingPipes(Atomic *atomic)
 	}
 
 	// Don't give building pipe to skinned geometry
-	if(atomic->pipeline->pluginID == ID_SKIN)
+	if(atomic->pipeline && atomic->pipeline->pluginID == ID_SKIN)
 		return;
 
-	// not quite sure how to handle matfx
-	if(atomic->pipeline->pluginID = ID_MATFX)
-		for(i = 0; i < geo->matList.numMaterials; i++){
-			mat = geo->matList.materials[i];
-		}
+	bool dn = gta::getExtraVertColors(atomic) != nil;
+
+	for(i = 0; i < geo->matList.numMaterials; i++){
+		mat = geo->matList.materials[i];
+
+		fx = MatFX::getEffects(mat);
+		if(fx == MatFX::UVTRANSFORM)
+			mat->pipeline = ps2::getPDSPipe(dn ? gta::PDS_PS2_CustomBuildingDNUVA_MatPipeID : gta::PDS_PS2_CustomBuildingUVA_MatPipeID);
+		else if(fx == MatFX::ENVMAP && MatFX::get(mat)->getEnvTexture() && geo->flags & Geometry::NORMALS)
+			mat->pipeline = ps2::getPDSPipe(dn ? gta::PDS_PS2_CustomBuildingDNEnvMap_MatPipeID : gta::PDS_PS2_CustomBuildingEnvMap_MatPipeID);
+		else
+			mat->pipeline = ps2::getPDSPipe(dn ? gta::PDS_PS2_CustomBuildingDN_MatPipeID : gta::PDS_PS2_CustomBuilding_MatPipeID);
+	}
+	atomic->pipeline = (ObjPipeline*)ps2::getPDSPipe(dn ? gta::PDS_PS2_CustomBuildingDN_AtmPipeID : gta::PDS_PS2_CustomBuilding_AtmPipeID);
+}
+
+void
+assignPS2SAPedPipe(Atomic *atomic)
+{
+	int i;
+	Geometry *geo;
+	Material *mat;
+
+	geo = atomic->geometry;
+	if(geo->instData){
+		fprintf(stderr, "error: can't re-assign pipeline on pre-instanced geometry\n");
+		exit(1);
+	}
+
+	if(atomic->pipeline && atomic->pipeline->pluginID == ID_SKIN)
+		return;
+
+	for(i = 0; i < geo->matList.numMaterials; i++){
+		mat = geo->matList.materials[i];
+		mat->pipeline = ps2::getPDSPipe(gta::PDS_PS2_CustomSkinPed_MatPipeID);
+	}
+	atomic->pipeline = (ObjPipeline*)ps2::getPDSPipe(gta::PDS_PS2_CustomSkinPed_AtmPipeID);
 }
 
 void
@@ -514,6 +549,8 @@ main(int argc, char *argv[])
 	int ps2vccar = 0;
 	int xboxbuild = 0;
 	int ps2sacar = 0;
+	int ps2sabuilding = 0;
+	int ps2saped = 0;
 	int info = 0;
 	int dumpmat = 0;
 	int tristrip = 0;
@@ -534,6 +571,8 @@ main(int argc, char *argv[])
 		}else if(strcmp_ci(longarg, "info") == 0) info++;
 		else if(strcmp_ci(longarg, "xboxbuilding") == 0) xboxbuild++;
 		else if(strcmp_ci(longarg, "ps2sacar") == 0) ps2sacar++;
+		else if(strcmp_ci(longarg, "ps2sabuilding") == 0) ps2sabuilding++;
+		else if(strcmp_ci(longarg, "ps2saped") == 0) ps2saped++;
 		else usage();
 		break;
 	case 'u':
@@ -793,6 +832,18 @@ main(int argc, char *argv[])
 		FORLIST(lnk, c->atomics){
 			Atomic *a = Atomic::fromClump(lnk);
 			assignPS2SAcarPipes(a);
+		}
+	}
+	if(ps2sabuilding){
+		FORLIST(lnk, c->atomics){
+			Atomic *a = Atomic::fromClump(lnk);
+			assignPS2SAbuildingPipes(a);
+		}
+	}
+	if(ps2saped){
+		FORLIST(lnk, c->atomics){
+			Atomic *a = Atomic::fromClump(lnk);
+			assignPS2SAPedPipe(a);
 		}
 	}
 

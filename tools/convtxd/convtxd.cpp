@@ -530,18 +530,20 @@ main(int argc, char *argv[])
 			printf("%s %s\n", argv[0], tex->name);
 	}
 */
-
-	if(outplatform == PLATFORM_D3D8)
-		FORLIST(lnk, txd->textures){
-			Texture *tex = Texture::fromDict(lnk);
+	FORLIST(lnk, txd->textures){
+		Texture *tex = Texture::fromDict(lnk);
+		if(tex->raster->platform == PLATFORM_XBOX && outplatform == PLATFORM_D3D8){
 			tex->raster = xboxToD3d8(tex->raster);
-		}
-	if(outplatform == PLATFORM_D3D9)
-		FORLIST(lnk, txd->textures){
-			Texture *tex = Texture::fromDict(lnk);
+		}else if(tex->raster->platform == PLATFORM_D3D8 && outplatform == PLATFORM_D3D9){
 			if(tex->raster->platform == PLATFORM_D3D8)
 				tex->raster->platform = PLATFORM_D3D9;
+		}else{
+			rw::platform = outplatform;
+			Image *img = tex->raster->toImage();
+			tex->raster = Raster::createFromImage(img);
 		}
+	}
+
 //	for(Texture *tex = txd->first; tex; tex = tex->next)
 //		tex->filterAddressing = (tex->filterAddressing&~0xF) | 0x2;
 	rw::platform = outplatform;

@@ -61,11 +61,14 @@ static void
 uiView(void)
 {
 	ImGui::Checkbox("Render World", &drawWorld);
-	ImGui::Checkbox("Render LOD", &drawLOD);
+	ImGui::Checkbox("Render only current Sector", &drawCurrentSector);
+	if(!drawCurrentSector)
+		ImGui::Checkbox("Render LOD", &drawLOD);
 	ImGui::Checkbox("Render Dynamic objects (COL only)", &drawDummies);
 
 	ImGui::NewLine();
 
+	ImGui::Checkbox("Render Path nodes", &drawPathNodes);
 	ImGui::Checkbox("Render Collision", &drawCol);
 	ImGui::Checkbox("Render Solid Bounds", &drawBounds);
 

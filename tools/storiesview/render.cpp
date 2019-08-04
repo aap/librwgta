@@ -257,15 +257,19 @@ renderPathNodes(void)
 		atomic->setFrame(f);
 	}
 
-	cubeMat->color.red = 255;
-	cubeMat->color.green = 0;
-	cubeMat->color.blue = 0;
-
 	rw::Frame *f = atomic->getFrame();
-	for(i = 0; i < gpThePaths->numPathNodes; i++){
-		CPathNode *pn = &gpThePaths->pathNodes[i];
-		if(i >= 0 && i < gpThePaths->numCarNodes)
-			continue;
+	for(i = 0; i < gpThePaths->m_numPathNodes; i++){
+		CPathNode *pn = &gpThePaths->m_pathNodes[i];
+
+		if(i >= 0 && i < gpThePaths->m_numCarPathNodes){
+			cubeMat->color.red = 255;
+			cubeMat->color.green = 0;
+			cubeMat->color.blue = 0;
+		}else if(i < gpThePaths->m_numPathNodes){
+			cubeMat->color.red = 0;
+			cubeMat->color.green = 255;
+			cubeMat->color.blue = 0;
+		}
 
 		rw::V3d pos;
 		pos.x = pn->x/8.0f;
@@ -274,6 +278,8 @@ renderPathNodes(void)
 #ifdef LCS
 		pos.z /= 8.0f;
 #endif
+		pos.z += 1.0f;
+
 		f->translate(&pos, rw::COMBINEREPLACE);
 		atomic->render();
 	}

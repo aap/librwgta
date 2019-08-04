@@ -1039,6 +1039,26 @@ dumpTxdStore(void)
 }
 
 void
+dumpPathNodeCoors(void)
+{
+	int i;
+	CPathFind *gpThePaths = gamedata->paths;
+
+	for(i = 0; i < gpThePaths->m_numPathNodes; i++){
+		CPathNode *pn = &gpThePaths->m_pathNodes[i];
+		rw::V3d pos;
+		pos.x = pn->x/8.0f;
+		pos.y = pn->y/8.0f;
+		pos.z = pn->z;
+#ifdef LCS
+		pos.z /= 8.0f;
+#endif
+
+		printf("%f, %f, %f\n", pos.x, pos.y, pos.z);
+	}
+}
+
+void
 extractResource(void)
 {
 	assignModelNames();
@@ -1049,6 +1069,8 @@ extractResource(void)
 #endif
 //	dumpPedStats();
 
+	dumpPathNodeCoors();
+
 //	writeAllModelInfo();
 //	dump2dfx();
 
@@ -1058,13 +1080,13 @@ extractResource(void)
 //	extractMarkers();
 //	writeWaterpro();
 
-	printf("inst\n");
-	dumpInstances(gamedata->buildingPool);
-	printf("\n");
-	dumpInstances(gamedata->treadablePool);
-	printf("\n");
-	dumpInstances(gamedata->dummyPool);
-	printf("end\n");
+//	printf("inst\n");
+//	dumpInstances(gamedata->buildingPool);
+//	printf("\n");
+//	dumpInstances(gamedata->treadablePool);
+//	printf("\n");
+//	dumpInstances(gamedata->dummyPool);
+//	printf("end\n");
 
 //	printf("zone\n");
 //	dumpZones();

@@ -644,7 +644,7 @@ LoadSectorInsts(SectorExt *se)
 }
 
 void
-RenderSector(SectorExt *se)
+RenderSector(SectorExt *se, bool sectorDrawLOD)
 {
 	int i;
 
@@ -677,7 +677,7 @@ RenderSector(SectorExt *se)
 //			continue;
 		if(be->isTimed && !GetIsTimeInRange(be->timeOn, be->timeOff))
 			continue;
-		if(inst->IsLOD() != drawLOD)
+		if(inst->IsLOD() != sectorDrawLOD)
 			continue;
 
 		ResourceExt *re = &gLevel->res[inst->resId];

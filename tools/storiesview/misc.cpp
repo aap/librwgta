@@ -292,11 +292,11 @@ walkResources(void)
 	drawLOD = 0;
 	Renderer::reset();
 	for(i = 0; i < gLevel->numSectors; i++)
-		RenderSector(&gLevel->sectors[i]);
+		RenderSector(&gLevel->sectors[i], drawLOD);
 	drawLOD = 1;
 	Renderer::reset();
 	for(i = 0; i < gLevel->numSectors; i++)
-		RenderSector(&gLevel->sectors[i]);
+		RenderSector(&gLevel->sectors[i], drawLOD);
 }
 
 void

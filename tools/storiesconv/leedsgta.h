@@ -739,14 +739,15 @@ struct CPathNode
 #else
 	int16 x;
 	int16 y;
-	int16 z;
+	int8 z;
 	// this is just guessing...
-	int16 unk1;
-	int16 unk2;	// flags? seems to be 0x8002 quite often
+	int8 unk1;
+	int16 unk2;
+	int16 unk3;	// flags? seems to be 0x8002 quite often
 #endif
 };
 
-struct CNaviNode	// not original name
+struct CCarPathLink
 {
 	char data[12];
 };
@@ -754,28 +755,28 @@ struct CNaviNode	// not original name
 struct CPathFind
 {
 #ifdef LCS
-	CPathNode *pathNodes;
-	CNaviNode *naviNodes;
-	uint16 *linksTo;	// numLinks
-	uint8 *distTo;		// numLinks
-	uint16 *naviLinks;	// numLinks
+	CPathNode *m_pathNodes;
+	CCarPathLink *m_carPathLinks;
+	uint16 *m_connections;	// numLinks
+	uint8 *m_distances;		// numLinks
+	uint16 *m_carPathConnections;	// numLinks
 
-	int32 numPathNodes;
-	int32 numCarNodes;
-	int32 numPedNodes;
-	int16 numMapObjects;	// ??
-	int16 numLinks;
-	int16 numNaviNodes;	// ??
+	int32 m_numPathNodes;
+	int32 m_numCarPathNodes;
+	int32 m_numPedPathNodes;
+	int16 m_numMapObjects;	// ??
+	int16 m_numConnections;
+	int16 m_numCarPathLinks;	// ??
 	int16 pad;
-	int32 unk;		// or numnavinodes ??
+	int32 unk;		// or m_numCarPathLinks ??
 #else
-	CPathNode *pathNodes;
-	void *naviNodes;	// ??
-	uint16 *linksTo;	// numLinks
+	CPathNode *m_pathNodes;
+	void *m_carPathLinks;	// ??
+	uint16 *m_connections;	// numLinks
 
-	int32 numPathNodes;
-	int32 numCarNodes;
-	int32 numPedNodes;
+	int32 m_numPathNodes;
+	int32 m_numCarPathNodes;
+	int32 m_numPedPathNodes;
 #endif
 };
 
