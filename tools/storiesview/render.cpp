@@ -245,10 +245,16 @@ renderColModels(void)
 	}
 }
 
+#ifdef LCS
+#define PATHZSCALE (8.0f)
+#else
+#define PATHZSCALE (1.0f)
+#endif
+
 void
 renderPathNodes(void)
 {
-	int i;
+	int i, j;
 	static rw::Atomic *atomic;
 	if(atomic == nil){
 		atomic = rw::Atomic::create();
@@ -257,6 +263,79 @@ renderPathNodes(void)
 		atomic->setFrame(f);
 	}
 
+	static int numIndices;
+	static int numVertices;
+	static rw::RWDEVICE::Im3DVertex *vertices;
+	static uint16 *indices;
+	if(vertices == nil){
+		numVertices = gpThePaths->m_numPathNodes;
+		vertices = rwNewT(rw::RWDEVICE::Im3DVertex, numVertices, 0);
+		numIndices = gpThePaths->m_numConnections*2;
+		indices = rwNewT(uint16, numIndices, 0);
+		int idx = 0;
+		for(i = 0; i < gpThePaths->m_numPathNodes; i++){
+			CPathNode *pn = &gpThePaths->m_pathNodes[i];
+
+			vertices[i].setX(pn->x/8.0f);
+			vertices[i].setY(pn->y/8.0f);
+			vertices[i].setZ(pn->z/PATHZSCALE + 1.0f);
+			if(i < gpThePaths->m_numCarPathNodes)
+				vertices[i].setColor(255, 0, 0, 255);
+			else
+				vertices[i].setColor(0, 255, 0, 255);
+
+			for(j = 0; j < pn->numLinks; j++){
+				assert(i < numVertices);
+				indices[idx++] = i;
+				assert(gpThePaths->m_connections[pn->firstLink+j].idx < numVertices);
+				indices[idx++] = gpThePaths->m_connections[pn->firstLink+j].idx;
+				assert(idx <= numIndices);
+			}
+		}
+		assert(idx == numIndices);
+	}
+
+	rw::im3d::Transform(vertices, numVertices, nil);
+	for(i = 0; i < numIndices; i += 10000)
+		rw::im3d::RenderIndexed(rw::PRIMTYPELINELIST, indices+i, min(10000, numIndices-i));
+	rw::im3d::End();
+
+//	return;
+
+	// Render connection flags
+	rw::Frame *f = atomic->getFrame();
+	for(i = 0; i < gpThePaths->m_numPathNodes; i++){
+		CPathNode *pn = &gpThePaths->m_pathNodes[i];
+
+		for(j = 0; j < pn->numLinks; j++){
+			bool draw = false;
+			cubeMat->color.red = 0;
+			cubeMat->color.green = 0;
+			cubeMat->color.blue = 0;
+			if(gpThePaths->m_connections[pn->firstLink+j].bTrafficLight){
+				cubeMat->color.red = 255;
+				draw = true;
+			}
+			if(gpThePaths->m_connections[pn->firstLink+j].bCrossesRoad){
+				cubeMat->color.green = 255;
+				draw = true;
+			}
+			if(!draw)
+				continue;
+			int k = gpThePaths->m_connections[pn->firstLink+j].idx;
+
+			rw::V3d pos;
+			pos.x = (gpThePaths->m_pathNodes[i].x + gpThePaths->m_pathNodes[k].x)/8.0f/2;
+			pos.y = (gpThePaths->m_pathNodes[i].y + gpThePaths->m_pathNodes[k].y)/8.0f/2;
+			pos.z = (gpThePaths->m_pathNodes[i].z + gpThePaths->m_pathNodes[k].z)/PATHZSCALE/2 + 1.0f;
+
+			f->translate(&pos, rw::COMBINEREPLACE);
+			atomic->render();
+		}
+	}
+
+/*
+	// nodes as boxes
 	rw::Frame *f = atomic->getFrame();
 	for(i = 0; i < gpThePaths->m_numPathNodes; i++){
 		CPathNode *pn = &gpThePaths->m_pathNodes[i];
@@ -274,15 +353,14 @@ renderPathNodes(void)
 		rw::V3d pos;
 		pos.x = pn->x/8.0f;
 		pos.y = pn->y/8.0f;
-		pos.z = pn->z;
-#ifdef LCS
-		pos.z /= 8.0f;
-#endif
+		pos.z = pn->z/PATHZSCALE;
+
 		pos.z += 1.0f;
 
 		f->translate(&pos, rw::COMBINEREPLACE);
 		atomic->render();
 	}
+*/
 }
 
 }

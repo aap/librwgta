@@ -56,7 +56,7 @@ xboxToD3d8(Raster *raster)
 		}
 		d3d::allocateDXT(newras, dxt, numLevels, ras->hasAlpha);
 	}else{
-		printf("swizzled!\n");
+	//	printf("swizzled!\n");
 		newras = Raster::create(raster->width, raster->height, raster->depth,
 		                        format | raster->type, PLATFORM_D3D8);
 	}
@@ -70,7 +70,7 @@ xboxToD3d8(Raster *raster)
 	for(int32 i = 0; i < numLevels; i++){
 		if(i >= newras->getNumLevels())
 			break;
-		data = raster->lock(i);
+		data = raster->lock(i, Raster::LOCKREAD);
 		d3d::setTexels(newras, data, i);
 		raster->unlock(i);
 	}
@@ -166,7 +166,7 @@ rastermodcustom(Raster *ras, float (*f)(float))
 	w = ras->width;
 	h = ras->height;
 	for(n = 0; n < levels; n++){
-		cols = ras->lock(n);
+		cols = ras->lock(n, Raster::LOCKWRITE);
 
 		switch(natras->format){
 		case D3DFMT_DXT1:
@@ -229,7 +229,7 @@ rastermod(Raster *ras, float (*f)(float))
 		int n;
 		len = ras->width * ras->height;
 		for(n = 0; n < levels; n++){
-			cols = ras->lock(n);
+			cols = ras->lock(n, Raster::LOCKWRITE);
 			int origlen = len;
 			while(len--){
 				colmod(cols, f);
@@ -243,7 +243,7 @@ rastermod(Raster *ras, float (*f)(float))
 		int n;
 		len = ras->width * ras->height;
 		for(n = 0; n < levels; n++){
-			cols = ras->lock(n);
+			cols = ras->lock(n, Raster::LOCKWRITE);
 			int origlen = len;
 			while(len--){
 				colmod1555(cols, f);

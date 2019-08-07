@@ -876,23 +876,32 @@ void
 convertCLUT(uint8 *texels, uint32 w, uint32 h)
 {
 	static uint8 map[4] = { 0x00, 0x10, 0x08, 0x18 };
-	for (uint32 i = 0; i < w*h; i++)
+	for(uint32 i = 0; i < w*h; i++)
 		texels[i] = (texels[i] & ~0x18) | map[(texels[i] & 0x18) >> 3];
+}
+
+static uint32
+swizzlePS2(uint32 x, uint32 y, uint32 logw)
+{
+#define X(n) ((x>>(n))&1)
+#define Y(n) ((y>>(n))&1)
+
+	uint32 nx, ny, n;
+	x ^= (Y(1)^Y(2))<<2;
+	nx = x&7 | (x>>1)&~7;
+	ny = y&1 | (y>>1)&~1;
+	n = Y(1) | X(3)<<1;
+	return n | nx<<2 | ny<<logw-1+2;
 }
 
 void
 unswizzle8PS2(uint8 *dst, uint8 *src, uint32 w, uint32 h)
 {
-	for (uint32 y = 0; y < h; y++)
-		for (uint32 x = 0; x < w; x++) {
-			int32 block_loc = (y&(~0xF))*w + (x&(~0xF))*2;
-			uint32 swap_sel = (((y+2)>>2)&0x1)*4;
-			int32 ypos = (((y&(~3))>>1) + (y&1))&0x7;
-			int32 column_loc = ypos*w*2 + ((x+swap_sel)&0x7)*4;
-			int32 byte_sum = ((y>>1)&1) + ((x>>2)&2);
-			uint32 swizzled = block_loc + column_loc + byte_sum;
-			dst[y*w+x] = src[swizzled];
-		}
+	uint32 logw = 0;
+	for(uint32 i = 1; i < w; i *= 2) logw++;
+	for(uint32 y = 0; y < h; y++)
+		for(uint32 x = 0; x < w; x++)
+			dst[(y<<logw)+x] = src[swizzlePS2(x, y, logw)];
 }
 
 /* algorithm from PPSSPP */

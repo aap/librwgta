@@ -1052,9 +1052,9 @@ dumpPathNodeCoors(void)
 		pos.z = pn->z;
 #ifdef LCS
 		pos.z /= 8.0f;
+#else
+		printf("%f, %f, %f\t%d %x %x %x\n", pos.x, pos.y, pos.z, pn->unk1, pn->firstLink, pn->numLinks, pn->flags);
 #endif
-
-		printf("%f, %f, %f\n", pos.x, pos.y, pos.z);
 	}
 }
 

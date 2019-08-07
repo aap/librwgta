@@ -713,7 +713,7 @@ struct CPathNode
 {
 #ifdef LCS
 	// from VC, but seems to work for LCS too
-	int16 unk1;
+	int16 prevIndex;
 	int16 nextIndex;
 	int16 x;
 	int16 y;
@@ -740,43 +740,77 @@ struct CPathNode
 	int16 x;
 	int16 y;
 	int8 z;
-	// this is just guessing...
-	int8 unk1;
-	int16 unk2;
-	int16 unk3;	// flags? seems to be 0x8002 quite often
+	uint8 unk1;	// flood fill group?
+	int16 firstLink;
+	uint16 numLinks : 4;
+	uint16 flags : 12;
 #endif
 };
 
 struct CCarPathLink
 {
+#ifdef LCS
 	char data[12];
+#else
+	char data[4];
+#endif
+};
+
+struct CPathConnection	// not original name
+{
+	uint16 idx : 14;
+	uint16 bTrafficLight : 1;
+	uint16 bCrossesRoad : 1;
 };
 
 struct CPathFind
 {
 #ifdef LCS
-	CPathNode *m_pathNodes;
-	CCarPathLink *m_carPathLinks;
-	uint16 *m_connections;	// numLinks
-	uint8 *m_distances;		// numLinks
-	uint16 *m_carPathConnections;	// numLinks
+	CPathNode *m_pathNodes;	// m_numPathNodes
+	CCarPathLink *m_carPathLinks;	// m_numCarPathLinks
+	CPathConnection *m_connections;	// m_numConnections
+	uint8 *m_distances;		// m_numConnections
+	uint16 *m_carPathConnections;	// m_numCarPathConnections
 
-	int32 m_numPathNodes;
-	int32 m_numCarPathNodes;
-	int32 m_numPedPathNodes;
-	int16 m_numMapObjects;	// ??
-	int16 m_numConnections;
-	int16 m_numCarPathLinks;	// ??
-	int16 pad;
-	int32 unk;		// or m_numCarPathLinks ??
+	int32 m_numPathNodes;		// 0x158F
+	int32 m_numCarPathNodes;	// 0x894
+	int32 m_numPedPathNodes;	// 0xCFB
+	int16 m_numMapObjects;		// 0x4C3
+	int16 m_numConnections;		// 0x2CF6
+	int16 m_numCarPathConnections;	// 0x11FC
+	int16 pad1;	// AAAA
+	int32 m_numCarPathLinks;	// 0x8FE
+	int32 unk1;
+	uint8 m_numGroups[2];
+	CPathNode m_extraNodes[512];	// ?
+	int16 pad2;
+	uint8 unk2[0x64c];	// mostly AA. not on mobile it seems?
+	uint8 unk3[120000];	// grid or something? no idea...
 #else
-	CPathNode *m_pathNodes;
-	void *m_carPathLinks;	// ??
-	uint16 *m_connections;	// numLinks
+	CPathNode *m_pathNodes;	// m_numPathNodes
+	CCarPathLink *m_carPathLinks;	// m_numCarPathLinks
+	uint16 *m_carPathConnections;	// m_numCarPathConnections
 
-	int32 m_numPathNodes;
-	int32 m_numCarPathNodes;
-	int32 m_numPedPathNodes;
+	int32 m_numPathNodes;		// 0x20C3
+	int32 m_numCarPathNodes;	// 0xC07
+	int32 m_numPedPathNodes;	// 0x14BC
+	int16 m_numMapObjects;		// 0
+	int16 m_numConnections;		// 0x44F4
+	int16 m_numCarPathConnections;	// 0x18D2
+	int16 pad1;	// AAAA
+	int32 m_numCarPathLinks;	// 0xC69
+	int16 pad2;	// AAAA
+	int16 unk1;	// 0
+	uint8 unk2[0x648];	// mostly AA
+	uint8 unk3[30000];	// grid or something? no idea...
+
+	CPathConnection *m_connections;	// m_numConnections
+	uint8 *m_distances;		// m_numConnections
+
+	int32 unk4;	// 0
+	int32 unk5;	// 0
+	uint8 unk6[6000];	// mostly AA
+	// 5 more ints?
 #endif
 };
 
