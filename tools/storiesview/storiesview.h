@@ -51,8 +51,12 @@ void plCapturePad(int arg);
 void plUpdatePad(CControllerState *state);
 
 #define DEGTORAD(d) (d/180.0f*PI)
+#ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
+#endif
+#ifndef max
 #define max(a,b) ((a) > (b) ? (a) : (b))
+#endif
 
 struct Zfile;
 Zfile *zopen(const char *path, const char *mode);

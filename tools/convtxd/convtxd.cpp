@@ -424,8 +424,8 @@ main(int argc, char *argv[])
 
 	rw::Engine::init();
 	gta::attachPlugins();
-	rw::Engine::open();
-	rw::Engine::start(nil);
+	rw::Engine::open(nil);
+	rw::Engine::start();
 	rw::Texture::setLoadTextures(false);
 //	rw::d3d::isP8supported = 0;
 
@@ -476,7 +476,7 @@ main(int argc, char *argv[])
 
 	rw::StreamFile in;
 	if(in.open(argv[0], "rb") == NULL){
-		fprintf(stderr, "couldn't open file %s\n", argv[1]);
+		fprintf(stderr, "couldn't open file %s\n", argv[0]);
 		return 1;
 	}
 	ChunkHeaderInfo header;

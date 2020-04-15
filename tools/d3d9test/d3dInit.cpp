@@ -1,3 +1,4 @@
+#include <d3d9.h>
 #include <rw.h>
 #include "rwgta.h"
 #include "camera.h"
@@ -6,7 +7,7 @@
 Camera *camera;
 rw::Clump *clump;
 rw::World *world;
-rw::EngineStartParams engineStartParams;
+rw::EngineOpenParams engineOpenParams;
 
 bool
 Init()
@@ -15,8 +16,8 @@ Init()
 //	rw::version = 0x34000;
 	rw::Engine::init();
 	gta::attachPlugins();
-	rw::Engine::open();
-	rw::Engine::start(&engineStartParams);
+	rw::Engine::open(&engineOpenParams);
+	rw::Engine::start();
 	rw::Texture::setLoadTextures(1);
 
 	rw::TexDictionary::setCurrent(rw::TexDictionary::create());
@@ -279,7 +280,7 @@ WinMain(HINSTANCE instance, HINSTANCE,
 		MessageBox(0, "MakeWindow() - FAILED", 0, 0);
 		return 0;
 	}
-	engineStartParams.window = win;
+	engineOpenParams.window = win;
 
 	Init();
 

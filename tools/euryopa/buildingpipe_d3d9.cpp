@@ -1,3 +1,4 @@
+#define WITH_D3D
 #include "euryopa.h"
 
 #ifdef RW_D3D9

@@ -530,8 +530,8 @@ main(int argc, char *argv[])
 
 	rw::Engine::init();
 	gta::attachPlugins();
-	rw::Engine::open();
-	rw::Engine::start(nil);
+	rw::Engine::open(nil);
+	rw::Engine::start();
 
 	rw::Texture::setCreateDummies(1);
 

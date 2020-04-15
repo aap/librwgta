@@ -225,3 +225,9 @@ project "IIItest"
 project "radaredit"
 	tool("radaredit")
 	kind "ConsoleApp"
+
+project "txdbuild"
+	tool("txdbuild")
+	kind "ConsoleApp"
+	removeplatforms { "*gl3", "*d3d9" }
+

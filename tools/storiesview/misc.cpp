@@ -1,3 +1,4 @@
+#include <Windows.h>
 #include "storiesview.h"
 
 FILE *logfile;

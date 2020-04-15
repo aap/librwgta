@@ -181,7 +181,7 @@ void MouseMove(int x, int y);
 void MouseButton(int buttons);
 
 // platform implementations
-extern rw::EngineStartParams engineStartParams;
+extern rw::EngineOpenParams engineOpenParams;
 int plGetTimeInMS(void);
 bool plWindowclosed(void);
 void plHandleEvents(void);

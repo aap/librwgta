@@ -1,7 +1,7 @@
 #include "III.h"
 #ifdef RW_GL3
 
-rw::EngineStartParams engineStartParams;
+rw::EngineOpenParams engineOpenParams;
 GLFWwindow *glfwwindow;
 
 //
@@ -251,10 +251,10 @@ main(int argc, char *argv[])
 	globals.windowtitle = "III test";
 	globals.quit = 0;
 
-	engineStartParams.window = &glfwwindow;
-	engineStartParams.width = globals.width;
-	engineStartParams.height = globals.height;
-	engineStartParams.windowtitle = globals.windowtitle;
+	engineOpenParams.window = &glfwwindow;
+	engineOpenParams.width = globals.width;
+	engineOpenParams.height = globals.height;
+	engineOpenParams.windowtitle = globals.windowtitle;
 
 	SystemInit();
 

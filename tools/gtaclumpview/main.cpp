@@ -12,7 +12,7 @@ struct SceneGlobals {
 	rw::Camera *camera;
 	rw::Clump *clump;
 } Scene;
-rw::EngineStartParams engineStartParams;
+rw::EngineOpenParams engineOpenParams;
 
 void
 Init(void)

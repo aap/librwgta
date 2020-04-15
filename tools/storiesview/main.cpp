@@ -1,3 +1,4 @@
+#include <Windows.h>
 #include "storiesview.h"
 #include <Xinput.h>
 
@@ -19,7 +20,7 @@ int32 atmOffset;	// UNUSED, just for rslconv.cpp
 
 rw::V3d zero = { 0.0f, 0.0f, 0.0f };
 SceneGlobals Scene;
-rw::EngineStartParams engineStartParams;
+rw::EngineOpenParams engineOpenParams;
 rw::Material *cubeMat;
 rw::Geometry *cubeGeo;
 rw::Light *pAmbient;

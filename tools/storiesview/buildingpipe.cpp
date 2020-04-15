@@ -1,3 +1,4 @@
+#include <d3d9.h>
 #include "storiesview.h"
 
 using namespace rw;

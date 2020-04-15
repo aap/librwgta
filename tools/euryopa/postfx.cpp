@@ -1,3 +1,4 @@
+#define WITH_D3D
 #include "euryopa.h"
 
 using namespace rw;

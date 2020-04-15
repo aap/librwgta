@@ -375,8 +375,8 @@ Initialise3D(void)
 {
 	rw::Engine::init();
 	PluginAttach();
-	rw::Engine::open();
-	rw::Engine::start(&engineStartParams);
+	rw::Engine::open(&engineOpenParams);
+	rw::Engine::start();
 	plAttachInput();
 
 	rw::Texture::setLoadTextures(1);

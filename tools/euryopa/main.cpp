@@ -9,7 +9,7 @@ float timeStep;
 float avgTimeStep;
 
 SceneGlobals Scene;
-rw::EngineStartParams engineStartParams;
+rw::EngineOpenParams engineOpenParams;
 rw::Light *pAmbient, *pDirect;
 rw::Texture *whiteTex;
 

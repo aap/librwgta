@@ -1,4 +1,5 @@
 #ifdef _WIN32
+#include <Windows.h>
 #include "III.h"
 
 #ifdef RW_D3D9
@@ -9,7 +10,7 @@ int pads[4];
 int numPads;
 int currentPad;
 
-rw::EngineStartParams engineStartParams;
+rw::EngineOpenParams engineOpenParams;
 bool shouldClose = false;
 
 bool
@@ -301,7 +302,7 @@ WinMain(HINSTANCE instance, HINSTANCE,
 		MessageBox(0, "MakeWindow() - FAILED", 0, 0);
 		return 0;
 	}
-	engineStartParams.window = win;
+	engineOpenParams.window = win;
 
 	SystemInit();
 

@@ -1,3 +1,4 @@
+#define WITH_D3D
 #include "storiesview.h"
 
 using namespace rw;
