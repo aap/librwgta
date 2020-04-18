@@ -1,5 +1,7 @@
-#include <d3d9.h>
+#define WITH_D3D
 #include "storiesview.h"
+
+#ifdef RW_D3D9
 
 using namespace rw;
 using namespace d3d;
@@ -78,3 +80,5 @@ makeBuildingPipe(void)
 	pipe->renderCB = buildingRenderCB;
 	return pipe;
 }
+
+#endif

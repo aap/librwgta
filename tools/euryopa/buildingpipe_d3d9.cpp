@@ -164,157 +164,174 @@ buildingRenderCB_PS2(Atomic *atomic, d3d9::InstanceDataHeader *header)
 #define GETEXTRACOLOREXT(g) PLUGINOFFSET(gta::ExtraVertColors, g, gta::extraVertColorOffset)
 
 static void
-buildingInstanceCB(Geometry *geo, d3d9::InstanceDataHeader *header)
+buildingInstanceCB(Geometry *geo, d3d9::InstanceDataHeader *header, bool32 reinstance)
 {
+	int i = 0;
 	VertexElement dcl[12];
+	VertexStream *s = &header->vertexStream[0];
 	gta::ExtraVertColors *extracols = GETEXTRACOLOREXT(geo);
 	V3d *extranormals = gta::getExtraNormals(geo);
 
-	VertexStream *s = &header->vertexStream[0];
-	s->offset = 0;
-	s->managed = 1;
-	s->geometryFlags = 0;
-	s->dynamicLock = 0;
-
-	int i = 0;
-	dcl[i].stream = 0;
-	dcl[i].offset = 0;
-	dcl[i].type = D3DDECLTYPE_FLOAT3;
-	dcl[i].method = D3DDECLMETHOD_DEFAULT;
-	dcl[i].usage = D3DDECLUSAGE_POSITION;
-	dcl[i].usageIndex = 0;
-	i++;
-	uint16 stride = 12;
-	s->geometryFlags |= 0x2;
-
 	bool isPrelit = (geo->flags & Geometry::PRELIT) != 0;
-	if(isPrelit){
-		// night
-		dcl[i].stream = 0;
-		dcl[i].offset = stride;
-		dcl[i].type = D3DDECLTYPE_D3DCOLOR;
-		dcl[i].method = D3DDECLMETHOD_DEFAULT;
-		dcl[i].usage = D3DDECLUSAGE_COLOR;
-		dcl[i].usageIndex = 0;
-		i++;
-		s->geometryFlags |= 0x8;
-		stride += 4;
-
-		// day
-		dcl[i].stream = 0;
-		dcl[i].offset = stride;
-		dcl[i].type = D3DDECLTYPE_D3DCOLOR;
-		dcl[i].method = D3DDECLMETHOD_DEFAULT;
-		dcl[i].usage = D3DDECLUSAGE_COLOR;
-		dcl[i].usageIndex = 1;
-		i++;
-		s->geometryFlags |= 0x8;
-		stride += 4;
-	}else{
-		// we need vertex colors in the shader so force white like on PS2, one set is enough
-		dcl[i].stream = 0;
-		dcl[i].offset = stride;
-		dcl[i].type = D3DDECLTYPE_D3DCOLOR;
-		dcl[i].method = D3DDECLMETHOD_DEFAULT;
-		dcl[i].usage = D3DDECLUSAGE_COLOR;
-		dcl[i].usageIndex = 0;
-		i++;
-		s->geometryFlags |= 0x8;
-		stride += 4;
-	}
-
-	for(int32 n = 0; n < geo->numTexCoordSets; n++){
-		dcl[i].stream = 0;
-		dcl[i].offset = stride;
-		dcl[i].type = D3DDECLTYPE_FLOAT2;
-		dcl[i].method = D3DDECLMETHOD_DEFAULT;
-		dcl[i].usage = D3DDECLUSAGE_TEXCOORD;
-		dcl[i].usageIndex = (uint8)n;
-		i++;
-		s->geometryFlags |= 0x10 << n;
-		stride += 8;
-	}
-
 	bool hasNormals = (geo->flags & Geometry::NORMALS) != 0;
-	if(hasNormals || extranormals){
+
+	if(!reinstance){
+		// Create declarations and buffers only the first time
+
+		assert(s->vertexBuffer == nil);
+		s->offset = 0;
+		s->managed = 1;
+		s->geometryFlags = 0;
+		s->dynamicLock = 0;
+
 		dcl[i].stream = 0;
-		dcl[i].offset = stride;
+		dcl[i].offset = 0;
 		dcl[i].type = D3DDECLTYPE_FLOAT3;
 		dcl[i].method = D3DDECLMETHOD_DEFAULT;
-		dcl[i].usage = D3DDECLUSAGE_NORMAL;
+		dcl[i].usage = D3DDECLUSAGE_POSITION;
 		dcl[i].usageIndex = 0;
 		i++;
-		s->geometryFlags |= 0x4;
-		stride += 12;
-	}
-	dcl[i] = D3DDECL_END();
-	header->vertexStream[0].stride = stride;
+		uint16 stride = 12;
+		s->geometryFlags |= 0x2;
 
-	header->vertexDeclaration = createVertexDeclaration((VertexElement*)dcl);
+		if(isPrelit){
+			// night
+			dcl[i].stream = 0;
+			dcl[i].offset = stride;
+			dcl[i].type = D3DDECLTYPE_D3DCOLOR;
+			dcl[i].method = D3DDECLMETHOD_DEFAULT;
+			dcl[i].usage = D3DDECLUSAGE_COLOR;
+			dcl[i].usageIndex = 0;
+			i++;
+			s->geometryFlags |= 0x8;
+			stride += 4;
 
-	s->vertexBuffer = createVertexBuffer(header->totalNumVertex*s->stride, 0, D3DPOOL_MANAGED);
+			// day
+			dcl[i].stream = 0;
+			dcl[i].offset = stride;
+			dcl[i].type = D3DDECLTYPE_D3DCOLOR;
+			dcl[i].method = D3DDECLMETHOD_DEFAULT;
+			dcl[i].usage = D3DDECLUSAGE_COLOR;
+			dcl[i].usageIndex = 1;
+			i++;
+			s->geometryFlags |= 0x8;
+			stride += 4;
+		}else{
+			// we need vertex colors in the shader so force white like on PS2, one set is enough
+			dcl[i].stream = 0;
+			dcl[i].offset = stride;
+			dcl[i].type = D3DDECLTYPE_D3DCOLOR;
+			dcl[i].method = D3DDECLMETHOD_DEFAULT;
+			dcl[i].usage = D3DDECLUSAGE_COLOR;
+			dcl[i].usageIndex = 0;
+			i++;
+			s->geometryFlags |= 0x8;
+			stride += 4;
+		}
 
-	// TODO: support both vertex buffers
+		for(int32 n = 0; n < geo->numTexCoordSets; n++){
+			dcl[i].stream = 0;
+			dcl[i].offset = stride;
+			dcl[i].type = D3DDECLTYPE_FLOAT2;
+			dcl[i].method = D3DDECLMETHOD_DEFAULT;
+			dcl[i].usage = D3DDECLUSAGE_TEXCOORD;
+			dcl[i].usageIndex = (uint8)n;
+			i++;
+			s->geometryFlags |= 0x10 << n;
+			stride += 8;
+		}
+
+		if(hasNormals || extranormals){
+			dcl[i].stream = 0;
+			dcl[i].offset = stride;
+			dcl[i].type = D3DDECLTYPE_FLOAT3;
+			dcl[i].method = D3DDECLMETHOD_DEFAULT;
+			dcl[i].usage = D3DDECLUSAGE_NORMAL;
+			dcl[i].usageIndex = 0;
+			i++;
+			s->geometryFlags |= 0x4;
+			stride += 12;
+		}
+		dcl[i] = D3DDECL_END();
+		s->stride = stride;
+
+		header->vertexDeclaration = createVertexDeclaration((VertexElement*)dcl);
+
+		s->vertexBuffer = createVertexBuffer(header->totalNumVertex*s->stride, 0, D3DPOOL_MANAGED);
+	}else
+		getDeclaration(header->vertexDeclaration, dcl);
+
 	uint8 *verts = lockVertices(s->vertexBuffer, 0, 0, D3DLOCK_NOSYSLOCK);
-	for(i = 0; dcl[i].usage != D3DDECLUSAGE_POSITION || dcl[i].usageIndex != 0; i++)
-		;
-	instV3d(vertFormatMap[dcl[i].type], verts + dcl[i].offset,
-		geo->morphTargets[0].vertices,
-		header->totalNumVertex,
-		header->vertexStream[dcl[i].stream].stride);
 
-	if(isPrelit){
-		int j;
-		for(i = 0; dcl[i].usage != D3DDECLUSAGE_COLOR || dcl[i].usageIndex != 0; i++)
+	// Instance vertices
+	if(!reinstance || geo->lockedSinceInst&Geometry::LOCKVERTICES){
+		for(i = 0; dcl[i].usage != D3DDECLUSAGE_POSITION || dcl[i].usageIndex != 0; i++)
 			;
-		for(j = 0; dcl[j].usage != D3DDECLUSAGE_COLOR || dcl[j].usageIndex != 1; j++)
-			;
-
-		InstanceData *inst = header->inst;
-		uint32 n = header->numMeshes;
-		rw::RGBA *dayColors = geo->colors;//extracols->dayColors;
-		rw::RGBA *nightColors = extracols->nightColors;
-//		if(dayColors == nil) dayColors = geo->colors;
-		if(nightColors == nil) nightColors = dayColors;
-		while(n--){
-			uint32 stride = header->vertexStream[dcl[i].stream].stride;
-			inst->vertexAlpha = instColor(vertFormatMap[dcl[i].type],
-				verts + dcl[i].offset + stride*inst->minVert,
-				nightColors + inst->minVert,
-				inst->numVertices,
-				stride);
-			inst->vertexAlpha |= instColor(vertFormatMap[dcl[j].type],
-				verts + dcl[j].offset + stride*inst->minVert,
-				dayColors + inst->minVert,
-				inst->numVertices,
-				stride);
-			inst++;
-		}
-	}else{
-		for(i = 0; dcl[i].usage != D3DDECLUSAGE_COLOR || dcl[i].usageIndex != 0; i++)
-			;
-		InstanceData *inst = header->inst;
-		uint32 n = header->numMeshes;
-		while(n--){
-			inst->vertexAlpha = 0;
-			inst++;
-		}
-		instWhite(vertFormatMap[dcl[i].type],
-			verts + dcl[i].offset,
+		instV3d(vertFormatMap[dcl[i].type], verts + dcl[i].offset,
+			geo->morphTargets[0].vertices,
 			header->totalNumVertex,
 			header->vertexStream[dcl[i].stream].stride);
 	}
 
+	// Instance prelight colors
+	if(!reinstance || geo->lockedSinceInst&Geometry::LOCKPRELIGHT){
+		if(isPrelit){
+			int j;
+			for(i = 0; dcl[i].usage != D3DDECLUSAGE_COLOR || dcl[i].usageIndex != 0; i++)
+				;
+			for(j = 0; dcl[j].usage != D3DDECLUSAGE_COLOR || dcl[j].usageIndex != 1; j++)
+				;
+
+			InstanceData *inst = header->inst;
+			uint32 n = header->numMeshes;
+			rw::RGBA *dayColors = geo->colors;//extracols->dayColors;
+			rw::RGBA *nightColors = extracols->nightColors;
+	//		if(dayColors == nil) dayColors = geo->colors;
+			if(nightColors == nil) nightColors = dayColors;
+			while(n--){
+				uint32 stride = header->vertexStream[dcl[i].stream].stride;
+				inst->vertexAlpha = instColor(vertFormatMap[dcl[i].type],
+					verts + dcl[i].offset + stride*inst->minVert,
+					nightColors + inst->minVert,
+					inst->numVertices,
+					stride);
+				inst->vertexAlpha |= instColor(vertFormatMap[dcl[j].type],
+					verts + dcl[j].offset + stride*inst->minVert,
+					dayColors + inst->minVert,
+					inst->numVertices,
+					stride);
+				inst++;
+			}
+		}else{
+			for(i = 0; dcl[i].usage != D3DDECLUSAGE_COLOR || dcl[i].usageIndex != 0; i++)
+				;
+			InstanceData *inst = header->inst;
+			uint32 n = header->numMeshes;
+			while(n--){
+				inst->vertexAlpha = 0;
+				inst++;
+			}
+			instWhite(vertFormatMap[dcl[i].type],
+				verts + dcl[i].offset,
+				header->totalNumVertex,
+				header->vertexStream[dcl[i].stream].stride);
+		}
+	}
+
+	// Instance tex coords
 	for(int32 n = 0; n < geo->numTexCoordSets; n++){
-		for(i = 0; dcl[i].usage != D3DDECLUSAGE_TEXCOORD || dcl[i].usageIndex != n; i++)
-			;
-		instTexCoords(vertFormatMap[dcl[i].type], verts + dcl[i].offset,
-			geo->texCoords[n],
-			header->totalNumVertex,
-			header->vertexStream[dcl[i].stream].stride);
+		if(!reinstance || geo->lockedSinceInst&(Geometry::LOCKTEXCOORDS<<n)){
+			for(i = 0; dcl[i].usage != D3DDECLUSAGE_TEXCOORD || dcl[i].usageIndex != n; i++)
+				;
+			instTexCoords(vertFormatMap[dcl[i].type], verts + dcl[i].offset,
+				geo->texCoords[n],
+				header->totalNumVertex,
+				header->vertexStream[dcl[i].stream].stride);
+		}
 	}
 
-	if(hasNormals || extranormals){
+	// Instance normals
+	if((hasNormals || extranormals) && (!reinstance || geo->lockedSinceInst&Geometry::LOCKNORMALS)){
 		for(i = 0; dcl[i].usage != D3DDECLUSAGE_NORMAL || dcl[i].usageIndex != 0; i++)
 			;
 		instV3d(vertFormatMap[dcl[i].type], verts + dcl[i].offset,
