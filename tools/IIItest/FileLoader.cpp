@@ -808,7 +808,7 @@ CFileLoader::LoadAtomicFile(rw::Stream *stream, int id)
 			nodename = GetFrameNodeName(atomic->getFrame());
 			GetNameAndLOD(nodename, name, &n);
 			modelinfo->SetAtomic(n, atomic);
-			atomic->removeFromClump();
+			atomic->clump->removeAtomic(atomic);
 			atomic->setFrame(rw::Frame::create());
 			CVisibilityPlugins::SetAtomicModelInfo(atomic, modelinfo);
 			CVisibilityPlugins::SetAtomicRenderCallback(atomic, nil);
@@ -887,7 +887,7 @@ CFileLoader::LoadModelFile(const char *filename)
 			  (CSimpleModelInfo*)CModelInfo::GetModelInfo(name, nil);
 			if(mi){
 				mi->SetAtomic(n, atomic);
-				atomic->removeFromClump();
+				atomic->clump->removeAtomic(atomic);
 				atomic->setFrame(Frame::create());
 				CVisibilityPlugins::SetAtomicModelInfo(atomic, mi);
 				CVisibilityPlugins::SetAtomicRenderCallback(atomic, nil);

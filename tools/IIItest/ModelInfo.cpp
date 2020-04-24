@@ -326,7 +326,7 @@ CVehicleModelInfo::SetAtomicRenderer(rw::Atomic *atm, rw::Clump *clump)
 		else
 			CVisibilityPlugins::SetAtomicRenderCallback(atm, CVisibilityPlugins::RenderVehicleHiDetailCB);
 	}else if(strstr(name, "_lo")){
-		atm->removeFromClump();
+		atm->clump->removeAtomic(atm);
 		atm->destroy();
 		return;
 	}else if(strstr(name, "_vlo"))
@@ -345,7 +345,7 @@ CVehicleModelInfo::SetAtomicRenderer_Boat(rw::Atomic *atm, rw::Clump *clump)
 	else if(strstr(name, "_hi"))
 		CVisibilityPlugins::SetAtomicRenderCallback(atm, CVisibilityPlugins::RenderVehicleHiDetailCB);
 	else if(strstr(name, "_lo")){
-		atm->removeFromClump();
+		atm->clump->removeAtomic(atm);
 		atm->destroy();
 		return;
 	}else if(strstr(name, "_vlo"))

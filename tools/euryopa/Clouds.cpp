@@ -348,7 +348,7 @@ RenderAndEmptyRenderBuffer(void)
 	assert(TempBufferIndicesStored <= TEMPBUFFERINDEXSIZE);
 	if(TempBufferVerticesStored){
 		rw::im3d::Transform(TempVertexBuffer, TempBufferVerticesStored, nil);
-		rw::im3d::RenderIndexed(rw::PRIMTYPETRILIST, TempIndexBuffer, TempBufferIndicesStored);
+		rw::im3d::RenderIndexedPrimitive(rw::PRIMTYPETRILIST, TempIndexBuffer, TempBufferIndicesStored);
 		rw::im3d::End();
 	}
 	TempBufferVerticesStored = 0;

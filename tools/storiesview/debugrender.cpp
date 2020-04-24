@@ -43,7 +43,7 @@ RenderAndEmptyRenderBuffer(void)
 	assert(TempBufferIndicesStored <= TEMPBUFFERINDEXSIZE);
 	if(TempBufferVerticesStored){
 		rw::im3d::Transform(TempVertexBuffer, TempBufferVerticesStored, nil);
-		rw::im3d::RenderIndexed(rw::PRIMTYPELINELIST, TempIndexBuffer, TempBufferIndicesStored);
+		rw::im3d::RenderIndexedPrimitive(rw::PRIMTYPELINELIST, TempIndexBuffer, TempBufferIndicesStored);
 		rw::im3d::End();
 	}
 	TempBufferVerticesStored = 0;
@@ -57,7 +57,7 @@ RenderAndEmptyTriRenderBuffer(void)
 	assert(TempTriBufferIndicesStored <= TEMPBUFFERINDEXSIZE);
 	if(TempTriBufferVerticesStored){
 		rw::im3d::Transform(TempTriVertexBuffer, TempTriBufferVerticesStored, nil);
-		rw::im3d::RenderIndexed(rw::PRIMTYPETRILIST, TempTriIndexBuffer, TempTriBufferIndicesStored);
+		rw::im3d::RenderIndexedPrimitive(rw::PRIMTYPETRILIST, TempTriIndexBuffer, TempTriBufferIndicesStored);
 		rw::im3d::End();
 	}
 	TempTriBufferVerticesStored = 0;

@@ -297,7 +297,7 @@ renderPathNodes(void)
 
 	rw::im3d::Transform(vertices, numVertices, nil);
 	for(i = 0; i < numIndices; i += 10000)
-		rw::im3d::RenderIndexed(rw::PRIMTYPELINELIST, indices+i, min(10000, numIndices-i));
+		rw::im3d::RenderIndexedPrimitive(rw::PRIMTYPELINELIST, indices+i, min(10000, numIndices-i));
 	rw::im3d::End();
 
 //	return;

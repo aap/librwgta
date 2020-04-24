@@ -658,7 +658,7 @@ defaultRenderCB_GSemu(Atomic *atomic, d3d9::InstanceDataHeader *header)
 
 	int lighting = !!(geo->flags & rw::Geometry::LIGHT);
 	if(lighting)
-		d3d::lightingCB(!!(geo->flags & rw::Geometry::NORMALS));
+		d3d::lightingCB_Fix(atomic);
 
 	d3d::setRenderState(D3DRS_LIGHTING, lighting);
 

@@ -166,7 +166,7 @@ ObjectDef::LoadAtomic(void)
 			else
 				GetNameAndDamage(nodename, name, &n);
 			SetAtomic(n, atomic);
-			atomic->removeFromClump();
+			atomic->clump->removeAtomic(atomic);
 			atomic->setFrame(rw::Frame::create());
 			SetupAtomic(atomic);
 		}

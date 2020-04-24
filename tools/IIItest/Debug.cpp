@@ -73,7 +73,7 @@ DrawDebugFrustum(void)
 		rw::SetRenderStatePtr(rw::TEXTURERASTER, nil);
 
 		rw::im3d::Transform(vertices, 8, nil);
-		rw::im3d::RenderIndexed(rw::PRIMTYPETRILIST, indices, i);
+		rw::im3d::RenderIndexedPrimitive(rw::PRIMTYPETRILIST, indices, i);
 		rw::im3d::End();
 
 		// Visualize normal
@@ -96,7 +96,7 @@ DrawDebugFrustum(void)
 		indices[0] = 0;
 		indices[1] = 1;
 		rw::im3d::Transform(vertices, 2, nil);
-		rw::im3d::RenderIndexed(rw::PRIMTYPELINELIST, indices, 2);
+		rw::im3d::RenderIndexedPrimitive(rw::PRIMTYPELINELIST, indices, 2);
 		rw::im3d::End();
 
 		rw::Sphere sph;
