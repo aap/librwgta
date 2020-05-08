@@ -77,19 +77,9 @@ using namespace d3d9;
 static void
 GetBackbuffer(Raster *raster)
 {
-	assert(raster->type == Raster::CAMERATEXTURE);
-	D3dRaster *natras = PLUGINOFFSET(D3dRaster, raster, nativeRasterOffset);
-
-	IDirect3DTexture9 *tex = (IDirect3DTexture9*)natras->texture;
-	IDirect3DSurface9 *surf = nil;
-	IDirect3DSurface9 *backbuf = nil;
- 	tex->GetSurfaceLevel(0, &surf);
-	assert(surf);
-	d3ddevice->GetRenderTarget(0, &backbuf);
-	assert(backbuf);
-	d3ddevice->StretchRect(backbuf, nil, surf, nil, D3DTEXF_NONE);
-	backbuf->Release();
-	surf->Release();
+	Raster::pushContext(raster);
+	engine->currentCamera->frameBuffer->renderFast(0, 0);
+	Raster::popContext();
 }
 
 static void *colourfilterIII_PS;
@@ -126,67 +116,60 @@ CreateShaders(void)
 }
 
 static void
+RenderColourFilterGeneric(void *ps)
+{
+	d3d::im2dOverridePS = ps;
+	im2d::RenderIndexedPrimitive(rw::PRIMTYPETRILIST,
+		&verts, 4, &indices, 6);
+	d3d::im2dOverridePS = nil;
+}
+
+static void
 RenderColourFilterIII(void)
 {
-	setPixelShader(colourfilterIII_PS);
-	rw::im2d::RenderIndexedPrimitive(rw::PRIMTYPETRILIST,
-		&verts, 4, &indices, 6);
+	RenderColourFilterGeneric(colourfilterIII_PS);
 }
 
 static void
 RenderColourFilterVC(void)
 {
-	setPixelShader(colourfilterVC_PS);
-	rw::im2d::RenderIndexedPrimitive(rw::PRIMTYPETRILIST,
-		&verts, 4, &indices, 6);
+	RenderColourFilterGeneric(colourfilterVC_PS);
 }
 
 static void
 RenderColourFilterLeedsPS2(void)
 {
-	setPixelShader(colourfilterLeedsPS2_PS);
-	rw::im2d::RenderIndexedPrimitive(rw::PRIMTYPETRILIST,
-		&verts, 4, &indices, 6);
+	RenderColourFilterGeneric(colourfilterLeedsPS2_PS);
 }
 
 static void
 RenderColourFilterLeedsPSP(void)
 {
-	setPixelShader(colourfilterLeedsPSP_PS);
-	rw::im2d::RenderIndexedPrimitive(rw::PRIMTYPETRILIST,
-		&verts, 4, &indices, 6);
+	RenderColourFilterGeneric(colourfilterLeedsPSP_PS);
 }
 
 static void
 RenderColourFilterSAPS2(void)
 {
-	setPixelShader(colourfilterSAPS2_PS);
-	rw::im2d::RenderIndexedPrimitive(rw::PRIMTYPETRILIST,
-		&verts, 4, &indices, 6);
+	RenderColourFilterGeneric(colourfilterSAPS2_PS);
 }
 
 static void
 RenderColourFilterSAPC(void)
 {
-	setPixelShader(colourfilterSAPC_PS);
-	rw::im2d::RenderIndexedPrimitive(rw::PRIMTYPETRILIST,
-		&verts, 4, &indices, 6);
+	RenderColourFilterGeneric(colourfilterSAPC_PS);
 }
 
 static void
 RenderRadiosity(void)
 {
-	setPixelShader(radiosityPS);
-	rw::im2d::RenderIndexedPrimitive(rw::PRIMTYPETRILIST,
-		&verts, 4, &indices, 6);
+	RenderColourFilterGeneric(radiosityPS);
 }
 
 static void
 RenderRadiosityLeeds(void)
 {
-	setPixelShader(radiosityLeedsPS);
-	rw::im2d::RenderIndexedPrimitive(rw::PRIMTYPETRILIST,
-		&verts, 4, &indices, 6);
+	RenderColourFilterGeneric(radiosityLeedsPS);
 }
 
 void

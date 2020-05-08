@@ -116,10 +116,10 @@ rslNodeListStreamRead(Stream *stream, rslNodeList *framelist)
 	RslNode *f;
 
 	mustFindChunk(stream, ID_STRUCT, NULL, NULL);
-	stream->read(&framelist->numNodes, 4);
+	stream->read8(&framelist->numNodes, 4);
 	framelist->frames = new RslNode*[framelist->numNodes];
 	for(int32 i = 0; i < framelist->numNodes; i++){
-		stream->read(&strfrm, sizeof(strfrm));
+		stream->read8(&strfrm, sizeof(strfrm));
 		f = RslNodeCreate();
 		f->modelling.right = strfrm.right;
 		f->modelling.up = strfrm.up;
@@ -140,7 +140,7 @@ rslNodeListStreamRead(Stream *stream, rslNodeList *framelist)
 			}else if(header.type == gta::ID_NODENAME){
 				f->name = new char[header.length+1];
 				memset(f->name, 0, header.length+1);
-				stream->read(f->name, header.length);
+				stream->read8(f->name, header.length);
 				f->name[header.length] = '\0';
 			}else{
 				stream->seek(header.length);
@@ -270,25 +270,25 @@ RslElementStreamRead(Stream *stream, rslNodeList *framelist)
 	RslGeometry *g;
 
 	mustFindChunk(stream, ID_STRUCT, NULL, NULL);
-	stream->read(buf, 16);
+	stream->read8(buf, 16);
 	a = RslElementCreate();
 	a->object.object.flags = buf[2];
 	mustFindChunk(stream, ID_GEOMETRY, NULL, NULL);
 
 	if(RslPSP){
 		sPspGeometry res, *rp;
-		stream->read(&res, sizeof(sPspGeometry));
+		stream->read8(&res, sizeof(sPspGeometry));
 		g = RslGeometryCreate(res.size);
 		rp = (sPspGeometry*)(g+1);
 		*rp++ = res;
-		stream->read(rp, res.size-sizeof(sPspGeometry));
+		stream->read8(rp, res.size-sizeof(sPspGeometry));
 	}else{
 		sPs2Geometry res, *rp;
-		stream->read(&res, sizeof(sPs2Geometry));
+		stream->read8(&res, sizeof(sPs2Geometry));
 		g = RslGeometryCreate(res.size & 0xFFFFF);
 		rp = (sPs2Geometry*)(g+1);
 		*rp++ = res;
-		stream->read(rp, (res.size&0xFFFFF)-sizeof(sPs2Geometry));
+		stream->read8(rp, (res.size&0xFFFFF)-sizeof(sPs2Geometry));
 	}
 
 	rslMaterialListStreamRead(stream, &g->matList);
@@ -330,7 +330,7 @@ RslSkinStreamRead(Stream *stream, RslGeometry *g)
 	skin->numBones = info;
 	skin->numUsedBones = info;
 	skin->invMatrices = new float[skin->numBones*16];
-	stream->read(skin->invMatrices, skin->numBones*16*4);
+	stream->read8(skin->invMatrices, skin->numBones*16*4);
 	// TODO: allocate...if we'd really care
 	(void)g;
 	return skin;
@@ -358,10 +358,10 @@ RslElementGroupStreamRead(Stream *stream)
 
 	mustFindChunk(stream, ID_STRUCT, NULL, &version);
 	if(version > 0x33000){
-		stream->read(buf, 12);
+		stream->read8(buf, 12);
 		numElements = buf[0];
 	}else
-		stream->read(&numElements, 4);
+		stream->read8(&numElements, 4);
 
 	clump = RslElementGroupCreate();
 	mustFindChunk(stream, ID_FRAMELIST, NULL, NULL);
@@ -463,7 +463,7 @@ RslMaterialStreamRead(Stream *stream)
 	uint32 length;
 	RslMaterialChunkInfo chunk;
 	mustFindChunk(stream, ID_STRUCT, NULL, NULL);
-	stream->read(&chunk, sizeof(chunk));
+	stream->read8(&chunk, sizeof(chunk));
 	RslMaterial *mat = RslMaterialCreate();
 	mat->color = chunk.color;
 	if(chunk.textured)
@@ -551,7 +551,7 @@ rslMaterialListStreamRead(Stream *stream, RslMaterialList *matlist)
 	mustFindChunk(stream, ID_STRUCT, NULL, NULL);
 	numMaterials = stream->readI32();
 	int32 *refs = new int32[numMaterials];
-	stream->read(refs, 4*numMaterials);
+	stream->read8(refs, 4*numMaterials);
 	for(int32 i = 0; i < numMaterials; i++){
 		assert(refs[i] < 0);
 		mustFindChunk(stream, ID_MATERIAL, NULL, NULL);
@@ -618,9 +618,9 @@ RslTextureStreamRead(Stream *stream)
 	mustFindChunk(stream, ID_STRUCT, NULL, NULL);
 	stream->readI32();	// filter addressing
 	mustFindChunk(stream, ID_STRING, &length, NULL);
-	stream->read(tex->name, length);
+	stream->read8(tex->name, length);
 	mustFindChunk(stream, ID_STRING, &length, NULL);
-	stream->read(tex->mask, length);
+	stream->read8(tex->mask, length);
 
 	ChunkHeaderInfo header;
 	mustFindChunk(stream, ID_EXTENSION, &length, NULL);
@@ -730,27 +730,27 @@ RslReadNativeTexture(Stream *stream)
 	uint32 buf[2];
 	RslTexture *tex = RslTextureCreate(NULL);
 	mustFindChunk(stream, ID_STRUCT, NULL, NULL);
-	stream->read(buf, sizeof(buf));
+	stream->read8(buf, sizeof(buf));
 	assert(buf[0] == 0x00505350); /* "PSP\0" */
 	mustFindChunk(stream, ID_STRING, &len, NULL);
-	stream->read(tex->name, len);
+	stream->read8(tex->name, len);
 	mustFindChunk(stream, ID_STRING, &len, NULL);
-	stream->read(tex->mask, len);
+	stream->read8(tex->mask, len);
 	mustFindChunk(stream, ID_STRUCT, NULL, NULL);
 	mustFindChunk(stream, ID_STRUCT, &len, NULL);
-	stream->read(&rasterInfo, sizeof(rasterInfo));
+	stream->read8(&rasterInfo, sizeof(rasterInfo));
 	mustFindChunk(stream, ID_STRUCT, &len, NULL);
 	if(RslPSP){
 		tex->raster = RslCreateRasterPSP(rasterInfo.width,
 			rasterInfo.height, rasterInfo.depth, rasterInfo.mipmaps,
 			rasterInfo.unused);
 		tex->raster->psp.data = new uint8[len];
-		stream->read(tex->raster->psp.data, len);
+		stream->read8(tex->raster->psp.data, len);
 	}else{
 		tex->raster = RslCreateRasterPS2(rasterInfo.width,
 			rasterInfo.height, rasterInfo.depth, rasterInfo.mipmaps);
 		tex->raster->ps2.data = new uint8[len];
-		stream->read(tex->raster->ps2.data, len);
+		stream->read8(tex->raster->ps2.data, len);
 	}
 	mustFindChunk(stream, ID_EXTENSION, &len, NULL);
 	stream->seek(len);

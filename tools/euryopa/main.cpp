@@ -211,9 +211,8 @@ rw::Raster*
 ConvertTexRaster(rw::Raster *ras)
 {
 	using namespace rw;
-// TEMP
-//return nil;
 	Image *img = ras->toImage();
+	ras->destroy();
 	img->unindex();
 	ras = Raster::createFromImage(img);
 	img->destroy();
@@ -244,13 +243,6 @@ InitRW(void)
 	if(!sk::InitRW())
 		return false;
 	rw::d3d::isP8supported = false;
-
-// HACK HACK HACK
-// patch in our own callback into the default pipeline
-#ifdef RW_D3D9
-	void defaultRenderCB_GSemu(rw::Atomic *atomic, rw::d3d9::InstanceDataHeader *header);
-	((rw::d3d9::ObjPipeline*)rw::engine->driver[rw::platform]->defaultPipeline)->renderCB = defaultRenderCB_GSemu;
-#endif
 
 	rw::Image *img = rw::Image::create(1, 1, 32);
 	uint32 white = 0xFFFFFFFF;

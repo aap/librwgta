@@ -23,7 +23,7 @@ VS_OUTPUT
 main(VS_INPUT IN)
 {	
 	VS_OUTPUT OUT;
-	OUT.Position = mul(IN.Position, combined);
+	OUT.Position = mul(combined, IN.Position);
 
 	OUT.Texcoord0 = mul(envmat, IN.Normal).xy - envXform.xy;
 	OUT.Texcoord0 *= -envXform.zw;

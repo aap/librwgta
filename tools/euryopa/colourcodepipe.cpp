@@ -10,36 +10,30 @@ rw::RGBA colourCode;
 using namespace d3d;
 using namespace d3d9;
 
-static void *vs;
+void *colourcode_PS;
 
 void
 colourCodeRenderCB(Atomic *atomic, d3d9::InstanceDataHeader *header)
 {
-	RawMatrix world;
 	Geometry *geo = atomic->geometry;
 
-	d3d::setRenderState(D3DRS_LIGHTING, 0);
+	setStreamSource(0, header->vertexStream[0].vertexBuffer, 0, header->vertexStream[0].stride);
+	setIndices(header->indexBuffer);
+	setVertexDeclaration(header->vertexDeclaration);
 
-	Frame *f = atomic->getFrame();
-	convMatrix(&world, f->getLTM());
-	d3ddevice->SetTransform(D3DTS_WORLD, (D3DMATRIX*)&world);
+	uint32 flags = geo->flags;
+	geo->flags &= ~Geometry::LIGHT;
+	lightingCB_Shader(atomic);
+	geo->flags = flags;
 
-	d3ddevice->SetStreamSource(0, (IDirect3DVertexBuffer9*)header->vertexStream[0].vertexBuffer,
-	                           0, header->vertexStream[0].stride);
-	d3ddevice->SetIndices((IDirect3DIndexBuffer9*)header->indexBuffer);
-	d3ddevice->SetVertexDeclaration((IDirect3DVertexDeclaration9*)header->vertexDeclaration);
+	uploadMatrices(atomic->getFrame()->getLTM());
 
-	// Use a vertex shader here if we're drawing over an object drawn
-	// with a vertex shader to minimize z-fights
-	if(d3d9UsedVertexShader){
-		void getComposedMatrix(Atomic *atm, RawMatrix *combined);
-		RawMatrix combined, ident;
-		RawMatrix::setIdentity(&ident);
-		setVertexShader(vs);
-		getComposedMatrix(atomic, &combined);
-		d3ddevice->SetVertexShaderConstantF(0, (float*)&combined, 4);
-		d3ddevice->SetVertexShaderConstantF(32, (float*)&ident, 4);
-	}
+	setVertexShader(default_amb_VS);
+	setPixelShader(colourcode_PS);
+
+	RGBAf c;
+	convColor(&c, &colourCode);
+	d3ddevice->SetPixelShaderConstantF(PSLOC_fogColor, (float*)&c, 1);
 
 	InstanceData *inst = header->inst;
 	uint32 blend;
@@ -51,27 +45,21 @@ colourCodeRenderCB(Atomic *atomic, d3d9::InstanceDataHeader *header)
 		if(renderColourCoded)
 			d3d::setRenderState(D3DRS_ALPHABLENDENABLE, 0);
 
-		d3d::setRenderState(D3DRS_TEXTUREFACTOR, D3DCOLOR_RGBA(colourCode.red, colourCode.green, colourCode.blue, colourCode.alpha));
-		d3d::setTextureStageState(0, D3DTSS_COLOROP, D3DTOP_SELECTARG1);
-		d3d::setTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TFACTOR);
-		d3d::setTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
-		d3d::setTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
-		d3d::setTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_TFACTOR);
-
 		d3d9::drawInst(header, inst);
 
 		d3d::setRenderState(D3DRS_ALPHABLENDENABLE, blend);
 		inst++;
 	}
-	setVertexShader(nil);
 }
 
 rw::ObjPipeline*
 makeColourCodePipeline(void)
 {
-	// reuse as our vertex shader
-#include "d3d_shaders/ps2BuildingVS.inc"
-	vs = createVertexShader(ps2BuildingVS_cso);
+	{
+#include "d3d_shaders/colourcode_PS.inc"
+		colourcode_PS = createPixelShader(colourcode_PS_cso);
+		assert(colourcode_PS);
+	}
 
 	d3d9::ObjPipeline *pipe = new d3d9::ObjPipeline(PLATFORM_D3D9);
 	pipe->instanceCB = defaultInstanceCB;

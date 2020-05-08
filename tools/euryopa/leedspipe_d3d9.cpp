@@ -23,7 +23,6 @@ static void *simple4PS;
 rw::ObjPipeline *leedsPipe;
 
 void getComposedMatrix(Atomic *atm, RawMatrix *combined);
-void defaultRenderCB_GSemu(Atomic *atomic, d3d9::InstanceDataHeader *header);
 
 static void
 leedsRenderCB_PS2(Atomic *atomic, d3d9::InstanceDataHeader *header)
@@ -32,10 +31,10 @@ leedsRenderCB_PS2(Atomic *atomic, d3d9::InstanceDataHeader *header)
 	float colorscale[4];
 	Geometry *geo = atomic->geometry;
 
-	d3ddevice->SetStreamSource(0, (IDirect3DVertexBuffer9*)header->vertexStream[0].vertexBuffer,
+	setStreamSource(0, (IDirect3DVertexBuffer9*)header->vertexStream[0].vertexBuffer,
 	                           0, header->vertexStream[0].stride);
-	d3ddevice->SetIndices((IDirect3DIndexBuffer9*)header->indexBuffer);
-	d3ddevice->SetVertexDeclaration((IDirect3DVertexDeclaration9*)header->vertexDeclaration);
+	setIndices((IDirect3DIndexBuffer9*)header->indexBuffer);
+	setVertexDeclaration((IDirect3DVertexDeclaration9*)header->vertexDeclaration);
 
 	setVertexShader(leedsPS2VS);
 	setPixelShader(simple4PS);
@@ -80,10 +79,6 @@ leedsRenderCB_PS2(Atomic *atomic, d3d9::InstanceDataHeader *header)
 
 		inst++;
 	}
-
-	d3ddevice->SetVertexShader(nil);
-	d3ddevice->SetPixelShader(nil);
-	d3d9UsedVertexShader = true;
 }
 
 static void
@@ -93,10 +88,9 @@ leedsRenderCB_PSP(Atomic *atomic, d3d9::InstanceDataHeader *header)
 	float colorscale[4];
 	Geometry *geo = atomic->geometry;
 
-	d3ddevice->SetStreamSource(0, (IDirect3DVertexBuffer9*)header->vertexStream[0].vertexBuffer,
-	                           0, header->vertexStream[0].stride);
-	d3ddevice->SetIndices((IDirect3DIndexBuffer9*)header->indexBuffer);
-	d3ddevice->SetVertexDeclaration((IDirect3DVertexDeclaration9*)header->vertexDeclaration);
+	setStreamSource(0, header->vertexStream[0].vertexBuffer, 0, header->vertexStream[0].stride);
+	setIndices(header->indexBuffer);
+	setVertexDeclaration(header->vertexDeclaration);
 
 	setVertexShader(leedsPS2VS);
 	setPixelShader(simple4PS);
@@ -141,10 +135,6 @@ leedsRenderCB_PSP(Atomic *atomic, d3d9::InstanceDataHeader *header)
 
 		inst++;
 	}
-
-	d3ddevice->SetVertexShader(nil);
-	d3ddevice->SetPixelShader(nil);
-	d3d9UsedVertexShader = true;
 }
 
 
@@ -155,10 +145,9 @@ leedsRenderCB_mobile(Atomic *atomic, d3d9::InstanceDataHeader *header)
 	float colorscale[4];
 	Geometry *geo = atomic->geometry;
 
-	d3ddevice->SetStreamSource(0, (IDirect3DVertexBuffer9*)header->vertexStream[0].vertexBuffer,
-	                           0, header->vertexStream[0].stride);
-	d3ddevice->SetIndices((IDirect3DIndexBuffer9*)header->indexBuffer);
-	d3ddevice->SetVertexDeclaration((IDirect3DVertexDeclaration9*)header->vertexDeclaration);
+	setStreamSource(0, header->vertexStream[0].vertexBuffer, 0, header->vertexStream[0].stride);
+	setIndices(header->indexBuffer);
+	setVertexDeclaration(header->vertexDeclaration);
 
 	setVertexShader(leedsPS2VS);
 	setPixelShader(simple4PS);
@@ -198,10 +187,6 @@ leedsRenderCB_mobile(Atomic *atomic, d3d9::InstanceDataHeader *header)
 
 		inst++;
 	}
-
-	d3ddevice->SetVertexShader(nil);
-	d3ddevice->SetPixelShader(nil);
-	d3d9UsedVertexShader = true;
 }
 
 static void
@@ -209,7 +194,7 @@ leedsRenderCB(Atomic *atomic, d3d9::InstanceDataHeader *header)
 {
 	switch(gBuildingPipeSwitch){
 	case PLATFORM_NULL:
-		defaultRenderCB_GSemu(atomic, header);
+		d3d9::defaultRenderCB_Shader(atomic, header);
 		break;
 	case PLATFORM_PS2:
 		leedsRenderCB_PS2(atomic, header);

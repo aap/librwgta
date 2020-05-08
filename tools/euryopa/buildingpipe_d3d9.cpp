@@ -34,12 +34,11 @@ static void *simplePS, *ps2EnvPS;
 void
 getComposedMatrix(Atomic *atm, RawMatrix *combined)
 {
-	RawMatrix world, compxpos, worldview;
+	RawMatrix world, worldview;
 	Camera *cam = (Camera*)engine->currentCamera;
 	convMatrix(&world, atm->getFrame()->getLTM());
 	RawMatrix::mult(&worldview, &world, &cam->devView);
-	RawMatrix::mult(&compxpos, &worldview, &cam->devProj);
-	RawMatrix::transpose(combined, &compxpos);
+	RawMatrix::mult(combined, &worldview, &cam->devProj);
 }
 
 static void
@@ -50,10 +49,9 @@ buildingRenderCB_PS2(Atomic *atomic, d3d9::InstanceDataHeader *header)
 	Geometry *geo = atomic->geometry;
 	RawMatrix::setIdentity(&ident);
 
-	d3ddevice->SetStreamSource(0, (IDirect3DVertexBuffer9*)header->vertexStream[0].vertexBuffer,
-	                           0, header->vertexStream[0].stride);
-	d3ddevice->SetIndices((IDirect3DIndexBuffer9*)header->indexBuffer);
-	d3ddevice->SetVertexDeclaration((IDirect3DVertexDeclaration9*)header->vertexDeclaration);
+	setStreamSource(0, header->vertexStream[0].vertexBuffer, 0, header->vertexStream[0].stride);
+	setIndices(header->indexBuffer);
+	setVertexDeclaration(header->vertexDeclaration);
 
 	setVertexShader(gBuildingPipeSwitch == PLATFORM_PC ? pcBuildingVS : ps2BuildingVS);
 	setPixelShader(simplePS);
@@ -155,10 +153,6 @@ buildingRenderCB_PS2(Atomic *atomic, d3d9::InstanceDataHeader *header)
 
 		inst++;
 	}
-
-	d3ddevice->SetVertexShader(nil);
-	d3ddevice->SetPixelShader(nil);
-	d3d9UsedVertexShader = true;
 }
 
 #define GETEXTRACOLOREXT(g) PLUGINOFFSET(gta::ExtraVertColors, g, gta::extraVertColorOffset)
@@ -354,11 +348,16 @@ MakeCustomBuildingPipelines(void)
 	ps2BuildingVS = createVertexShader(ps2BuildingVS_cso);
 	pcBuildingVS = createVertexShader(pcBuildingVS_cso);
 	simplePS = createPixelShader(simplePS_cso);
+	assert(ps2BuildingVS);
+	assert(pcBuildingVS);
+	assert(simplePS);
 
 #include "d3d_shaders/ps2BuildingFxVS.inc"
 #include "d3d_shaders/ps2EnvPS.inc"
 	ps2BuildingFxVS = createVertexShader(ps2BuildingFxVS_cso);
 	ps2EnvPS = createPixelShader(ps2EnvPS_cso);
+	assert(ps2BuildingFxVS);
+	assert(ps2EnvPS);
 
 
 	pipe = new d3d9::ObjPipeline(PLATFORM_D3D9);

@@ -147,7 +147,7 @@ static rw::Stream*
 readNodeName(rw::Stream *stream, int32 len, void *object, int32 offset, int32)
 {
 	char *name = PLUGINOFFSET(char, object, offset);
-	stream->read(name, len);
+	stream->read8(name, len);
 	name[len] = '\0';
 	//printf("%s\n", name);
 	return stream;
@@ -157,7 +157,7 @@ static rw::Stream*
 writeNodeName(rw::Stream *stream, int32 len, void *object, int32 offset, int32)
 {
 	char *name = PLUGINOFFSET(char, object, offset);
-	stream->write(name, len);
+	stream->write8(name, len);
 	return stream;
 }
 
@@ -219,7 +219,7 @@ readBreakableModel(rw::Stream *stream, int32, void *object, int32 o, int32)
 	uint32 hasBreakable = stream->readU32();
 	if(hasBreakable == 0)
 		return stream;
-	stream->read(header, 13*4);
+	stream->read8(header, 13*4);
 	uint32 size = header[1]*(12+8+4) + header[5]*(6+2) +
 	              header[8]*(32+32+12);
 	uint8 *p = new uint8[sizeof(Breakable)+size];
@@ -230,7 +230,7 @@ readBreakableModel(rw::Stream *stream, int32, void *object, int32 o, int32)
 	breakable->numFaces     = header[5];
 	breakable->numMaterials = header[8];
 	p += sizeof(Breakable);
-	stream->read(p, size);
+	stream->read8(p, size);
 	breakable->vertices = (float*)p;
 	p += breakable->numVertices*12;
 	breakable->texCoords = (float*)p;
@@ -265,9 +265,9 @@ writeBreakableModel(rw::Stream *stream, int32, void *object, int32 o, int32)
 	header[1] = breakable->numVertices;
 	header[5] = breakable->numFaces;
 	header[8] = breakable->numMaterials;
-	stream->write(header, 13*4);
+	stream->write8(header, 13*4);
 	p += sizeof(Breakable);
-	stream->write(p, breakable->numVertices*(12+8+4) +
+	stream->write8(p, breakable->numVertices*(12+8+4) +
 	                       breakable->numFaces*(6+2) +
 	                       breakable->numMaterials*(32+32+12));
 	return stream;
@@ -343,7 +343,7 @@ readExtraNormals(rw::Stream *stream, int32, void *object, int32 offset, int32)
 {
 	rw::Geometry *geo = (rw::Geometry*)object;
 	rw::V3d *extranormals = allocateExtraNormals(geo);
-	stream->read(extranormals, geo->numVertices*3*4);
+	stream->read8(extranormals, geo->numVertices*3*4);
 	return stream;
 }
 
@@ -353,7 +353,7 @@ writeExtraNormals(rw::Stream *stream, int32, void *object, int32 offset, int32)
 	rw::Geometry *geo = (rw::Geometry*)object;
 	rw::V3d *extranormals = *PLUGINOFFSET(rw::V3d*, object, offset);
 	assert(extranormals != nil);
-	stream->write(extranormals, geo->numVertices*3*4);
+	stream->write8(extranormals, geo->numVertices*3*4);
 	return stream;
 }
 
@@ -429,7 +429,7 @@ readExtraVertColors(rw::Stream *stream, int32, void *object, int32 offset, int32
 	colordata->nightColors = new rw::RGBA[geometry->numVertices];
 	colordata->dayColors = new rw::RGBA[geometry->numVertices];
 	colordata->balance = 1.0f;
-	stream->read(colordata->nightColors, geometry->numVertices*4);
+	stream->read8(colordata->nightColors, geometry->numVertices*4);
 	if(geometry->colors)
 		memcpy(colordata->dayColors, geometry->colors,
 		       geometry->numVertices*4);
@@ -444,7 +444,7 @@ writeExtraVertColors(rw::Stream *stream, int32, void *object, int32 offset, int3
 	stream->writeU32(colordata->nightColors != nil);
 	if(colordata->nightColors){
 		rw::Geometry *geometry = (rw::Geometry*)object;
-		stream->write(colordata->nightColors, geometry->numVertices*4);
+		stream->write8(colordata->nightColors, geometry->numVertices*4);
 	}
 	return stream;
 }
@@ -530,7 +530,7 @@ readEnvMat(rw::Stream *stream, int32, void *object, int32 offset, int32)
 	EnvStream buf;
 	EnvMat *env = new EnvMat;
 	*PLUGINOFFSET(EnvMat*, object, offset) = env;
-	stream->read(&buf, sizeof(buf));
+	stream->read8(&buf, sizeof(buf));
 	env->scaleX = (int8)(buf.scaleX*8.0f);
 	env->scaleY = (int8)(buf.scaleY*8.0f);
 	env->transScaleX = (int8)(buf.transScaleX*8.0f);
@@ -551,7 +551,7 @@ writeEnvMat(rw::Stream *stream, int32, void *object, int32 offset, int32)
 	buf.transScaleY = env->transScaleY/8.0f;
 	buf.shininess = env->shininess/255.0f;
 	buf.zero = 0;
-	stream->write(&buf, sizeof(buf));
+	stream->write8(&buf, sizeof(buf));
 	return stream;
 }
 
@@ -617,7 +617,7 @@ readSpecMat(rw::Stream *stream, int32, void *object, int32 offset, int32)
 	SpecStream buf;
 	SpecMat *spec = new SpecMat;
 	*PLUGINOFFSET(SpecMat*, object, offset) = spec;
-	stream->read(&buf, sizeof(buf));
+	stream->read8(&buf, sizeof(buf));
 	spec->specularity = buf.specularity;
 	spec->texture = rw::Texture::create(nil);
 	strncpy(spec->texture->name, buf.texname, 24);
@@ -631,7 +631,7 @@ writeSpecMat(rw::Stream *stream, int32, void *object, int32 offset, int32)
 	SpecMat *spec = *PLUGINOFFSET(SpecMat*, object, offset);
 	buf.specularity = spec->specularity;
 	strncpy(buf.texname, spec->texture->name, 24);
-	stream->write(&buf, sizeof(buf));
+	stream->write8(&buf, sizeof(buf));
 	return stream;
 }
 
@@ -819,7 +819,7 @@ read2dEffect(rw::Stream *stream, int32 size, void *object, int32 offset, int32)
 	SizedData *data = PLUGINOFFSET(SizedData, object, offset);
 	data->size = size;
 	data->data = new uint8[data->size];
-	stream->read(data->data, data->size);
+	stream->read8(data->data, data->size);
 	return stream;
 }
 
@@ -827,7 +827,7 @@ static rw::Stream*
 write2dEffect(rw::Stream *stream, int32, void *object, int32 offset, int32)
 {
 	SizedData *data = PLUGINOFFSET(SizedData, object, offset);
-	stream->write(data->data, data->size);
+	stream->write8(data->data, data->size);
 	return stream;
 }
 
@@ -894,7 +894,7 @@ readCollision(rw::Stream *stream, int32 size, void *object, int32 offset, int32)
 	SizedData *data = PLUGINOFFSET(SizedData, object, offset);
 	data->size = size;
 	data->data = new uint8[data->size];
-	stream->read(data->data, data->size);
+	stream->read8(data->data, data->size);
 	return stream;
 }
 
@@ -902,7 +902,7 @@ static rw::Stream*
 writeCollision(rw::Stream *stream, int32, void *object, int32 offset, int32)
 {
 	SizedData *data = PLUGINOFFSET(SizedData, object, offset);
-	stream->write(data->data, data->size);
+	stream->write8(data->data, data->size);
 	return stream;
 }
 

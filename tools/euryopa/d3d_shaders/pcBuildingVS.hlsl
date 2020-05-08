@@ -29,7 +29,7 @@ VS_OUTPUT main(in VS_INPUT IN)
 {
 	VS_OUTPUT OUT;
 
-	OUT.Position = mul(IN.Position, combined);
+	OUT.Position = mul(combined, IN.Position);
 	OUT.Texcoord0 = mul(texmat, float4(IN.TexCoord, 0.0, 1.0)).xy;
 
 	OUT.Color = IN.DayColor*dayparam + IN.NightColor*nightparam;

@@ -28,11 +28,11 @@ writeSingleCol(CColModel *colmodel, char *name)
 	stream.open("out.col", "wb");
 	header.ident = COLL;
 	header.size = writeColModel(colmodel, &buf)+24;
-	stream.write(&header, 8);
+	stream.write8(&header, 8);
 	memset(colname, 0, 24);
 	strncpy(colname, name, 24);
-	stream.write(colname, 24);
-	stream.write(buf, header.size-24);
+	stream.write8(colname, 24);
+	stream.write8(buf, header.size-24);
 	delete[] buf;
 	stream.close();
 }
@@ -45,11 +45,11 @@ readColFile(rw::Stream *stream)
 
 	printf("reading bundle\n");
 	while(1){
-		if(stream->read(&header, 8) == 0 ||
+		if(stream->read8(&header, 8) == 0 ||
 		   header.ident != COLL)
 			return;
 		rw::uint8 *buf = new rw::uint8[header.size];
-		stream->read(buf, header.size);
+		stream->read8(buf, header.size);
 		memcpy(name, buf, 24);
 		CColModel *colmodel = new CColModel;
 		printf("%s %x\n", name, header.size);

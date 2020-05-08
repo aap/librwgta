@@ -24,7 +24,7 @@ VS_OUTPUT main(in VS_INPUT IN)
 {
 	VS_OUTPUT OUT;
 
-	OUT.Position = mul(IN.Position, combined);
+	OUT.Position = mul(combined, IN.Position);
 	OUT.Texcoord0 = IN.TexCoord;
 
 	OUT.Color = saturate(IN.Color*float4(ambient, 1.0f) + float4(emissive, 0.0f)*surfEmiss);

@@ -668,11 +668,11 @@ CVector RoundVector(CVector &vec)
 	const float epsilon = 0.0009f;
 	CVector v;
 	v.x = vec.x;
-	if(abs(v.x) < epsilon) v.x = 0.0f;
+	if(fabs(v.x) < epsilon) v.x = 0.0f;
 	v.y = vec.y;
-	if(abs(v.y) < epsilon) v.y = 0.0f;
+	if(fabs(v.y) < epsilon) v.y = 0.0f;
 	v.z = vec.z;
-	if(abs(v.z) < epsilon) v.z = 0.0f;
+	if(fabs(v.z) < epsilon) v.z = 0.0f;
 	return v;
 }
 
@@ -681,13 +681,13 @@ Quat RoundQuat(const Quat &quat)
 	const float epsilon = 0.0009f;
 	Quat q;
 	q.w = quat.w;
-	if(abs(q.w) < epsilon) q.w = 0.0f;
+	if(fabs(q.w) < epsilon) q.w = 0.0f;
 	q.x = quat.x;
-	if(abs(q.x) < epsilon) q.x = 0.0f;
+	if(fabs(q.x) < epsilon) q.x = 0.0f;
 	q.y = quat.y;
-	if(abs(q.y) < epsilon) q.y = 0.0f;
+	if(fabs(q.y) < epsilon) q.y = 0.0f;
 	q.z = quat.z;
-	if(abs(q.z) < epsilon) q.z = 0.0f;
+	if(fabs(q.z) < epsilon) q.z = 0.0f;
 	return normalize(q);
 }
 
@@ -1127,8 +1127,8 @@ dumpLevel(sLevelChunk *level)
 		data = new uint8[h->fileSize];
 		memcpy(data, h, sizeof(sChunkHeader));
 		stream.seek(h->globalTab, 0);	// this is the offset for some reason
-		stream.read(data+0x20, h->fileSize-sizeof(sChunkHeader));
-		outf.write(data, h->fileSize);
+		stream.read8(data+0x20, h->fileSize-sizeof(sChunkHeader));
+		outf.write8(data, h->fileSize);
 		outf.close();
 		filename[len-3] = '\0';
 	}
@@ -1420,9 +1420,9 @@ main(int argc, char *argv[])
 		stream.seek(0, 0);
 
 		sChunkHeader header;
-		stream.read(&header, sizeof(sChunkHeader));
+		stream.read8(&header, sizeof(sChunkHeader));
 		uint8 *data = (uint8*)malloc(header.fileSize-sizeof(sChunkHeader));
-		stream.read(data, header.fileSize-sizeof(sChunkHeader));
+		stream.read8(data, header.fileSize-sizeof(sChunkHeader));
 		stream.close();
 		cReloctableChunk(header.ident, header.shrink).Fixup(header, data);
 
@@ -1433,10 +1433,10 @@ main(int argc, char *argv[])
 	}
 
 	sChunkHeader header;
-	stream.read(&header, sizeof(sChunkHeader));
+	stream.read8(&header, sizeof(sChunkHeader));
 	uint8 *data;
 	data = (uint8*)malloc(header.fileSize-sizeof(sChunkHeader));
-	stream.read(data, header.fileSize-sizeof(sChunkHeader));
+	stream.read8(data, header.fileSize-sizeof(sChunkHeader));
 	stream.close();
 	cReloctableChunk(header.ident, header.shrink).Fixup(header, data);
 
