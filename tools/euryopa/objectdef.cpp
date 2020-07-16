@@ -103,7 +103,7 @@ SetupAtomic(rw::Atomic *atm)
 	if(params.neoWorldPipe)
 		atm->pipeline = neoWorldPipe;
 	else if(params.leedsPipe)
-		atm->pipeline = leedsPipe;
+		atm->pipeline = gta::leedsPipe;
 	else if(params.daynightPipe && IsBuildingPipeAttached(atm))
 		SetupBuildingPipe(atm);
 	else{

@@ -6,9 +6,7 @@ namespace Renderer
 rw::ObjPipeline *buildingPipe;
 
 rw::ObjPipeline *colourCodePipe;
-rw::RGBA colourCode;
 rw::RGBA highlightColor;
-bool renderColourCoded;
 
 
 struct InstAtm
@@ -47,12 +45,12 @@ addToTransparentRenderList(sGeomInstance *inst, rw::Atomic *a)
 void
 myRenderCB(rw::Atomic *atomic)
 {
-	if(renderColourCoded)
+	if(gta::renderColourCoded)
 		colourCodePipe->render(atomic);
 	else if(highlightColor.red || highlightColor.green || highlightColor.blue){
 		atomic->getPipeline()->render(atomic);
-		colourCode = highlightColor;
-		colourCode.alpha = 128;
+		gta::colourCode = highlightColor;
+		gta::colourCode.alpha = 128;
 		int32 zwrite, fog, aref;
 		zwrite = GetRenderState(rw::ZWRITEENABLE);
 		fog = rw::GetRenderState(rw::FOGENABLE);
@@ -71,10 +69,10 @@ myRenderCB(rw::Atomic *atomic)
 void
 setColourCode(int n)
 {
-	colourCode.red = n & 0xFF;
-	colourCode.green = n>>8 & 0xFF;
-	colourCode.blue = n>>16 & 0xFF;
-	colourCode.alpha = 255;
+	gta::colourCode.red = n & 0xFF;
+	gta::colourCode.green = n>>8 & 0xFF;
+	gta::colourCode.blue = n>>16 & 0xFF;
+	gta::colourCode.alpha = 255;
 }
 
 void
@@ -119,10 +117,10 @@ renderEverythingColourCoded(void)
 {
 	rw::SetRenderState(rw::FOGENABLE, 0);
 	SetRenderState(rw::ALPHATESTREF, 10);
-	renderColourCoded = 1;
+	gta::renderColourCoded = 1;
 	renderOpaque();
 	renderTransparent();
-	renderColourCoded = 0;
+	gta::renderColourCoded = 0;
 }
 
 void
@@ -187,8 +185,8 @@ drawEntityCol(CEntity *e)
 		RenderColModelWire(mi->colModel, &mat, false);
 	else{
 		rw::RGBA col;
-		if(renderColourCoded)
-			col = colourCode;
+		if(gta::renderColourCoded)
+			col = gta::colourCode;
 		else{
 			if(ee->selected)
 				RenderColModelWire(mi->colModel, &mat, false);
@@ -295,7 +293,7 @@ renderPathNodes(void)
 		assert(idx == numIndices);
 	}
 
-	rw::im3d::Transform(vertices, numVertices, nil);
+	rw::im3d::Transform(vertices, numVertices, nil, rw::im3d::EVERYTHING);
 	for(i = 0; i < numIndices; i += 10000)
 		rw::im3d::RenderIndexedPrimitive(rw::PRIMTYPELINELIST, indices+i, min(10000, numIndices-i));
 	rw::im3d::End();

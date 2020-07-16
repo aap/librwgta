@@ -68,6 +68,7 @@ uiView(void)
 
 	ImGui::NewLine();
 
+	ImGui::Checkbox("Render Water", &drawWater);
 	ImGui::Checkbox("Render Path nodes", &drawPathNodes);
 	ImGui::Checkbox("Render Collision", &drawCol);
 	ImGui::Checkbox("Render Solid Bounds", &drawBounds);

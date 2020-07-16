@@ -130,7 +130,7 @@ Draw(float timeDelta)
 	clump->render();
 
 	camera->m_rwcam->endUpdate();
-	camera->m_rwcam->showRaster();
+	camera->m_rwcam->showRaster(0);
 	return true;
 }
 

@@ -86,6 +86,7 @@ enum eLevel
 
 extern CCamera TheCamera;
 //extern bool drawCubes;
+extern bool drawWater;
 extern bool drawCol;
 extern bool drawBounds;
 extern bool drawCurrentSector;
@@ -293,12 +294,7 @@ void renderEverythingColourCoded(void);
 void myRenderCB(rw::Atomic *atomic);
 
 extern rw::ObjPipeline *colourCodePipe;
-extern rw::RGBA colourCode;
-extern bool renderColourCoded;
-int32 GetColourCode(int x, int y);
 };
-rw::ObjPipeline *makeColourCodePipeline(void);
-rw::ObjPipeline *makeBuildingPipe(void);
 
 
 void gui(void);

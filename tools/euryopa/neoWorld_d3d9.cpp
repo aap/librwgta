@@ -8,31 +8,35 @@ using namespace rw;
 using namespace d3d;
 using namespace d3d9;
 
+enum {
+	PSLOC_lightfactor = 1
+};
+
+
 rw::ObjPipeline *neoWorldPipe;
 
+static void *neoWorld_VS;
 static void *neoWorldIII_PS;
 static void *neoWorldVC_PS;
 
 static void
 neoWorldRenderCB(Atomic *atomic, d3d9::InstanceDataHeader *header)
 {
-	RawMatrix world;
-	Geometry *geo = atomic->geometry;
+	int vsBits;
+	setStreamSource(0, header->vertexStream[0].vertexBuffer, 0, header->vertexStream[0].stride);
+	setIndices(header->indexBuffer);
+	setVertexDeclaration(header->vertexDeclaration);
 
-	int lighting = !!(geo->flags & rw::Geometry::LIGHT);
-	if(lighting)
-		d3d::lightingCB_Fix(atomic);
+	vsBits = lightingCB_Shader(atomic);
+	uploadMatrices(atomic->getFrame()->getLTM());
 
-	d3d::setRenderState(D3DRS_LIGHTING, lighting);
+	d3ddevice->SetVertexShaderConstantF(VSLOC_fogData, (float*)&d3dShaderState.fogData, 1);
+	d3ddevice->SetPixelShaderConstantF(PSLOC_fogColor, (float*)&d3dShaderState.fogColor, 1);
 
-	Frame *f = atomic->getFrame();
-	convMatrix(&world, f->getLTM());
-	d3ddevice->SetTransform(D3DTS_WORLD, (D3DMATRIX*)&world);
+	setVertexShader(neoWorld_VS);
 
-	d3ddevice->SetStreamSource(0, (IDirect3DVertexBuffer9*)header->vertexStream[0].vertexBuffer,
-	                           0, header->vertexStream[0].stride);
-	d3ddevice->SetIndices((IDirect3DIndexBuffer9*)header->indexBuffer);
-	d3ddevice->SetVertexDeclaration((IDirect3DVertexDeclaration9*)header->vertexDeclaration);
+	float surfProps[4];
+	surfProps[3] = 0.0f;
 
 	if(params.neoWorldPipe == GAME_III)
 		setPixelShader(neoWorldIII_PS);
@@ -43,8 +47,10 @@ neoWorldRenderCB(Atomic *atomic, d3d9::InstanceDataHeader *header)
 
 	InstanceData *inst = header->inst;
 	for(uint32 i = 0; i < header->numMeshes; i++){
-		if(MatFX::getEffects(inst->material) == MatFX::DUAL){
-			MatFX *matfx = MatFX::get(inst->material);
+		Material *m = inst->material;
+
+		if(MatFX::getEffects(m) == MatFX::DUAL){
+			MatFX *matfx = MatFX::get(m);
 			Texture *dualtex = matfx->getDualTexture();
 			if(dualtex == nil)
 				goto notex;
@@ -56,36 +62,33 @@ neoWorldRenderCB(Atomic *atomic, d3d9::InstanceDataHeader *header)
 			lightfactor[0] = lightfactor[1] = lightfactor[2] = 0.0f;
 		}
 		lightfactor[3] = inst->material->color.alpha/255.0f;
-		d3d::setTexture(0, inst->material->texture);
-		d3ddevice->SetPixelShaderConstantF(0, lightfactor, 1);
+		d3d::setTexture(0, m->texture);
+		d3ddevice->SetPixelShaderConstantF(PSLOC_lightfactor, lightfactor, 1);
 
-		SetRenderState(VERTEXALPHA, inst->vertexAlpha || inst->material->color.alpha != 255);
+		SetRenderState(VERTEXALPHA, inst->vertexAlpha || m->color.alpha != 255);
 
-		rw::RGBA col = { 255, 255, 255, 255 };
-		d3d::setMaterial(inst->material->surfaceProps, col);
+		rw::RGBAf col = { 1.0f, 1.0f, 1.0f, m->color.alpha/255.0f };
+		d3ddevice->SetVertexShaderConstantF(VSLOC_matColor, (float*)&col, 1);
 
-		d3d::setRenderState(D3DRS_AMBIENTMATERIALSOURCE, D3DMCS_MATERIAL);
-		if(geo->flags & Geometry::PRELIT)
-			d3d::setRenderState(D3DRS_EMISSIVEMATERIALSOURCE, D3DMCS_COLOR1);
-		else
-			d3d::setRenderState(D3DRS_EMISSIVEMATERIALSOURCE, D3DMCS_MATERIAL);
-		d3d::setRenderState(D3DRS_DIFFUSEMATERIALSOURCE, inst->vertexAlpha ? D3DMCS_COLOR1 : D3DMCS_MATERIAL);
+		surfProps[0] = m->surfaceProps.ambient;
+		surfProps[1] = m->surfaceProps.specular;
+		surfProps[2] = m->surfaceProps.diffuse;
+		d3ddevice->SetVertexShaderConstantF(VSLOC_surfProps, surfProps, 1);
 
-
-		if(params.ps2AlphaTest)
-			drawInst_GSemu(header, inst);
-		else
-			drawInst(header, inst);
-
+		drawInst(header, inst);
 		inst++;
 	}
-	d3ddevice->SetPixelShader(nil);
 }
 
 
 void
 MakeNeoWorldPipe(void)
 {
+#include "d3d_shaders/default_UV2_VS.inc"
+	neoWorld_VS = createVertexShader(default_UV2_VS_cso);
+	assert(neoWorld_VS);
+
+
 #include "d3d_shaders/neoWorldIII_PS.inc"
 #include "d3d_shaders/neoWorldVC_PS.inc"
 	neoWorldIII_PS = createPixelShader(neoWorldIII_PS_cso);

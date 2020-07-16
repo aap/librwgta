@@ -356,9 +356,9 @@ RenderEverythingColourCoded(void)
 	SetRenderState(rw::ALPHATESTREF, 10);
 	int aref = params.alphaRef;
 	params.alphaRef = 10;
-	renderColourCoded = 1;
+	gta::renderColourCoded = 1;
 	RenderEverything();
-	renderColourCoded = 0;
+	gta::renderColourCoded = 0;
 	params.alphaRef = aref;
 }
 
@@ -370,7 +370,7 @@ handleTool(void)
 		static rw::RGBA black = { 0, 0, 0, 0xFF };
 		TheCamera.m_rwcam->clear(&black, rw::Camera::CLEARIMAGE|rw::Camera::CLEARZ);
 		RenderEverythingColourCoded();
-		int32 c = GetColourCode(CPad::newMouseState.x, CPad::newMouseState.y);
+		int32 c = gta::GetColourCode(CPad::newMouseState.x, CPad::newMouseState.y);
 		ObjectInst *inst = GetInstanceByID(c);
 		if(inst){
 			if(CPad::IsShiftDown())
@@ -663,7 +663,7 @@ Draw(void)
 	ImGui::Render();
 
 	Scene.camera->endUpdate();
-	Scene.camera->showRaster();
+	Scene.camera->showRaster(rw::Raster::FLIPWAITVSYNCH);
 	frameCounter++;
 }
 

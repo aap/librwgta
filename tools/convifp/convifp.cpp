@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <cassert>
+#include <Windows.h>
 
 #include <rw.h>
 #include <args.h>
@@ -383,6 +384,324 @@ MergePackages(AnimPackage *pack1, AnimPackage *pack2)
 	}
 }
 
+static char *inputFiles[] = {
+	"ped_ps2.ifp",
+	"ped_pc.ifp",
+	"baseball.ifp",
+	"biked.ifp",
+	"bikeh.ifp",
+	"bikes.ifp",
+	"bikev.ifp",
+	"buddy.ifp",
+	"chainsaw.ifp",
+	"coach.ifp",
+	"colt45.ifp",
+	"flame.ifp",
+	"grenade.ifp",
+	"knife.ifp",
+	"lance.ifp",
+	"m60.ifp",
+	"medic.ifp",
+	"playidles.ifp",
+	"python.ifp",
+	"rifle.ifp",
+	"riot.ifp",
+	"shotgun.ifp",
+	"skate.ifp",
+	"sniper.ifp",
+	"strip.ifp",
+	"sunbathe.ifp",
+	"sword.ifp",
+	"tec.ifp",
+	"uzi.ifp",
+	"van.ifp",
+	nil
+};
+AnimPackage *animFiles[200];
+int numFiles;
+
+struct {
+	char *output;
+	char *input;
+} animNames[] = {
+	{ "ARRESTgun", "ARRESTgun" },
+	{ "CAR_LB", "CAR_LB" },
+	{ "CAR_Lshuffle_RHS", "CAR_Lshuffle_RHS" },
+	{ "CAR_Lsit", "CAR_Lsit" },
+	{ "CAR_Qjack", "CAR_Qjack" },
+	{ "CAR_Qjacked", "CAR_Qjacked" },
+	{ "CAR_alignHI_LHS", "CAR_alignHI_LHS" },
+	{ "CAR_alignHI_RHS", "CAR_alignHI_RHS" },
+	{ "CAR_align_LHS", "CAR_align_LHS" },
+	{ "CAR_align_RHS", "CAR_align_RHS" },
+	{ "CAR_close_LHS", "CAR_close_LHS" },
+	{ "CAR_close_RHS", "CAR_close_RHS" },
+	{ "CAR_closedoorL_LHS", "CAR_closedoorL_LHS" },
+	{ "CAR_closedoorL_RHS", "CAR_closedoorL_RHS" },
+	{ "CAR_closedoor_LHS", "CAR_closedoor_LHS" },
+	{ "CAR_closedoor_RHS", "CAR_closedoor_RHS" },
+	{ "CAR_crawloutRHS", "CAR_crawloutRHS" },
+	{ "CAR_doorlocked_LHS", "CAR_doorlocked_LHS" },
+	{ "CAR_doorlocked_RHS", "CAR_doorlocked_RHS" },
+	{ "CAR_getinL_LHS", "CAR_getinL_LHS" },
+	{ "CAR_getinL_RHS", "CAR_getinL_RHS" },
+	{ "CAR_getin_LHS", "CAR_getin_LHS" },
+	{ "CAR_getin_RHS", "CAR_getin_RHS" },
+	{ "CAR_getoutL_LHS", "CAR_getoutL_LHS" },
+	{ "CAR_getoutL_RHS", "CAR_getoutL_RHS" },
+	{ "CAR_getout_LHS", "CAR_getout_LHS" },
+	{ "CAR_getout_RHS", "CAR_getout_RHS" },
+	{ "CAR_open_LHS", "CAR_open_LHS" },
+	{ "CAR_open_RHS", "CAR_open_RHS" },
+	{ "CAR_pulloutL_LHS", "CAR_pulloutL_LHS" },
+	{ "CAR_pulloutL_RHS", "CAR_pulloutL_RHS" },
+	{ "CAR_pullout_LHS", "CAR_pullout_LHS" },
+	{ "CAR_pullout_RHS", "CAR_pullout_RHS" },
+	{ "CAR_rolldoor", "CAR_rolldoor" },
+	{ "CAR_rolldoorLO", "CAR_rolldoorLO" },
+	{ "CAR_shuffle_RHS", "CAR_shuffle_RHS" },
+	{ "CAR_sit", "CAR_sit" },
+	{ "CAR_sitp", "CAR_sitp" },
+	{ "CAR_sitpLO", "CAR_sitpLO" },
+	{ "COACH_inL", "COACH_inL" },
+	{ "COACH_inR", "COACH_inR" },
+	{ "COACH_opnL", "COACH_opnL" },
+	{ "COACH_opnR", "COACH_opnR" },
+	{ "COACH_outL", "COACH_outL" },
+	{ "CPR", "CPR" },
+	{ "DRIVE_BOAT", "DRIVE_BOAT" },
+	{ "DRIVE_L", "DRIVE_L" },
+	{ "DROWN", "DROWN" },
+	{ "DUCK_down", "DUCK_down" },
+	{ "DUCK_low", "DUCK_low" },
+	{ "Drive_LO_R", "Drive_LO_R" },
+	{ "Drive_LO_l", "Drive_LO_l" },
+	{ "Drive_R", "Drive_R" },
+	{ "Driveby_L", "Driveby_L" },
+	{ "Driveby_R", "Driveby_R" },
+	{ "EV_dive", "EV_dive" },
+	{ "EV_step", "EV_step" },
+	{ "FALL_collapse", "FALL_collapse" },
+	{ "FALL_fall", "FALL_fall" },
+	{ "FALL_glide", "FALL_glide" },
+	{ "FALL_land", "FALL_land" },
+	{ "FIGHT2IDLE", "FIGHT2IDLE" },
+	{ "FIGHTIDLE", "FIGHTIDLE" },
+	{ "FIGHTLhook", "FIGHTLhook" },
+	{ "FIGHTbodyblow", "FIGHTbodyblow" },
+	{ "FIGHThead", "FIGHThead" },
+	{ "FIGHTkick", "FIGHTkick" },
+	{ "FIGHTknee", "FIGHTknee" },
+	{ "FIGHTlngkck", "FIGHTlngkck" },
+	{ "FIGHTppunch", "FIGHTppunch" },
+	{ "FIGHTpunch", "FIGHTpunch" },
+	{ "FIGHTrndhse", "FIGHTrndhse" },
+	{ "FIGHTsh_F", "FIGHTsh_F" },
+	{ "FLOOR_hit", "FLOOR_hit" },
+	{ "FLOOR_hit_f", "FLOOR_hit_f" },
+	{ "FUCKU", "FUCKU" },
+	{ "Getup", "Getup" },
+	{ "Getup_front", "Getup_front" },
+	{ "HIT_L", "HIT_L" },
+	{ "HIT_R", "HIT_R" },
+	{ "HIT_back", "HIT_back" },
+	{ "HIT_behind", "HIT_behind" },
+	{ "HIT_bodyblow", "HIT_bodyblow" },
+	{ "HIT_chest", "HIT_chest" },
+	{ "HIT_front", "HIT_front" },
+	{ "HIT_head", "HIT_head" },
+	{ "HIT_walk", "HIT_walk" },
+	{ "HIT_wall", "HIT_wall" },
+	{ "IDLE_STANCE", "IDLE_STANCE" },
+	{ "IDLE_csaw", "IDLE_csaw" },
+	{ "JOG_maleA", "JOG_maleA" },
+	{ "JOG_maleB", "JOG_maleB" },
+	{ "JUMP_glide", "JUMP_glide" },
+	{ "JUMP_land", "JUMP_land" },
+	{ "JUMP_launch", "JUMP_launch" },
+	{ "KD_left", "KD_left" },
+	{ "KD_right", "KD_right" },
+	{ "KICK_floor", "KICK_floor" },
+	{ "KO_shot_armR", "KO_shot_armR" },
+	{ "KO_shot_arml", "KO_shot_arml" },
+	{ "KO_shot_face", "KO_shot_face" },
+	{ "KO_shot_front", "KO_shot_front" },
+	{ "KO_shot_legR", "KO_shot_legR" },
+	{ "KO_shot_legl", "KO_shot_legl" },
+	{ "KO_shot_stom", "KO_shot_stom" },
+	{ "KO_skid_back", "KO_skid_back" },
+	{ "KO_skid_front", "KO_skid_front" },
+	{ "KO_spin_L", "KO_spin_L" },
+	{ "KO_spin_R", "KO_spin_R" },
+	{ "PHONE_in", "PHONE_in" },
+	{ "PHONE_out", "PHONE_out" },
+	{ "PHONE_talk", "PHONE_talk" },
+	{ "RBLOCK_Cshoot", "RBLOCK_Cshoot" },
+	{ "RUN_civi", "RUN_civi" },
+	{ "SHOT_leftP", "SHOT_leftP" },
+	{ "SHOT_partial", "SHOT_partial" },
+	{ "SHOT_rightP", "SHOT_rightP" },
+	{ "SPRINT_civi", "SPRINT_civi" },
+	{ "TRAIN_getin", "TRAIN_getin" },
+	{ "TRAIN_getout", "TRAIN_getout" },
+	{ "TURN_180", "TURN_180" },
+	{ "VAN_close", "VAN_close" },
+	{ "VAN_closeL", "VAN_closeL" },
+	{ "VAN_getin", "VAN_getin" },
+	{ "VAN_getinL", "VAN_getinL" },
+	{ "VAN_getout", "VAN_getout" },
+	{ "VAN_getoutL", "VAN_getoutL" },
+	{ "VAN_open", "VAN_open" },
+	{ "VAN_openL", "VAN_openL" },
+	{ "WALK_shuffle", "WALK_shuffle" },
+	{ "WEAPON_AK_body", "RIFLE_fire" },
+	{ "WEAPON_AK_rload", "RIFLE_load" },
+	{ "WEAPON_bat_h", "WEAPON_bat_h" },
+	{ "WEAPON_bat_v", "WEAPON_bat_v" },
+	{ "WEAPON_hgun_body", "colt45_fire" },
+	{ "WEAPON_hgun_rload", "colt45_reload" },
+	{ "WEAPON_pump", "WEAPON_pump" },
+	{ "WEAPON_sniper", "WEAPON_sniper" },
+	{ "WEAPON_start_throw", "WEAPON_start_throw" },
+	{ "WEAPON_throw", "WEAPON_throw" },
+	{ "WEAPON_throwu", "WEAPON_throwu" },
+	{ "XPRESSscratch", "XPRESSscratch" },
+	{ "bomber", "bomber" },
+	{ "car_LjackedLHS", "car_LjackedLHS" },
+	{ "car_LjackedRHS", "car_LjackedRHS" },
+	{ "car_hookertalk", "car_hookertalk" },
+	{ "car_jackedLHS", "car_jackedLHS" },
+	{ "car_jackedRHS", "car_jackedRHS" },
+	{ "handsCOWER", "handsCOWER" },
+	{ "handsup", "handsup" },
+	{ "idle_armed", "idle_armed" },
+	{ "idle_cam", "idle_cam" },
+	{ "idle_chat", "idle_chat" },
+	{ "idle_csaw", "idle_csaw" },
+	{ "idle_hbhb", "idle_hbhb" },
+	{ "idle_rocket", "idle_rocket" },
+	{ "idle_stance", "idle_stance" },
+	{ "idle_taxi", "idle_taxi" },
+	{ "idle_tired", "idle_tired" },
+	{ "punchR", "punchR" },
+	{ "roadcross", "roadcross" },
+	{ "run_1armed", "run_1armed" },
+	{ "run_armed", "run_armed" },
+	{ "run_back", "run_back" },
+	{ "run_civi", "run_civi" },
+	{ "run_csaw", "run_csaw" },
+	{ "run_csaw_back", "run_csaw_back" },
+	{ "run_csaw_left", "run_csaw_left" },
+	{ "run_csaw_right", "run_csaw_right" },
+	{ "run_fatold", "run_fatold" },
+	{ "run_gang1", "run_gang1" },
+	{ "run_left", "run_left" },
+	{ "run_player", "run_player" },
+	{ "run_right", "run_right" },
+	{ "run_rocket", "run_rocket" },
+	{ "run_rocket_back", "run_rocket_back" },
+	{ "run_rocket_left", "run_rocket_left" },
+	{ "run_rocket_right", "run_rocket_right" },
+	{ "run_stop", "run_stop" },
+	{ "run_stopR", "run_stopR" },
+	{ "skate_idle", "skate_idle" },
+	{ "skate_run", "skate_run" },
+	{ "skate_sprint", "skate_sprint" },
+	{ "sprint_civi", "sprint_civi" },
+	{ "sprint_panic", "sprint_panic" },
+	{ "walk_back", "walk_back" },
+	{ "walk_civi", "walk_civi" },
+	{ "walk_csaw", "walk_csaw" },
+	{ "walk_csaw_back", "walk_csaw_back" },
+	{ "walk_csaw_left", "walk_csaw_left" },
+	{ "walk_csaw_right", "walk_csaw_right" },
+	{ "walk_fat", "walk_fat" },
+	{ "walk_fatold", "walk_fatold" },
+	{ "walk_gang1", "walk_gang1" },
+	{ "walk_gang2", "walk_gang2" },
+	{ "walk_left", "walk_left" },
+	{ "walk_old", "walk_old" },
+	{ "walk_player", "walk_player" },
+	{ "walk_right", "walk_right" },
+	{ "walk_rocket", "walk_rocket" },
+	{ "walk_rocket_back", "walk_rocket_back" },
+	{ "walk_rocket_left", "walk_rocket_left" },
+	{ "walk_rocket_right", "walk_rocket_right" },
+	{ "walk_start", "walk_start" },
+	{ "walk_start_back", "walk_start_back" },
+	{ "walk_start_csaw", "walk_start_csaw" },
+	{ "walk_start_left", "walk_start_left" },
+	{ "walk_start_right", "walk_start_right" },
+	{ "walk_start_rocket", "walk_start_rocket" },
+	{ "walkst_csaw_back", "walkst_csaw_back" },
+	{ "walkst_csaw_left", "walkst_csaw_left" },
+	{ "walkst_csaw_right", "walkst_csaw_right" },
+	{ "walkst_rocket_back", "walkst_rocket_back" },
+	{ "walkst_rocket_left", "walkst_rocket_left" },
+	{ "walkst_rocket_right", "walkst_rocket_right" },
+	{ "woman_idlestance", "woman_idlestance" },
+	{ "woman_run", "woman_run" },
+	{ "woman_runpanic", "woman_runpanic" },
+	{ "woman_walkbusy", "woman_walkbusy" },
+	{ "woman_walknorm", "woman_walknorm" },
+	{ "woman_walkold", "woman_walkold" },
+	{ "woman_walksexy", "woman_walksexy" },
+	{ "woman_walkshop", "woman_walkshop" },
+	{ nil, nil }
+};
+
+AnimHierarchy*
+findAnimInAll(const char *name)
+{
+	int i, x;
+	for(i = 0; i < numFiles; i++){
+		x = FindAnimation(animFiles[i], name);
+		if(x >= 0)
+			return &animFiles[i]->animations[x];
+	}
+	return nil;
+}
+
+void
+buildCombinedFile(void)
+{
+	FILE *f;
+	for(numFiles = 0; inputFiles[numFiles]; numFiles++){
+		f = fopen(inputFiles[numFiles], "rb");
+		if(f == nil){
+			printf("botch\n");
+			exit(1);
+		}
+//if(strcmp(inputFiles[numFiles], "van.ifp") == 0)
+//DebugBreak();
+		animFiles[numFiles] = &LoadIFP(f)->packages[0];
+		fclose(f);
+	}
+	printf("loaded %d files\n", numFiles);
+
+	AnimPackage *pak = new AnimPackage;
+	strcpy(pak->name, "ped");
+	pak->numAnimations = 0;
+	pak->animations = new AnimHierarchy[300];
+
+	int i;
+	for(i = 0; animNames[i].output; i++){
+		AnimHierarchy *anim = findAnimInAll(animNames[i].input);
+		if(anim == nil)
+			printf("couldn't find %s\n", animNames[i].input);
+		else{
+			strcpy(anim->name, animNames[i].output);
+			pak->animations[pak->numAnimations++] = *anim;
+		}
+	}
+
+	f = fopen("ped_miami.ifp", "wb");
+	if(f == nil)
+		exit(1);
+	WriteIFP(pak, f);
+	fclose(f);
+}
+
 void
 usage(void)
 {
@@ -399,6 +718,9 @@ main(int argc, char *argv[])
 
 	merge = nil;
 	output = nil;
+
+//buildCombinedFile();
+//return 0;
 
 	ARGBEGIN{
 	case 'm':

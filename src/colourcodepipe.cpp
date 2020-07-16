@@ -1,12 +1,16 @@
 #define WITH_D3D
-#include "euryopa.h"
+#include <rw.h>
+#include "rwgta.h"
+#include <assert.h>
 
-using namespace rw;
+namespace gta {
 
+bool renderColourCoded;
 rw::RGBA colourCode;
 
 #ifdef RW_D3D9
 
+using namespace rw;
 using namespace d3d;
 using namespace d3d9;
 
@@ -112,13 +116,21 @@ colourCodeRenderCB(Atomic *atomic, gl3::InstanceDataHeader *header)
 {
 	Material *m;
 	RGBAf col;
+	Geometry *geo = atomic->geometry;
 
 	setWorldMatrix(atomic->getFrame()->getLTM());
-	lightingCB(0);
+	uint32 flags = geo->flags;
+	geo->flags &= ~Geometry::LIGHT;
+	lightingCB(atomic);
+	geo->flags = flags;
 
-	glBindBuffer(GL_ARRAY_BUFFER, header->vbo);
+#ifdef RW_GL_USE_VAOS
+	glBindVertexArray(header->vao);
+#else
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, header->ibo);
+	glBindBuffer(GL_ARRAY_BUFFER, header->vbo);
 	setAttribPointers(header->attribDesc, header->numAttribs);
+#endif
 
 	InstanceData *inst = header->inst;
 	int32 n = header->numMeshes;
@@ -153,9 +165,14 @@ colourCodeRenderCB(Atomic *atomic, gl3::InstanceDataHeader *header)
 rw::ObjPipeline*
 makeColourCodePipeline(void)
 {
+	{
 #include "gl_shaders/colcode_vs_gl3.inc"
 #include "gl_shaders/colcode_fs_gl3.inc"
-	colourCodeShader = Shader::fromStrings(colcode_vert_src, colcode_frag_src);
+	const char *vs[] = { shaderDecl, header_vert_src, colcode_vert_src, nil };
+	const char *fs[] = { shaderDecl, header_frag_src, colcode_frag_src, nil };
+	colourCodeShader = Shader::create(vs, fs);
+	assert(colourCodeShader);
+	}
 
 	gl3::ObjPipeline *pipe = new gl3::ObjPipeline(PLATFORM_GL3);
 	pipe->instanceCB = defaultInstanceCB;
@@ -173,3 +190,5 @@ GetColourCode(int x, int y)
 	return col.blue<<16 | col.green<<8 | col.red;
 }
 #endif
+
+}

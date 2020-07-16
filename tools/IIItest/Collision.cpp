@@ -327,7 +327,7 @@ CCollision::TestSphereTriangle(const CColSphere &sphere,
 	const CVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane)
 {
 	// If sphere and plane don't intersect, no collision
-	if(abs(plane.CalcPoint(sphere.center)) > sphere.radius)
+	if(fabs(plane.CalcPoint(sphere.center)) > sphere.radius)
 		return false;
 
 	const CVector &va = verts[tri.a];
@@ -858,7 +858,7 @@ CCollision::ProcessSphereTriangle(const CColSphere &sphere,
 	// If sphere and plane don't intersect, no collision
 	float planedist = plane.CalcPoint(sphere.center);
 	float distsq = planedist*planedist;
-	if(abs(planedist) > sphere.radius || distsq > mindistsq)
+	if(fabs(planedist) > sphere.radius || distsq > mindistsq)
 		return false;
 
 	const CVector &va = verts[tri.a];
@@ -905,7 +905,7 @@ CCollision::ProcessSphereTriangle(const CColSphere &sphere,
 		else assert(0);
 	}else if(testcase == 3){
 		// center is in triangle
-		dist = abs(planedist);
+		dist = fabs(planedist);
 		p = sphere.center - normal*planedist;
 	}else
 		assert(0);	// front fell off
@@ -1330,7 +1330,7 @@ CColTrianglePlane::Set(const CVector *v, CColTriangle &tri)
 	normal = CrossProduct(vc-va, vb-va);
 	normal.Normalise();
 	dist = DotProduct(normal, va);
-	CVector an(abs(normal.x), abs(normal.y), abs(normal.z));
+	CVector an(fabs(normal.x), fabs(normal.y), fabs(normal.z));
 	// find out largest component and its direction
 	if(an.x > an.y && an.x > an.z)
 		dir = normal.x < 0.0f ? DIR_X_NEG : DIR_X_POS;

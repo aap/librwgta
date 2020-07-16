@@ -11,7 +11,7 @@ struct PS_INPUT
 float4
 main(PS_INPUT IN) : COLOR
 {
-	float4 color = tex2D(tex, IN.texcoord0.xy)*IN.color*colorscale.x;
+	float4 color = tex2D(tex, IN.texcoord0.xy)*IN.color*colorscale;
 	color.rgb = lerp(fogColor.rgb, color.rgb, IN.texcoord0.z);
 	return color;
 }

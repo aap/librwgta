@@ -439,12 +439,12 @@ if(c->name[0]){
 	stream.open(filename, "wb");
 	ident = 0x4C4C4F43;
 	size = WriteCollisionFile(mi->colModel, &buf)+24;
-	stream.write(&ident, 4);
-	stream.write(&size, 4);
+	stream.write8(&ident, 4);
+	stream.write8(&size, 4);
 	memset(colname, 0, 24);
 	strncpy(colname, mi->name, 24);
-	stream.write(colname, 24);
-	stream.write(buf, size-24);
+	stream.write8(colname, 24);
+	stream.write8(buf, size-24);
 	rwFree(buf);
 	stream.close();
 }

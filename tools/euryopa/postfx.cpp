@@ -193,7 +193,7 @@ RenderPostFX(void)
 	d3ddevice->SetPixelShaderConstantF(1, (float*)&Timecycle::currentColours.postfx2, 1);
 	postfxvars[0] = Timecycle::currentColours.radiosityLimit/255.0f;
 	postfxvars[1] = Timecycle::currentColours.radiosityIntensity/255.0f;
-	postfxvars[2] = 1.0f;		// render passes
+	postfxvars[2] = 2.0f;		// render passes
 	d3ddevice->SetPixelShaderConstantF(2, (float*)postfxvars, 1);
 
 	rw::SetRenderStatePtr(TEXTURERASTER, backBufferTex->raster);
@@ -255,9 +255,6 @@ RenderPostFX(void)
 			RenderColourFilterLeedsPSP();
 			changedBackbuf = 1;
 		}
-
-
-	d3ddevice->SetPixelShader(nil);
 }
 
 #else

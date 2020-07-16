@@ -29,7 +29,7 @@ static rw::Stream*
 readNodeName(rw::Stream *stream, int32 len, void *object, int32 offset, int32)
 {
 	char *name = PLUGINOFFSET(char, object, offset);
-	stream->read(name, len);
+	stream->read8(name, len);
 	name[len] = '\0';
 	//printf("%s\n", name);
 	return stream;
@@ -39,7 +39,7 @@ static rw::Stream*
 writeNodeName(rw::Stream *stream, int32 len, void *object, int32 offset, int32)
 {
 	char *name = PLUGINOFFSET(char, object, offset);
-	stream->write(name, len);
+	stream->write8(name, len);
 	return stream;
 }
 

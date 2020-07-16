@@ -19,11 +19,15 @@ neoWorldRenderCB(Atomic *atomic, gl3::InstanceDataHeader *header)
 	GLfloat surfProps[4];
 
 	setWorldMatrix(atomic->getFrame()->getLTM());
-	lightingCB(!!(atomic->geometry->flags & Geometry::NORMALS));
+	lightingCB(atomic);
 
-	glBindBuffer(GL_ARRAY_BUFFER, header->vbo);
+#ifdef RW_GL_USE_VAOS
+	glBindVertexArray(header->vao);
+#else
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, header->ibo);
+	glBindBuffer(GL_ARRAY_BUFFER, header->vbo);
 	setAttribPointers(header->attribDesc, header->numAttribs);
+#endif
 
 	InstanceData *inst = header->inst;
 	int32 n = header->numMeshes;
@@ -62,7 +66,7 @@ neoWorldRenderCB(Atomic *atomic, gl3::InstanceDataHeader *header)
 		surfProps[1] = m->surfaceProps.specular;
 		surfProps[2] = m->surfaceProps.diffuse;
 		surfProps[3] = 0.0f;
-		glUniform4fv(U(u_surfaceProps), 1, surfProps);
+		glUniform4fv(U(u_surfProps), 1, surfProps);
 
 		rw::SetRenderState(VERTEXALPHA, inst->vertexAlpha || m->color.alpha != 0xFF);
 
@@ -84,8 +88,17 @@ MakeNeoWorldPipe(void)
 #include "gl_shaders/simple_vs_gl3.inc"
 #include "gl_shaders/neoWorldIII_fs_gl3.inc"
 #include "gl_shaders/neoWorldVC_fs_gl3.inc"
-	neoWorldIIIShader = Shader::fromStrings(simple_vert_src, neoWorldIII_frag_src);
-	neoWorldVCShader = Shader::fromStrings(simple_vert_src, neoWorldVC_frag_src);
+	const char *vs[] = { shaderDecl, header_vert_src, simple_vert_src, nil };
+	{
+	const char *fs[] = { shaderDecl, header_frag_src, neoWorldIII_frag_src, nil };
+	neoWorldIIIShader = Shader::create(vs, fs);
+	assert(neoWorldIIIShader);
+	}
+	{
+	const char *fs[] = { shaderDecl, header_frag_src, neoWorldVC_frag_src, nil };
+	neoWorldVCShader = Shader::create(vs, fs);
+	assert(neoWorldVCShader);
+	}
 
 	gl3::ObjPipeline *pipe;
 	pipe = new gl3::ObjPipeline(PLATFORM_D3D9);

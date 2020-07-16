@@ -72,7 +72,7 @@ DrawDebugFrustum(void)
 		rw::SetRenderState(rw::ZWRITEENABLE, 1);
 		rw::SetRenderStatePtr(rw::TEXTURERASTER, nil);
 
-		rw::im3d::Transform(vertices, 8, nil);
+		rw::im3d::Transform(vertices, 8, nil, rw::im3d::EVERYTHING);
 		rw::im3d::RenderIndexedPrimitive(rw::PRIMTYPETRILIST, indices, i);
 		rw::im3d::End();
 
@@ -95,7 +95,7 @@ DrawDebugFrustum(void)
 		vertices[1].setColor(0, 0, 255, 255);
 		indices[0] = 0;
 		indices[1] = 1;
-		rw::im3d::Transform(vertices, 2, nil);
+		rw::im3d::Transform(vertices, 2, nil, rw::im3d::EVERYTHING);
 		rw::im3d::RenderIndexedPrimitive(rw::PRIMTYPELINELIST, indices, 2);
 		rw::im3d::End();
 

@@ -1,5 +1,8 @@
 #define WITH_D3D
-#include "euryopa.h"
+#include <rw.h>
+#include "rwgta.h"
+
+namespace gta {
 
 #ifdef RW_D3D9
 
@@ -8,44 +11,39 @@ using namespace d3d;
 using namespace d3d9;
 
 enum {
-	REG_transform	= 0,
-	REG_ambient	= 4,
-	REG_emissive	= 5,
-	REG_matCol	= 19,
-	REG_surfProps	= 20,
+	VSLOC_emissive = VSLOC_lightOffset,
 
-	REG_shaderParams= 29,
+	PSLOC_colorscale = 1
 };
+
+rw::RGBAf leedsPipe_amb;
+rw::RGBAf leedsPipe_emiss;
 
 static void *leedsPS2VS;
 static void *simple4PS;
 
 rw::ObjPipeline *leedsPipe;
 
-void getComposedMatrix(Atomic *atm, RawMatrix *combined);
-
-static void
+void
 leedsRenderCB_PS2(Atomic *atomic, d3d9::InstanceDataHeader *header)
 {
-	RawMatrix combined;
 	float colorscale[4];
 	Geometry *geo = atomic->geometry;
 
-	setStreamSource(0, (IDirect3DVertexBuffer9*)header->vertexStream[0].vertexBuffer,
-	                           0, header->vertexStream[0].stride);
-	setIndices((IDirect3DIndexBuffer9*)header->indexBuffer);
-	setVertexDeclaration((IDirect3DVertexDeclaration9*)header->vertexDeclaration);
+	setStreamSource(0, header->vertexStream[0].vertexBuffer, 0, header->vertexStream[0].stride);
+	setIndices(header->indexBuffer);
+	setVertexDeclaration(header->vertexDeclaration);
+
+	d3ddevice->SetVertexShaderConstantF(VSLOC_fogData, (float*)&d3dShaderState.fogData, 1);
+	d3ddevice->SetPixelShaderConstantF(PSLOC_fogColor, (float*)&d3dShaderState.fogColor, 1);
 
 	setVertexShader(leedsPS2VS);
 	setPixelShader(simple4PS);
 
-	getComposedMatrix(atomic, &combined);
-	d3ddevice->SetVertexShaderConstantF(REG_transform, (float*)&combined, 4);
+	uploadMatrices(atomic->getFrame()->getLTM());
 
-	rw::RGBAf amb = Timecycle::currentColours.amb;
-	rw::RGBAf emiss = Timecycle::currentColours.amb_bl;
-	d3ddevice->SetVertexShaderConstantF(REG_ambient, (float*)&amb, 1);
-	d3ddevice->SetVertexShaderConstantF(REG_emissive, (float*)&emiss, 1);
+	d3ddevice->SetVertexShaderConstantF(VSLOC_ambLight, (float*)&leedsPipe_amb, 1);
+	d3ddevice->SetVertexShaderConstantF(VSLOC_emissive, (float*)&leedsPipe_emiss, 1);
 
 	colorscale[3] = 1.0f;
 
@@ -55,7 +53,7 @@ leedsRenderCB_PS2(Atomic *atomic, d3d9::InstanceDataHeader *header)
 		if(inst->material->texture)
 			cs = 255/128.0f;
 		colorscale[0] = colorscale[1] = colorscale[2] = cs;
-		d3ddevice->SetPixelShaderConstantF(0, colorscale, 1);
+		d3ddevice->SetPixelShaderConstantF(PSLOC_colorscale, colorscale, 1);
 
 		d3d::setTexture(0, inst->material->texture);
 
@@ -64,27 +62,23 @@ leedsRenderCB_PS2(Atomic *atomic, d3d9::InstanceDataHeader *header)
 		// Material colour
 		rw::RGBAf col;
 		convColor(&col, &inst->material->color);
-		d3ddevice->SetVertexShaderConstantF(REG_matCol, (float*)&col, 1);
+		d3ddevice->SetVertexShaderConstantF(VSLOC_matColor, (float*)&col, 1);
 		float surfprops[4];
 		surfprops[0] = inst->material->surfaceProps.ambient;
 		surfprops[1] = inst->material->surfaceProps.specular;
 		surfprops[2] = inst->material->surfaceProps.diffuse;
 		surfprops[3] = 0.5f;
-		d3ddevice->SetVertexShaderConstantF(REG_surfProps, surfprops, 1);
+		d3ddevice->SetVertexShaderConstantF(VSLOC_surfProps, surfprops, 1);
 
-		if(params.ps2AlphaTest)
-			drawInst_GSemu(header, inst);
-		else
-			drawInst(header, inst);
+		drawInst(header, inst);
 
 		inst++;
 	}
 }
 
-static void
+void
 leedsRenderCB_PSP(Atomic *atomic, d3d9::InstanceDataHeader *header)
 {
-	RawMatrix combined;
 	float colorscale[4];
 	Geometry *geo = atomic->geometry;
 
@@ -92,16 +86,16 @@ leedsRenderCB_PSP(Atomic *atomic, d3d9::InstanceDataHeader *header)
 	setIndices(header->indexBuffer);
 	setVertexDeclaration(header->vertexDeclaration);
 
+	d3ddevice->SetVertexShaderConstantF(VSLOC_fogData, (float*)&d3dShaderState.fogData, 1);
+	d3ddevice->SetPixelShaderConstantF(PSLOC_fogColor, (float*)&d3dShaderState.fogColor, 1);
+
 	setVertexShader(leedsPS2VS);
 	setPixelShader(simple4PS);
 
-	getComposedMatrix(atomic, &combined);
-	d3ddevice->SetVertexShaderConstantF(REG_transform, (float*)&combined, 4);
+	uploadMatrices(atomic->getFrame()->getLTM());
 
-	rw::RGBAf amb = Timecycle::currentColours.amb;
-	rw::RGBAf emiss = Timecycle::currentColours.amb_bl;
-	d3ddevice->SetVertexShaderConstantF(REG_ambient, (float*)&amb, 1);
-	d3ddevice->SetVertexShaderConstantF(REG_emissive, (float*)&emiss, 1);
+	d3ddevice->SetVertexShaderConstantF(VSLOC_ambLight, (float*)&leedsPipe_amb, 1);
+	d3ddevice->SetVertexShaderConstantF(VSLOC_emissive, (float*)&leedsPipe_emiss, 1);
 
 	colorscale[3] = 1.0f;
 
@@ -111,7 +105,7 @@ leedsRenderCB_PSP(Atomic *atomic, d3d9::InstanceDataHeader *header)
 		if(inst->material->texture)
 			cs = 2.0f;
 		colorscale[0] = colorscale[1] = colorscale[2] = cs;
-		d3ddevice->SetPixelShaderConstantF(0, colorscale, 1);
+		d3ddevice->SetPixelShaderConstantF(PSLOC_colorscale, colorscale, 1);
 
 		d3d::setTexture(0, inst->material->texture);
 
@@ -120,28 +114,24 @@ leedsRenderCB_PSP(Atomic *atomic, d3d9::InstanceDataHeader *header)
 		// Material colour
 		rw::RGBAf col;
 		convColor(&col, &inst->material->color);
-		d3ddevice->SetVertexShaderConstantF(REG_matCol, (float*)&col, 1);
+		d3ddevice->SetVertexShaderConstantF(VSLOC_matColor, (float*)&col, 1);
 		float surfprops[4];
 		surfprops[0] = inst->material->surfaceProps.ambient;
 		surfprops[1] = inst->material->surfaceProps.specular;
 		surfprops[2] = inst->material->surfaceProps.diffuse;
 		surfprops[3] = 1.22f;
-		d3ddevice->SetVertexShaderConstantF(REG_surfProps, surfprops, 1);
+		d3ddevice->SetVertexShaderConstantF(VSLOC_surfProps, surfprops, 1);
 
-		if(params.ps2AlphaTest)
-			drawInst_GSemu(header, inst);
-		else
-			drawInst(header, inst);
+		drawInst(header, inst);
 
 		inst++;
 	}
 }
 
 
-static void
+void
 leedsRenderCB_mobile(Atomic *atomic, d3d9::InstanceDataHeader *header)
 {
-	RawMatrix combined;
 	float colorscale[4];
 	Geometry *geo = atomic->geometry;
 
@@ -149,19 +139,19 @@ leedsRenderCB_mobile(Atomic *atomic, d3d9::InstanceDataHeader *header)
 	setIndices(header->indexBuffer);
 	setVertexDeclaration(header->vertexDeclaration);
 
+	d3ddevice->SetVertexShaderConstantF(VSLOC_fogData, (float*)&d3dShaderState.fogData, 1);
+	d3ddevice->SetPixelShaderConstantF(PSLOC_fogColor, (float*)&d3dShaderState.fogColor, 1);
+
 	setVertexShader(leedsPS2VS);
 	setPixelShader(simple4PS);
 
-	getComposedMatrix(atomic, &combined);
-	d3ddevice->SetVertexShaderConstantF(REG_transform, (float*)&combined, 4);
+	uploadMatrices(atomic->getFrame()->getLTM());
 
-	rw::RGBAf amb = Timecycle::currentColours.amb;
-	rw::RGBAf emiss = Timecycle::currentColours.amb_bl;
-	d3ddevice->SetVertexShaderConstantF(REG_ambient, (float*)&amb, 1);
-	d3ddevice->SetVertexShaderConstantF(REG_emissive, (float*)&emiss, 1);
+	d3ddevice->SetVertexShaderConstantF(VSLOC_ambLight, (float*)&leedsPipe_amb, 1);
+	d3ddevice->SetVertexShaderConstantF(VSLOC_emissive, (float*)&leedsPipe_emiss, 1);
 	
 	colorscale[0] = colorscale[1] = colorscale[2] = colorscale[3] = 1.0f;
-	d3ddevice->SetPixelShaderConstantF(0, colorscale, 1);
+	d3ddevice->SetPixelShaderConstantF(PSLOC_colorscale, colorscale, 1);
 
 	InstanceData *inst = header->inst;
 	for(uint32 i = 0; i < header->numMeshes; i++){
@@ -172,40 +162,17 @@ leedsRenderCB_mobile(Atomic *atomic, d3d9::InstanceDataHeader *header)
 		// Material colour
 		rw::RGBAf col;
 		convColor(&col, &inst->material->color);
-		d3ddevice->SetVertexShaderConstantF(REG_matCol, (float*)&col, 1);
+		d3ddevice->SetVertexShaderConstantF(VSLOC_matColor, (float*)&col, 1);
 		float surfprops[4];
 		surfprops[0] = inst->material->surfaceProps.ambient;
 		surfprops[1] = inst->material->surfaceProps.specular;
 		surfprops[2] = inst->material->surfaceProps.diffuse;
 		surfprops[3] = 1.0f;
-		d3ddevice->SetVertexShaderConstantF(REG_surfProps, surfprops, 1);
+		d3ddevice->SetVertexShaderConstantF(VSLOC_surfProps, surfprops, 1);
 
-		if(params.ps2AlphaTest)
-			drawInst_GSemu(header, inst);
-		else
-			drawInst(header, inst);
+		drawInst(header, inst);
 
 		inst++;
-	}
-}
-
-static void
-leedsRenderCB(Atomic *atomic, d3d9::InstanceDataHeader *header)
-{
-	switch(gBuildingPipeSwitch){
-	case PLATFORM_NULL:
-		d3d9::defaultRenderCB_Shader(atomic, header);
-		break;
-	case PLATFORM_PS2:
-		leedsRenderCB_PS2(atomic, header);
-		break;
-	case PLATFORM_PSP:
-		leedsRenderCB_PSP(atomic, header);
-		break;
-	// TEST
-	case PLATFORM_PC:
-		leedsRenderCB_mobile(atomic, header);
-		break;
 	}
 }
 
@@ -221,8 +188,10 @@ MakeLeedsPipe(void)
 	pipe = new d3d9::ObjPipeline(PLATFORM_D3D9);
 	pipe->instanceCB = d3d9::defaultInstanceCB;
 	pipe->uninstanceCB = nil;
-	pipe->renderCB = leedsRenderCB;
+	pipe->renderCB = leedsRenderCB_PS2;	// default to PS2 for now
 	leedsPipe = pipe;
 }
 
 #endif
+
+}

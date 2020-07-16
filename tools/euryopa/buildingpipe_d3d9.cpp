@@ -25,6 +25,8 @@ enum {
 	REG_fxParams	= 36,
 	REG_envXform	= 37,
 	REG_envmat	= 38,
+
+	PSLOC_colorscale = 1
 };
 
 
@@ -52,6 +54,9 @@ buildingRenderCB_PS2(Atomic *atomic, d3d9::InstanceDataHeader *header)
 	setStreamSource(0, header->vertexStream[0].vertexBuffer, 0, header->vertexStream[0].stride);
 	setIndices(header->indexBuffer);
 	setVertexDeclaration(header->vertexDeclaration);
+
+	d3ddevice->SetVertexShaderConstantF(VSLOC_fogData, (float*)&d3dShaderState.fogData, 1);
+	d3ddevice->SetPixelShaderConstantF(PSLOC_fogColor, (float*)&d3dShaderState.fogColor, 1);
 
 	setVertexShader(gBuildingPipeSwitch == PLATFORM_PC ? pcBuildingVS : ps2BuildingVS);
 	setPixelShader(simplePS);
@@ -85,7 +90,7 @@ buildingRenderCB_PS2(Atomic *atomic, d3d9::InstanceDataHeader *header)
 		if(inst->material->texture && gBuildingPipeSwitch == PLATFORM_PS2)
 			colorscale = 255.0f/128.0f;
 		d3ddevice->SetVertexShaderConstantF(REG_shaderParams, &colorscale, 1);
-		d3ddevice->SetPixelShaderConstantF(0, &colorscale, 1);
+		d3ddevice->SetPixelShaderConstantF(PSLOC_colorscale, &colorscale, 1);
 
 		int hasEnv = (*(uint32*)&inst->material->surfaceProps.specular) & 1;
 		gta::EnvMat *env = gta::getEnvMat(inst->material);
@@ -112,10 +117,7 @@ buildingRenderCB_PS2(Atomic *atomic, d3d9::InstanceDataHeader *header)
 			d3ddevice->SetVertexShaderConstantF(REG_texmat, (float*)&ident, 4);
 
 
-		if(params.ps2AlphaTest)
-			drawInst_GSemu(header, inst);
-		else
-			drawInst(header, inst);
+		drawInst(header, inst);
 
 		if(hasEnv){
 			setVertexShader(ps2BuildingFxVS);

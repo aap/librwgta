@@ -197,6 +197,7 @@ DefinedState(void)
 	SetRenderState(rw::FOGENABLE, 0);
 	SetRenderState(rw::ALPHATESTREF, params.alphaRefDefault);
 	SetRenderState(rw::ALPHATESTFUNC, rw::ALPHAGREATEREQUAL);
+	SetRenderState(rw::GSALPHATEST, params.ps2AlphaTest);
 	rw::RGBA fog;
 	uint32 c;
 	rw::convColor(&fog, &Timecycle::currentFogColour);
@@ -207,10 +208,18 @@ DefinedState(void)
 
 // Simple function to convert a raster to the current platform.
 // TODO: convert custom formats (DXT) properly.
-rw::Raster*
+static rw::Raster*
 ConvertTexRaster(rw::Raster *ras)
 {
 	using namespace rw;
+
+	if(ras->platform == rw::platform)
+		return ras;
+	// compatible platforms
+	if(ras->platform == PLATFORM_D3D8 && rw::platform == PLATFORM_D3D9 ||
+	   ras->platform == PLATFORM_D3D9 && rw::platform == PLATFORM_D3D8)
+		return ras;
+
 	Image *img = ras->toImage();
 	ras->destroy();
 	img->unindex();
@@ -226,13 +235,8 @@ ConvertTxd(rw::TexDictionary *txd)
 	FORLIST(lnk, txd->textures){
 		tex = rw::Texture::fromDict(lnk);
 		rw::Raster *ras = tex->raster;
-		if(ras && ras->platform != rw::platform){
-			if(!(ras->platform == rw::PLATFORM_D3D8 && rw::platform == rw::PLATFORM_D3D9 ||
-			     ras->platform == rw::PLATFORM_D3D9 && rw::platform == rw::PLATFORM_D3D8)){
-				tex->raster = ConvertTexRaster(ras);
-				ras->destroy();
-			}
-		}
+		if(ras)
+			tex->raster = ConvertTexRaster(ras);
 		tex->setFilter(rw::Texture::LINEAR);
 	}
 }

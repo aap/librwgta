@@ -8,7 +8,7 @@ CDebugDraw::RenderAndEmptyRenderBuffer(void)
 	assert(TempBufferVerticesStored <= TEMPBUFFERVERTSIZE);
 	assert(TempBufferIndicesStored <= TEMPBUFFERINDEXSIZE);
 	if(TempBufferVerticesStored){
-		rw::im3d::Transform(TempVertexBuffer, TempBufferVerticesStored, nil);
+		rw::im3d::Transform(TempVertexBuffer, TempBufferVerticesStored, nil, rw::im3d::EVERYTHING);
 		rw::im3d::RenderIndexedPrimitive(rw::PRIMTYPELINELIST, TempIndexBuffer, TempBufferIndicesStored);
 		rw::im3d::End();
 	}

@@ -115,7 +115,7 @@ Draw(float timeDelta)
 	Scene.clump->render();
 
 	camera->m_rwcam->endUpdate();
-	camera->m_rwcam->showRaster();
+	camera->m_rwcam->showRaster(0);
 }
 
 

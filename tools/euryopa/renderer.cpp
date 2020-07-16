@@ -20,8 +20,6 @@ static uint16 currentScanCode;
 
 static rw::ObjPipeline *colourCodePipe;
 
-bool d3d9UsedVertexShader;
-
 enum Visibility
 {
 	VIS_INVISIBLE,
@@ -333,19 +331,17 @@ ProcessLodList(void)
 	}
 }
 
-bool renderColourCoded;
 static rw::RGBA highlightColor;
 
 void
 myRenderCB(rw::Atomic *atomic)
 {
-	d3d9UsedVertexShader = false;
-	if(renderColourCoded)
+	if(gta::renderColourCoded)
 		colourCodePipe->render(atomic);
 	else if(highlightColor.red || highlightColor.green || highlightColor.blue){
 		atomic->getPipeline()->render(atomic);
-		colourCode = highlightColor;
-		colourCode.alpha = 128;
+		gta::colourCode = highlightColor;
+		gta::colourCode.alpha = 128;
 		int32 zwrite, fog, aref;
 		zwrite = GetRenderState(rw::ZWRITEENABLE);
 		fog = rw::GetRenderState(rw::FOGENABLE);
@@ -384,10 +380,10 @@ RenderInst(ObjectInst *inst)
 	}
 
 	pDirect->setFlags(0);
-	colourCode.red = inst->m_id & 0xFF;
-	colourCode.green = inst->m_id>>8 & 0xFF;
-	colourCode.blue = inst->m_id>>16 & 0xFF;
-	colourCode.alpha = 255;
+	gta::colourCode.red = inst->m_id & 0xFF;
+	gta::colourCode.green = inst->m_id>>8 & 0xFF;
+	gta::colourCode.blue = inst->m_id>>16 & 0xFF;
+	gta::colourCode.alpha = 255;
 
 	if(inst->m_selected && inst->m_highlight < HIGHLIGHT_SELECTION)
 		inst->m_highlight = HIGHLIGHT_SELECTION;
@@ -602,52 +598,42 @@ RenderEverythingCollisions(void)
 	}
 }
 
+#ifdef RW_D3D9
+static void
+leedsRenderCB(rw::Atomic *atomic, rw::d3d9::InstanceDataHeader *header)
+{
+	gta::leedsPipe_amb = Timecycle::currentColours.amb;
+	gta::leedsPipe_emiss = Timecycle::currentColours.amb_bl;
+	switch(gBuildingPipeSwitch){
+	case PLATFORM_NULL:
+		rw::d3d9::defaultRenderCB_Shader(atomic, header);
+		break;
+	case PLATFORM_PS2:
+		gta::leedsRenderCB_PS2(atomic, header);
+		break;
+	case PLATFORM_PSP:
+		gta::leedsRenderCB_PSP(atomic, header);
+		break;
+	// TEST
+	case PLATFORM_PC:
+		gta::leedsRenderCB_mobile(atomic, header);
+		break;
+	}
+}
+
+void
+MakeLeedsPipe(void)
+{
+	gta::MakeLeedsPipe();
+	((rw::d3d9::ObjPipeline*)gta::leedsPipe)->renderCB = leedsRenderCB;
+}
+#endif
+
 void
 RenderInit(void)
 {
-	colourCodePipe = makeColourCodePipeline();
+	colourCodePipe = gta::makeColourCodePipeline();
 	MakeCustomBuildingPipelines();
 	MakeNeoWorldPipe();
 	MakeLeedsPipe();
 }
-
-#ifdef RW_D3D9
-
-using namespace rw;
-using namespace d3d;
-using namespace d3d9;
-
-static void
-defaultCombinerSetup(InstanceData *inst)
-{
-	if(inst->material->texture){
-		// Texture
-		d3d::setTexture(0, inst->material->texture);
-		d3d::setTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
-		d3d::setTextureStageState(0, D3DTSS_COLORARG1, D3DTA_CURRENT);
-		d3d::setTextureStageState(0, D3DTSS_COLORARG2, D3DTA_TEXTURE);
-		d3d::setTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
-		d3d::setTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_CURRENT);
-		d3d::setTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_TEXTURE);
-	}else{
-		d3d::setTextureStageState(0, D3DTSS_COLOROP, D3DTOP_SELECTARG1);
-		d3d::setTextureStageState(0, D3DTSS_COLORARG1, D3DTA_CURRENT);
-		d3d::setTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
-		d3d::setTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_CURRENT);
-	}
-
-	// Material colour
-	const rw::RGBA *col = &inst->material->color;
-	d3d::setTextureStageState(1, D3DTSS_CONSTANT, D3DCOLOR_ARGB(col->alpha,col->red,col->green,col->blue));
-	d3d::setTextureStageState(1, D3DTSS_COLOROP, D3DTOP_MODULATE);
-	d3d::setTextureStageState(1, D3DTSS_COLORARG1, D3DTA_CURRENT);
-	d3d::setTextureStageState(1, D3DTSS_COLORARG2, D3DTA_CONSTANT);
-	d3d::setTextureStageState(1, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
-	d3d::setTextureStageState(1, D3DTSS_ALPHAARG1, D3DTA_CURRENT);
-	d3d::setTextureStageState(1, D3DTSS_ALPHAARG2, D3DTA_CONSTANT);
-
-	d3d::setTextureStageState(2, D3DTSS_COLOROP, D3DTOP_DISABLE);
-	d3d::setTextureStageState(2, D3DTSS_ALPHAOP, D3DTOP_DISABLE);
-}
-
-#endif

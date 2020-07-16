@@ -25,6 +25,7 @@ rw::Material *cubeMat;
 rw::Geometry *cubeGeo;
 rw::Light *pAmbient;
 //bool drawCubes;
+bool drawWater = true;
 bool drawCol;
 bool drawBounds;
 bool drawCurrentSector = false;
@@ -243,6 +244,8 @@ updateTimecycle(void)
 	currentFog.blue = (currentSkyTop.blue + 2*currentSkyBot.blue)/3.0f;
 	currentFog.alpha = 255;
 
+	convColor(&gta::leedsPipe_amb, &currentAmbient);
+	convColor(&gta::leedsPipe_emiss, &currentEmissive);
 }
 
 void
@@ -256,6 +259,7 @@ DefinedState(void)
 	SetRenderState(rw::FOGENABLE, 0);
 	SetRenderState(rw::ALPHATESTREF, 128);
 	SetRenderState(rw::ALPHATESTFUNC, rw::ALPHAGREATEREQUAL);
+	SetRenderState(rw::GSALPHATEST, 1);
 	uint32 c = RWRGBAINT(currentFog.red, currentFog.green,
 		currentFog.blue, 255);
 	SetRenderState(rw::FOGCOLOR, c);
@@ -353,8 +357,9 @@ InitRW(void)
 
 	makeCube();
 
-	Renderer::buildingPipe = makeBuildingPipe();
-	Renderer::colourCodePipe = makeColourCodePipeline();
+	gta::MakeLeedsPipe();
+	Renderer::buildingPipe = gta::leedsPipe;
+	Renderer::colourCodePipe = gta::makeColourCodePipeline();
 
 	ImGui_ImplRW_Init();
 	ImGui::StyleColorsClassic();
@@ -857,7 +862,7 @@ pickWorldObject(void)
 	static rw::RGBA white = { 0xFF, 0xFF, 0xFF, 0xFF };
 	TheCamera.m_rwcam->clear(&white, rw::Camera::CLEARIMAGE|rw::Camera::CLEARZ);
 	Renderer::renderEverythingColourCoded();
-	int32 c = Renderer::GetColourCode(CPad::newMouseState.x, CPad::newMouseState.y);
+	int32 c = gta::GetColourCode(CPad::newMouseState.x, CPad::newMouseState.y);
 	BuildingExt *build = FindBuildingExt(c);
 	if(build){
 		if(CPad::IsShiftDown())
@@ -881,12 +886,12 @@ pickColModel(void)
 	CEntity *e;
 	static rw::RGBA white = { 0xFF, 0xFF, 0xFF, 0xFF };
 	TheCamera.m_rwcam->clear(&white, rw::Camera::CLEARIMAGE|rw::Camera::CLEARZ);
-	Renderer::renderColourCoded = 1;
+	gta::renderColourCoded = 1;
 	Renderer::renderColModels();
-	Renderer::renderColourCoded = 0;
+	gta::renderColourCoded = 0;
 	RenderDebugTris();
 	RenderDebugLines();
-	int32 c = Renderer::GetColourCode(CPad::newMouseState.x, CPad::newMouseState.y);
+	int32 c = gta::GetColourCode(CPad::newMouseState.x, CPad::newMouseState.y);
 	switch(c >> 16){
 	case 1: e = pBuildingPool->GetSlot(c & 0xFFFF); break;
 	case 2: e = pTreadablePool->GetSlot(c & 0xFFFF); break;
@@ -1012,7 +1017,8 @@ Draw(void)
 	Renderer::renderOpaque();
 	Renderer::renderTransparent();
 
-//	CWaterLevel_::mspInst->RenderWater();
+	if(drawWater)
+		CWaterLevel_::mspInst->RenderWater();
 
 	rw::SetRenderState(rw::FOGENABLE, 0);
 
@@ -1023,7 +1029,7 @@ Draw(void)
 	ImGui::Render();
 
 	TheCamera.m_rwcam->endUpdate();
-	TheCamera.m_rwcam->showRaster();
+	TheCamera.m_rwcam->showRaster(rw::Raster::FLIPWAITVSYNCH);
 
 	frameCounter++;
 }

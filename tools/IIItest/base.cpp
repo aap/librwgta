@@ -347,7 +347,7 @@ void
 DoRWStuffEndOfFrame(void)
 {
 	Scene.camera->endUpdate();
-	Scene.camera->showRaster();
+	Scene.camera->showRaster(0);
 }
 
 void

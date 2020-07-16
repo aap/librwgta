@@ -1,6 +1,44 @@
 Librw = os.getenv("LIBRW")
-GLEWdir = "C:/Users/aap/src/glew-2.1.0"
-GLFW64dir = "C:/Users/aap/src/glfw-3.2.1.bin.WIN64"
+
+newoption {
+	trigger     = "glewdir",
+	value       = "PATH",
+	description = "Directory of GLEW",
+	default     = "../glew-2.1.0",
+}
+
+newoption {
+	trigger		= "gfxlib",
+	value       = "LIBRARY",
+	description = "Choose a particular development library",
+	default		= "glfw",
+	allowed		= {
+		{ "glfw",	"GLFW" },
+		{ "sdl2",	"SDL2" },
+	},
+}
+
+newoption {
+	trigger     = "glfwdir64",
+	value       = "PATH",
+	description = "Directory of glfw",
+	default     = "../glfw-3.3.2.bin.WIN64",
+}
+
+newoption {
+	trigger     = "glfwdir32",
+	value       = "PATH",
+	description = "Directory of glfw",
+	default     = "../glfw-3.3.2.bin.WIN32",
+}
+
+newoption {
+	trigger     = "sdl2dir",
+	value       = "PATH",
+	description = "Directory of sdl2",
+	default     = "../SDL2-2.0.8",
+}
+
 Zlibdir = "C:/Users/aap/src/zlib-1.2.11"
 
 workspace "librwgta"
@@ -14,8 +52,12 @@ workspace "librwgta"
 			"win-amd64-null", "win-amd64-gl3", "win-amd64-d3d9" }
 	filter { "system:linux" }
 		platforms { "linux-x86-null", "linux-x86-gl3",
-			"linux-amd64-null", "linux-amd64-gl3" }
+			"linux-amd64-null", "linux-amd64-gl3",
+			"linux-arm-null", "linux-arm-gl3" }
 	-- TODO: ps2
+		if _OPTIONS["gfxlib"] == "sdl2" then
+			includedirs { "/usr/include/SDL2" }
+		end
 	filter {}
 
 	filter "configurations:Debug"
@@ -31,15 +73,25 @@ workspace "librwgta"
 		defines { "RW_NULL" }
 	filter { "platforms:*gl3" }
 		defines { "RW_GL3" }
+		if _OPTIONS["gfxlib"] == "sdl2" then
+			defines { "LIBRW_SDL2" }
+		end
 	filter { "platforms:*d3d9" }
 		defines { "RW_D3D9" }
 	filter { "platforms:*ps2" }
 		defines { "RW_PS2" }
+		toolset "gcc"
+		gccprefix 'ee-'
+		buildoptions { "-nostdlib", "-fno-common" }
+		includedirs { "$(PS2SDK)/ee/include", "$(PS2SDK)/common/include" }
+		optimize "Off"
 
 	filter { "platforms:*amd64*" }
 		architecture "x86_64"
 	filter { "platforms:*x86*" }
 		architecture "x86"
+	filter { "platforms:*arm*" }
+		architecture "ARM"
 
 	filter { "platforms:win*" }
 		system "windows"
@@ -47,12 +99,22 @@ workspace "librwgta"
 		system "linux"
 
 	filter { "platforms:win*gl3" }
-		includedirs { path.join(GLEWdir, "include") }
-		includedirs { path.join(GLFW64dir, "include") }
+		defines { "GLEW_STATIC" }
+		includedirs { path.join(_OPTIONS["glewdir"], "include") }
+		includedirs { path.join(_OPTIONS["sdl2dir"], "include") }
+	filter { "platforms:win-x86-gl3" }
+		includedirs { path.join(_OPTIONS["glfwdir32"], "include") }
+	filter { "platforms:win-amd64-gl3" }
+		includedirs { path.join(_OPTIONS["glfwdir64"], "include") }
 
 	filter "action:vs*"
 		buildoptions { "/wd4996", "/wd4244" }
 		
+	filter { "platforms:win*gl3", "action:not vs*" }
+		if _OPTIONS["gfxlib"] == "sdl2" then
+			includedirs { "/mingw/include/SDL2" } -- TODO: Detect this properly
+		end
+
 	filter {}
 
 	Libdir = "lib/%{cfg.platform}/%{cfg.buildcfg}"
@@ -78,18 +140,36 @@ end
 
 function findlibs()
 	filter { "platforms:linux*gl3" }
-		links { "GL", "GLEW", "glfw" }
-	filter { "platforms:win*gl3" }
+		links { "GL", "GLEW" }
+		if _OPTIONS["gfxlib"] == "glfw" then
+			links { "glfw" }
+		else
+			links { "SDL2" }
+		end
+	filter { "platforms:win*gl3", "action:vs*" }
 		defines { "GLEW_STATIC" }
+		links { "glew32s" }
+	filter { "platforms:win*gl3", "action:not vs*" }
+		links { "glew32" }
 	filter { "platforms:win-amd64-gl3" }
-		libdirs { path.join(GLEWdir, "lib/Release/x64") }
-		libdirs { path.join(GLFW64dir, "lib-vc2015") }
+		libdirs { path.join(_OPTIONS["glewdir"], "lib/Release/x64") }
+		libdirs { path.join(_OPTIONS["glfwdir64"], "lib-vc2015") }
+		libdirs { path.join(_OPTIONS["sdl2dir"], "lib/x64") }
 	filter { "platforms:win-x86-gl3" }
-		libdirs { path.join(GLEWdir, "lib/Release/Win32") }
+		libdirs { path.join(_OPTIONS["glewdir"], "lib/Release/Win32") }
+		libdirs { path.join(_OPTIONS["glfwdir32"], "lib-vc2015") }
+		libdirs { path.join(_OPTIONS["sdl2dir"], "lib/x86") }
 	filter { "platforms:win*gl3" }
-		links { "glew32s", "glfw3", "opengl32" }
+		links { "opengl32" }
+		if _OPTIONS["gfxlib"] == "glfw" then
+			links { "glfw3" }
+		else
+			links { "SDL2" }
+		end
 	filter { "platforms:*d3d9" }
-		links { "d3d9", "Xinput9_1_0" }
+		links { "gdi32", "d3d9" }
+	filter { "platforms:*d3d9", "action:vs*" }
+		links { "Xinput9_1_0" }
 	filter {}
 end
 

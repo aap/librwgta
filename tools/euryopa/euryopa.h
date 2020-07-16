@@ -519,17 +519,9 @@ extern rw::Texture *whiteTex;
 extern SceneGlobals Scene;
 extern CCamera TheCamera;
 
-extern bool d3d9UsedVertexShader;
-
 bool32 instWhite(int type, uint8 *dst, uint32 numVertices, uint32 stride);
 
 void myRenderCB(rw::Atomic *atomic);
-
-// Colour code pipeline for picking and highlighting
-extern bool renderColourCoded;
-extern rw::RGBA colourCode;
-rw::ObjPipeline *makeColourCodePipeline(void);
-int32 GetColourCode(int x, int y);
 
 // Neo World pipeline
 extern rw::ObjPipeline *neoWorldPipe;

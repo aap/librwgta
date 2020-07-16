@@ -197,6 +197,30 @@ rw::int32 findSAVertex(rw::Geometry *g, rw::uint32 flags[], rw::uint32 mask, SaV
 
 void registerPDSPipes(void);
 
+
+//
+// Colour code pipe for picking and highlighting
+//
+
+extern bool renderColourCoded;
+extern rw::RGBA colourCode;
+rw::ObjPipeline *makeColourCodePipeline(void);
+rw::int32 GetColourCode(int x, int y);
+
+//
+// Leeds building pipe
+//
+
+extern rw::RGBAf leedsPipe_amb;
+extern rw::RGBAf leedsPipe_emiss;
+extern rw::ObjPipeline *leedsPipe;
+
+void MakeLeedsPipe(void);
+// various render CBs
+void leedsRenderCB_PSP(rw::Atomic *atomic, rw::d3d9::InstanceDataHeader *header);
+void leedsRenderCB_PS2(rw::Atomic *atomic, rw::d3d9::InstanceDataHeader *header);
+void leedsRenderCB_mobile(rw::Atomic *atomic, rw::d3d9::InstanceDataHeader *header);
+
 }
 
 #endif
