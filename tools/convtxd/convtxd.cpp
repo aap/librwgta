@@ -256,6 +256,20 @@ rastermod(Raster *ras, float (*f)(float))
 		fprintf(stderr, "cannot convert\n");
 }
 
+void
+changeDepth(Texture *tex, int depth)
+{
+	Image *img = tex->raster->toImage();
+	tex->raster->destroy();
+
+	if(depth == 4 || depth == 8)
+		img->palettize(depth);
+	// TODO: more
+
+	tex->raster = Raster::createFromImage(img);
+	img->destroy();
+}
+
 struct StrAssoc {
 	const char *key;
 	int val;
@@ -276,6 +290,7 @@ enum {
 	NEW = 1,
 	SEARCHPATH,
 	ADD,
+	DEPTH,
 	LINEAR,
 	WRITE
 };
@@ -284,6 +299,7 @@ StrAssoc cmds[] = {
 	{ "new", NEW },
 	{ "searchpath", SEARCHPATH },
 	{ "add", ADD },
+	{ "depth", DEPTH },
 	{ "linear", LINEAR },
 	{ "write", WRITE },
 	{ "", 0 }
@@ -340,6 +356,7 @@ runscript(void)
 {
 	char *s, *arg;
 	int cmd;
+	int depth;
 	TexDictionary::setCurrent(TexDictionary::create());
 	rw::Texture::setLoadTextures(true);
 	Texture *tex = NULL;
@@ -368,6 +385,12 @@ runscript(void)
 			NEEDARG(arg);
 			arg = removequotes(arg);
 			tex = Texture::read(arg, strtok(NULL, "\t"));
+			break;
+		case DEPTH:
+			NEEDARG(arg);
+			depth = atoi(arg);
+			if(tex)
+				changeDepth(tex, depth);
 			break;
 		case LINEAR:
 			if(tex)
@@ -552,7 +575,7 @@ main(int argc, char *argv[])
 		FORLIST(lnk, txd->textures){
 			Texture *tex = Texture::fromDict(lnk);
 			Image *img = tex->raster->toImage();
-			img->unindex();
+			img->unpalettize();
 			Raster *ras = tex->raster;
 			tex->raster = Raster::createFromImage(img);
 			ras->destroy();
@@ -565,7 +588,7 @@ main(int argc, char *argv[])
 		FORLIST(lnk, txd->textures){
 			Texture *tex = Texture::fromDict(lnk);
 			Image *img = tex->raster->toImage();
-			img->unindex();
+	//		img->unindex();
 
 			if(separatemask && tex->mask[0]){
 				Image *mask = img->extractMask();
@@ -577,6 +600,8 @@ main(int argc, char *argv[])
 				strncat(filename, ".tga", 1024);
 				writeTGA(mask, filename);
 				mask->destroy();
+//			}else if(img->hasAlpha()){
+//				printf("%s has alpha but no mask (%d)\n", tex->name, img->depth);
 			}
 
 			strncpy(filename, tex->name, 1024);

@@ -204,7 +204,7 @@ main(int argc, char *argv[])
 				assert(tex->raster->height == 128);
 
 				img = tex->raster->toImage();
-				img->unindex();
+				img->unpalettize();
 
 				copyImage(fullradar, j*128, i*128, img, 0, 0, 128, 128);
 

@@ -474,7 +474,7 @@ writetex(rw::Texture *tex)
 	static char filename[1024];
 
 	Image *img = tex->raster->toImage();
-	img->unindex();
+	img->unpalettize();
 
 	sprintf(filename, "C:/vcstmp/tex/%s.tga", tex->name);
 	writeTGA(img, filename);
