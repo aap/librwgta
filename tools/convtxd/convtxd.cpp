@@ -412,6 +412,56 @@ runscript(void)
 	return 0;
 }
 
+bool
+fileExists(const char *path)
+{
+	FILE *f;
+	f = fopen(path, "r");
+	if(f == nil)
+		return false;
+	fclose(f);
+	return true;
+}
+
+void
+makeUniqueFilename(char *filename, const char *file, const char *extension)
+{
+	int i;
+	sprintf(filename, "%s%s", file, extension);
+	if(!fileExists(filename))
+		return;
+	for(i = 1; ; i++){
+		sprintf(filename, "%s_!%d%s", file, i, extension);
+		if(!fileExists(filename))
+			return;
+	}
+}
+
+// Only overwrite a TGA if it's larger than the one already existing
+void
+writeLargerTGA(Image *image, const char *filename)
+{
+	FILE *f;
+	f = fopen(filename, "rb");
+	if(f == nil){
+		writeTGA(image, filename);
+		printf("writing %s\n", filename);
+	}else{
+		uint16 w, h;
+		fseek(f, 12, SEEK_SET);
+		fread(&w, 1, 2, f);
+		fread(&h, 1, 2, f);
+		fclose(f);
+		if(image->width > w){
+			if(image->height < h)
+				printf("warning: %s is smaller in height\n", filename);
+			writeTGA(image, filename);
+			printf("writing %s\n", filename);
+		}
+	}
+}
+
+
 void
 usage(void)
 {
@@ -596,16 +646,18 @@ main(int argc, char *argv[])
 				// separate file.
 				img->removeMask();
 
-				strncpy(filename, tex->mask, 1024);
-				strncat(filename, ".tga", 1024);
+				sprintf(filename, "%s%s", tex->mask, ".tga");
+//makeUniqueFilename(filename, tex->mask, ".tga");
+//				writeLargerTGA(mask, filename);
 				writeTGA(mask, filename);
 				mask->destroy();
 //			}else if(img->hasAlpha()){
 //				printf("%s has alpha but no mask (%d)\n", tex->name, img->depth);
 			}
 
-			strncpy(filename, tex->name, 1024);
-			strncat(filename, ".tga", 1024);
+			sprintf(filename, "%s%s", tex->name, ".tga");
+//makeUniqueFilename(filename, tex->name, ".tga");
+//			writeLargerTGA(img, filename);
 			writeTGA(img, filename);
 
 			img->destroy();
