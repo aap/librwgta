@@ -1037,7 +1037,7 @@ convertTo32_PSP(uint8 *out, uint8 *pal, uint8 *tex,
 		break;
 	case 4:
 		uint8 *dat = new uint8[w*h];
-		rw::ps2::expandPSMT4(dat, w, tex, bufw/2, w, h);
+		rw::expandPal4(dat, w, tex, bufw/2, w, h);
 		tex = dat;
 		for(uint32 i = 0; i < h; i++)
 			for(uint32 j = 0; j < w; j++){
@@ -1129,11 +1129,11 @@ convertRasterPSP(RslRasterPSP *ras)
 
 	switch(ras->depth){
 	case 4:
-		rw::ps2::expandPSMT4(img->pixels, img->stride, mem, bufw/2, w, h);
+		rw::expandPal4(img->pixels, img->stride, mem, bufw/2, w, h);
 		memcpy(img->palette, palette, 16*4);
 		break;
 	case 8:
-		rw::ps2::copyPSMT8(img->pixels, img->stride, mem, bufw, w, h);
+		rw::copyPal8(img->pixels, img->stride, mem, bufw, w, h);
 		memcpy(img->palette, palette, 256*4);
 		break;
 	case 16: assert(0);
