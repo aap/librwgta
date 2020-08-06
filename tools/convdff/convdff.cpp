@@ -43,6 +43,7 @@ usage(void)
 	fprintf(stderr, "\t-o output platform. ps2, xbox, mobile, d3d8, d3d9\n");
 	fprintf(stderr, "\t-b remove textures containing \"body\" on editable materials\n");
 	fprintf(stderr, "\t-bb remove textures containing \"body\" on all materials\n");
+	fprintf(stderr, "\t-a auto-assign hanim IDs (use when converting old skins. may fail)\n");
 	fprintf(stderr, "\t--III2VCcar specmap. convert reflections from III to VC using specmap\n");
 	fprintf(stderr, "\t--ps2VCcar set up VC vehicle for use with PS2 and Xbox reflections\n");
 	fprintf(stderr, "\t--xboxbuilding convert SA Xbox building to something PS2 and PC understand\n");
@@ -318,26 +319,6 @@ dumpBoneMatrices(Skin *skin, HAnimHierarchy *hier)
 	}
 }
 
-//void
-//assignNodeIdsChild(Frame *f)
-//{
-//	if(f->next)
-//		assignNodeIdsChild(f->next);
-//	assignNodeIds(f);
-//}
-//void
-//assignNodeIds(Frame *f)
-//{
-//	// Let's hope frame an hanim hierarchy are in synch!
-//	f->nodeId = *remainingNodeIds++;
-//	if(f->nodeId == -1){
-//		f->nodeId = nextId++;
-//		remainingNodeIds[-1] = f->nodeId;
-//	}
-//	if(f->child)
-//		assignNodeIdsChild(f->child);
-//}
-
 Frame**
 makeFrameList1(Frame *frame, Frame **flist)
 {
@@ -409,29 +390,9 @@ assignIDs(HAnimHierarchy *hier)
 			nextID++;
 		}
 	}
-/*
-	printf("	1\n");
-	for(i = 0; i < hier->numNodes; i++){
-		int flag = 0;
-		if(frames1[i]->next)
-			flag |= HAnimHierarchy::PUSH;
-		if(frames1[i]->child == nil)
-			flag |= HAnimHierarchy::POP;
-		printf("%d %s\n", flag, getFrameName(frames1[i]));
-	}
-	printf("	2\n");
-	for(i = 0; i < hier->numNodes; i++){
-		int flag = 0;
-		if(frames2[i]->next)
-			flag |= HAnimHierarchy::PUSH;
-		if(frames2[i]->child == nil)
-			flag |= HAnimHierarchy::POP;
-		printf("%d %s\n", flag, getFrameName(frames2[i]));
-	}
-*/
-//	for(i = 0; i < hier->numNodes; i++){
-//		hier->nodeInfo[i].id = nextID++;
-//	}
+
+	rwFree(frames1);
+	rwFree(frames2);
 }
 
 void
