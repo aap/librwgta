@@ -221,8 +221,6 @@ main(int argc, char *argv[])
 //	rw::platform = rw::PLATFORM_XBOX;
 	rw::platform = rw::PLATFORM_D3D8;
 //	rw::platform = rw::PLATFORM_D3D9;
-//	int outplatform = rw::PLATFORM_XBOX;
-	int outplatform = rw::PLATFORM_D3D9;
 
 	rw::Engine::init();
 	gta::attachPlugins();
@@ -239,12 +237,12 @@ main(int argc, char *argv[])
 		s = EARGF(usage());
 		for(int i = 0; platforms[i].str; i++){
 			if(strcmp(platforms[i].str, s) == 0){
-				outplatform = platforms[i].val;
+				rw::platform = platforms[i].val;
 				goto found;
 			}
 		}
 		fprintf(stderr, "unknown platform %s\n", s);
-		outplatform = PLATFORM_D3D8;
+		rw::platform = PLATFORM_D3D8;
 	found:
 		break;
 	default:

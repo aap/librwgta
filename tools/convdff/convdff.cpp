@@ -250,6 +250,21 @@ getFrameName(Frame *f)
 }
 
 void
+printMatrix(Matrix *mat)
+{
+	printf("[ [ %8.4f, %8.4f, %8.4f, %8.4f ]\n"
+	       "  [ %8.4f, %8.4f, %8.4f, %8.4f ]\n"
+	       "  [ %8.4f, %8.4f, %8.4f, %8.4f ]\n"
+	       "  [ %8.4f, %8.4f, %8.4f, %8.4f ] ]\n"
+		"  %08x == flags\n",
+		mat->right.x, mat->up.x, mat->at.x, mat->pos.x,
+		mat->right.y, mat->up.y, mat->at.y, mat->pos.y,
+		mat->right.z, mat->up.z, mat->at.z, mat->pos.z,
+		0.0f, 0.0f, 0.0f, 1.0f,
+		mat->flags);
+}
+
+void
 dumpFrameHier(Frame *frame, int dumpMat, int ind = 0)
 {
 	for(int i = 0; i < ind; i++)
@@ -263,22 +278,16 @@ dumpFrameHier(Frame *frame, int dumpMat, int ind = 0)
 			name = h->nodeInfo[i].frame ? getFrameName(h->nodeInfo[i].frame) : "";
 			printf("\t\t%d %d\t%p %s\n", h->nodeInfo[i].id, h->nodeInfo[i].flags, h->nodeInfo[i].frame, name);
 
-			if(dumpMat){
-		//	rw::Matrix *mat = h->nodeInfo[i].frame->getLTM();
-			rw::Matrix *mat = &h->nodeInfo[i].frame->matrix;
-			printf("[ [ %8.4f, %8.4f, %8.4f, %8.4f ]\n"
-			       "  [ %8.4f, %8.4f, %8.4f, %8.4f ]\n"
-			       "  [ %8.4f, %8.4f, %8.4f, %8.4f ]\n"
-			       "  [ %8.4f, %8.4f, %8.4f, %8.4f ] ]\n"
-				"  %08x == flags\n",
-				mat->right.x, mat->up.x, mat->at.x, mat->pos.x,
-				mat->right.y, mat->up.y, mat->at.y, mat->pos.y,
-				mat->right.z, mat->up.z, mat->at.z, mat->pos.z,
-				0.0f, 0.0f, 0.0f, 1.0f,
-				mat->flags);
+			if(dumpMat && h->nodeInfo[i].frame){
+				printMatrix(h->nodeInfo[i].frame->getLTM());
+			//	printMatrix(&h->nodeInfo[i].frame->matrix);
 			}
 		}
 	}
+	//if(dumpMat && frame){
+	//	printMatrix(frame->getLTM());
+	//	printMatrix(&frame->matrix);
+	//}
 	for(Frame *child = frame->child;
 	    child; child = child->next)
 		dumpFrameHier(child, dumpMat, ind+1);
@@ -291,7 +300,10 @@ dumpBoneMatrices(Skin *skin, HAnimHierarchy *hier)
 	Matrix *mat;
 
 	for(i = 0; i < skin->numBones; i++){
+		Matrix inv;
 		mat = (Matrix*)&skin->inverseMatrices[i*16];
+		Matrix::invert(&inv, mat);
+		mat = &inv;
 		printf("node %s\n", gta::getNodeName(hier->nodeInfo[i].frame));
 		printf("[ [ %8.4f, %8.4f, %8.4f, %8.4f ]\n"
 		       "  [ %8.4f, %8.4f, %8.4f, %8.4f ]\n"
@@ -304,6 +316,122 @@ dumpBoneMatrices(Skin *skin, HAnimHierarchy *hier)
 			0.0f, 0.0f, 0.0f, 1.0f,
 			mat->flags);
 	}
+}
+
+//void
+//assignNodeIdsChild(Frame *f)
+//{
+//	if(f->next)
+//		assignNodeIdsChild(f->next);
+//	assignNodeIds(f);
+//}
+//void
+//assignNodeIds(Frame *f)
+//{
+//	// Let's hope frame an hanim hierarchy are in synch!
+//	f->nodeId = *remainingNodeIds++;
+//	if(f->nodeId == -1){
+//		f->nodeId = nextId++;
+//		remainingNodeIds[-1] = f->nodeId;
+//	}
+//	if(f->child)
+//		assignNodeIdsChild(f->child);
+//}
+
+Frame**
+makeFrameList1(Frame *frame, Frame **flist)
+{
+	*flist++ = frame;
+	if(frame->child)
+		flist = makeFrameList1(frame->child, flist);
+	if(frame->next)
+		flist = makeFrameList1(frame->next, flist);
+	return flist;
+}
+
+Frame**
+makeFrameList2(Frame *frame, Frame **flist)
+{
+	if(frame->next)
+		flist = makeFrameList2(frame->next, flist);
+	*flist++ = frame;
+	if(frame->child)
+		flist = makeFrameList2(frame->child, flist);
+	return flist;
+}
+
+bool
+checkFrameList(HAnimHierarchy *hier, Frame **flist)
+{
+	int i;
+	for(i = 0; i < hier->numNodes; i++){
+		int flags = 0;
+		if(flist[i]->next)
+			flags |= HAnimHierarchy::PUSH;
+		if(flist[i]->child == nil)
+			flags |= HAnimHierarchy::POP;
+		if(hier->nodeInfo[i].flags != flags)
+			return false;
+	}
+	return true;
+}
+
+void
+assignIDs(HAnimHierarchy *hier)
+{
+	int i;
+	int nextID = 2000;
+	if(hier->numNodes != hier->parentFrame->count()){
+		fprintf(stderr, "error: hierarchies don't match\n");
+		return;
+	}
+	Frame **frames1 = rwNewT(Frame*, hier->numNodes, 0);
+	Frame **frames2 = rwNewT(Frame*, hier->numNodes, 0);
+	makeFrameList1(hier->parentFrame, frames1);
+	makeFrameList2(hier->parentFrame, frames2);
+
+	Frame **flist = nil;
+	if(checkFrameList(hier, frames1))
+		flist = frames1;
+	else if(checkFrameList(hier, frames2))
+		flist = frames2;
+	else
+		fprintf(stderr, "error: hierarchies don't match\n");
+
+	// Have a matching topology. let's assume it's correct
+	if(flist){
+		printf("FOUND a hierarchy!\n");
+		for(i = 0; i < hier->numNodes; i++){
+			hier->nodeInfo[i].frame = flist[i];
+		printf("%s\n", getFrameName(hier->nodeInfo[i].frame));
+			hier->nodeInfo[i].id = nextID;
+			HAnimData::get(flist[i])->id = nextID;
+			nextID++;
+		}
+	}
+/*
+	printf("	1\n");
+	for(i = 0; i < hier->numNodes; i++){
+		int flag = 0;
+		if(frames1[i]->next)
+			flag |= HAnimHierarchy::PUSH;
+		if(frames1[i]->child == nil)
+			flag |= HAnimHierarchy::POP;
+		printf("%d %s\n", flag, getFrameName(frames1[i]));
+	}
+	printf("	2\n");
+	for(i = 0; i < hier->numNodes; i++){
+		int flag = 0;
+		if(frames2[i]->next)
+			flag |= HAnimHierarchy::PUSH;
+		if(frames2[i]->child == nil)
+			flag |= HAnimHierarchy::POP;
+		printf("%d %s\n", flag, getFrameName(frames2[i]));
+	}
+*/
+//	for(i = 0; i < hier->numNodes; i++){
+//		hier->nodeInfo[i].id = nextID++;
+//	}
 }
 
 void
@@ -555,6 +683,7 @@ main(int argc, char *argv[])
 	int dumpmat = 0;
 	int tristrip = 0;
 	int json = 0;
+	int assign = 0;
 
 	char *s, *longarg;
 	//char *seconddff = NULL;
@@ -616,6 +745,9 @@ main(int argc, char *argv[])
 		break;
 	case 'j':
 		json++;
+		break;
+	case 'a':
+		assign++;
 		break;
 	case 'o':
 		s = EARGF(usage());
@@ -726,6 +858,11 @@ main(int argc, char *argv[])
 	//	printf("%d %f %f %f\n", l->getType(), l->color.red, l->color.green, l->color.blue);
 	//}
 
+	if(assign){
+		HAnimHierarchy *hier = HAnimHierarchy::find(c->getFrame());
+		if(hier)
+			assignIDs(hier);
+	}
 
 	if(dump){
 		HAnimHierarchy *hier = HAnimHierarchy::find(c->getFrame());
