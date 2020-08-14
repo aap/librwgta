@@ -362,7 +362,7 @@ MakeCustomBuildingPipelines(void)
 	assert(ps2EnvPS);
 
 
-	pipe = new d3d9::ObjPipeline(PLATFORM_D3D9);
+	pipe = d3d9::ObjPipeline::create();
 	pipe->pluginID = gta::RSPIPE_PC_CustomBuilding_PipeID;
 	pipe->pluginData = gta::RSPIPE_PC_CustomBuilding_PipeID;
 	pipe->instanceCB = buildingInstanceCB;
@@ -370,7 +370,7 @@ MakeCustomBuildingPipelines(void)
 	pipe->renderCB = buildingRenderCB_PS2;
 	buildingPipe = pipe;
 
-	pipe = new d3d9::ObjPipeline(PLATFORM_D3D9);
+	pipe = d3d9::ObjPipeline::create();
 	pipe->pluginID = gta::RSPIPE_PC_CustomBuildingDN_PipeID;
 	pipe->pluginData = gta::RSPIPE_PC_CustomBuildingDN_PipeID;
 	pipe->instanceCB = buildingInstanceCB;

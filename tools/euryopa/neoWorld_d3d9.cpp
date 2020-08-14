@@ -95,7 +95,7 @@ MakeNeoWorldPipe(void)
 	neoWorldVC_PS = createPixelShader(neoWorldVC_PS_cso);
 
 	d3d9::ObjPipeline *pipe;
-	pipe = new d3d9::ObjPipeline(PLATFORM_D3D9);
+	pipe = d3d9::ObjPipeline::create();
 	pipe->instanceCB = d3d9::defaultInstanceCB;
 	pipe->uninstanceCB = nil;
 	pipe->renderCB = neoWorldRenderCB;

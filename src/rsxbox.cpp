@@ -61,28 +61,28 @@ registerXboxPipes(void)
 {
 	xbox::ObjPipeline *pipe;
 
-	pipe = new xbox::ObjPipeline(PLATFORM_XBOX);
+	pipe = xbox::ObjPipeline::create();
 	pipe->pluginID = gta::RSPIPE_XBOX_CustomBuilding_PipeID;
 	pipe->pluginData = gta::RSPIPE_XBOX_CustomBuilding_PipeID;
 	pipe->instanceCB = nil;
 	pipe->uninstanceCB = defaultUninstanceCB;
 	XboxCustomBuildingPipe = pipe;
 
-	pipe = new xbox::ObjPipeline(PLATFORM_XBOX);
+	pipe = xbox::ObjPipeline::create();
 	pipe->pluginID = gta::RSPIPE_XBOX_CustomBuildingDN_PipeID;
 	pipe->pluginData = gta::RSPIPE_XBOX_CustomBuildingDN_PipeID;
 	pipe->instanceCB = nil;
 	pipe->uninstanceCB = defaultUninstanceCB;
 	XboxCustomBuildingDNPipe = pipe;
 
-	pipe = new xbox::ObjPipeline(PLATFORM_XBOX);
+	pipe = xbox::ObjPipeline::create();
 	pipe->pluginID = gta::RSPIPE_XBOX_CustomBuildingEnvMap_PipeID;
 	pipe->pluginData = gta::RSPIPE_XBOX_CustomBuildingEnvMap_PipeID;
 	pipe->instanceCB = nil;
 	pipe->uninstanceCB = customBuildingUninstanceCB;
 	XboxCustomBuildingEnvMapPipe = pipe;
 
-	pipe = new xbox::ObjPipeline(PLATFORM_XBOX);
+	pipe = xbox::ObjPipeline::create();
 	pipe->pluginID = gta::RSPIPE_XBOX_CustomBuildingDNEnvMap_PipeID;
 	pipe->pluginData = gta::RSPIPE_XBOX_CustomBuildingDNEnvMap_PipeID;
 	pipe->instanceCB = nil;

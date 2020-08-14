@@ -65,7 +65,7 @@ makeColourCodePipeline(void)
 		assert(colourcode_PS);
 	}
 
-	d3d9::ObjPipeline *pipe = new d3d9::ObjPipeline(PLATFORM_D3D9);
+	d3d9::ObjPipeline *pipe = d3d9::ObjPipeline::create();
 	pipe->instanceCB = defaultInstanceCB;
 	pipe->uninstanceCB = defaultUninstanceCB;
 	pipe->renderCB = colourCodeRenderCB;

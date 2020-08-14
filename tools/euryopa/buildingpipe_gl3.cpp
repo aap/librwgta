@@ -354,7 +354,7 @@ MakeCustomBuildingPipelines(void)
 	assert(ps2BuildingFXShader);
 	}
 
-	pipe = new gl3::ObjPipeline(PLATFORM_GL3);
+	pipe = gl3::ObjPipeline::create();
 	pipe->pluginID = gta::RSPIPE_PC_CustomBuilding_PipeID;
 	pipe->pluginData = gta::RSPIPE_PC_CustomBuilding_PipeID;
 	pipe->instanceCB = buildingInstanceCB;
@@ -362,7 +362,7 @@ MakeCustomBuildingPipelines(void)
 	pipe->renderCB = buildingRenderCB;
 	buildingPipe = pipe;
 
-	pipe = new gl3::ObjPipeline(PLATFORM_GL3);
+	pipe = gl3::ObjPipeline::create();
 	pipe->pluginID = gta::RSPIPE_PC_CustomBuildingDN_PipeID;
 	pipe->pluginData = gta::RSPIPE_PC_CustomBuildingDN_PipeID;
 	pipe->instanceCB = buildingInstanceCB;

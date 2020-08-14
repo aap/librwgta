@@ -101,7 +101,7 @@ MakeNeoWorldPipe(void)
 	}
 
 	gl3::ObjPipeline *pipe;
-	pipe = new gl3::ObjPipeline(PLATFORM_D3D9);
+	pipe = gl3::ObjPipeline::create();
 	pipe->instanceCB = gl3::defaultInstanceCB;
 	pipe->uninstanceCB = nil;
 	pipe->renderCB = neoWorldRenderCB;

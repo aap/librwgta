@@ -185,7 +185,7 @@ MakeLeedsPipe(void)
 	simple4PS = createPixelShader(simple4PS_cso);
 
 	d3d9::ObjPipeline *pipe;
-	pipe = new d3d9::ObjPipeline(PLATFORM_D3D9);
+	pipe = d3d9::ObjPipeline::create();
 	pipe->instanceCB = d3d9::defaultInstanceCB;
 	pipe->uninstanceCB = nil;
 	pipe->renderCB = leedsRenderCB_PS2;	// default to PS2 for now
