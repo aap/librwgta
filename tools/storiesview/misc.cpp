@@ -39,9 +39,9 @@ dumpInstBS(int level, sGeomInstance *inst)
 	float r = halfFloatToFloat(inst->bound[3]);
 	BuildingExt *be = GetBuildingExt(inst->GetId());
 
-	fprintf(logfile, "%X %d %d  %f %f %f %f", inst->GetId() | level<<16, inst->IsLOD(), be->interior, x, y, z, r);
-	if(be->isTimed)
-		fprintf(logfile, " %d %d", be->timeOn, be->timeOff);
+	fprintf(logfile, "%X %d %d  %f %f %f %f", inst->GetId() | level<<16, inst->IsFlagged(), be->interior, x, y, z, r);
+	//if(be->isTimed)
+	//	fprintf(logfile, " %d %d", be->timeOn, be->timeOff);
 	fprintf(logfile, "\n");
 }
 

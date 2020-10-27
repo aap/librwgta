@@ -12,6 +12,7 @@ using namespace d3d9;
 
 enum {
 	VSLOC_emissive = VSLOC_lightOffset,
+	VSLOC_ambient,
 
 	PSLOC_colorscale = 1
 };
@@ -34,15 +35,12 @@ leedsRenderCB_PS2(Atomic *atomic, d3d9::InstanceDataHeader *header)
 	setIndices(header->indexBuffer);
 	setVertexDeclaration(header->vertexDeclaration);
 
-	d3ddevice->SetVertexShaderConstantF(VSLOC_fogData, (float*)&d3dShaderState.fogData, 1);
-	d3ddevice->SetPixelShaderConstantF(PSLOC_fogColor, (float*)&d3dShaderState.fogColor, 1);
-
 	setVertexShader(leedsPS2VS);
 	setPixelShader(simple4PS);
 
 	uploadMatrices(atomic->getFrame()->getLTM());
 
-	d3ddevice->SetVertexShaderConstantF(VSLOC_ambLight, (float*)&leedsPipe_amb, 1);
+	d3ddevice->SetVertexShaderConstantF(VSLOC_ambient, (float*)&leedsPipe_amb, 1);
 	d3ddevice->SetVertexShaderConstantF(VSLOC_emissive, (float*)&leedsPipe_emiss, 1);
 
 	colorscale[3] = 1.0f;
@@ -59,16 +57,7 @@ leedsRenderCB_PS2(Atomic *atomic, d3d9::InstanceDataHeader *header)
 
 		SetRenderState(VERTEXALPHA, inst->vertexAlpha || inst->material->color.alpha != 255);
 
-		// Material colour
-		rw::RGBAf col;
-		convColor(&col, &inst->material->color);
-		d3ddevice->SetVertexShaderConstantF(VSLOC_matColor, (float*)&col, 1);
-		float surfprops[4];
-		surfprops[0] = inst->material->surfaceProps.ambient;
-		surfprops[1] = inst->material->surfaceProps.specular;
-		surfprops[2] = inst->material->surfaceProps.diffuse;
-		surfprops[3] = 0.5f;
-		d3ddevice->SetVertexShaderConstantF(VSLOC_surfProps, surfprops, 1);
+		setMaterial(inst->material->color, inst->material->surfaceProps, 0.5f);
 
 		drawInst(header, inst);
 
@@ -86,15 +75,12 @@ leedsRenderCB_PSP(Atomic *atomic, d3d9::InstanceDataHeader *header)
 	setIndices(header->indexBuffer);
 	setVertexDeclaration(header->vertexDeclaration);
 
-	d3ddevice->SetVertexShaderConstantF(VSLOC_fogData, (float*)&d3dShaderState.fogData, 1);
-	d3ddevice->SetPixelShaderConstantF(PSLOC_fogColor, (float*)&d3dShaderState.fogColor, 1);
-
 	setVertexShader(leedsPS2VS);
 	setPixelShader(simple4PS);
 
 	uploadMatrices(atomic->getFrame()->getLTM());
 
-	d3ddevice->SetVertexShaderConstantF(VSLOC_ambLight, (float*)&leedsPipe_amb, 1);
+	d3ddevice->SetVertexShaderConstantF(VSLOC_ambient, (float*)&leedsPipe_amb, 1);
 	d3ddevice->SetVertexShaderConstantF(VSLOC_emissive, (float*)&leedsPipe_emiss, 1);
 
 	colorscale[3] = 1.0f;
@@ -111,16 +97,7 @@ leedsRenderCB_PSP(Atomic *atomic, d3d9::InstanceDataHeader *header)
 
 		SetRenderState(VERTEXALPHA, inst->vertexAlpha || inst->material->color.alpha != 255);
 
-		// Material colour
-		rw::RGBAf col;
-		convColor(&col, &inst->material->color);
-		d3ddevice->SetVertexShaderConstantF(VSLOC_matColor, (float*)&col, 1);
-		float surfprops[4];
-		surfprops[0] = inst->material->surfaceProps.ambient;
-		surfprops[1] = inst->material->surfaceProps.specular;
-		surfprops[2] = inst->material->surfaceProps.diffuse;
-		surfprops[3] = 1.22f;
-		d3ddevice->SetVertexShaderConstantF(VSLOC_surfProps, surfprops, 1);
+		setMaterial(inst->material->color, inst->material->surfaceProps, 1.22f);
 
 		drawInst(header, inst);
 
@@ -139,15 +116,12 @@ leedsRenderCB_mobile(Atomic *atomic, d3d9::InstanceDataHeader *header)
 	setIndices(header->indexBuffer);
 	setVertexDeclaration(header->vertexDeclaration);
 
-	d3ddevice->SetVertexShaderConstantF(VSLOC_fogData, (float*)&d3dShaderState.fogData, 1);
-	d3ddevice->SetPixelShaderConstantF(PSLOC_fogColor, (float*)&d3dShaderState.fogColor, 1);
-
 	setVertexShader(leedsPS2VS);
 	setPixelShader(simple4PS);
 
 	uploadMatrices(atomic->getFrame()->getLTM());
 
-	d3ddevice->SetVertexShaderConstantF(VSLOC_ambLight, (float*)&leedsPipe_amb, 1);
+	d3ddevice->SetVertexShaderConstantF(VSLOC_ambient, (float*)&leedsPipe_amb, 1);
 	d3ddevice->SetVertexShaderConstantF(VSLOC_emissive, (float*)&leedsPipe_emiss, 1);
 	
 	colorscale[0] = colorscale[1] = colorscale[2] = colorscale[3] = 1.0f;
@@ -159,16 +133,7 @@ leedsRenderCB_mobile(Atomic *atomic, d3d9::InstanceDataHeader *header)
 
 		SetRenderState(VERTEXALPHA, inst->vertexAlpha || inst->material->color.alpha != 255);
 
-		// Material colour
-		rw::RGBAf col;
-		convColor(&col, &inst->material->color);
-		d3ddevice->SetVertexShaderConstantF(VSLOC_matColor, (float*)&col, 1);
-		float surfprops[4];
-		surfprops[0] = inst->material->surfaceProps.ambient;
-		surfprops[1] = inst->material->surfaceProps.specular;
-		surfprops[2] = inst->material->surfaceProps.diffuse;
-		surfprops[3] = 1.0f;
-		d3ddevice->SetVertexShaderConstantF(VSLOC_surfProps, surfprops, 1);
+		setMaterial(inst->material->color, inst->material->surfaceProps, 1.0f);
 
 		drawInst(header, inst);
 

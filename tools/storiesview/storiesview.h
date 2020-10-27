@@ -90,17 +90,24 @@ extern bool drawWater;
 extern bool drawCol;
 extern bool drawBounds;
 extern bool drawCurrentSector;
+extern bool drawAllInteriors;
+extern int drawFlagged;
 extern bool drawLOD;
 extern bool drawDummies;
 extern bool drawWorld;
 extern bool drawPathNodes;
 extern bool drawUnnamed;
 extern bool drawUnmatched;
+extern bool drawOnlySwaps;
+extern bool ignoreTime;
+extern bool ignoreSwapState;
 extern int frameCounter;
 extern float timeStep;
 extern float avgTimeStep;
 
-extern int currentArea;
+extern int currentInterior;
+extern bool passmask[NUMSECTORLISTS];
+extern int swapstate[100];	// dunno how many we should have
 extern int currentHour;
 extern int currentMinute;
 extern int currentWeather;
@@ -133,9 +140,8 @@ enum SectorType
 struct BuildingExt
 {
 	int id;	// our own id
-	bool isTimed;
-	uint8 timeOn, timeOff;
-	bool hidden;
+	sLevelSwap *swap;
+
 	bool isTransparent;
 	int32 iplId;
 	int interior;
@@ -165,10 +171,7 @@ struct SectorExt
 	rw::V3d origin;
 	SectorType type;
 	int secx, secy;	// world sector indices
-	// for triggered sectors
-	bool isTimed;
-	uint8 timeOn, timeOff;
-	bool hidden;
+	sBuildingSwapInfo *swap;
 
 	int numInstances;
 	rw::Atomic **instances;
@@ -296,7 +299,7 @@ void myRenderCB(rw::Atomic *atomic);
 extern rw::ObjPipeline *colourCodePipe;
 };
 
-
+void updatePassMask(void);
 void gui(void);
 
 void RenderDebugLines(void);

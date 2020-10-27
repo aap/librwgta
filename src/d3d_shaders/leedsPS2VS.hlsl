@@ -2,8 +2,9 @@ float4x4	combined	: register(c0);
 float4		matCol		: register(c12);
 float4		surfProps	: register(c13);
 float4		fogData		: register(c14);
-float3		ambient		: register(c15);
+
 float3		emissive	: register(c16);
+float3		ambient		: register(c17);
 
 #define surfAmb (surfProps.x)
 #define surfEmiss (surfProps.w)

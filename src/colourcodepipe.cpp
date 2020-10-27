@@ -16,6 +16,11 @@ using namespace d3d9;
 
 void *colourcode_PS;
 
+enum {
+	PSLOC_globalColor = 1
+};
+
+
 void
 colourCodeRenderCB(Atomic *atomic, d3d9::InstanceDataHeader *header)
 {
@@ -37,7 +42,7 @@ colourCodeRenderCB(Atomic *atomic, d3d9::InstanceDataHeader *header)
 
 	RGBAf c;
 	convColor(&c, &colourCode);
-	d3ddevice->SetPixelShaderConstantF(PSLOC_fogColor, (float*)&c, 1);
+	d3ddevice->SetPixelShaderConstantF(PSLOC_globalColor, (float*)&c, 1);
 
 	InstanceData *inst = header->inst;
 	uint32 blend;

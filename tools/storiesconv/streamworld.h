@@ -11,6 +11,21 @@
 #define NUMSECTORSY 46
 #endif
 
+enum {
+	SECLIST_SUPERLOD,
+#ifdef VCS
+	SECLIST_UNDERWATER,
+#endif
+	SECLIST_LOD,
+	SECLIST_ROADS,
+	SECLIST_NORMAL,
+	SECLIST_NOZWRITE,
+	SECLIST_LIGHTS,
+	SECLIST_TRANSPARENT,
+	SECLIST_END,
+	NUMSECTORLISTS
+};
+
 // some type names from LCS:
 //	sDMAModel	  // lucid
 //	sDMAMaterial	  // lucid
@@ -72,23 +87,45 @@ struct Resource
 };
 
 // One row of streamable sectors
-struct SectorRow
+struct sLevelSectorDirectory	// not completely sure about the name
 {
 	sChunkHeader *header;	// an array
-	int32 startOff;	// starting offset of this row
+	int32 startOff;	// starting offset of this row, (actually 16 bit i think)
 			// (startOff sectors in the world will be considered empty)
 };
 
-struct TriggerInfo
+struct sLevelSwap
 {
 	// There are three cases:
 	// timeOff == 0xFF -> unconditional swap
 	// timeOff &  0x80 -> timed object with timeOff&0x7F
-	// otherwise -> conditioned by cWorldStream data
+	// otherwise -> timeOff building swap slot, timeOn swap state
 	uint8 timeOff;
 	uint8 timeOn;
-	int16 id;	// instance ID for level, sector ID for sector
+	int16 id;	// instance ID
+
+	bool IsUnconditional(void) { return timeOff == 0xFF; }
+	bool IsTimed(void) { return !!(timeOff&0x80); }
+	int GetTimeOff_Slot(void) { return timeOff&0x7F; }
+	int GetTimeOn_State(void) { return timeOn; }
+	bool IsVisible(void);
 };
+
+typedef sLevelSwap sBuildingSwapInfo;
+/*
+// rather identical to the above
+struct sBuildingSwapInfo
+{
+	uint8 timeOff;
+	uint8 timeOn;
+	int16 id;	// sector ID
+
+	bool IsUnconditional(void) { return timeOff == 0xFF; }
+	bool IsTimed(void) { return !!(timeOff&0x80); }
+	int GetTimeOff_Slot(void) { return timeOff&0x7F; }
+	int GetTimeOn_State(void) { return timeOn; }
+};
+*/
 
 struct AreaResource
 {
@@ -114,11 +151,27 @@ struct AreaInfo
 struct sInteriorSwap
 {
 	uint8 secx, secy;	// position of this sector
-	// not quite sure what these two do exactly
-	uint8 buildingIndex;	// index into the building swap array
-	uint8 buildingSwap;	// some kind of id?
+	uint8 swapSlot;		// index into the building swap array
+	uint8 swapState;	// normally 0 or 1, but can go higher
 	int16 sectorId;		// sector index
 };
+
+struct sDynamic
+{
+	// TODO
+	uint8 fake[48];
+};
+/* from majestic
+struct sDynamic
+{
+    RslV3                    scale;
+    short                    modelInfoId;
+    short                    geometryId;
+    RslV3                    pos;
+    ushort                    flags;
+    short                    geometryId2; // Transparent 
+    RslSphere                boundingSphere;
+};*/
 
 struct OverlayResource
 {
@@ -139,12 +192,15 @@ struct sGeomInstance
 	RslMatrix matrix;
 
 	int16 GetId(void) { return id & 0x7FFF; }
-	bool IsLOD(void) {
+	bool IsFlagged(void) {
+		return !!(id & 0x8000);
+/*
 #ifdef LCS
 		return !(id & 0x8000);
 #else
 		return !!(id & 0x8000);
 #endif
+*/
 	}
 };
 #ifndef RW_PS2
@@ -156,27 +212,18 @@ struct Sector
 	OverlayResource *resources;
 	uint16           numResources;
 	uint16           unk1;
-	sGeomInstance   *sectionA;	// super LODs
-#ifdef VCS
-	sGeomInstance   *sectionB;	// under water LODs
-#endif
-	sGeomInstance   *sectionC;	// LODs
-	sGeomInstance   *sectionD;	// roads
-	sGeomInstance   *sectionE;	// normal HD objects
-	sGeomInstance   *sectionF;	// shadows? no z-write?
-	sGeomInstance   *sectionG;	// lights
-	sGeomInstance   *sectionH;	// Transparent
-	sGeomInstance   *sectionEnd;
-	int16            numTriggeredObjects;
+	sGeomInstance	*passes[NUMSECTORLISTS];
+	int16            numSwaps;
 	uint16           unk3;
-	TriggerInfo     *triggeredObjects;
+	// cf cWorldStream::QueueBuildingSwaps
+	sBuildingSwapInfo *swaps;
 };
 
 struct sLevelChunk	// leeds name
 {
 	Resource *resourceTable;
-	SectorRow sectorRows[NUMSECTORSY];
-	SectorRow sectorEnd;
+	sLevelSectorDirectory sectorRows[NUMSECTORSY];
+	sLevelSectorDirectory sectorEnd;
 	int32 numResources;
 	// Positions for the first 32 building instances...what's so special about them?
 	CVector positions[32];
@@ -185,12 +232,11 @@ struct sLevelChunk	// leeds name
 	int32 numX;
 	void *xs;	// 28 bytes
 #endif
-	int32 numTriggeredObjects;
-	TriggerInfo *triggeredObjects;
+	int32 numLevelSwaps;
+	sLevelSwap *levelSwaps;
 #ifdef LCS
-	// 2dfx according to gtamodding.ru
-	int32 numY;
-	void *ys;	// 48 bytes
+	int32 numDynamics;
+	sDynamic *dynamics;
 #endif
 	int32 numInteriors;
 	sInteriorSwap *interiors;
@@ -201,9 +247,9 @@ struct sLevelChunk	// leeds name
 #endif
 
 #ifdef VCS
-	// 2dfx again?
-	int32 numY;
-	void *ys;	// 48 bytes
+	// dynamics again?
+	int32 numDynamics;
+	sDynamic *dynamics;
 
 	int32 numAreas;
 	AreaInfo *areas;

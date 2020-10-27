@@ -28,13 +28,18 @@ rw::Light *pAmbient;
 bool drawWater = true;
 bool drawCol;
 bool drawBounds;
-bool drawCurrentSector = false;
-bool drawLOD = true;
-bool drawDummies = false;
+bool drawCurrentSector = true;
+bool drawAllInteriors;
+int drawFlagged = 2;
+bool drawLOD;
+bool drawDummies;
 bool drawWorld = true;
 bool drawPathNodes;
 bool drawUnnamed;
 bool drawUnmatched;
+bool drawOnlySwaps;
+bool ignoreTime;
+bool ignoreSwapState;
 int frameCounter = -1;
 float timeStep;
 float avgTimeStep;
@@ -54,7 +59,9 @@ uint8 *gStreamingBuf;
 
 int curSectX = 28;
 int curSectY = 4;
-int currentArea = -1;
+int currentInterior = -1;
+bool passmask[NUMSECTORLISTS];
+int swapstate[100];	// dunno how many we should have
 int currentHour = 12;
 int currentMinute = 0;
 int currentWeather = 0;
@@ -364,6 +371,8 @@ InitRW(void)
 	ImGui_ImplRW_Init();
 	ImGui::StyleColorsClassic();
 
+	updatePassMask();
+
 	return true;
 }
 
@@ -583,6 +592,8 @@ found:
 		LoadSector(i, -1);
 	for(i = 0; i < gLevel->chunk->numInteriors; i++)
 		LoadSector(gLevel->chunk->interiors[i].sectorId, i);
+//	for(i = 0; i < gLevel->numSectors; i++)
+//		LoadSector(i, -1);
 
 #ifdef VCS
 	for(i = 0; i < gLevel->chunk->numAreas; i++)
@@ -975,18 +986,21 @@ Draw(void)
 
 	if(drawWorld){
 //		renderSector(worldSectors[curSectX][curSectY]);
-		if(currentArea >= 0)
-			RenderSector(&gLevel->sectors[gLevel->chunk->interiors[currentArea].sectorId], drawLOD);
+		if(currentInterior >= 0)
+			RenderSector(&gLevel->sectors[gLevel->chunk->interiors[currentInterior].sectorId], drawLOD);
 		else{
 			if(drawCurrentSector){
 				int ix, iy;
 				GetSectorForPosition(TheCamera.m_position.x, TheCamera.m_position.y, &ix, &iy);
 				RenderSector(worldSectors[ix][iy], true);
-				frameCounter++;	// models won't be drawn in the second pass otherwise
-				RenderSector(worldSectors[ix][iy], false);
+			//	frameCounter++;	// models won't be drawn in the second pass otherwise
+			//	RenderSector(worldSectors[ix][iy], false);
 			}else{
 				for(i = 0; i < gLevel->numWorldSectors; i++)
 					RenderSector(&gLevel->sectors[i], drawLOD);
+				if(drawAllInteriors)
+					for(i = 0; i < gLevel->chunk->numInteriors; i++)
+						RenderSector(&gLevel->sectors[gLevel->chunk->interiors[i].sectorId], drawLOD);
 			}
 		}
 	}
@@ -1064,10 +1078,10 @@ AppEventHandler(sk::Event e, void *param)
 	switch(e){
 	case INITIALIZE:
 
-	//	AllocConsole();
-	//	freopen("CONIN$", "r", stdin);
-	//	freopen("CONOUT$", "w", stdout);
-	//	freopen("CONOUT$", "w", stderr);
+		//AllocConsole();
+		//freopen("CONIN$", "r", stdin);
+		//freopen("CONOUT$", "w", stdout);
+		//freopen("CONOUT$", "w", stderr);
 
 		Init();
 		plAttachInput();

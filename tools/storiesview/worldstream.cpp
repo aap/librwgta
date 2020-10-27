@@ -133,18 +133,22 @@ LoadLevel(eLevel lev)
 	}
 
 	// Set up timed objects and hide building swaps, whatever that is exactly
-	TriggerInfo *trig = gLevel->chunk->triggeredObjects;
-	for(i = 0; i < gLevel->chunk->numTriggeredObjects; i++){
-		BuildingExt *be = GetBuildingExt(trig->id);
-		if(trig->timeOff & 0x80){
+	sLevelSwap *swap = gLevel->chunk->levelSwaps;
+	for(i = 0; i < gLevel->chunk->numLevelSwaps; i++){
+		BuildingExt *be = GetBuildingExt(swap->id);
+		be->swap = swap;
+/*
+		be->isSwap = true;
+		if(swap->timeOff & 0x80){
 			be->isTimed = true;
-			be->timeOff = trig->timeOff & 0x7F;
-			be->timeOn = trig->timeOn;
+			be->timeOff = swap->timeOff & 0x7F;
+			be->timeOn = swap->timeOn;
 		}else{
 			be->hidden = true;
 //			printf("%02x %02x\t%d\n", trig->timeOff & 0x7F, trig->timeOn, trig->id);
 		}
-		trig++;
+*/
+		swap++;
 	}
 
 	// Set up interior sectors
@@ -155,7 +159,7 @@ LoadLevel(eLevel lev)
 		se->secy = intr->secy;
 		se->origin = worldSectorPositions[se->secx][se->secy];
 		se->type = SECTOR_INTERIOR;
-	//	printf("%d %d %d %d %d\n", intr->secx, intr->secy, intr->buildingIndex, intr->buildingSwap, intr->sectorId);
+//		printf("%d %d %d %d %d\n", intr->secx, intr->secy, intr->swapSlot, intr->swapState, intr->sectorId);
 		intr++;
 	}
 
@@ -208,7 +212,7 @@ LoadSector(int n, int interior)
 	// Make some room for our RW data
 	if(se->type == SECTOR_WORLD || se->type == SECTOR_INTERIOR){
 		sGeomInstance *inst;
-		for(inst = se->sect->sectionA; inst != se->sect->sectionEnd; inst++){
+		for(inst = se->sect->passes[0]; inst != se->sect->passes[SECLIST_END]; inst++){
 			GetBuildingExt(inst->GetId())->interior = interior;
 //XX			dumpInstBS(gLevel->levelid, inst);
 			se->numInstances++;
@@ -218,20 +222,15 @@ LoadSector(int n, int interior)
 		se->dummies = (rw::Atomic**)malloc(se->numInstances*sizeof(void*));
 		memset(se->dummies, 0, se->numInstances*sizeof(void*));
 
-		TriggerInfo *trig = se->sect->triggeredObjects;
-		for(i = 0; i < se->sect->numTriggeredObjects; i++){
-			SectorExt *se = &gLevel->sectors[trig->id];
+		sBuildingSwapInfo *swap = se->sect->swaps;
+		for(i = 0; i < se->sect->numSwaps; i++){
+			SectorExt *se = &gLevel->sectors[swap->id];
+			se->swap = swap;
 
-			if(trig->timeOff & 0x80){
-				se->isTimed = true;
-				se->timeOff = trig->timeOff & 0x7F;
-				se->timeOn = trig->timeOn;
-			}else
-				se->hidden = true;
-			LoadSector(trig->id, -1);
+			LoadSector(swap->id, -1);
 
 //			printf("%d %d %d\t%d\n", trig->timeOff & 0x80, trig->timeOn, trig->timeOff & 0x7F, trig->id);
-			trig++;
+			swap++;
 		}
 
 	}
@@ -599,7 +598,7 @@ writetex(tex);
 void
 LoadBuildingInst(SectorExt *se, int i)
 {
-	sGeomInstance *inst = &se->sect->sectionA[i];
+	sGeomInstance *inst = &se->sect->passes[0][i];
 	BuildingExt *be = GetBuildingExt(inst->GetId());
 
 	if(se->instances[i])
@@ -643,10 +642,26 @@ LoadSectorInsts(SectorExt *se)
 		LoadBuildingInst(se, i);
 }
 
+bool
+sLevelSwap::IsVisible(void)
+{
+	if(IsUnconditional()){
+		// what here? Does this even happen?
+		return false;
+	}else if(IsTimed()){
+		if(!ignoreTime && !GetIsTimeInRange(GetTimeOn_State(), GetTimeOff_Slot()))
+			return false;
+	}else{
+		if(!ignoreSwapState && swapstate[GetTimeOff_Slot()] != GetTimeOn_State())
+			return false;
+	}
+	return true;
+}
+
 void
 RenderSector(SectorExt *se, bool sectorDrawLOD)
 {
-	int i;
+	int i, j;
 
 	cubeMat->color.red = 255;
 	cubeMat->color.green = 255;
@@ -656,8 +671,10 @@ RenderSector(SectorExt *se, bool sectorDrawLOD)
 	if(se == nil)
 		return;
 
-	for(i = 0; i < se->numInstances; i++){
-		sGeomInstance *inst = &se->sect->sectionA[i];
+	for(j = 0; j < SECLIST_END; j++){
+	for(sGeomInstance *inst = &se->sect->passes[j][0]; passmask[j] && inst != &se->sect->passes[j+1][0]; inst++){
+		i = inst - &se->sect->passes[0][0];
+
 		BuildingExt *be = GetBuildingExt(inst->GetId());
 		BuildingExt::Model *m = be->GetResourceInfo(inst->resId);
 
@@ -672,16 +689,24 @@ RenderSector(SectorExt *se, bool sectorDrawLOD)
 		be->matrix = *(rw::Matrix*)&inst->matrix;
 		be->matrix.pos = add(be->matrix.pos, se->origin);
 
+		bool isSwap = false;
+		if(be->swap){
+			if(!be->swap->IsVisible())
+				continue;
+			isSwap = true;
+		}
 
-//		if(!be->hidden)
-//			continue;
-		if(be->isTimed && !GetIsTimeInRange(be->timeOn, be->timeOff))
-			continue;
-		if(inst->IsLOD() != sectorDrawLOD)
+		if((int)inst->IsFlagged() == drawFlagged)
 			continue;
 
 		ResourceExt *re = &gLevel->res[inst->resId];
-		if(re->sector && re->sector->isTimed && !GetIsTimeInRange(re->sector->timeOn, re->sector->timeOff))
+		if(re->sector && re->sector->swap){
+			if(!re->sector->swap->IsVisible())
+				continue;
+			isSwap = true;
+		}
+
+		if(!isSwap && drawOnlySwaps)
 			continue;
 
 		if(se->instances[i] == nil)
@@ -727,6 +752,7 @@ RenderSector(SectorExt *se, bool sectorDrawLOD)
 		else
 			Renderer::addToOpaqueRenderList(inst, se->instances[i]);
 	}
+	}
 }
 
 void
@@ -742,7 +768,7 @@ RenderCubesSector(SectorExt *se)
 	pAmbient->setColor(1.0f, 1.0f, 1.0f);
 
 	for(i = 0; i < se->numInstances; i++){
-		sGeomInstance *inst = &se->sect->sectionA[i];
+		sGeomInstance *inst = &se->sect->passes[0][i];
 		float x = halfFloatToFloat(inst->bound[0]);
 		float y = halfFloatToFloat(inst->bound[1]);
 		float z = halfFloatToFloat(inst->bound[2]);
