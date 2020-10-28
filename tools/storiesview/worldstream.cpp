@@ -157,11 +157,17 @@ LoadLevel(eLevel lev)
 	memset(gLevel->areas, 0, gLevel->chunk->numAreas*sizeof(void*));
 
 	SwapInfo *swapinfo = gLevel->chunk->swapInfos;
+//FILE *xxx = fopen("C:/vcsinteriors.txt", "w");
 	for(i = 0; i < gLevel->chunk->numSwapInfos; i++){
-	//	printf("%08X %08X %08X %08X %08X %08X %08X\n", swapinfo->entity, swapinfo->hash, swapinfo->swapState, swapinfo->modelA,
-	//		swapinfo->modelB, swapinfo->swapSlot, swapinfo->field_18);
+		//CBaseModelInfo *miA = CModelInfo::Get(swapinfo->modelA);
+		//CBaseModelInfo *miB = CModelInfo::Get(swapinfo->modelB);
+		//fprintf(xxx, "%08X %08X %08X %08X %08X %08X %08X\n", swapinfo->entity, swapinfo->hash, swapinfo->swapState, swapinfo->modelA,
+		//	swapinfo->modelB, swapinfo->swapSlot, swapinfo->field_18);
+		//fprintf(xxx, "\t%s %s\n", miA->name, miB->name);
+		swapinfo->building = pBuildingPool->GetSlot(swapinfo->buildingId);
 		swapinfo++;
 	}
+//fclose(xxx);
 
 //	AreaInfo *ai = gLevel->chunk->areas;
 //	for(i = 0; i < gLevel->chunk->numAreas; i++){
@@ -655,7 +661,7 @@ sLevelSwap::IsVisible(void)
 }
 
 void
-RenderSector(SectorExt *se, bool sectorDrawLOD)
+RenderSector(SectorExt *se)
 {
 	int i, j;
 
@@ -666,6 +672,18 @@ RenderSector(SectorExt *se, bool sectorDrawLOD)
 
 	if(se == nil)
 		return;
+
+	// Replace this sector with its interior counterpart
+/*
+	for(i = 0; i < gLevel->chunk->numInteriors; i++){
+		sInteriorSwap *intr = &gLevel->chunk->interiors[i];
+		if(intr->secx == se->secx && intr->secy == se->secy &&
+		   (drawAllInteriors || swapstate[intr->swapSlot] == intr->swapState)){
+			se = &gLevel->sectors[intr->sectorId];
+			break;
+		}
+	}
+*/
 
 	for(j = 0; j < SECLIST_END; j++){
 	for(sGeomInstance *inst = &se->sect->passes[j][0]; passmask[j] && inst != &se->sect->passes[j+1][0]; inst++){

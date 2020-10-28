@@ -984,23 +984,34 @@ Draw(void)
 	int i;
 	Renderer::reset();
 
+	// See if any interior is switched on,
+	// if so only render *its* sector
+	int foundInterior = -1;
+	for(i = 0; i < gLevel->chunk->numInteriors; i++){
+		sInteriorSwap *intr = &gLevel->chunk->interiors[i];
+		if(swapstate[intr->swapSlot] == intr->swapState){
+			foundInterior = i;
+			break;
+		}
+	}
+
 	if(drawWorld){
 //		renderSector(worldSectors[curSectX][curSectY]);
-		if(currentInterior >= 0)
-			RenderSector(&gLevel->sectors[gLevel->chunk->interiors[currentInterior].sectorId], drawLOD);
+//		if(currentInterior >= 0)
+//			RenderSector(&gLevel->sectors[gLevel->chunk->interiors[currentInterior].sectorId]);
+		if(foundInterior >= 0)
+			RenderSector(&gLevel->sectors[gLevel->chunk->interiors[foundInterior].sectorId]);
 		else{
 			if(drawCurrentSector){
 				int ix, iy;
 				GetSectorForPosition(TheCamera.m_position.x, TheCamera.m_position.y, &ix, &iy);
-				RenderSector(worldSectors[ix][iy], true);
-			//	frameCounter++;	// models won't be drawn in the second pass otherwise
-			//	RenderSector(worldSectors[ix][iy], false);
+				RenderSector(worldSectors[ix][iy]);
 			}else{
 				for(i = 0; i < gLevel->numWorldSectors; i++)
-					RenderSector(&gLevel->sectors[i], drawLOD);
-				if(drawAllInteriors)
-					for(i = 0; i < gLevel->chunk->numInteriors; i++)
-						RenderSector(&gLevel->sectors[gLevel->chunk->interiors[i].sectorId], drawLOD);
+					RenderSector(&gLevel->sectors[i]);
+			//	if(drawAllInteriors)
+			//		for(i = 0; i < gLevel->chunk->numInteriors; i++)
+			//			RenderSector(&gLevel->sectors[gLevel->chunk->interiors[i].sectorId]);
 			}
 		}
 	}

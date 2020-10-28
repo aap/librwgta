@@ -150,13 +150,16 @@ struct AreaInfo
 
 struct SwapInfo
 {
-	uint32 entity;	// some index in file, pointer in memory
+	union {
+		int32 buildingId;	// in file
+		CEntity *building;	// after load
+	};
 	uint32 hash;		// this is the interface to the script
-	uint32 swapState;	// 0 not included
-	uint32 modelA;		// model ID for 0 state
-	uint32 modelB;		// model ID for swapped state
-	uint32 swapSlot;
-	uint32 field_18;
+	int32 swapState;	// 0 not included
+	int32 modelA;		// model ID for 0 state
+	int32 modelB;		// model ID for swapped state
+	int32 swapSlot;
+	int32 field_18;
 };
 
 struct sInteriorSwap

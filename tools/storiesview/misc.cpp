@@ -290,14 +290,11 @@ static void
 walkResources(void)
 {
 	int i;
-	drawLOD = 0;
+	// TODO: this will have to be rewritten
+	drawFlagged = 2;
 	Renderer::reset();
 	for(i = 0; i < gLevel->numSectors; i++)
-		RenderSector(&gLevel->sectors[i], drawLOD);
-	drawLOD = 1;
-	Renderer::reset();
-	for(i = 0; i < gLevel->numSectors; i++)
-		RenderSector(&gLevel->sectors[i], drawLOD);
+		RenderSector(&gLevel->sectors[i]);
 }
 
 void

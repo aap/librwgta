@@ -203,7 +203,7 @@ void LoadLevel(eLevel lev);
 void LoadSector(int n, int interior);
 void LoadArea(int n);
 void LoadSectorInsts(SectorExt *se);
-void RenderSector(SectorExt*, bool sectorDrawLOD);
+void RenderSector(SectorExt*);
 void RenderCubesSector(SectorExt*);
 BuildingExt *GetBuildingExt(int id);
 BuildingExt *FindBuildingExt(int id);

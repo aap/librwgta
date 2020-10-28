@@ -3,6 +3,7 @@
 static bool showTimeWeatherWindow;
 static bool showViewWindow;
 static bool showObjectWindow;
+static bool showSwapWindow;
 
 static void
 advanceHour(int diff)
@@ -56,6 +57,7 @@ uiTimeWeather(void)
 	if(currentInterior >= gLevel->chunk->numInteriors) currentInterior = -1;
 	if(currentInterior < -1) currentInterior = gLevel->chunk->numInteriors-1;
 
+#ifndef VCS
 	static int swapslot;
 	ImGui::PushItemWidth(100);
 	ImGui::BeginGroup();
@@ -69,6 +71,7 @@ uiTimeWeather(void)
 	if(swapstate[swapslot] < 0) swapstate[swapslot] = 0;
 	ImGui::EndGroup();
 	ImGui::PopItemWidth();
+#endif
 }
 
 void
@@ -77,7 +80,7 @@ updatePassMask(void)
 	passmask[SECLIST_SUPERLOD] = drawLOD | drawCurrentSector;
 	passmask[SECLIST_LOD] = drawLOD | drawCurrentSector;
 #ifdef VCS
-	passmask[SECLIST_UNDERWATER] = ~drawLOD | drawCurrentSector;
+	passmask[SECLIST_UNDERWATER] = !drawLOD | drawCurrentSector;
 #endif
 	passmask[SECLIST_ROADS] = !drawLOD | drawCurrentSector;
 	passmask[SECLIST_NORMAL] = !drawLOD | drawCurrentSector;
@@ -284,6 +287,111 @@ uiObject(void)
 #endif
 }
 
+#ifdef VCS
+uint32 selectedHash = -1;
+static void
+uiSwap(void)
+{
+	int i;
+
+	if(ImGui::TreeNode("Swap groups")){
+		int numGroups = 0;
+		uint32 lastHash = -1;
+		lastHash = -1;
+		for(i = 0; i < gLevel->chunk->numSwapInfos; i++){
+			if(lastHash == gLevel->chunk->swapInfos[i].hash)
+				continue;
+			lastHash = gLevel->chunk->swapInfos[i].hash;
+			numGroups++;
+		}
+		int nPerCol = (numGroups+2)/3;
+
+		ImGui::Columns(3, "swapgroups", false);
+		ImGui::Separator();
+		lastHash = -1;
+		int n = 0;
+		for(i = 0; i < gLevel->chunk->numSwapInfos; i++){
+			char label[32];
+			if(lastHash == gLevel->chunk->swapInfos[i].hash)
+				continue;
+			lastHash = gLevel->chunk->swapInfos[i].hash;
+			sprintf(label, "%X", gLevel->chunk->swapInfos[i].hash);
+			if(ImGui::Selectable(label))
+				selectedHash = gLevel->chunk->swapInfos[i].hash;
+			//if (ImGui::Button(label, ImVec2(-1,0))) {}
+			if(++n == nPerCol){
+				ImGui::NextColumn();
+				n = 0;
+			}
+		}
+		ImGui::Columns(1);
+		ImGui::Separator();
+		ImGui::TreePop();
+	}
+
+	if(selectedHash != -1){
+		static char tmp[128];
+		sprintf(tmp, "Group: %X", selectedHash);
+		ImGui::Text(tmp);
+		ImGui::Columns(5, "thisgroup", true);
+		ImGui::Separator();
+		ImGui::Text("Entity"); ImGui::NextColumn();
+		ImGui::Text("slot"); ImGui::NextColumn();
+		ImGui::Text("state"); ImGui::NextColumn();
+		ImGui::Text("model A"); ImGui::NextColumn();
+		ImGui::Text("model B"); ImGui::NextColumn();
+		ImGui::Separator();
+		for(i = 0; i < gLevel->chunk->numSwapInfos; i++){
+			SwapInfo *si = &gLevel->chunk->swapInfos[i];
+			if(si->hash != selectedHash)
+				continue;
+			
+			sprintf(tmp, "%p", si->building);
+			EntityExt *ee = (EntityExt*)si->building->vtable;
+			if(ImGui::Selectable(tmp))
+				ee->JumpTo();
+			ImGui::NextColumn();
+			sprintf(tmp, "%d", si->swapSlot);
+			ImGui::Selectable(tmp);
+			ImGui::NextColumn();
+			sprintf(tmp, "%d##swap%d", si->swapState, i);
+			bool highlight = swapstate[si->swapSlot] == si->swapState;
+			if(highlight)
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 1.0f, 1.0f));
+			if(ImGui::Selectable(tmp)){
+				if(swapstate[si->swapSlot] == si->swapState){
+					si->building->modelIndex = si->modelA;
+					swapstate[si->swapSlot] = 0;
+				}else{
+					si->building->modelIndex = si->modelB;
+					swapstate[si->swapSlot] = si->swapState;
+				}
+			}
+			if(highlight)
+				ImGui::PopStyleColor();
+			ImGui::NextColumn();
+
+			CBaseModelInfo *miA = CModelInfo::Get(si->modelA);
+			CBaseModelInfo *miB = CModelInfo::Get(si->modelB);
+			ImGui::Selectable(miA->name);
+			ImGui::NextColumn();
+			ImGui::Selectable(miB->name);
+			ImGui::NextColumn();
+		}
+		ImGui::Columns(1);
+		ImGui::Separator();
+	}
+	if(ImGui::Button("Reset swaps")){
+		for(i = 0; i < nelem(swapstate); i++)
+			swapstate[i] = 0;
+		for(i = 0; i < gLevel->chunk->numSwapInfos; i++){
+			SwapInfo *si = &gLevel->chunk->swapInfos[i];
+			si->building->modelIndex = si->modelA;
+		}
+	}
+}
+#endif
+
 void
 gui(void)
 {
@@ -307,6 +415,15 @@ gui(void)
 		uiObject();
 		ImGui::End();
 	}
+
+#ifdef VCS
+	if(CPad::IsKeyJustDown('X')) showSwapWindow ^= 1;
+	if(showSwapWindow){
+		ImGui::Begin("Swap", &showSwapWindow);
+		uiSwap();
+		ImGui::End();
+	}
+#endif VCS	
 
 /*
 	// re-enable these later when we're editing again
