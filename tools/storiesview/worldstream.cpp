@@ -137,17 +137,6 @@ LoadLevel(eLevel lev)
 	for(i = 0; i < gLevel->chunk->numLevelSwaps; i++){
 		BuildingExt *be = GetBuildingExt(swap->id);
 		be->swap = swap;
-/*
-		be->isSwap = true;
-		if(swap->timeOff & 0x80){
-			be->isTimed = true;
-			be->timeOff = swap->timeOff & 0x7F;
-			be->timeOn = swap->timeOn;
-		}else{
-			be->hidden = true;
-//			printf("%02x %02x\t%d\n", trig->timeOff & 0x7F, trig->timeOn, trig->id);
-		}
-*/
 		swap++;
 	}
 
@@ -166,6 +155,13 @@ LoadLevel(eLevel lev)
 #ifdef VCS
 	gLevel->areas = (Area**)malloc(gLevel->chunk->numAreas*sizeof(void*));
 	memset(gLevel->areas, 0, gLevel->chunk->numAreas*sizeof(void*));
+
+	SwapInfo *swapinfo = gLevel->chunk->swapInfos;
+	for(i = 0; i < gLevel->chunk->numSwapInfos; i++){
+	//	printf("%08X %08X %08X %08X %08X %08X %08X\n", swapinfo->entity, swapinfo->hash, swapinfo->swapState, swapinfo->modelA,
+	//		swapinfo->modelB, swapinfo->swapSlot, swapinfo->field_18);
+		swapinfo++;
+	}
 
 //	AreaInfo *ai = gLevel->chunk->areas;
 //	for(i = 0; i < gLevel->chunk->numAreas; i++){

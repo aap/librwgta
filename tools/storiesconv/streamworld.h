@@ -148,6 +148,17 @@ struct AreaInfo
 	int32 numResources;
 };
 
+struct SwapInfo
+{
+	uint32 entity;	// some index in file, pointer in memory
+	uint32 hash;		// this is the interface to the script
+	uint32 swapState;	// 0 not included
+	uint32 modelA;		// model ID for 0 state
+	uint32 modelB;		// model ID for swapped state
+	uint32 swapSlot;
+	uint32 field_18;
+};
+
 struct sInteriorSwap
 {
 	uint8 secx, secy;	// position of this sector
@@ -229,8 +240,8 @@ struct sLevelChunk	// leeds name
 	CVector positions[32];
 
 #ifdef VCS
-	int32 numX;
-	void *xs;	// 28 bytes
+	int32 numSwapInfos;
+	SwapInfo *swapInfos;	// 28 bytes
 #endif
 	int32 numLevelSwaps;
 	sLevelSwap *levelSwaps;
