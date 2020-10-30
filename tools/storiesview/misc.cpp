@@ -39,7 +39,7 @@ dumpInstBS(int level, sGeomInstance *inst)
 	float r = halfFloatToFloat(inst->bound[3]);
 	BuildingExt *be = GetBuildingExt(inst->GetId());
 
-	fprintf(logfile, "%X %d %d  %f %f %f %f", inst->GetId() | level<<16, inst->IsFlagged(), be->interior, x, y, z, r);
+//	fprintf(logfile, "%X %d %d  %f %f %f %f", inst->GetId() | level<<16, inst->IsFlagged(), be->interior, x, y, z, r);
 	//if(be->isTimed)
 	//	fprintf(logfile, " %d %d", be->timeOn, be->timeOff);
 	fprintf(logfile, "\n");
@@ -99,6 +99,7 @@ struct Link
 {
 	int worldId;
 	int iplId;
+	int modelId;
 } inactiveLinks[0x8000];
 int numInactiveLinks;
 
@@ -108,7 +109,7 @@ char *linkpath = "C:\\vcs_links.txt";
 #else
 Link filelinks[] = {
 #include "vcs_links.inc"
-	{ -1, -1 }
+	{ -1, -1, -1 }
 };
 #endif
 
@@ -155,28 +156,33 @@ LinkInstances(void)
 	}
 
 	int levid = gLevel->levelid << 16;
-	int worldId, iplId;
+	int worldId, iplId, modelId;
 
 #ifdef EDIT_LINKS
 	FILE *f = fopen(linkpath, "r");
 	if(f == nil)
-		abort();
+		return;//abort();
 
-	while(fscanf(f, "%x %x", &worldId, &iplId) == 2){
+	while(fscanf(f, "%x %x %d", &worldId, &iplId, &modelId) == 3){
+//	while(fscanf(f, "%x %x", &worldId, &iplId) == 2){
 #else
 	for(Link *l = filelinks;
-	    worldId = l->worldId, iplId = l->iplId, worldId >= 0;
+	    worldId = l->worldId, iplId = l->iplId, modelId = l->modelId, worldId >= 0;
 	    l++){
 #endif
-		if((worldId & ~0xFFFF) != levid){
+		if((worldId & ~0xFFFF) == levid){
+			be = GetBuildingExt(worldId&0x7FFF);
+			be->SetEntity(iplId);
+			if(modelId >= 0)
+				be->modelId = modelId;
+		}else{
 			inactiveLinks[numInactiveLinks].worldId = worldId;
 			inactiveLinks[numInactiveLinks].iplId = iplId;
+			inactiveLinks[numInactiveLinks].modelId = modelId;
 			numInactiveLinks++;
-			continue;
 		}
-
-		be = GetBuildingExt(worldId&0x7FFF);
-		be->SetEntity(iplId);
+		if(modelId >= 0)	// pretty much guaranteed
+			GetModelInfoExt(modelId)->buildingId = worldId;
 	}
 
 #ifdef EDIT_LINKS
@@ -233,7 +239,7 @@ WriteLinks(void)
 		ee = (EntityExt*)e->vtable;
 		iplId = i;
 		for(j = 0; j < ee->n; j++)
-			fprintf(f, "%x %x\n", ee->insts[j]->id | levid, iplId);
+			fprintf(f, "%x %x %d\n", ee->insts[j]->id | levid, iplId, ee->insts[j]->modelId);
 	}
 	n = pTreadablePool->GetSize();
 	for(i = 0; i < n; i++){
@@ -243,13 +249,42 @@ WriteLinks(void)
 		ee = (EntityExt*)e->vtable;
 		iplId = i | 0x10000;
 		for(j = 0; j < ee->n; j++)
-			fprintf(f, "%x %x\n", ee->insts[j]->id | levid, iplId);
+			fprintf(f, "%x %x %d\n", ee->insts[j]->id | levid, iplId, ee->insts[j]->modelId);
 	}
 	for(i = 0; i < numInactiveLinks; i++)
-		fprintf(f, "%x %x\n", inactiveLinks[i].worldId, inactiveLinks[i].iplId);
+		fprintf(f, "%x %x %d\n", inactiveLinks[i].worldId, inactiveLinks[i].iplId, inactiveLinks[i].modelId);
 
 	fclose(f);
 #endif
+}
+
+
+//throw away function
+void
+dumpModelInfoLinks(void)
+{
+	int i;
+	for(i = 0; i < CModelInfo::msNumModelInfos; i++){
+		CBaseModelInfo *mi = CModelInfo::Get(i);
+		ModelInfoExt *mie = GetModelInfoExt(i);
+		if(mi == nil) continue;
+		CStreamingInfo *si = &pStreaming->ms_aInfoForModel[i];
+		char *txdname = CTexListStore::GetSlot(mi->txdSlot)->name;
+		if(si->cdSize > 0)
+			continue;
+		if(mie->buildingId >= 0)
+			continue;
+		if(mie->inst != nil)
+			continue;
+		if(mie->isSwap)
+			continue;
+		if(strcmp(txdname, "knackers") != 0)
+			continue;
+//		if(strncmp(mi->name, "eb_", 3) == 0)	// empire dummies
+//			continue;
+
+		fprintf(logfile, "%d %s %s\n", i, mi->name, txdname);
+	}
 }
 
 #else
@@ -289,12 +324,12 @@ LinkInstances(void)
 static void
 walkResources(void)
 {
-	int i;
-	// TODO: this will have to be rewritten
-	drawFlagged = 2;
-	Renderer::reset();
-	for(i = 0; i < gLevel->numSectors; i++)
-		RenderSector(&gLevel->sectors[i]);
+//	int i;
+//	// TODO: this will have to be rewritten
+//	drawFlagged = 2;
+//	Renderer::reset();
+//	for(i = 0; i < gLevel->numSectors; i++)
+//		RenderSector(&gLevel->sectors[i]);
 }
 
 void
@@ -469,27 +504,37 @@ DumpModels(void)
 	BuildingExt::Model *mdl;
 	ModelInfoExt *mie;
 	CEntity *e;
-	EntityExt *ee;
+//	EntityExt *ee;
 	Resource *res;
 	rw::Geometry *geoa, *geob;
 	rw::Frame *f;
 	rw::Atomic *a;
 	rw::Clump *c;
 
-	walkResources();
+//	walkResources();
 
 	for(i = 0; i < CModelInfo::msNumModelInfos; i++){
 		mi = CModelInfo::Get(i);
 		mie = GetModelInfoExt(i);
 		if(mi == nil) continue;
 
-		e = mie->inst;
-		if(e == nil) continue;
+		if(mie->buildingId < 0)
+			continue;		// no building we can convert
+		if((mie->buildingId>>16) != gLevel->levelid)
+			continue;		// model isn't in this level
 
-		ee = (EntityExt*)e->vtable;
-		if(ee->n != 1) continue;
+		be = GetBuildingExt(mie->buildingId & 0x7FFF);
+		assert(be->modelId == i);
+		e = GetEntityById(be->iplId);
+		assert(e);
 
-		be = ee->insts[0];
+//		e = mie->inst;
+//		if(e == nil) continue;
+//
+//		ee = (EntityExt*)e->vtable;
+//		if(ee->n != 1) continue;
+//
+//		be = ee->insts[0];
 		/* never more than 2 */
 		geoa = nil; geob = nil;
 		for(mdl = be->resources; mdl; mdl = mdl->next){

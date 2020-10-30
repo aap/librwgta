@@ -148,7 +148,8 @@ drawEntityCol(CEntity *e)
 	EntityExt *ee = (EntityExt*)e->vtable;
 
 	if(drawUnmatched)
-		if(ee->n == 1)
+	//	if(ee->n == 1)
+		if(ee->n > 0)
 			return;
 	if(!drawCol && ee->highlight == 0 && !ee->selected)
 		return;

@@ -28,8 +28,8 @@ typedef uint16 float16;
 //#define EDIT_LINKS
 #define LODNAMES
 
-//#define DUMPMODELS
 //#define DUMPCOLLISION
+//#define DUMPMODELS
 //#define DUMPTEXTURES
 
 
@@ -136,15 +136,22 @@ enum SectorType
 	SECTOR_TRIG,	// only resources
 };
 
+struct SectorExt;
+
 // streamed world
 struct BuildingExt
 {
 	int id;	// our own id
 	sLevelSwap *swap;
 
-	bool isTransparent;
 	int32 iplId;
-	int interior;
+	int32 modelId;
+
+	sGeomInstance *inst;	// a random instance
+	SectorExt *sect;	// sector that instance is in
+
+	bool isTransparent;
+//	int interior;	// not useful
 	bool selected;
 	int highlight;
 	rw::LLLink inSelection;
@@ -232,7 +239,11 @@ struct EntityExt
 
 struct ModelInfoExt
 {
+	// do we even need this anymore?
 	CEntity *inst;	// a random instance
+
+	int buildingId;	// a random one, not necessary in this level!
+	bool isSwap;	// will be swapped in for something else
 };
 extern ModelInfoExt *pModelInfoExts;
 void InitModelInfoExt(void);
@@ -328,6 +339,8 @@ void WriteLinks(void);
 
 void DumpCollisions(void);
 void DumpModels(void);
+
+void dumpModelInfoLinks(void);
 
 enum {
 	TexName = 1,

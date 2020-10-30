@@ -139,6 +139,20 @@
 	{ 0xf5e2484e, "pmkb_chr_tbl_test" },
 	{ 0xf36b099c, "jm_barrier01" },
 
+	{ 0xc7b9c9ab, "jm_htl_bar" },
+	{ 0xCCA0D44E, "jm_concbar" },
+	{ 0xACF41998, "jm_ivy01", },
+
+	// empty objects
+	{ 0x30ec5765, "dr_roofblokb01" },
+	{ 0xa9e506df, "dr_roofblokb02" },
+	{ 0xdee23649, "dr_roofblokb03" },
+	{ 0x312e3d52, "dr_roofblokc01" },
+	{ 0xa8276ce8, "dr_roofblokc02" },
+	{ 0xdf205c7e, "dr_roofblokc03" },
+	{ 0x4144c9dd, "dr_roofblokc04" },
+	{ 0x3643f94b, "dr_roofblokc05" },
+
 	{ 0x754f004b, "ed_airliner" },
 	{ 0xd8771995, "LODairliner" },
 	{ 0xC4A0712B, "ed_flamingo" },

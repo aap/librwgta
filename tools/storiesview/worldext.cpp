@@ -12,6 +12,7 @@ GetBuildingExt(int id)
 	be = (BuildingExt*)malloc(sizeof(BuildingExt));
 	memset(be, 0, sizeof(BuildingExt));
 	be->iplId = -1;
+	be->modelId = -1;
 	be->id = id;
 	gLevel->buildings[id] = be;
 	return be;
@@ -112,6 +113,7 @@ EntityExt::AddBuilding(BuildingExt *b)
 	this->insts = rwResizeT(BuildingExt*, this->insts, this->n, 0);
 	this->insts[this->n-1] = b;
 	b->iplId = this->GetIplID();
+	b->modelId = this->entity->modelIndex;
 }
 
 void
@@ -119,6 +121,7 @@ EntityExt::RemoveBuilding(BuildingExt *b)
 {
 	int i;
 	b->iplId = -1;
+	b->modelId = -1;
 	for(i = 0; i < this->n; i++)
 		if(this->insts[i] == b){
 			memmove(&this->insts[i], &this->insts[i+1], sizeof(void*)*(this->n-(i+1)));

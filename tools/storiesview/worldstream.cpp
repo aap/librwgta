@@ -165,6 +165,8 @@ LoadLevel(eLevel lev)
 		//	swapinfo->modelB, swapinfo->swapSlot, swapinfo->field_18);
 		//fprintf(xxx, "\t%s %s\n", miA->name, miB->name);
 		swapinfo->building = pBuildingPool->GetSlot(swapinfo->buildingId);
+		GetModelInfoExt(swapinfo->modelA)->isSwap = true;
+		GetModelInfoExt(swapinfo->modelB)->isSwap = true;
 		swapinfo++;
 	}
 //fclose(xxx);
@@ -215,7 +217,11 @@ LoadSector(int n, int interior)
 	if(se->type == SECTOR_WORLD || se->type == SECTOR_INTERIOR){
 		sGeomInstance *inst;
 		for(inst = se->sect->passes[0]; inst != se->sect->passes[SECLIST_END]; inst++){
-			GetBuildingExt(inst->GetId())->interior = interior;
+			BuildingExt *be = GetBuildingExt(inst->GetId());
+			be->inst = inst;
+			be->sect = se;
+
+//useless		GetBuildingExt(inst->GetId())->interior = interior;
 //XX			dumpInstBS(gLevel->levelid, inst);
 			se->numInstances++;
 		}
@@ -605,6 +611,7 @@ LoadBuildingInst(SectorExt *se, int i)
 
 	if(se->instances[i])
 		return;
+	be->GetResourceInfo(inst->resId);	// to collect the models
 	Resource *res = GetResource(inst->resId);
 
 	rw::Geometry *geo = nil;
@@ -632,6 +639,7 @@ LoadBuildingInst(SectorExt *se, int i)
 	m.pos = add(m.pos, se->origin);
 
 	m.optimize();
+	be->matrix = m;
 	f->transform(&m, rw::COMBINEREPLACE);
 	se->instances[i] = a;
 }
@@ -692,16 +700,14 @@ RenderSector(SectorExt *se)
 		BuildingExt *be = GetBuildingExt(inst->GetId());
 		BuildingExt::Model *m = be->GetResourceInfo(inst->resId);
 
-		//if(!(inst >= se->sect->sectionA && inst < se->sect->sectionB))
-		//	continue;
-
 		if(m->lastFrame == frameCounter)
 			continue;
 		m->lastFrame = frameCounter;
 
 		// remember matrix for dff dumping
-		be->matrix = *(rw::Matrix*)&inst->matrix;
-		be->matrix.pos = add(be->matrix.pos, se->origin);
+		// shouldn't be needed anymore
+		//be->matrix = *(rw::Matrix*)&inst->matrix;
+		//be->matrix.pos = add(be->matrix.pos, se->origin);
 
 		bool isSwap = false;
 		if(be->swap){
@@ -738,7 +744,8 @@ RenderSector(SectorExt *se)
 			if(be->iplId >= 0){
 				CEntity *e = GetEntityById(be->iplId);
 				EntityExt *ee = (EntityExt*)e->vtable;
-				if(ee->n == 1)
+			//	if(ee->n == 1)
+				if(ee->n > 0)
 					continue;
 			}//else
 			//	continue;

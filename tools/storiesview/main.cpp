@@ -592,8 +592,6 @@ found:
 		LoadSector(i, -1);
 	for(i = 0; i < gLevel->chunk->numInteriors; i++)
 		LoadSector(gLevel->chunk->interiors[i].sectorId, i);
-//	for(i = 0; i < gLevel->numSectors; i++)
-//		LoadSector(i, -1);
 
 #ifdef VCS
 	for(i = 0; i < gLevel->chunk->numAreas; i++)
@@ -613,6 +611,11 @@ found:
 #ifdef DUMPMODELS
 	DumpModels();
 #endif
+
+	// See which modelinfos have missing geometry
+//	openLogFile("C:/vcs_mi_links.txt");
+//	dumpModelInfoLinks();
+//	closeLogFile();
 
 //XX	closeLogFile();
 
@@ -1009,9 +1012,9 @@ Draw(void)
 			}else{
 				for(i = 0; i < gLevel->numWorldSectors; i++)
 					RenderSector(&gLevel->sectors[i]);
-			//	if(drawAllInteriors)
-			//		for(i = 0; i < gLevel->chunk->numInteriors; i++)
-			//			RenderSector(&gLevel->sectors[gLevel->chunk->interiors[i].sectorId]);
+				if(drawAllInteriors)
+					for(i = 0; i < gLevel->chunk->numInteriors; i++)
+						RenderSector(&gLevel->sectors[gLevel->chunk->interiors[i].sectorId]);
 			}
 		}
 	}

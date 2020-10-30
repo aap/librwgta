@@ -1069,10 +1069,11 @@ extractResource(void)
 #endif
 //	dumpPedStats();
 
-	dumpPathNodeCoors();
+//	dumpPathNodeCoors();
 
-//	writeAllModelInfo();
-//	dump2dfx();
+	// use this to dump vcs.ide
+	//writeAllModelInfo();
+	//dump2dfx();
 
 //	dumpTxdStore();
 
@@ -1080,13 +1081,14 @@ extractResource(void)
 //	extractMarkers();
 //	writeWaterpro();
 
-//	printf("inst\n");
-//	dumpInstances(gamedata->buildingPool);
-//	printf("\n");
-//	dumpInstances(gamedata->treadablePool);
-//	printf("\n");
-//	dumpInstances(gamedata->dummyPool);
-//	printf("end\n");
+	// use this to dump vcs.ipl
+	printf("inst\n");
+	dumpInstances(gamedata->buildingPool);
+	printf("\n");
+	dumpInstances(gamedata->treadablePool);
+	printf("\n");
+	dumpInstances(gamedata->dummyPool);
+	printf("end\n");
 
 //	printf("zone\n");
 //	dumpZones();
@@ -1168,7 +1170,7 @@ dumpSector(Sector *sector)
 //	if((sector->unk1 & 2) == 0)	// this is wrong
 		return;
 
-	for(inst = sector->sectionA; inst != sector->sectionEnd; inst++){
+	for(inst = sector->passes[0]; inst != sector->passes[SECLIST_END]; inst++){
 		// these are in worldspace, and per object not per model placement
 		float x = halfFloatToFloat(inst->bound[0]);
 		float y = halfFloatToFloat(inst->bound[1]);

@@ -148,11 +148,21 @@ entityInfo(CEntity *e)
 	CBaseModelInfo *mi = CModelInfo::Get(e->modelIndex);
 	EntityExt *ee = (EntityExt*)e->vtable;
 
-	strcpy(tmp, mi->name);
-	ImGui::InputText("X", tmp, 64);
-//	ImGui::Text("model: %s", mi->name);
+//	ImGui::Text("model: %d, ", e->modelIndex);
+//	ImGui::SameLine();
+//	strcpy(tmp, mi->name);
+//	ImGui::InputText(".", tmp, 64);
+	ImGui::Text("model: %d, %s", e->modelIndex, mi->name);
+	if(mi->type == MODELINFO_SIMPLE || mi->type == MODELINFO_TIME){
+		CTimeModelInfo *si = (CTimeModelInfo*)mi;
+		ImGui::SameLine();
+		ImGui::Text(", %d, %f", si->numObjects, si->drawDistances[0]);
+		if(mi->type == MODELINFO_TIME){
+			ImGui::Text("time: %d %d", si->timeOn, si->timeOff);
+		}
+	}
 
-	sprintf(tmp, "ipl: %d, 0x%X", e->modelIndex, ee->GetIplID());
+	sprintf(tmp, "Entity 0x%X %p", ee->GetIplID(), e);
 	ImGui::PushID(e);
 	ImGui::Selectable(tmp);
 	ImGui::PopID();
@@ -164,8 +174,10 @@ entityInfo(CEntity *e)
 			ee->JumpTo();
 	}
 
+	ImGui::Text("Buildings:");
 	for(i = 0; i < ee->n; i++){
-		sprintf(tmp, "  %p", ee->insts[i]);
+		sprintf(tmp, "  0x%X %d %s", ee->insts[i]->id, ee->insts[i]->modelId,
+			CModelInfo::Get(ee->insts[i]->modelId)->name);
 		ImGui::PushID(ee->insts[i]);
 		ImGui::Selectable(tmp);
 		ImGui::PopID();
@@ -214,7 +226,8 @@ uiObject(void)
 
 	BuildingExt *b = BuildingExt::GetSelection();
 	if(b && ImGui::TreeNode("Building")){
-		ImGui::Text("%p", b);
+		ImGui::Text("0x%X %p", b->id, b);
+		ImGui::Separator();
 		if(b->iplId >= 0){
 			CEntity *e = GetEntityById(b->iplId);
 			entityInfo(e);
@@ -241,6 +254,8 @@ uiObject(void)
 		ImGui::TreePop();
 	}
 
+	ImGui::Separator();
+
 	if(ImGui::TreeNode("Instances")){
 		static ImGuiTextFilter filter;
 		filter.Draw();
@@ -264,6 +279,32 @@ uiObject(void)
 				listEntity(e, &filter, highlight);
 			}
 		}
+		ImGui::TreePop();
+	}
+
+	if(ImGui::TreeNode("Building")){
+		for(i = 0; i < 0x8000; i++){
+			if(gLevel->buildings[i] == nil)
+				continue;
+			BuildingExt *b = gLevel->buildings[i];
+			if(b->iplId < 0 || b->modelId < 0){
+				char tmp[100];
+				sprintf(tmp, "%X  %X  %d", i, b->iplId, b->modelId);
+				ImGui::PushID(i);
+				ImGui::Selectable(tmp);
+				ImGui::PopID();
+				if(ImGui::IsItemHovered()){
+					if(ImGui::IsMouseClicked(1))
+						b->Select();
+					if(ImGui::IsMouseDoubleClicked(0)){
+						rw::V3d pos = add(*(rw::V3d*)&b->inst->matrix.pos, b->sect->origin);
+						TheCamera.setTarget(pos);
+						TheCamera.setDistanceFromTarget(TheCamera.minDistToSphere(halfFloatToFloat(b->inst->bound[3])));
+					}
+				}
+			}
+		}
+		ImGui::TreePop();
 	}
 
 #ifdef EDIT_LINKS
@@ -288,6 +329,22 @@ uiObject(void)
 }
 
 #ifdef VCS
+static void
+doswap(uint32 group, int state)
+{
+	int i;
+	for(i = 0; i < gLevel->chunk->numSwapInfos; i++){
+		SwapInfo *si = &gLevel->chunk->swapInfos[i];
+		if(si->hash == group){
+			if(state == 0)
+				si->building->modelIndex = si->modelA;
+			else if(state == si->swapState)
+				si->building->modelIndex = si->modelB;
+			swapstate[si->swapSlot] = state;
+		}
+	}
+}
+
 uint32 selectedHash = -1;
 static void
 uiSwap(void)
@@ -345,20 +402,32 @@ uiSwap(void)
 			SwapInfo *si = &gLevel->chunk->swapInfos[i];
 			if(si->hash != selectedHash)
 				continue;
-			
-			sprintf(tmp, "%p", si->building);
+
+//			sprintf(tmp, "%p", si->building);
+			sprintf(tmp, "0x%X", ((EntityExt*)si->building->vtable)->GetIplID());
 			EntityExt *ee = (EntityExt*)si->building->vtable;
-			if(ImGui::Selectable(tmp))
-				ee->JumpTo();
+			ImGui::Selectable(tmp);
+			if(ImGui::IsItemHovered()){
+				ee->highlight = 1;
+				if(ImGui::IsMouseClicked(1))
+					ee->Select();
+				if(ImGui::IsMouseClicked(0))
+					ee->JumpTo();
+			}
 			ImGui::NextColumn();
 			sprintf(tmp, "%d", si->swapSlot);
-			ImGui::Selectable(tmp);
+			ImGui::Text(tmp);
 			ImGui::NextColumn();
 			sprintf(tmp, "%d##swap%d", si->swapState, i);
 			bool highlight = swapstate[si->swapSlot] == si->swapState;
 			if(highlight)
 				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 1.0f, 1.0f));
 			if(ImGui::Selectable(tmp)){
+				if(swapstate[si->swapSlot] == si->swapState)
+					doswap(selectedHash, 0);
+				else
+					doswap(selectedHash, si->swapState);
+/*
 				if(swapstate[si->swapSlot] == si->swapState){
 					si->building->modelIndex = si->modelA;
 					swapstate[si->swapSlot] = 0;
@@ -366,6 +435,7 @@ uiSwap(void)
 					si->building->modelIndex = si->modelB;
 					swapstate[si->swapSlot] = si->swapState;
 				}
+*/
 			}
 			if(highlight)
 				ImGui::PopStyleColor();
@@ -373,9 +443,9 @@ uiSwap(void)
 
 			CBaseModelInfo *miA = CModelInfo::Get(si->modelA);
 			CBaseModelInfo *miB = CModelInfo::Get(si->modelB);
-			ImGui::Selectable(miA->name);
+			ImGui::Text(miA->name);
 			ImGui::NextColumn();
-			ImGui::Selectable(miB->name);
+			ImGui::Text(miB->name);
 			ImGui::NextColumn();
 		}
 		ImGui::Columns(1);
@@ -411,6 +481,7 @@ gui(void)
 
 	if(CPad::IsKeyJustDown('I')) showObjectWindow ^= 1;
 	if(showObjectWindow){
+		ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiCond_FirstUseEver);
 		ImGui::Begin("Object", &showObjectWindow);
 		uiObject();
 		ImGui::End();
@@ -419,24 +490,22 @@ gui(void)
 #ifdef VCS
 	if(CPad::IsKeyJustDown('X')) showSwapWindow ^= 1;
 	if(showSwapWindow){
+		ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiCond_FirstUseEver);
 		ImGui::Begin("Swap", &showSwapWindow);
 		uiSwap();
 		ImGui::End();
 	}
 #endif VCS	
 
-/*
-	// re-enable these later when we're editing again
+#ifdef EDIT_LINKS
 	if(CPad::IsKeyJustDown('H')){
 		drawCol = !drawCol;
 		drawWorld = !drawCol;
 	}
 	if(CPad::IsKeyJustDown('B'))
 		drawBounds = !drawBounds;
-*/
 
-#ifdef EDIT_LINKS
-	if(CPad::IsKeyJustDown('X') &&
+	if(CPad::IsKeyJustDown('C') &&
 	   EntityExt::selection.count() == 1 &&
 	   BuildingExt::selection.count() == 1){
 		BuildingExt *b = BuildingExt::GetSelection();
