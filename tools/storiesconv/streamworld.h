@@ -172,20 +172,15 @@ struct sInteriorSwap
 
 struct sDynamic
 {
-	// TODO
-	uint8 fake[48];
+	// from majestic. looks right
+	RslV3 scale;
+	int16 modelId;
+	int16 resId;
+	RslV3 pos;
+	uint16 flags;
+	int16 resId2;	// transparent
+	float bounds[4];
 };
-/* from majestic
-struct sDynamic
-{
-    RslV3                    scale;
-    short                    modelInfoId;
-    short                    geometryId;
-    RslV3                    pos;
-    ushort                    flags;
-    short                    geometryId2; // Transparent 
-    RslSphere                boundingSphere;
-};*/
 
 struct OverlayResource
 {

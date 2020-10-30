@@ -558,9 +558,14 @@ DumpModels(void)
 		m.transform(&inv, rw::COMBINEPOSTCONCAT);
 		//rw::Matrix::mult(&m, &be->matrix, &inv);
 
-		if(geoa && geob)
-			geoa = makeGeo(geoa, geob);
-//		transformGeo(geoa, &be->matrix);
+		bool isGeoTransparent(rw::Geometry *geo);
+		if(geoa && geob){
+			// want to have transparent objects last
+			if(isGeoTransparent(geoa))
+				geoa = makeGeo(geob, geoa);
+			else
+				geoa = makeGeo(geoa, geob);
+		}
 		transformGeo(geoa, &m);
 		f = rw::Frame::create();
 		a = rw::Atomic::create();
