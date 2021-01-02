@@ -41,7 +41,7 @@ xboxToD3d8(Raster *raster)
 //	format &= ~Raster::MIPMAP;
 	if(ras->format){
 		newras = Raster::create(raster->width, raster->height, raster->depth,
-		                        format | raster->type | 0x80, PLATFORM_D3D8);
+		                        format | raster->type | Raster::DONTALLOCATE, PLATFORM_D3D8);
 		int32 dxt = 0;
 		switch(ras->format){
 		case xbox::D3DFMT_DXT1:
@@ -138,19 +138,6 @@ colmod565(uint8 *col, float (*f)(float))
 	c = r<<11 | g<<5 | b;
 	*(uint16*)col = c;
 }
-
-#ifndef RW_D3D9
-#define MAKEFOURCC(ch0, ch1, ch2, ch3)                              \
-            ((uint32)(uint8)(ch0) | ((uint32)(uint8)(ch1) << 8) |       \
-            ((uint32)(uint8)(ch2) << 16) | ((uint32)(uint8)(ch3) << 24 ))
-enum {
-	D3DFMT_DXT1                 = MAKEFOURCC('D', 'X', 'T', '1'),
-	D3DFMT_DXT2                 = MAKEFOURCC('D', 'X', 'T', '2'),
-	D3DFMT_DXT3                 = MAKEFOURCC('D', 'X', 'T', '3'),
-	D3DFMT_DXT4                 = MAKEFOURCC('D', 'X', 'T', '4'),
-	D3DFMT_DXT5                 = MAKEFOURCC('D', 'X', 'T', '5'),
-};
-#endif
 
 void
 rastermodcustom(Raster *ras, float (*f)(float))
