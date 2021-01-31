@@ -377,7 +377,7 @@ FillGaps(float *data)
 #define NEXT(h) (((h)+1)%params.numHours)
 #define PREV(h) (((h)+params.numHours-1)%params.numHours)
 	for(w = 0; w < params.numWeathers; w++){
-		for(hend = 0; hend < 24; hend++)
+		for(hend = 0; hend < params.numHours; hend++)
 			if(data[IX(w,hend)] != -1.0f)
 				goto foundstart;
 		return;
@@ -396,9 +396,9 @@ foundfirst:
 					goto foundlast;
 			break;
 foundlast:
-			h1 = PREV(h1);
-			// h2 is now the last -1 in a row of -1s
-			n = (h2-h1 + 24) % 24;
+			// h2 is now the first entry after a row of -1s
+			h1 = PREV(h1);	// make h1 the first before a row of -1s
+			n = (h2-h1 + params.numHours) % params.numHours;
 			step = (data[IX(w,h2)] - data[IX(w,h1)])/n;
 
 			hprev = h1;

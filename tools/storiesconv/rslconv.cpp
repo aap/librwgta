@@ -23,8 +23,13 @@ static RslNode*
 findNode(RslNode *f, int32 id)
 {
 	if(f == NULL) return NULL;
-	if((f->nodeId & 0xFF) == (id & 0xFF))
-		return f;
+	// HACK flag nodes we've already seen
+	if(!(f->object.privateFlags & 0x80)){
+		if((f->nodeId & 0xFF) == (id & 0xFF)){
+			f->object.privateFlags |= 0x80;
+			return f;
+		}
+	}
 	RslNode *ff = findNode(f->next, id);
 	if(ff) return ff;
 	return findNode(f->child, id);
@@ -44,6 +49,7 @@ int32 nextId;
 struct Node {
 	int32 id;
 	int32 parent;
+	RslNode *frame;
 };
 
 static int32 *remainingNodeIds;
@@ -66,6 +72,37 @@ assignNodeIds(RslNode *f)
 	}
 	if(f->child)
 		assignNodeIdsChild(f->child);
+}
+
+void
+dumpFrameHier(RslNode *frame, int dumpMat, int ind = 0)
+{
+	for(int i = 0; i < ind; i++)
+		printf("  ");
+	const char *name = frame->name;
+	printf("*%s %d %s\n", name && name[0] ? name : "---", frame->nodeId, frame->hier ? "HIERARCHY" : "");
+	if(frame->hier){
+		RslTAnimTree *h = frame->hier;
+		int32 stack[100];
+		int32 sp = 0;
+		stack[sp] = 0;
+		int nind = 0;
+		stack[sp++] = ind;
+		for(int i = 0; i < h->numNodes; i++){
+			name = h->pNodeInfo[i].frame ? h->pNodeInfo[i].frame->name : "";
+			if(h->pNodeInfo[i].flags & HAnimHierarchy::PUSH)
+				stack[sp++] = nind;
+			nind++;
+			printf("\t\t");
+			for(int j = 0; j < nind; j++) printf("  ");
+			printf("%d %d\t%p %s\n", (uint8)h->pNodeInfo[i].id, h->pNodeInfo[i].flags, h->pNodeInfo[i].frame, name);
+			if(h->pNodeInfo[i].flags & HAnimHierarchy::POP)
+				nind = stack[--sp];
+		}
+	}
+	for(RslNode *child = frame->child;
+	    child; child = child->next)
+		dumpFrameHier(child, dumpMat, ind+1);
 }
 
 Frame*
@@ -111,16 +148,25 @@ convertFrame(RslNode *f)
 			if(ni->flags & HAnimHierarchy::PUSH)
 				sp++;
 			stack[sp] = i;
+//printf("trying to find %d from %s\n", (uint8)ni->id, f->name);
 			RslNode *ff = findNode(f, (uint8)ni->id);
 			assert(ff);
 			n->id = ff->nodeId;
+//printf("found %s: %d\n", ff->name, ff->nodeId);
+//fflush(stdout);
 			if(n->id < 0){
-				ff = findNode(f, nodehier[n->parent].id);
+				// may not have found the right frame here
+				// so get the parent frame instead and look for a -1 child
+				//ff = findNode(f, nodehier[n->parent].id);
+				ff = nodehier[n->parent].frame;
+//printf("\t\tfound %s for parent id %d\n", ff->name, nodehier[n->parent].id);
+//fflush(stdout);
 				assert(ff);
 				ff = findChild(ff);
 				assert(ff);
 				n->id = ff->nodeId = nextId++;
 			}
+			n->frame = ff;
 			//printf("%d %s %d %d\n", i, ff->name, n->id, n->parent);
 			if(ni->flags & HAnimHierarchy::POP)
 				sp--;
@@ -730,6 +776,7 @@ convertClump(RslElementGroup *c)
 	rwc = Clump::create();
 	rslNodeListInitialize(&frameList, (RslNode*)c->object.parent);
 	Frame **rwframes = new Frame*[frameList.numNodes];
+//dumpFrameHier((RslNode*)c->object.parent, 0);
 #ifdef VCS
 	for(int32 i = 0; i < frameList.numNodes; i++)
 		frameList.frames[i]->nodeId = -1;
