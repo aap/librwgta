@@ -604,6 +604,13 @@ leedsRenderCB(rw::Atomic *atomic, rw::d3d9::InstanceDataHeader *header)
 {
 	gta::leedsPipe_amb = Timecycle::currentColours.amb;
 	gta::leedsPipe_emiss = Timecycle::currentColours.amb_bl;
+/*
+	// test. use amb like in normal gta
+	gta::leedsPipe_emiss = Timecycle::currentColours.amb;
+	gta::leedsPipe_amb.red = 1.0f;
+	gta::leedsPipe_amb.green = 1.0f;
+	gta::leedsPipe_amb.blue = 1.0f;
+*/
 	switch(gBuildingPipeSwitch){
 	case PLATFORM_NULL:
 		rw::d3d9::defaultRenderCB_Shader(atomic, header);

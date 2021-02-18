@@ -311,3 +311,9 @@ project "txdbuild"
 	kind "ConsoleApp"
 	removeplatforms { "*gl3", "*d3d9" }
 
+project "convcdimage"
+	tool("convcdimage")
+	kind "ConsoleApp"
+	files { "tools/euryopa/minilzo/minilzo.c" }
+	removeplatforms { "*gl3", "*d3d9" }
+

@@ -1075,20 +1075,20 @@ extractResource(void)
 	//writeAllModelInfo();
 	//dump2dfx();
 
-//	dumpTxdStore();
+	dumpTxdStore();
 
 //	dumpVehicleData();
 //	extractMarkers();
 //	writeWaterpro();
 
 	// use this to dump vcs.ipl
-	printf("inst\n");
-	dumpInstances(gamedata->buildingPool);
-	printf("\n");
-	dumpInstances(gamedata->treadablePool);
-	printf("\n");
-	dumpInstances(gamedata->dummyPool);
-	printf("end\n");
+	//printf("inst\n");
+	//dumpInstances(gamedata->buildingPool);
+	//printf("\n");
+	//dumpInstances(gamedata->treadablePool);
+	//printf("\n");
+	//dumpInstances(gamedata->dummyPool);
+	//printf("end\n");
 
 //	printf("zone\n");
 //	dumpZones();
