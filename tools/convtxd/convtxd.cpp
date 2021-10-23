@@ -592,6 +592,8 @@ main(int argc, char *argv[])
 */
 	FORLIST(lnk, txd->textures){
 		Texture *tex = Texture::fromDict(lnk);
+		tex->raster = Raster::convertTexToCurrentPlatform(tex->raster);
+/*
 		if(tex->raster->platform == PLATFORM_XBOX && outplatform == PLATFORM_D3D8){
 			tex->raster = xboxToD3d8(tex->raster);
 		}else if(tex->raster->platform == PLATFORM_D3D8 && outplatform == PLATFORM_D3D9){
@@ -602,6 +604,7 @@ main(int argc, char *argv[])
 			Image *img = tex->raster->toImage();
 			tex->raster = Raster::createFromImage(img);
 		}
+*/
 	}
 
 //	for(Texture *tex = txd->first; tex; tex = tex->next)
@@ -620,8 +623,8 @@ main(int argc, char *argv[])
 		}
 	}
 
-	const char *ext = ".tga";
-//	const char *ext = ".png";
+//	const char *ext = ".tga";
+	const char *ext = ".png";
 
 	char filename[1024];
 	if(extract){
@@ -639,8 +642,8 @@ main(int argc, char *argv[])
 				sprintf(filename, "%s%s", tex->mask, ext);
 //makeUniqueFilename(filename, tex->mask, ".tga");
 //				writeLargerTGA(mask, filename);
-				writeTGA(mask, filename);
-//				writePNG(mask, filename);
+//				writeTGA(mask, filename);
+				writePNG(mask, filename);
 				mask->destroy();
 //			}else if(img->hasAlpha()){
 //				printf("%s has alpha but no mask (%d)\n", tex->name, img->depth);
@@ -649,8 +652,8 @@ main(int argc, char *argv[])
 			sprintf(filename, "%s%s", tex->name, ext);
 //makeUniqueFilename(filename, tex->name, ".tga");
 //			writeLargerTGA(img, filename);
-			writeTGA(img, filename);
-//			writePNG(img, filename);
+//			writeTGA(img, filename);
+			writePNG(img, filename);
 
 			img->destroy();
 		}

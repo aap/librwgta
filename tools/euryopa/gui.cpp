@@ -67,7 +67,7 @@ struct ExampleAppLog
 			ImGui::TextUnformatted(Buf.begin());
 
 		if(ScrollToBottom)
-			ImGui::SetScrollHere(1.0f);
+			ImGui::SetScrollHereY(1.0f);
 		ScrollToBottom = false;
 		ImGui::EndChild();
 		ImGui::End();
@@ -611,7 +611,7 @@ uiTest(void)
 	ImGui::Text("hi there");
 	if(ImGui::IsWindowFocused())
 		ImGui::Text("focus");
-	if(ImGui::IsMouseDragging())
+	if(ImGui::IsMouseDragging(ImGuiMouseButton_Left))
 		ImGui::Text("drag");
 	if(ImGui::IsWindowHovered())
 		ImGui::Text("hover");
