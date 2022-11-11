@@ -85,9 +85,9 @@ MakeNeoWorldPipe(void)
 	u_tex1 = registerUniform("tex1");
 	u_lm = registerUniform("u_lm");
 
-#include "gl_shaders/simple_vs_gl3.inc"
-#include "gl_shaders/neoWorldIII_fs_gl3.inc"
-#include "gl_shaders/neoWorldVC_fs_gl3.inc"
+#include "gl_shaders/simple_vert.inc"
+#include "gl_shaders/neoWorldIII_frag.inc"
+#include "gl_shaders/neoWorldVC_frag.inc"
 	const char *vs[] = { shaderDecl, header_vert_src, simple_vert_src, nil };
 	{
 	const char *fs[] = { shaderDecl, header_frag_src, neoWorldIII_frag_src, nil };

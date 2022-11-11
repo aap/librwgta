@@ -110,11 +110,10 @@ GetColourCode(int x, int y)
 
 #ifdef RW_GL3
 
+using namespace rw;
 using namespace gl3;
 
 Shader *colourCodeShader;
-
-#define U(i) currentShader->uniformLocations[i]
 
 void
 colourCodeRenderCB(Atomic *atomic, gl3::InstanceDataHeader *header)
@@ -129,57 +128,47 @@ colourCodeRenderCB(Atomic *atomic, gl3::InstanceDataHeader *header)
 	lightingCB(atomic);
 	geo->flags = flags;
 
-#ifdef RW_GL_USE_VAOS
-	glBindVertexArray(header->vao);
-#else
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, header->ibo);
-	glBindBuffer(GL_ARRAY_BUFFER, header->vbo);
-	setAttribPointers(header->attribDesc, header->numAttribs);
-#endif
+	setupVertexInput(header);
 
 	InstanceData *inst = header->inst;
 	int32 n = header->numMeshes;
 
 	colourCodeShader->use();
 
+	convColor(&col, &colourCode);
+	setUniform(u_matColor, &col);
+
 	while(n--){
 		m = inst->material;
-
-		convColor(&col, &colourCode);
-		glUniform4fv(U(u_matColor), 1, (GLfloat*)&col);
 
 		setTexture(0, m->texture);
 		rw::SetRenderState(VERTEXALPHA, inst->vertexAlpha || colourCode.alpha != 0xFF);
 
-		GLboolean blend;
-		glGetBooleanv(GL_BLEND, &blend);
+		int blend = getAlphaBlend();
 		if(renderColourCoded)
-			glDisable(GL_BLEND);
+			setAlphaBlend(false);
 
-		flushCache();
-		glDrawElements(header->primType, inst->numIndex,
-		               GL_UNSIGNED_SHORT, (void*)(uintptr)inst->offset);
+		drawInst(header, inst);
 
-		(blend ? glEnable : glDisable)(GL_BLEND);
-
+		setAlphaBlend(blend);
 		inst++;
 	}
-	disableAttribPointers(header->attribDesc, header->numAttribs);
+	teardownVertexInput(header);
 }
 
 rw::ObjPipeline*
 makeColourCodePipeline(void)
 {
 	{
-#include "gl_shaders/colcode_vs_gl3.inc"
-#include "gl_shaders/colcode_fs_gl3.inc"
+#include "gl_shaders/colcode_vert.inc"
+#include "gl_shaders/colcode_frag.inc"
 	const char *vs[] = { shaderDecl, header_vert_src, colcode_vert_src, nil };
 	const char *fs[] = { shaderDecl, header_frag_src, colcode_frag_src, nil };
 	colourCodeShader = Shader::create(vs, fs);
 	assert(colourCodeShader);
 	}
 
-	gl3::ObjPipeline *pipe = new gl3::ObjPipeline(PLATFORM_GL3);
+	gl3::ObjPipeline *pipe = gl3::ObjPipeline::create();
 	pipe->instanceCB = defaultInstanceCB;
 	pipe->uninstanceCB = defaultUninstanceCB;
 	pipe->renderCB = colourCodeRenderCB;
@@ -190,8 +179,10 @@ int32
 GetColourCode(int x, int y)
 {
 	rw::RGBA col;
+	int viewport[4];
 	// TODO: check format and dimensions properly
-	glReadPixels(x, sk::globals.height-y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, &col);
+	glGetIntegerv(GL_VIEWPORT, viewport); 
+	glReadPixels(x, viewport[3]-y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, &col);
 	return col.blue<<16 | col.green<<8 | col.red;
 }
 #endif

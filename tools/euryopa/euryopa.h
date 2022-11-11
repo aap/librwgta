@@ -27,6 +27,12 @@ using rw::uintptr;
 
 struct ObjectInst;
 
+#ifdef RWHALFPIXEL
+#define HALFPX (0.5f)
+#else
+#define HALFPX (0.0f)
+#endif
+
 #include "Pad.h"
 #include "camera.h"
 #include "collision.h"
@@ -541,6 +547,7 @@ void MakeCustomBuildingPipelines(void);
 extern rw::ObjPipeline *leedsPipe;
 void MakeLeedsPipe(void);
 
+void RegisterPipes(void);
 void RenderInit(void);
 void BuildRenderList(void);
 void RenderOpaque(void);

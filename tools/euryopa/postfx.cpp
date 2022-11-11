@@ -20,8 +20,8 @@ CreateImmediateData(void)
 	int h = sk::globals.height;
 	float recipZ = 1.0f/cam->nearPlane;
 
-	verts[0].setScreenX(0-0.5f);
-	verts[0].setScreenY(0-0.5f);
+	verts[0].setScreenX(0-HALFPX);
+	verts[0].setScreenY(0-HALFPX);
 	verts[0].setScreenZ(rw::im2d::GetNearZ());
 	verts[0].setCameraZ(cam->nearPlane);
 	verts[0].setRecipCameraZ(recipZ);
@@ -29,8 +29,8 @@ CreateImmediateData(void)
 	verts[0].setU(0.0f, recipZ);
 	verts[0].setV(0.0f, recipZ);
 
-	verts[1].setScreenX(w-0.5f);
-	verts[1].setScreenY(0-0.5f);
+	verts[1].setScreenX(w-HALFPX);
+	verts[1].setScreenY(0-HALFPX);
 	verts[1].setScreenZ(rw::im2d::GetNearZ());
 	verts[1].setCameraZ(cam->nearPlane);
 	verts[1].setRecipCameraZ(recipZ);
@@ -38,8 +38,8 @@ CreateImmediateData(void)
 	verts[1].setU(1.0f, recipZ);
 	verts[1].setV(0.0f, recipZ);
 
-	verts[2].setScreenX(0-0.5f);
-	verts[2].setScreenY(h-0.5f);
+	verts[2].setScreenX(0-HALFPX);
+	verts[2].setScreenY(h-HALFPX);
 	verts[2].setScreenZ(rw::im2d::GetNearZ());
 	verts[2].setCameraZ(cam->nearPlane);
 	verts[2].setRecipCameraZ(recipZ);
@@ -47,8 +47,8 @@ CreateImmediateData(void)
 	verts[2].setU(0.0f, recipZ);
 	verts[2].setV(1.0f, recipZ);
 
-	verts[3].setScreenX(w-0.5f);
-	verts[3].setScreenY(h-0.5f);
+	verts[3].setScreenX(w-HALFPX);
+	verts[3].setScreenY(h-HALFPX);
 	verts[3].setScreenZ(rw::im2d::GetNearZ());
 	verts[3].setCameraZ(cam->nearPlane);
 	verts[3].setRecipCameraZ(recipZ);
@@ -69,10 +69,157 @@ InitPostFX(void)
 		backBufferTex->raster = backBuffer;
 }
 
+static bool shadersInitialized;
 #ifdef RW_D3D9
-
 using namespace d3d;
 using namespace d3d9;
+
+static void *colourfilterIII;
+static void *colourfilterVC;
+static void *colourfilterLeedsPS2;
+static void *colourfilterLeedsPSP;
+static void *colourfilterSAPS2;
+static void *colourfilterSAPC;
+static void *radiosity;
+static void *radiosityLeeds;
+
+static void
+CreateShaders(void)
+{
+#include "d3d_shaders/colourfilterIII_PS.inc"
+	colourfilterIII = createPixelShader(colourfilterIII_PS_cso);
+#include "d3d_shaders/colourfilterVC_PS.inc"
+	colourfilterVC = createPixelShader(colourfilterVC_PS_cso);
+#include "d3d_shaders/colourfilterLeedsPS2_PS.inc"
+	colourfilterLeedsPS2 = createPixelShader(colourfilterLeedsPS2_PS_cso);
+#include "d3d_shaders/colourfilterLeedsPSP_PS.inc"
+	colourfilterLeedsPSP = createPixelShader(colourfilterLeedsPSP_PS_cso);
+#include "d3d_shaders/colourfilterSAPS2_PS.inc"
+	colourfilterSAPS2 = createPixelShader(colourfilterSAPS2_PS_cso);
+#include "d3d_shaders/colourfilterSAPC_PS.inc"
+	colourfilterSAPC = createPixelShader(colourfilterSAPC_PS_cso);
+#include "d3d_shaders/radiosityPS.inc"
+	radiosity = createPixelShader(radiosityPS_cso);
+#include "d3d_shaders/radiosityLeedsPS.inc"
+	radiosityLeeds = createPixelShader(radiosityLeedsPS_cso);
+
+	shadersInitialized = true;
+}
+
+static void
+RenderColourFilterGeneric(void *ps)
+{
+	float postfxvars[4];
+	d3ddevice->SetPixelShaderConstantF(0, (float*)&Timecycle::currentColours.postfx1, 1);
+	d3ddevice->SetPixelShaderConstantF(1, (float*)&Timecycle::currentColours.postfx2, 1);
+	postfxvars[0] = Timecycle::currentColours.radiosityLimit/255.0f;
+	postfxvars[1] = Timecycle::currentColours.radiosityIntensity/255.0f;
+	postfxvars[2] = 2.0f;		// render passes
+	d3ddevice->SetPixelShaderConstantF(2, (float*)postfxvars, 1);
+
+	d3d::im2dOverridePS = ps;
+	im2d::RenderIndexedPrimitive(rw::PRIMTYPETRILIST,
+		&verts, 4, &indices, 6);
+	d3d::im2dOverridePS = nil;
+}
+#endif
+
+#ifdef RW_OPENGL
+
+static Shader *colourfilterIII;
+static Shader *colourfilterVC;
+static Shader *colourfilterLeedsPS2;
+static Shader *colourfilterLeedsPSP;
+static Shader *colourfilterSAPS2;
+static Shader *colourfilterSAPC;
+static Shader *radiosity;
+static Shader *radiosityLeeds;
+
+int32 u_postfxCol1;
+int32 u_postfxCol2;
+int32 u_postfxParams;
+
+static void
+CreateShaders(void)
+{
+	u_postfxCol1 = registerUniform("u_postfxCol1");
+	u_postfxCol2 = registerUniform("u_postfxCol2");
+	u_postfxParams = registerUniform("u_postfxParams");
+
+#include "gl_shaders/im2d_vert.inc"
+	const char *vs[] = { shaderDecl, header_vert_src, im2d_vert_src, nil };
+	{
+#include "gl_shaders/colourfilterIII_frag.inc"
+	const char *fs[] = { shaderDecl, header_frag_src, colourfilterIII_frag_src, nil };
+	colourfilterIII = Shader::create(vs, fs);
+	assert(colourfilterIII);
+	}
+	{
+#include "gl_shaders/colourfilterVC_frag.inc"
+	const char *fs[] = { shaderDecl, header_frag_src, colourfilterVC_frag_src, nil };
+	colourfilterVC = Shader::create(vs, fs);
+	assert(colourfilterVC);
+	}
+	{
+#include "gl_shaders/colourfilterLeedsPS2_frag.inc"
+	const char *fs[] = { shaderDecl, header_frag_src, colourfilterLeedsPS2_frag_src, nil };
+	colourfilterLeedsPS2 = Shader::create(vs, fs);
+	assert(colourfilterLeedsPS2);
+	}
+	{
+#include "gl_shaders/colourfilterLeedsPSP_frag.inc"
+	const char *fs[] = { shaderDecl, header_frag_src, colourfilterLeedsPSP_frag_src, nil };
+	colourfilterLeedsPSP = Shader::create(vs, fs);
+	assert(colourfilterLeedsPSP);
+	}
+	{
+#include "gl_shaders/colourfilterSAPS2_frag.inc"
+	const char *fs[] = { shaderDecl, header_frag_src, colourfilterSAPS2_frag_src, nil };
+	colourfilterSAPS2 = Shader::create(vs, fs);
+	assert(colourfilterSAPS2);
+	}
+	{
+#include "gl_shaders/colourfilterSAPC_frag.inc"
+	const char *fs[] = { shaderDecl, header_frag_src, colourfilterSAPC_frag_src, nil };
+	colourfilterSAPC = Shader::create(vs, fs);
+	assert(colourfilterSAPC);
+	}
+	{
+#include "gl_shaders/radiosity_frag.inc"
+	const char *fs[] = { shaderDecl, header_frag_src, radiosity_frag_src, nil };
+	radiosity = Shader::create(vs, fs);
+	assert(radiosity);
+	}
+	{
+#include "gl_shaders/radiosityLeeds_frag.inc"
+	const char *fs[] = { shaderDecl, header_frag_src, radiosityLeeds_frag_src, nil };
+	radiosityLeeds = Shader::create(vs, fs);
+	assert(radiosityLeeds);
+	}
+
+	shadersInitialized = true;
+}
+
+static void
+RenderColourFilterGeneric(Shader *sh)
+{
+if(sh == nil) return;
+#define U(i) currentShader->uniformLocations[i]
+	gl3::im2dOverrideShader = sh;
+	sh->use();
+	float postfxvars[4];
+	postfxvars[0] = Timecycle::currentColours.radiosityLimit/255.0f;
+	postfxvars[1] = Timecycle::currentColours.radiosityIntensity/255.0f;
+	postfxvars[2] = 2.0f;		// render passes
+	glUniform4fv(U(u_postfxCol1), 1, (float*)&Timecycle::currentColours.postfx1);
+	glUniform4fv(U(u_postfxCol2), 1, (float*)&Timecycle::currentColours.postfx2);
+	glUniform4fv(U(u_postfxParams), 1, postfxvars);
+	im2d::RenderIndexedPrimitive(rw::PRIMTYPETRILIST,
+		&verts, 4, &indices, 6);
+	gl3::im2dOverrideShader = nil;
+}
+#endif
+
 
 static void
 GetBackbuffer(Raster *raster)
@@ -82,94 +229,52 @@ GetBackbuffer(Raster *raster)
 	Raster::popContext();
 }
 
-static void *colourfilterIII_PS;
-static void *colourfilterVC_PS;
-static void *colourfilterLeedsPS2_PS;
-static void *colourfilterLeedsPSP_PS;
-static void *colourfilterSAPS2_PS;
-static void *colourfilterSAPC_PS;
-static void *radiosityPS;
-static void *radiosityLeedsPS;
-static bool shadersInitialized;
-
-static void
-CreateShaders(void)
-{
-#include "d3d_shaders/colourfilterIII_PS.inc"
-	colourfilterIII_PS = createPixelShader(colourfilterIII_PS_cso);
-#include "d3d_shaders/colourfilterVC_PS.inc"
-	colourfilterVC_PS = createPixelShader(colourfilterVC_PS_cso);
-#include "d3d_shaders/colourfilterLeedsPS2_PS.inc"
-	colourfilterLeedsPS2_PS = createPixelShader(colourfilterLeedsPS2_PS_cso);
-#include "d3d_shaders/colourfilterLeedsPSP_PS.inc"
-	colourfilterLeedsPSP_PS = createPixelShader(colourfilterLeedsPSP_PS_cso);
-#include "d3d_shaders/colourfilterSAPS2_PS.inc"
-	colourfilterSAPS2_PS = createPixelShader(colourfilterSAPS2_PS_cso);
-#include "d3d_shaders/colourfilterSAPC_PS.inc"
-	colourfilterSAPC_PS = createPixelShader(colourfilterSAPC_PS_cso);
-#include "d3d_shaders/radiosityPS.inc"
-	radiosityPS = createPixelShader(radiosityPS_cso);
-#include "d3d_shaders/radiosityLeedsPS.inc"
-	radiosityLeedsPS = createPixelShader(radiosityLeedsPS_cso);
-
-	shadersInitialized = true;
-}
-
-static void
-RenderColourFilterGeneric(void *ps)
-{
-	d3d::im2dOverridePS = ps;
-	im2d::RenderIndexedPrimitive(rw::PRIMTYPETRILIST,
-		&verts, 4, &indices, 6);
-	d3d::im2dOverridePS = nil;
-}
-
 static void
 RenderColourFilterIII(void)
 {
-	RenderColourFilterGeneric(colourfilterIII_PS);
+	RenderColourFilterGeneric(colourfilterIII);
 }
 
 static void
 RenderColourFilterVC(void)
 {
-	RenderColourFilterGeneric(colourfilterVC_PS);
+	RenderColourFilterGeneric(colourfilterVC);
 }
 
 static void
 RenderColourFilterLeedsPS2(void)
 {
-	RenderColourFilterGeneric(colourfilterLeedsPS2_PS);
+	RenderColourFilterGeneric(colourfilterLeedsPS2);
 }
 
 static void
 RenderColourFilterLeedsPSP(void)
 {
-	RenderColourFilterGeneric(colourfilterLeedsPSP_PS);
+	RenderColourFilterGeneric(colourfilterLeedsPSP);
 }
 
 static void
 RenderColourFilterSAPS2(void)
 {
-	RenderColourFilterGeneric(colourfilterSAPS2_PS);
+	RenderColourFilterGeneric(colourfilterSAPS2);
 }
 
 static void
 RenderColourFilterSAPC(void)
 {
-	RenderColourFilterGeneric(colourfilterSAPC_PS);
+	RenderColourFilterGeneric(colourfilterSAPC);
 }
 
 static void
 RenderRadiosity(void)
 {
-	RenderColourFilterGeneric(radiosityPS);
+	RenderColourFilterGeneric(radiosity);
 }
 
 static void
 RenderRadiosityLeeds(void)
 {
-	RenderColourFilterGeneric(radiosityLeedsPS);
+	RenderColourFilterGeneric(radiosityLeeds);
 }
 
 void
@@ -187,14 +292,6 @@ RenderPostFX(void)
 
 	if(!shadersInitialized)
 		CreateShaders();
-
-	float postfxvars[4];
-	d3ddevice->SetPixelShaderConstantF(0, (float*)&Timecycle::currentColours.postfx1, 1);
-	d3ddevice->SetPixelShaderConstantF(1, (float*)&Timecycle::currentColours.postfx2, 1);
-	postfxvars[0] = Timecycle::currentColours.radiosityLimit/255.0f;
-	postfxvars[1] = Timecycle::currentColours.radiosityIntensity/255.0f;
-	postfxvars[2] = 2.0f;		// render passes
-	d3ddevice->SetPixelShaderConstantF(2, (float*)postfxvars, 1);
 
 	rw::SetRenderStatePtr(TEXTURERASTER, backBufferTex->raster);
 	rw::SetRenderState(rw::TEXTUREFILTER, Texture::LINEAR);
@@ -256,7 +353,3 @@ RenderPostFX(void)
 			changedBackbuf = 1;
 		}
 }
-
-#else
-void RenderPostFX(void) {}
-#endif

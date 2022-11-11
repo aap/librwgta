@@ -1,27 +1,24 @@
-all: simple_vs_gl3.inc colcode_vs_gl3.inc colcode_fs_gl3.inc \
-	ps2Building_vs_gl3.inc ps2Building_fs_gl3.inc \
+all: simple_vs_gl3.inc \
+	ps2Building_vs_gl3.inc pcBuilding_vs_gl3.inc ps2Building_fs_gl3.inc \
 	ps2BuildingFX_vs_gl3.inc ps2Env_fs_gl3.inc \
-	neoWorldIII_fs_gl3.inc neoWorldVC_fs_gl3.inc
+	neoWorldIII_fs_gl3.inc neoWorldVC_fs_gl3.inc \
+	colourfilterIII_fs_gl3.inc
 
 simple_vs_gl3.inc: simple.vert
 	(echo 'const char *simple_vert_src =';\
 	 sed 's/..*/"&\\n"/' simple.vert;\
 	 echo ';') >simple_vs_gl3.inc
 
-colcode_vs_gl3.inc: colcode.vert
-	(echo 'const char *colcode_vert_src =';\
-	 sed 's/..*/"&\\n"/' colcode.vert;\
-	 echo ';') >colcode_vs_gl3.inc
-
-colcode_fs_gl3.inc: colcode.frag
-	(echo 'const char *colcode_frag_src =';\
-	 sed 's/..*/"&\\n"/' colcode.frag;\
-	 echo ';') >colcode_fs_gl3.inc
 
 ps2Building_vs_gl3.inc: ps2Building.vert
 	(echo 'const char *ps2Building_vert_src =';\
 	 sed 's/..*/"&\\n"/' ps2Building.vert;\
 	 echo ';') >ps2Building_vs_gl3.inc
+
+pcBuilding_vs_gl3.inc: pcBuilding.vert
+	(echo 'const char *pcBuilding_vert_src =';\
+	 sed 's/..*/"&\\n"/' pcBuilding.vert;\
+	 echo ';') >pcBuilding_vs_gl3.inc
 
 ps2Building_fs_gl3.inc: ps2Building.frag
 	(echo 'const char *ps2Building_frag_src =';\
@@ -48,3 +45,8 @@ neoWorldVC_fs_gl3.inc: neoWorldVC.frag
 	(echo 'const char *neoWorldVC_frag_src =';\
 	 sed 's/..*/"&\\n"/' neoWorldVC.frag;\
 	 echo ';') >neoWorldVC_fs_gl3.inc
+
+colourfilterIII_fs_gl3.inc: colourfilterIII.frag
+	(echo 'const char *colourfilterIII_frag_src =';\
+	 sed 's/..*/"&\\n"/' colourfilterIII.frag;\
+	 echo ';') >colourfilterIII_fs_gl3.inc

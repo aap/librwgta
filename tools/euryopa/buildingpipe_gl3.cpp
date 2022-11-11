@@ -7,11 +7,11 @@ using namespace gl3;
 
 enum AttribIndices
 {
-	ATTRIB_NIGHTCOLOR = 2,
-	ATTRIB_DAYCOLOR = 4,
+	ATTRIB_NIGHTCOLOR = ATTRIB_COLOR,
+	ATTRIB_DAYCOLOR = ATTRIB_WEIGHTS,	// hack
 };
 
-static gl3::Shader *ps2BuildingShader, *ps2BuildingFXShader;
+static gl3::Shader *ps2BuildingShader, *pcBuildingShader, *ps2BuildingFXShader;
 int32 u_dayparam, u_nightparam;	// DN
 int32 u_texmat;	// UVA
 int32 u_envmat, u_envXform, u_shininess;	// EnvMap
@@ -210,29 +210,19 @@ buildingRenderCB(Atomic *atomic, gl3::InstanceDataHeader *header)
 	RawMatrix ident;
 	Matrix *texmat;
 	Material *m;
-	RGBAf col;
-	GLfloat surfProps[4];
 	Geometry *geo = atomic->geometry;
 
 	RawMatrix::setIdentity(&ident);
 	setWorldMatrix(atomic->getFrame()->getLTM());
+	int32 vsBits = lightingCB(atomic);
 	uint32 flags = geo->flags;
-	geo->flags &= ~Geometry::LIGHT;
 	lightingCB(atomic);
-	geo->flags = flags;
-
-#ifdef RW_GL_USE_VAOS
-	glBindVertexArray(header->vao);
-#else
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, header->ibo);
-	glBindBuffer(GL_ARRAY_BUFFER, header->vbo);
-	setAttribPointers(header->attribDesc, header->numAttribs);
-#endif
+	setupVertexInput(header);
 
 	InstanceData *inst = header->inst;
 	int32 n = header->numMeshes;
 
-	ps2BuildingShader->use();
+	(gBuildingPipeSwitch == PLATFORM_PC ? pcBuildingShader : ps2BuildingShader)->use();
 
 	float dayparam[4], nightparam[4];
 	if(atomic->pipeline->pluginData == gta::RSPIPE_PC_CustomBuilding_PipeID){
@@ -255,22 +245,12 @@ buildingRenderCB(Atomic *atomic, gl3::InstanceDataHeader *header)
 		m = inst->material;
 
 		float colorscale = 1.0f;
-		if(m->texture)
+		if(m->texture && gBuildingPipeSwitch == PLATFORM_PS2)
 			colorscale = 255.0f/128.0f;
-		setTexture(0, m->texture);
 		glUniform1fv(U(u_colorscale), 1, &colorscale);
 
-		int hasEnv = (*(uint32*)&inst->material->surfaceProps.specular) & 1;
-		gta::EnvMat *env = gta::getEnvMat(inst->material);
-
-		convColor(&col, &m->color);
-		glUniform4fv(U(u_matColor), 1, (GLfloat*)&col);
-
-		surfProps[0] = m->surfaceProps.ambient;
-		surfProps[1] = m->surfaceProps.specular;
-		surfProps[2] = m->surfaceProps.diffuse;
-		surfProps[3] = 0.0f;
-		glUniform4fv(U(u_surfProps), 1, surfProps);
+		setMaterial(flags, m->color, m->surfaceProps);
+		setTexture(0, m->texture);
 
 		// UV animation
 		if(MatFX::getEffects(inst->material) == MatFX::UVTRANSFORM){
@@ -285,12 +265,11 @@ buildingRenderCB(Atomic *atomic, gl3::InstanceDataHeader *header)
 
 		rw::SetRenderState(VERTEXALPHA, inst->vertexAlpha || m->color.alpha != 0xFF);
 
-		flushCache();
-		glDrawElements(header->primType, inst->numIndex,
-		               GL_UNSIGNED_SHORT, (void*)(uintptr)inst->offset);
+		drawInst(header, inst);
 
-
+		int hasEnv = (*(uint32*)&inst->material->surfaceProps.specular) & 1;
 		if(hasEnv){
+			gta::EnvMat *env = gta::getEnvMat(inst->material);
 			ps2BuildingFXShader->use();
 			glUniformMatrix4fv(U(u_envmat), 1, 0, (float*)&envmat);
 
@@ -311,17 +290,15 @@ buildingRenderCB(Atomic *atomic, gl3::InstanceDataHeader *header)
 			SetRenderState(DESTBLEND, BLENDONE);
 			SetRenderState(VERTEXALPHA, 1);
 
-			flushCache();
-			glDrawElements(header->primType, inst->numIndex,
-			               GL_UNSIGNED_SHORT, (void*)(uintptr)inst->offset);
+			drawInst(header, inst);
 
 			SetRenderState(DESTBLEND, dst);
-			ps2BuildingShader->use();
+			(gBuildingPipeSwitch == PLATFORM_PC ? pcBuildingShader : ps2BuildingShader)->use();
 		}
 
 		inst++;
 	}
-	disableAttribPointers(header->attribDesc, header->numAttribs);
+	teardownVertexInput(header);
 }
 
 void
@@ -338,16 +315,20 @@ MakeCustomBuildingPipelines(void)
 	u_colorscale = registerUniform("u_colorscale");
 
 	{
-#include "gl_shaders/ps2Building_vs_gl3.inc"
-#include "gl_shaders/ps2Building_fs_gl3.inc"
+#include "gl_shaders/ps2Building_vert.inc"
+#include "gl_shaders/pcBuilding_vert.inc"
+#include "gl_shaders/ps2Building_frag.inc"
 	const char *vs[] = { shaderDecl, header_vert_src, ps2Building_vert_src, nil };
+	const char *vspc[] = { shaderDecl, header_vert_src, pcBuilding_vert_src, nil };
 	const char *fs[] = { shaderDecl, header_frag_src, ps2Building_frag_src, nil };
 	ps2BuildingShader = Shader::create(vs, fs);
 	assert(ps2BuildingShader);
+	pcBuildingShader = Shader::create(vspc, fs);
+	assert(pcBuildingShader);
 	}
 	{
-#include "gl_shaders/ps2BuildingFX_vs_gl3.inc"
-#include "gl_shaders/ps2Env_fs_gl3.inc"
+#include "gl_shaders/ps2BuildingFX_vert.inc"
+#include "gl_shaders/ps2Env_frag.inc"
 	const char *vs[] = { shaderDecl, header_vert_src, ps2BuildingFX_vert_src, nil };
 	const char *fs[] = { shaderDecl, header_frag_src, ps2Env_frag_src, nil };
 	ps2BuildingFXShader = Shader::create(vs, fs);

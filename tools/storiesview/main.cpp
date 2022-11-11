@@ -88,7 +88,7 @@ debug(const char *fmt, ...)
 	va_end(ap);
 }
 
-#define XINPUT
+//#define XINPUT
 #ifdef XINPUT
 int pads[4];
 int numPads;
@@ -109,7 +109,6 @@ void
 plCapturePad(int arg)
 {
 	currentPad = arg;
-	return;
 }
 
 void
@@ -155,6 +154,10 @@ plUpdatePad(CControllerState *state)
 	state->left = !!(xstate.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT);
 
 }
+#else
+void plAttachInput(void) {}
+void plCapturePad(int arg) {}
+void plUpdatePad(CControllerState *state) {}
 #endif
 
 void

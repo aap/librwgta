@@ -632,7 +632,13 @@ main(int argc, char *argv[])
 			Texture *tex = Texture::fromDict(lnk);
 			Image *img = tex->raster->toImage();
 	//		img->unindex();
-
+			if(separatemask == 2){
+				if(img->hasAlpha())
+					sprintf(filename, "%s##%s%s", tex->name, tex->mask, ext);
+				else
+					sprintf(filename, "%s%s", tex->name, ext);
+				writePNG(img, filename);
+			}else{
 			if(separatemask && tex->mask[0]){
 				Image *mask = img->extractMask();
 				// write colors without alpha if we have a
@@ -654,6 +660,7 @@ main(int argc, char *argv[])
 //			writeLargerTGA(img, filename);
 //			writeTGA(img, filename);
 			writePNG(img, filename);
+			}
 
 			img->destroy();
 		}

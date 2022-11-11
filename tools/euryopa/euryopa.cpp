@@ -296,11 +296,11 @@ FindVersion(void)
 
 	if(f = fopen_ci("data/gta3.dat", "r"), f)
 		gameversion = GAME_III;
-	else if(f = fopen_ci("data/gta_vc.dat", "r"), f)
-		gameversion = GAME_VC;
 	// This is wrong of course, but we'll use it as a hack
 	else if(f = fopen_ci("data/gta_lcs.dat", "r"), f)
 		gameversion = GAME_LCS;
+	else if(f = fopen_ci("data/gta_vc.dat", "r"), f)
+		gameversion = GAME_VC;
 	else if(f = fopen_ci("data/gta_vcs.dat", "r"), f)
 		gameversion = GAME_VCS;
 	else if(f = fopen_ci("data/gta.dat", "r"), f)
@@ -402,19 +402,10 @@ fallbackFindCB(const char *name)
 void
 LoadGame(void)
 {
+// for debugging...
 //	SetCurrentDirectory("C:/Users/aap/games/gta3");
 //	SetCurrentDirectory("C:/Users/aap/games/gtavc");
 //	SetCurrentDirectory("C:/Users/aap/games/gtasa");
-//	SetCurrentDirectory("F://gtasa");
-//	SetCurrentDirectory("F://gta3_xbox");
-//	SetCurrentDirectory("F://gtavc_xbox");
-//	SetCurrentDirectory("F://gtasa_pc");
-//	SetCurrentDirectory("E://");
-//	SetCurrentDirectory("C:\\Users\\aap\\games\\gta3d_latest");
-//	SetCurrentDirectory("C:/Users/aap/games/lcsps2_test");
-//	SetCurrentDirectory("C:/Users/aap/games/lcs_test");
-//	SetCurrentDirectory("C:/Users/aap/games/lcspc");
-//	SetCurrentDirectory("C:/Users/aap/games/vcs_test");
 
 	FindVersion();
 	switch(gameversion){
@@ -636,6 +627,7 @@ Draw(void)
 	// DEBUG render object picking
 	//RenderEverythingColourCoded();
 
+
 	if(gRenderPostFX)
 		RenderPostFX();
 
@@ -656,11 +648,13 @@ Draw(void)
 	if(gRenderAttribZones)
 		Zones::RenderAttribZones();
 
+	rw::SetRenderState(rw::ALPHATESTFUNC, rw::ALPHAALWAYS);	// don't mess up GUI
 	// This fucks up the z buffer, but what else can we do?
 	RenderDebugLines();
-
 	ImGui::EndFrame();
 	ImGui::Render();
+
+	ImGui_ImplRW_RenderDrawLists(ImGui::GetDrawData());
 
 	Scene.camera->endUpdate();
 	Scene.camera->showRaster(rw::Raster::FLIPWAITVSYNCH);

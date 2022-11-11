@@ -31,8 +31,8 @@ static void
 dumptex(Texture *tex, FILE *f, int ind)
 {
 	pr(ind++, f, "{\n");
-	pr(ind, f, "name: \"%s\",\n", tex->name);
-	pr(ind, f, "mask: \"%s\"\n", tex->mask);
+	pr(ind, f, "\"name\": \"%s\",\n", tex->name);
+	pr(ind, f, "\"mask\": \"%s\"\n", tex->mask);
 	pr(--ind, f, "}");
 }
 
@@ -40,26 +40,26 @@ static void
 dumpmaterial(Material *m, FILE *f, int ind)
 {
 	pr(ind++, f, "{\n");
-	pr(ind, f, "color: [ %d, %d, %d, %d ],\n",
+	pr(ind, f, "\"color\": [ %d, %d, %d, %d ],\n",
 		m->color.red, m->color.green, m->color.blue, m->color.alpha);
-	pr(ind, f, "surfaceProperties: [ %f, %f, %f ]",
+	pr(ind, f, "\"surfaceProperties\": [ %f, %f, %f ]",
 		m->surfaceProps.ambient, m->surfaceProps.specular, m->surfaceProps.diffuse);
 	if(m->texture){
 		pr(0, f, ",\n");
-		pr(ind, f, "texture:\n");
+		pr(ind, f, "\"texture\":\n");
 		dumptex(m->texture, f, ind);
 	}
 	if(MatFX::getEffects(m)){
 		MatFX *matfx = MatFX::get(m);
 		pr(0, f, ",\n");
-		pr(ind++, f, "matfx: {\n");
-		pr(ind, f, "type: %d", matfx->type);
+		pr(ind++, f, "\"matfx\": {\n");
+		pr(ind, f, "\"type\": %d", matfx->type);
 		if(matfx->type == MatFX::ENVMAP){
 			pr(0, f, ",\n");
-			pr(ind, f, "envCoefficient: %f", matfx->getEnvCoefficient());
+			pr(ind, f, "\"envCoefficient\": %f", matfx->getEnvCoefficient());
 			if(matfx->getEnvTexture()){
 				pr(0, f, ",\n");
-				pr(ind, f, "envTex:\n");
+				pr(ind, f, "\"envTex\":\n");
 				dumptex(matfx->getEnvTexture(), f, ind);
 			}
 		}
@@ -70,20 +70,20 @@ dumpmaterial(Material *m, FILE *f, int ind)
 	gta::EnvMat *env = gta::getEnvMat(m);
 	if(env){
 		pr(0, f, ",\n");
-		pr(ind++, f, "envMap: {\n");
-		pr(ind, f, "scale: [ %f, %f ],\n", env->getScaleX(), env->getScaleY());
-		pr(ind, f, "transScale: [ %f, %f ],\n", env->getTransScaleX(), env->getTransScaleY());
-		pr(ind, f, "shininess: %f\n", env->getShininess());
+		pr(ind++, f, "\"envMap\": {\n");
+		pr(ind, f, "\"scale\": [ %f, %f ],\n", env->getScaleX(), env->getScaleY());
+		pr(ind, f, "\"transScale\": [ %f, %f ],\n", env->getTransScaleX(), env->getTransScaleY());
+		pr(ind, f, "\"shininess\": %f\n", env->getShininess());
 		pr(--ind, f, "}");
 	}
 
 	gta::SpecMat *spec = gta::getSpecMat(m);
 	if(spec){
 		pr(0, f, ",\n");
-		pr(ind++, f, "specMap: {\n");
-		pr(ind, f, "specularity: %f,\n", spec->specularity);
+		pr(ind++, f, "\"specMap\": {\n");
+		pr(ind, f, "\"specularity\": %f,\n", spec->specularity);
 		assert(spec->texture);
-		pr(ind, f, "texture: \"%s\"\n", spec->texture->name);
+		pr(ind, f, "\"texture\": \"%s\"\n", spec->texture->name);
 		pr(--ind, f, "}");
 	}
 
@@ -104,7 +104,7 @@ dumpgeo(Geometry *g, FILE *f, int ind)
 	}
 
 	if(g->colors){
-		pr(ind++, f, "prelit: [\n");
+		pr(ind++, f, "\"prelit\": [\n");
 #ifndef SKIPDATA
 		for(j = 0; j < g->numVertices; j++)
 			pr(ind, f, "[ %d, %d, %d, %d ]%s\n",
@@ -118,7 +118,7 @@ dumpgeo(Geometry *g, FILE *f, int ind)
 	}
 
 	if(g->numTexCoordSets){
-		pr(ind++, f, "texCoords: [\n");
+		pr(ind++, f, "\"texCoords\": [\n");
 		for(i = 0; i < g->numTexCoordSets; i++){
 			pr(ind++, f, "[\n");
 #ifndef SKIPDATA
@@ -133,7 +133,7 @@ dumpgeo(Geometry *g, FILE *f, int ind)
 		pr(--ind, f, "],\n");
 	}
 
-	pr(ind++, f, "triangles: [\n");
+	pr(ind++, f, "\"triangles\": [\n");
 #ifndef SKIPDATA
 	for(i = 0; i < g->numTriangles; i++)
 		pr(ind, f, "[ %d, %d, %d, %d ]%s\n",
@@ -145,12 +145,12 @@ dumpgeo(Geometry *g, FILE *f, int ind)
 #endif
 	pr(--ind, f, "],\n");
 
-	pr(ind++, f, "morphTargets: [\n");
+	pr(ind++, f, "\"morphTargets\": [\n");
 	for(i = 0; i < g->numMorphTargets; i++){
 		pr(ind++, f, "{\n");
 		MorphTarget *mt = &g->morphTargets[i];
 		if(mt->vertices){
-			pr(ind++, f, "vertices: [\n");
+			pr(ind++, f, "\"vertices\": [\n");
 #ifndef SKIPDATA
 			for(j = 0; j < g->numVertices; j++)
 				pr(ind, f, "[ %f, %f, %f ]%s\n",
@@ -162,7 +162,7 @@ dumpgeo(Geometry *g, FILE *f, int ind)
 			pr(--ind, f, "]%s\n", mt->normals ? "," : "");
 		}
 		if(mt->normals){
-			pr(ind++, f, "normals: [\n");
+			pr(ind++, f, "\"normals\": [\n");
 #ifndef SKIPDATA
 			for(j = 0; j < g->numVertices; j++)
 				pr(ind, f, "[ %f, %f, %f ]%s\n",
@@ -177,7 +177,7 @@ dumpgeo(Geometry *g, FILE *f, int ind)
 	}
 	pr(--ind, f, "],\n");
 
-	pr(ind++, f, "materials: [\n");
+	pr(ind++, f, "\"materials\": [\n");
 	for(i = 0; i < g->matList.numMaterials; i++){
 		dumpmaterial(g->matList.materials[i], f, ind);
 		pr(0, f, "%s\n", i == g->matList.numMaterials-1 ? "" : ",");
@@ -185,13 +185,13 @@ dumpgeo(Geometry *g, FILE *f, int ind)
 	pr(--ind, f, "],\n");
 
 	MeshHeader *h = g->meshHeader;
-	pr(ind, f, "meshtype: %d,\n", h->flags);
-	pr(ind++, f, "meshes: [\n");
+	pr(ind, f, "\"meshtype\": %d,\n", h->flags);
+	pr(ind++, f, "\"meshes\": [\n");
 	Mesh *m = h->getMeshes();
 	for(i = 0; i < h->numMeshes; i++){
 		pr(ind++, f, "{\n");
-		pr(ind, f, "matId: %d,\n", findPointer(m->material, (void**)g->matList.materials, g->matList.numMaterials));
-		pr(ind++, f, "indices: [\n");
+		pr(ind, f, "\"matId\": %d,\n", findPointer(m->material, (void**)g->matList.materials, g->matList.numMaterials));
+		pr(ind++, f, "\"indices\": [\n");
 #ifndef SKIPDATA
 		for(j = 0; j < m->numIndices; j++)
 			pr(ind, f, "%d%s\n", m->indices[j],
@@ -210,11 +210,11 @@ static void
 dumpatomic(Atomic *a, FrameList_ *frmlist, FILE *f, int ind)
 {
 	pr(ind++, f, "{\n");
-	pr(ind, f, "frame: %d,\n", findPointer(a->getFrame(), (void**)frmlist->frames, frmlist->numFrames));
-	pr(ind, f, "geometry:\n");
+	pr(ind, f, "\"frame\": %d,\n", findPointer(a->getFrame(), (void**)frmlist->frames, frmlist->numFrames));
+	pr(ind, f, "\"geometry\":\n");
 	dumpgeo(a->geometry, f, ind);
 	pr(0, f, ",\n");
-	pr(ind, f, "matfx: %d\n", MatFX::getEffects(a));
+	pr(ind, f, "\"matfx\": %d\n", MatFX::getEffects(a));
 	pr(--ind, f, "}");
 }
 
@@ -222,14 +222,14 @@ static void
 dumpframe(Frame *frm, FrameList_ *frmlist, FILE *f, int ind)
 {
 	pr(ind++, f, "{\n");
-	pr(ind, f, "parent: %d,\n", findPointer(frm->getParent(), (void**)frmlist->frames, frmlist->numFrames));
-	pr(ind, f, "matrix: [ %f, %f, %f,  %f, %f, %f,  %f, %f, %f,  %f, %f, %f ],\n",
+	pr(ind, f, "\"parent\": %d,\n", findPointer(frm->getParent(), (void**)frmlist->frames, frmlist->numFrames));
+	pr(ind, f, "\"matrix\": [ %f, %f, %f,  %f, %f, %f,  %f, %f, %f,  %f, %f, %f ],\n",
 		frm->matrix.right.x, frm->matrix.right.y, frm->matrix.right.z,
 		frm->matrix.up.x, frm->matrix.up.y, frm->matrix.up.z,
 		frm->matrix.at.x, frm->matrix.at.y, frm->matrix.at.z,
 		frm->matrix.pos.x, frm->matrix.pos.y, frm->matrix.pos.z);
 	// TODO? hanim
-	pr(ind, f, "name: \"%s\"\n", gta::getNodeName(frm));
+	pr(ind, f, "\"name\": \"%s\"\n", gta::getNodeName(frm));
 	pr(--ind, f, "}");
 }
 
@@ -238,7 +238,7 @@ dumpframes(FrameList_ *frmlist, FILE *f, int ind)
 {
 	int i;
 
-	pr(ind++, f, "frames: [\n");
+	pr(ind++, f, "\"frames\": [\n");
 	int first = 1;
 	for(i = 0; i < frmlist->numFrames; i++){
 		if(!first)
@@ -261,7 +261,7 @@ dumpclump(Clump *c, FILE *f, int ind)
 	makeFrameList(c->getFrame(), frmlst.frames);
 	dumpframes(&frmlst, f, ind);
 
-	pr(ind++, f, "atomics: [\n");
+	pr(ind++, f, "\"atomics\": [\n");
 	int first = 1;
 	FORLIST(lnk, c->atomics){
 		Atomic *a = Atomic::fromClump(lnk);

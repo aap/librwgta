@@ -213,13 +213,15 @@ rw::int32 GetColourCode(int x, int y);
 
 extern rw::RGBAf leedsPipe_amb;
 extern rw::RGBAf leedsPipe_emiss;
+extern rw::int32 leedsPipe_platformSwitch;	// 0 - psp, 1 - ps2, 2 - mobile
 extern rw::ObjPipeline *leedsPipe;
 
 void MakeLeedsPipe(void);
-// various render CBs
-void leedsRenderCB_PSP(rw::Atomic *atomic, rw::d3d9::InstanceDataHeader *header);
-void leedsRenderCB_PS2(rw::Atomic *atomic, rw::d3d9::InstanceDataHeader *header);
-void leedsRenderCB_mobile(rw::Atomic *atomic, rw::d3d9::InstanceDataHeader *header);
+#ifdef RW_D3D9
+void leedsRenderCB(rw::Atomic *atomic, rw::d3d9::InstanceDataHeader *header);
+#else
+void leedsRenderCB(rw::Atomic *atomic, rw::RWDEVICE::InstanceDataHeader *header);
+#endif
 
 }
 

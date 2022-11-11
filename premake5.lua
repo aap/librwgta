@@ -1,13 +1,6 @@
 Librw = os.getenv("LIBRW")
 
 newoption {
-	trigger     = "glewdir",
-	value       = "PATH",
-	description = "Directory of GLEW",
-	default     = "../glew-2.1.0",
-}
-
-newoption {
 	trigger		= "gfxlib",
 	value       = "LIBRARY",
 	description = "Choose a particular development library",
@@ -22,21 +15,21 @@ newoption {
 	trigger     = "glfwdir64",
 	value       = "PATH",
 	description = "Directory of glfw",
-	default     = "../glfw-3.3.2.bin.WIN64",
+	default     = "../glfw-3.3.4.bin.WIN64",
 }
 
 newoption {
 	trigger     = "glfwdir32",
 	value       = "PATH",
 	description = "Directory of glfw",
-	default     = "../glfw-3.3.2.bin.WIN32",
+	default     = "../glfw-3.3.4.bin.WIN32",
 }
 
 newoption {
 	trigger     = "sdl2dir",
 	value       = "PATH",
 	description = "Directory of sdl2",
-	default     = "../SDL2-2.0.8",
+	default     = "../SDL2-2.0.14",
 }
 
 Zlibdir = "C:/Users/aap/src/zlib-1.2.11"
@@ -140,23 +133,16 @@ end
 
 function findlibs()
 	filter { "platforms:linux*gl3" }
-		links { "GL", "GLEW" }
+		links { "GL" }
 		if _OPTIONS["gfxlib"] == "glfw" then
 			links { "glfw" }
 		else
 			links { "SDL2" }
 		end
-	filter { "platforms:win*gl3", "action:vs*" }
-		defines { "GLEW_STATIC" }
-		links { "glew32s" }
-	filter { "platforms:win*gl3", "action:not vs*" }
-		links { "glew32" }
 	filter { "platforms:win-amd64-gl3" }
-		libdirs { path.join(_OPTIONS["glewdir"], "lib/Release/x64") }
 		libdirs { path.join(_OPTIONS["glfwdir64"], "lib-vc2015") }
 		libdirs { path.join(_OPTIONS["sdl2dir"], "lib/x64") }
 	filter { "platforms:win-x86-gl3" }
-		libdirs { path.join(_OPTIONS["glewdir"], "lib/Release/Win32") }
 		libdirs { path.join(_OPTIONS["glfwdir32"], "lib-vc2015") }
 		libdirs { path.join(_OPTIONS["sdl2dir"], "lib/x86") }
 	filter { "platforms:win*gl3" }

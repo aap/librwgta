@@ -598,34 +598,30 @@ RenderEverythingCollisions(void)
 	}
 }
 
+void
+setupLeedsPipe(void)
+{
+	gta::leedsPipe_amb = Timecycle::currentColours.amb;
+	gta::leedsPipe_emiss = Timecycle::currentColours.amb_bl;
+	switch(gBuildingPipeSwitch){
+	case PLATFORM_PS2:
+		gta::leedsPipe_platformSwitch = 1;
+		break;
+	case PLATFORM_PSP:
+		gta::leedsPipe_platformSwitch = 0;
+		break;
+	default:
+		gta::leedsPipe_platformSwitch = 2;
+		break;
+	}
+}
+
 #ifdef RW_D3D9
 static void
 leedsRenderCB(rw::Atomic *atomic, rw::d3d9::InstanceDataHeader *header)
 {
-	gta::leedsPipe_amb = Timecycle::currentColours.amb;
-	gta::leedsPipe_emiss = Timecycle::currentColours.amb_bl;
-/*
-	// test. use amb like in normal gta
-	gta::leedsPipe_emiss = Timecycle::currentColours.amb;
-	gta::leedsPipe_amb.red = 1.0f;
-	gta::leedsPipe_amb.green = 1.0f;
-	gta::leedsPipe_amb.blue = 1.0f;
-*/
-	switch(gBuildingPipeSwitch){
-	case PLATFORM_NULL:
-		rw::d3d9::defaultRenderCB_Shader(atomic, header);
-		break;
-	case PLATFORM_PS2:
-		gta::leedsRenderCB_PS2(atomic, header);
-		break;
-	case PLATFORM_PSP:
-		gta::leedsRenderCB_PSP(atomic, header);
-		break;
-	// TEST
-	case PLATFORM_PC:
-		gta::leedsRenderCB_mobile(atomic, header);
-		break;
-	}
+	setupLeedsPipe();
+	gta::leedsRenderCB(atomic, header);
 }
 
 void
@@ -635,6 +631,47 @@ MakeLeedsPipe(void)
 	((rw::d3d9::ObjPipeline*)gta::leedsPipe)->renderCB = leedsRenderCB;
 }
 #endif
+
+#ifdef RW_GL3
+static void
+leedsRenderCB(rw::Atomic *atomic, rw::gl3::InstanceDataHeader *header)
+{
+	setupLeedsPipe();
+	gta::leedsRenderCB(atomic, header);
+}
+
+void
+MakeLeedsPipe(void)
+{
+	gta::MakeLeedsPipe();
+	((rw::gl3::ObjPipeline*)gta::leedsPipe)->renderCB = leedsRenderCB;
+}
+#endif
+
+void
+RegisterPipes(void)
+{
+#ifdef RW_GL3
+	rw::gl3::registerUniform("u_dayparam");
+	rw::gl3::registerUniform("u_nightparam");
+	rw::gl3::registerUniform("u_texmat");
+	rw::gl3::registerUniform("u_envmat");
+	rw::gl3::registerUniform("u_envXform");
+	rw::gl3::registerUniform("u_shininess");
+	rw::gl3::registerUniform("u_colorscale");
+
+	rw::gl3::registerUniform("tex0");
+	rw::gl3::registerUniform("tex1");
+	rw::gl3::registerUniform("u_lm");
+
+	rw::gl3::registerUniform("u_postfxCol1");
+	rw::gl3::registerUniform("u_postfxCol2");
+	rw::gl3::registerUniform("u_postfxParams");
+
+	rw::gl3::registerUniform("u_amb");
+	rw::gl3::registerUniform("u_emiss");
+#endif
+}
 
 void
 RenderInit(void)
