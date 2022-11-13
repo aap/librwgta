@@ -620,6 +620,7 @@ uiTest(void)
 }
 
 static ExampleAppLog logwindow;
+// TODO: this crashes for me on linux. should figure out how to fix
 void addToLogWindow(const char *fmt, va_list args) { logwindow.AddLog(fmt, args); }
 
 void

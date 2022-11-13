@@ -312,12 +312,12 @@ AppEventHandler(sk::Event e, void *param)
 
 	switch(e){
 	case INITIALIZE:
-//*
+/*
 		AllocConsole();
 		freopen("CONIN$", "r", stdin);
 		freopen("CONOUT$", "w", stdout);
 		freopen("CONOUT$", "w", stderr);
-//*/
+*/
 		Init();
 		plAttachInput();
 		return EVENTPROCESSED;

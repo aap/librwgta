@@ -45,8 +45,10 @@ void addToLogWindow(const char *fmt, va_list args);
 char *getPath(const char *path);
 FILE *fopen_ci(const char *path, const char *mode);
 bool doesFileExist(const char *path);
-inline float clamp(float v, float min, float max){ return v<min ? min : v>max ? max : v; }
-inline float sq(float x){ return x*x; }
+template <typename T> T min(T a, T b) { return a < b ? a : b; }
+template <typename T> T max(T a, T b) { return a > b ? a : b; }
+template <typename T> T clamp(T v, T min, T max) { return v<min ? min : v>max ? max : v; }
+template <typename T> T sq(T a) { return a*a; }
 
 void plCapturePad(int arg);
 void plUpdatePad(CControllerState *state);
@@ -220,7 +222,7 @@ extern int currentArea;
 
 struct WeatherInfo
 {
-	char *name;
+	const char *name;
 	int flags;
 };
 

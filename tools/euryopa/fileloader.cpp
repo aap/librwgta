@@ -417,7 +417,7 @@ void
 LoadObjectTypes(const char *filename)
 {
 	int i;
-	firstID = MAXINT;
+	firstID = 0x7FFFFFFF;
 	lastID = -1;
 	LoadDataFile(filename, ideDesc);
 
