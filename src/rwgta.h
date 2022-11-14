@@ -220,7 +220,9 @@ void MakeLeedsPipe(void);
 #ifdef RW_D3D9
 void leedsRenderCB(rw::Atomic *atomic, rw::d3d9::InstanceDataHeader *header);
 #else
+#ifdef RWDEVICE
 void leedsRenderCB(rw::Atomic *atomic, rw::RWDEVICE::InstanceDataHeader *header);
+#endif
 #endif
 
 }
