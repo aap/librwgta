@@ -69,7 +69,7 @@ MakeTxdCurrent(char *name)
 {
 	TxdDef *txd;
 	for(txd = txds; txd; txd = txd->next){
-		if(strcmpi(name, txd->name) == 0){
+		if(strcmp_ci(name, txd->name) == 0){
 			rw::TexDictionary::setCurrent(txd->texDict);
 			return;
 		}

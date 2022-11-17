@@ -268,7 +268,7 @@ main(int argc, char *argv[])
 			usage();
 		*ext = '\0';
 	}else
-		outname = "output";
+		outname = (char*)"output";
 
 	char tmpname[1024];
 	snprintf(tmpname, sizeof(tmpname), "%s.img", basename);

@@ -2,7 +2,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <cassert>
-#include <Windows.h>
 
 #include <rw.h>
 #include <args.h>
@@ -364,7 +363,7 @@ FindAnimation(AnimPackage *pack, const char *name)
 {
 	int i;
 	for(i = 0; i < pack->numAnimations; i++)
-		if(stricmp(pack->animations[i].name, name) == 0)
+		if(strcmp_ci(pack->animations[i].name, name) == 0)
 			return i;
 	return -1;
 }
@@ -384,7 +383,7 @@ MergePackages(AnimPackage *pack1, AnimPackage *pack2)
 	}
 }
 
-static char *inputFiles[] = {
+static const char *inputFiles[] = {
 	"ped_ps2.ifp",
 	"ped_pc.ifp",
 	"baseball.ifp",
@@ -421,8 +420,8 @@ AnimPackage *animFiles[200];
 int numFiles;
 
 struct {
-	char *output;
-	char *input;
+	const char *output;
+	const char *input;
 } animNames[] = {
 	{ "ARRESTgun", "ARRESTgun" },
 	{ "CAR_LB", "CAR_LB" },
