@@ -561,9 +561,6 @@ Draw(void)
 
 	updateFPS();
 
-	ImGui_ImplRW_NewFrame(timeStep);
-	ImGuizmo::BeginFrame();
-
 	Weather::Update();
 	Timecycle::Update();
 	Timecycle::SetLights();
@@ -585,6 +582,9 @@ Draw(void)
 	Scene.camera->beginUpdate();
 
 	DefinedState();
+
+	ImGui_ImplRW_NewFrame(timeStep);
+	ImGuizmo::BeginFrame();
 
 	LoadAllRequestedObjects();
 	BuildRenderList();

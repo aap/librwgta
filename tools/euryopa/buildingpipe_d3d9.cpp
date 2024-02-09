@@ -251,9 +251,11 @@ buildingInstanceCB(Geometry *geo, d3d9::InstanceDataHeader *header, bool32 reins
 		dcl[i] = D3DDECL_END();
 		s->stride = stride;
 
+		assert(header->vertexDeclaration == nil);
 		header->vertexDeclaration = createVertexDeclaration((VertexElement*)dcl);
 
-		s->vertexBuffer = createVertexBuffer(header->totalNumVertex*s->stride, 0, D3DPOOL_MANAGED);
+		assert(s->vertexBuffer == nil);
+		s->vertexBuffer = createVertexBuffer(header->totalNumVertex*s->stride, 0, false);
 	}else
 		getDeclaration(header->vertexDeclaration, dcl);
 

@@ -45,6 +45,12 @@ void addToLogWindow(const char *fmt, va_list args);
 char *getPath(const char *path);
 FILE *fopen_ci(const char *path, const char *mode);
 bool doesFileExist(const char *path);
+#ifdef min
+#undef min
+#endif
+#ifdef max
+#undef max
+#endif
 template <typename T> T min(T a, T b) { return a < b ? a : b; }
 template <typename T> T max(T a, T b) { return a > b ? a : b; }
 template <typename T> T clamp(T v, T min, T max) { return v<min ? min : v>max ? max : v; }
