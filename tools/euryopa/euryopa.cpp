@@ -28,6 +28,7 @@ bool gNoAreaCull;
 bool gDoBackfaceCulling;	// init from params
 bool gPlayAnimations = true;
 bool gUseViewerCam;
+bool gDrawTarget = true;
 
 // non-rendering things
 bool gRenderCollision;
@@ -636,7 +637,8 @@ Draw(void)
 
 	SetRenderState(rw::CULLMODE, rw::CULLNONE);
 
-	TheCamera.DrawTarget();
+	if(gDrawTarget)
+		TheCamera.DrawTarget();
 	if(gRenderCollision)
 		RenderEverythingCollisions();
 	if(gRenderTimecycleBoxes)

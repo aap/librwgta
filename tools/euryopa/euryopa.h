@@ -84,6 +84,7 @@ extern bool gNoAreaCull;
 extern bool gDoBackfaceCulling;
 extern bool gPlayAnimations;
 extern bool gUseViewerCam;
+extern bool gDrawTarget;
 
 // non-rendering things
 extern bool gRenderCollision;

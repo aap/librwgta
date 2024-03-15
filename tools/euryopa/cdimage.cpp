@@ -1,5 +1,4 @@
 #include "euryopa.h"
-#include <vector>
 
 #include "minilzo/minilzo.h"
 

@@ -88,7 +88,7 @@ uiMainmenu(void)
 			if(ImGui::MenuItem("View", "V", showViewWindow)) { showViewWindow ^= 1; }
 			if(ImGui::MenuItem("Rendering", "R", showRenderingWindow)) { showRenderingWindow ^= 1; }
 			if(ImGui::MenuItem("Object Info", "I", showInstanceWindow)) { showInstanceWindow ^= 1; }
-			if(ImGui::MenuItem("Editor ", nil, showEditorWindow)) { showEditorWindow ^= 1; }
+			if(ImGui::MenuItem("Editor", "E", showEditorWindow)) { showEditorWindow ^= 1; }
 			if(ImGui::MenuItem("Log ", nil, showLogWindow)) { showLogWindow ^= 1; }
 			if(ImGui::MenuItem("Demo ", nil, showDemoWindow)) { showDemoWindow ^= 1; }
 			if(ImGui::MenuItem("Help", nil, showHelpWindow)) { showHelpWindow ^= 1; }
@@ -505,21 +505,164 @@ uiObjInfo(ObjectDef *obj)
 	}
 }
 
+struct CamSetting {
+	char name[256];
+	rw::V3d pos;
+	rw::V3d target;
+	float fov;
+
+	int hour, minute;
+	int weather1, weather2;
+	int extracolors;
+
+	int area;
+};
+
+#include <vector>
+std::vector<CamSetting> camSettings;
+
+static void
+loadCamSettings(void)
+{
+	CamSetting cam;
+	char line[256], *p, *pp;
+	FILE *f;
+
+	f = fopen("camsettings.txt", "r");
+	if(f == nil)
+		return;
+	camSettings.clear();
+	while(fgets(line, sizeof(line), f)){
+		p = line;
+		while(*p && isspace(*p)) p++;
+		if(*p != '"')
+			continue;
+		pp = ++p;
+		while(*p && *p != '"') p++;
+		if(*p != '"')
+			continue;
+		*p++ = '\0';
+		strncpy(cam.name, pp, sizeof(cam.name));
+		sscanf(p, "%f %f %f  %f %f %f  %f  %d %d %d %d  %d",
+			&cam.pos.x, &cam.pos.y, &cam.pos.z,
+			&cam.target.x, &cam.target.y, &cam.target.z,
+			&cam.fov,
+			&cam.hour, &cam.minute, &cam.weather1, &cam.weather2,
+			&cam.area);
+		if(cam.fov < 1.0f || cam.fov > 150.0f)
+			cam.fov = 70.0f;
+		if(cam.area < 0 || cam.area >= params.numAreas)
+			cam.area = 0;
+		cam.hour %= 24;
+		cam.minute %= 60;
+		cam.weather1 %= params.numWeathers;
+		cam.weather2 %= params.numWeathers;
+		camSettings.push_back(cam);
+	}
+
+	fclose(f);
+}
+
+static void
+saveCamSettings(void)
+{
+	FILE *f;
+
+	f = fopen("camsettings.txt", "w");
+	if(f == nil)
+		return;
+
+	for(int i = 0; i < camSettings.size(); i++){
+		CamSetting *cam = &camSettings[i];
+		fprintf(f, "\"%s\" %f %f %f  %f %f %f  %f  %d %d %d %d  %d\n",
+			cam->name,
+			cam->pos.x, cam->pos.y, cam->pos.z,
+			cam->target.x, cam->target.y, cam->target.z,
+			cam->fov,
+			cam->hour, cam->minute, cam->weather1, cam->weather2,
+			cam->area);
+	}
+
+	fclose(f);
+}
+
+static void
+getCurrentCamSetting(CamSetting *cam)
+{
+	for(char *p = cam->name; *p; p++)
+		if(*p == '"') *p = ' ';
+	cam->pos = TheCamera.m_position;
+	cam->target = TheCamera.m_target;
+	cam->fov = TheCamera.m_fov;
+	cam->hour = currentHour;
+	cam->minute = currentMinute;
+	cam->weather1 = Weather::oldWeather;
+	cam->weather2 = Weather::newWeather;
+	cam->area = currentArea;
+}
+
 static void
 uiEditorWindow(void)
 {
 	static char buf[256];
+	static char name[256] = "default";
 
 	CPtrNode *p;
 	ObjectInst *inst;
 	ObjectDef *obj;
+	TxdDef *txd;
 
 	ImGui::Begin("Editor Window", &showEditorWindow);
 
 	if(ImGui::TreeNode("Camera")){
 		ImGui::InputFloat3("Cam position", (float*)&TheCamera.m_position);
 		ImGui::InputFloat3("Cam target", (float*)&TheCamera.m_target);
+		ImGui::SameLine();
+		ImGui::Checkbox("show", &gDrawTarget);
+		ImGui::SliderFloat("FOV", (float*)&TheCamera.m_fov, 1.0f, 150.0f, "%.0f");
 		ImGui::Text("Far: %f", Timecycle::currentColours.farClp);
+
+		ImGui::InputText("name", name, sizeof(name));
+		if(ImGui::Button("Save")){
+			CamSetting cam;
+			strncpy(cam.name, name, sizeof(cam.name));
+			getCurrentCamSetting(&cam);
+			camSettings.push_back(cam);
+			saveCamSettings();
+		}
+
+		for(int i = 0; i < camSettings.size(); i++){
+			CamSetting *cam = &camSettings[i];
+			ImGui::PushID(i);
+			sprintf(buf, "%-20s", cam->name);
+			bool del = ImGui::Button("Delete");
+			ImGui::SameLine();
+			if(ImGui::Button("Replace")){
+				strncpy(cam->name, name, sizeof(cam->name));
+				getCurrentCamSetting(cam);
+				saveCamSettings();
+			}
+			ImGui::SameLine();
+			if(ImGui::Selectable(buf)){
+				strncpy(name, cam->name, sizeof(name));
+				TheCamera.m_position = cam->pos;
+				TheCamera.m_target = cam->target;
+				TheCamera.m_fov = cam->fov;
+				currentHour = cam->hour;
+				currentMinute = cam->minute;
+				Weather::oldWeather = cam->weather1;
+				Weather::newWeather = cam->weather2;
+				if(params.numAreas)
+					currentArea = cam->area;
+			}
+			ImGui::PopID();
+			if(del){
+				memmove(&camSettings[i], &camSettings[i+1], (camSettings.size()-i-1)*sizeof(CamSetting));
+				camSettings.pop_back();
+				saveCamSettings();
+				i--;
+			}
+		}
 		ImGui::TreePop();
 	}
 
@@ -548,20 +691,27 @@ uiEditorWindow(void)
 
 	if(ImGui::TreeNode("Instances")){
 		static ImGuiTextFilter filter;
-		filter.Draw();
+		static ImGuiTextFilter filter2;
+		filter.Draw("Model (inc,-exc)"); ImGui::SameLine();
+		if(ImGui::Button("Clear##Model"))
+			filter.Clear();
+		filter2.Draw("Txd (inc,-exc)"); ImGui::SameLine();
+		if(ImGui::Button("Clear##Txd"))
+			filter2.Clear();
 		static bool highlight;
 		ImGui::Checkbox("Highlight matches", &highlight);
 		for(p = instances.first; p; p = p->next){
 			inst = (ObjectInst*)p->item;
 			obj = GetObjectDef(inst->m_objectId);
-			if(filter.PassFilter(obj->m_name)){
+			txd = GetTxdDef(obj->m_txdSlot);
+			if(filter.PassFilter(obj->m_name) && filter2.PassFilter(txd->name)){
 				bool pop = false;
 				if(inst->m_selected){
 					ImGui::PushStyleColor(ImGuiCol_Text, (ImVec4)ImColor(255, 0, 0));
 					pop = true;
 				}
 				ImGui::PushID(inst);
-				sprintf(buf, "%-20s %8.2f %8.2f %8.2f", obj->m_name,
+				sprintf(buf, "%-20s %-20s %8.2f %8.2f %8.2f", obj->m_name, txd->name,
 					inst->m_translation.x, inst->m_translation.y, inst->m_translation.z);
 				ImGui::Selectable(buf);
 				ImGui::PopID();
@@ -628,6 +778,12 @@ gui(void)
 {
 	static bool show_another_window = false;
 	static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+	static bool camloaded = false;
+
+	if(!camloaded){
+		loadCamSettings();
+		camloaded = true;
+	}
 
 	uiMainmenu();
 
@@ -657,7 +813,9 @@ gui(void)
 	if(CPad::IsKeyJustDown('I')) showInstanceWindow ^= 1;
 	if(showInstanceWindow) uiInstWindow();
 
+	if(CPad::IsKeyJustDown('E')) showEditorWindow ^= 1;
 	if(showEditorWindow) uiEditorWindow();
+
 	if(showHelpWindow) uiHelpWindow();
 	if(showDemoWindow){
 		ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiCond_FirstUseEver);
