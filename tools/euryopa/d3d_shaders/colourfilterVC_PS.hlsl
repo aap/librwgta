@@ -1,5 +1,5 @@
 uniform sampler2D tex : register(s0);
-uniform float4 blurcol : register(c0);
+uniform float4 blurcol : register(c10);
 
 
 float4 main(in float2 texcoord : TEXCOORD0) : COLOR0

@@ -1,5 +1,5 @@
 uniform sampler2D tex : register(s0);
-uniform float3 params : register(c2);
+uniform float3 params : register(c12);
 
 #define limit (params.x)
 #define intensity (params.y)

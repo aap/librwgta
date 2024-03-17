@@ -110,12 +110,12 @@ static void
 RenderColourFilterGeneric(void *ps)
 {
 	float postfxvars[4];
-	d3ddevice->SetPixelShaderConstantF(0, (float*)&Timecycle::currentColours.postfx1, 1);
-	d3ddevice->SetPixelShaderConstantF(1, (float*)&Timecycle::currentColours.postfx2, 1);
+	d3ddevice->SetPixelShaderConstantF(10, (float*)&Timecycle::currentColours.postfx1, 1);
+	d3ddevice->SetPixelShaderConstantF(11, (float*)&Timecycle::currentColours.postfx2, 1);
 	postfxvars[0] = Timecycle::currentColours.radiosityLimit/255.0f;
 	postfxvars[1] = Timecycle::currentColours.radiosityIntensity/255.0f;
 	postfxvars[2] = 2.0f;		// render passes
-	d3ddevice->SetPixelShaderConstantF(2, (float*)postfxvars, 1);
+	d3ddevice->SetPixelShaderConstantF(12, (float*)postfxvars, 1);
 
 	d3d::im2dOverridePS = ps;
 	im2d::RenderIndexedPrimitive(rw::PRIMTYPETRILIST,
