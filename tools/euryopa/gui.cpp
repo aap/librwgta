@@ -753,7 +753,7 @@ static void
 uiTest(void)
 {
 	ImGuiContext &g = *GImGui;
-	int y = g.FontBaseSize + g.Style.FramePadding.y * 2.0f;	// height of main menu
+	int y = g.FontSizeBase + g.Style.FramePadding.y * 2.0f;	// height of main menu
 	ImGui::SetNextWindowPos(ImVec2(0, y), ImGuiCond_Always);
 	ImGui::SetNextWindowSize(ImVec2(200, sk::globals.height-y), ImGuiCond_Always);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
@@ -771,7 +771,8 @@ uiTest(void)
 
 static ExampleAppLog logwindow;
 // TODO: this crashes for me on linux. should figure out how to fix
-void addToLogWindow(const char *fmt, va_list args) { logwindow.AddLog(fmt, args); }
+//void addToLogWindow(const char *fmt, va_list args) { logwindow.AddLog(fmt, args); }
+void addToLogWindow(const char *fmt, va_list args) { }
 
 void
 gui(void)

@@ -66,7 +66,9 @@ workspace "librwgta"
 		defines { "RW_NULL" }
 	filter { "platforms:*gl3" }
 		defines { "RW_GL3" }
-		if _OPTIONS["gfxlib"] == "sdl2" then
+		if _OPTIONS["gfxlib"] == "glfw" then
+			defines { "LIBRW_GLFW" }
+		else
 			defines { "LIBRW_SDL2" }
 		end
 	filter { "platforms:*d3d9" }

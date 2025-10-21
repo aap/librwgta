@@ -12,6 +12,7 @@
 #include <rwgta.h>
 #define PS2
 
+//using namespace std;
 using rw::int8;
 using rw::uint8;
 using rw::int16;

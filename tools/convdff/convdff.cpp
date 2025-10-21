@@ -27,6 +27,7 @@ char *argv0;
 char *inputfilename;
 
 void dumpjson(Clump*, const char *file);
+void centerTexCoords(Geometry *g);
 
 void
 usage(void)
@@ -645,6 +646,7 @@ main(int argc, char *argv[])
 	int tristrip = 0;
 	int json = 0;
 	int assign = 0;
+	int centerUV = 0;
 
 	char *s, *longarg;
 	//char *seconddff = NULL;
@@ -663,6 +665,7 @@ main(int argc, char *argv[])
 		else if(strcmp_ci(longarg, "ps2sacar") == 0) ps2sacar++;
 		else if(strcmp_ci(longarg, "ps2sabuilding") == 0) ps2sabuilding++;
 		else if(strcmp_ci(longarg, "ps2saped") == 0) ps2saped++;
+		else if(strcmp_ci(longarg, "centerUV") == 0) centerUV++;
 		else usage();
 		break;
 	case 'u':
@@ -952,6 +955,12 @@ main(int argc, char *argv[])
 			Geometry *g = Atomic::fromClump(lnk)->geometry;
 			g->correctTristripWinding();
 			g->generateTriangles();
+		}
+
+	if(centerUV)
+		FORLIST(lnk, c->atomics){
+			Geometry *g = Atomic::fromClump(lnk)->geometry;
+			centerTexCoords(g);
 		}
 
 	if(tristrip)
