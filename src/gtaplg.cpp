@@ -770,78 +770,354 @@ attachCustomPipelines(rw::Atomic *atomic)
 
 // 2dEffect
 
-struct SizedData
-{
-	uint32 size;
-	uint8 *data;
-};
-
 int32 twodEffectOffset;
 
 static void*
 create2dEffect(void *object, int32 offset, int32)
 {
-	SizedData *data;
-	data = PLUGINOFFSET(SizedData, object, offset);
-	data->size = 0;
-	data->data = nil;
+	*PLUGINOFFSET(SpecMat*, object, offset) = nil;
 	return object;
 }
 
 static void*
 destroy2dEffect(void *object, int32 offset, int32)
 {
-	SizedData *data;
-	data = PLUGINOFFSET(SizedData, object, offset);
-	delete[] data->data;
-	data->data = nil;
-	data->size = 0;
+	uint8* buffer = *PLUGINOFFSET(uint8*, object, offset);
+
+	if (buffer != nil) {
+		delete[] buffer;
+		*PLUGINOFFSET(uint8*, object, offset) = nil;
+	}
+
 	return object;
 }
 
 static void*
 copy2dEffect(void *dst, void *src, int32 offset, int32)
 {
-	SizedData *srcdata, *dstdata;
-	dstdata = PLUGINOFFSET(SizedData, dst, offset);
-	srcdata = PLUGINOFFSET(SizedData, src, offset);
-	dstdata->size = srcdata->size;
-	if(dstdata->size != 0){
-		dstdata->data = new uint8[dstdata->size];
-		memcpy(dstdata->data, srcdata->data, dstdata->size);
-	}
+	uint8* srcBuffer;
+	uint8* destBuffer;
+	int32 numEffects;
+
+	srcBuffer = *PLUGINOFFSET(uint8*, src, offset);
+	if (srcBuffer == nil)
+		return dst;
+
+	numEffects = *(int32*)srcBuffer;
+
+	destBuffer = new uint8[numEffects * sizeof(Effect2d) + 4];
+	*PLUGINOFFSET(uint8*, dst, offset) = destBuffer;
+
+	memcpy(destBuffer, srcBuffer, numEffects * sizeof(Effect2d) + 4);
 	return dst;
 }
 
 static rw::Stream*
 read2dEffect(rw::Stream *stream, int32 size, void *object, int32 offset, int32)
 {
-	SizedData *data = PLUGINOFFSET(SizedData, object, offset);
-	data->size = size;
-	data->data = new uint8[data->size];
-	stream->read8(data->data, data->size);
+	Effect2d* effects;
+	uint8* buffer;
+	int32 numEffects;
+
+	numEffects = stream->readI32();
+
+	if (numEffects == 0) {
+		*PLUGINOFFSET(uint8*, object, offset) = nil;
+		return stream;
+	}
+
+	buffer = new uint8[numEffects * sizeof(Effect2d) + 4];
+	effects = (Effect2d*)(buffer + 4);
+	*(int32*)buffer = numEffects;
+
+	*PLUGINOFFSET(uint8*, object, offset) = buffer;
+
+	for (int32 i = 0; i < numEffects; i++) {
+		Effect2dHeader header;
+		PedQueueAttrStream pedqueue;
+		Effect2d* effect;
+
+		effect = &effects[i];
+		stream->read8(&header, sizeof(header));
+
+		effect->posn = header.pos;
+		effect->type = header.type;
+		switch (header.type) {
+		case ET_LIGHT:
+			if (header.size == sizeof(LightAttrFileStream_1)) {
+				LightAttrFileStream_1 lightv1;
+				stream->read8(&lightv1, sizeof(lightv1));
+
+				effect->attr.l.col = lightv1.col;
+				effect->attr.l.lodDist = lightv1.lodDist;
+				effect->attr.l.size = lightv1.size;
+				effect->attr.l.coronaSize = lightv1.coronaSize;
+				effect->attr.l.shadowSize = lightv1.shadowSize;
+				effect->attr.l.flags = lightv1.flags + (lightv1.extraFlags << 8);
+				effect->attr.l.flashiness = lightv1.flashiness;
+				effect->attr.l.reflectionType = lightv1.reflectionType;
+				effect->attr.l.lensFlareType = lightv1.lensFlareType;
+				effect->attr.l.shadowAlpha = lightv1.shadowAlpha;
+
+				strcpy(effect->attr.l.coronaTex, lightv1.coronaTex);
+				effect->attr.l.coronaTex[23] = '\0';
+
+				strcpy(effect->attr.l.shadowTex, lightv1.shadowTex);
+				effect->attr.l.shadowTex[23] = '\0';
+
+				effect->attr.l.shadowDepth = lightv1.shadowDepth;
+				effect->attr.l.lightDirX = 0;
+				effect->attr.l.lightDirY = 0;
+				effect->attr.l.lightDirZ = 100;
+			}
+			else if (header.size == sizeof(LightAttrFileStream_2)) {
+				LightAttrFileStream_2 lightv2;
+				stream->read8(&lightv2, sizeof(lightv2));
+
+				effect->attr.l.col = lightv2.col;
+				effect->attr.l.lodDist = lightv2.lodDist;
+				effect->attr.l.size = lightv2.size;
+				effect->attr.l.coronaSize = lightv2.coronaSize;
+				effect->attr.l.shadowSize = lightv2.shadowSize;
+				effect->attr.l.flags = lightv2.flags + (lightv2.extraFlags << 8);
+				effect->attr.l.flashiness = lightv2.flashiness;
+				effect->attr.l.reflectionType = lightv2.reflectionType;
+				effect->attr.l.lensFlareType = lightv2.lensFlareType;
+				effect->attr.l.shadowAlpha = lightv2.shadowAlpha;
+
+				strcpy(effect->attr.l.coronaTex, lightv2.coronaTex);
+				effect->attr.l.coronaTex[23] = '\0';
+
+				strcpy(effect->attr.l.shadowTex, lightv2.shadowTex);
+				effect->attr.l.shadowTex[23] = '\0';
+
+				effect->attr.l.shadowDepth = lightv2.shadowDepth;
+				effect->attr.l.lightDirX = lightv2.lightDirX;
+				effect->attr.l.lightDirY = lightv2.lightDirY;
+				effect->attr.l.lightDirZ = lightv2.lightDirZ;
+			}
+			break;
+
+		case ET_PARTICLE:
+			stream->read8(&effect->attr.p, sizeof(effect->attr.p));
+			break;
+
+		case ET_PEDQUEUE:
+			stream->read8(&pedqueue, sizeof(pedqueue));
+
+			effect->attr.q.type = pedqueue.type;
+			effect->attr.q.queueDir = pedqueue.queueDir;
+			effect->attr.q.useDir = pedqueue.useDir;
+			effect->attr.q.forwardDir = pedqueue.forwardDir;
+
+			strcpy(effect->attr.q.scriptName, pedqueue.scriptName);
+			effect->attr.q.scriptName[7] = '\0';
+
+			effect->attr.q.interest = pedqueue.interest;
+			effect->attr.q.lookAt = pedqueue.lookAt;
+			effect->attr.q.flags = pedqueue.flags;
+			break;
+
+		case ET_INTERIOR:
+			stream->read8(&effect->attr.i, sizeof(effect->attr.i));
+			break;
+
+		case ET_ENTRYEXIT:
+			stream->read8(&effect->attr.e, sizeof(effect->attr.e));
+			break;
+
+		case ET_ROADSIGN:
+			stream->read8(&effect->attr.rs, sizeof(effect->attr.rs));
+			break;
+
+		case ET_TRIGGERPOINT:
+			stream->read8(&effect->attr.t, sizeof(effect->attr.t));
+			break;
+
+		case ET_COVERPOINT:
+			stream->read8(&effect->attr.c, sizeof(effect->attr.c));
+			break;
+
+		case ET_ESCALATOR:
+			stream->read8(&effect->attr.es, sizeof(effect->attr.es));
+			break;
+		}
+	}
+
 	return stream;
 }
 
 static rw::Stream*
 write2dEffect(rw::Stream *stream, int32, void *object, int32 offset, int32)
 {
-	SizedData *data = PLUGINOFFSET(SizedData, object, offset);
-	stream->write8(data->data, data->size);
+	int32 numEffects;
+	Effect2d* effects;
+	uint8* buffer;
+
+	buffer = *PLUGINOFFSET(uint8*, object, offset);
+	numEffects = *(int32*)(buffer);
+	effects = (Effect2d*)(buffer + 4);
+
+	stream->write8(&numEffects, sizeof(numEffects));
+	for (int32 i = 0; i < numEffects; i++) {
+		Effect2d* effect;
+		Effect2dHeader header;
+		PedQueueAttrStream pedqueue;
+		LightAttrFileStream_2 lightattr;
+
+		effect = &effects[i];
+
+		header.pos = effect->posn;
+		header.type = effect->type;
+		switch (effect->type) {
+		case ET_LIGHT: header.size = sizeof(lightattr); break;
+		case ET_PARTICLE: header.size = sizeof(effect->attr.p); break;
+		case ET_PEDQUEUE: header.size = sizeof(pedqueue); break;
+		case ET_SUNGLARE: header.size = 0; break;
+		case ET_INTERIOR: header.size = sizeof(effect->attr.i); break;
+		case ET_ENTRYEXIT: header.size = sizeof(effect->attr.e); break;
+		case ET_ROADSIGN: header.size = sizeof(effect->attr.rs); break;
+		case ET_TRIGGERPOINT: header.size = sizeof(effect->attr.t); break;
+		case ET_COVERPOINT: header.size = sizeof(effect->attr.c); break;
+		case ET_ESCALATOR: header.size = sizeof(effect->attr.es); break;
+		}
+
+		stream->write8(&header, sizeof(header));
+
+		switch (effect->type) {
+		case ET_LIGHT:
+			lightattr.col = effect->attr.l.col;
+			lightattr.lodDist = effect->attr.l.lodDist;
+			lightattr.size = effect->attr.l.size;
+			lightattr.coronaSize = effect->attr.l.coronaSize;
+			lightattr.shadowSize = effect->attr.l.shadowSize;
+			lightattr.flags = effect->attr.l.flags & 255;
+			lightattr.extraFlags = (effect->attr.l.flags >> 8) & 255;
+			lightattr.flashiness = effect->attr.l.flashiness;
+			lightattr.reflectionType = effect->attr.l.reflectionType;
+			lightattr.lensFlareType = effect->attr.l.lensFlareType;
+			lightattr.shadowAlpha = effect->attr.l.shadowAlpha;
+
+			strcpy(lightattr.coronaTex, effect->attr.l.coronaTex);
+			lightattr.coronaTex[23] = '\0';
+
+			strcpy(lightattr.shadowTex, effect->attr.l.shadowTex);
+			lightattr.shadowTex[23] = '\0';
+
+			lightattr.shadowDepth = effect->attr.l.shadowDepth;
+			lightattr.lightDirX = effect->attr.l.lightDirX;
+			lightattr.lightDirY = effect->attr.l.lightDirY;
+			lightattr.lightDirZ = effect->attr.l.lightDirZ;
+
+			stream->write8(&lightattr, sizeof(lightattr));
+			break;
+
+		case ET_PARTICLE:
+			stream->write8(&effect->attr.p, sizeof(effect->attr.p));
+			break;
+
+		case ET_PEDQUEUE:
+			pedqueue.type = effect->attr.q.type;
+			pedqueue.queueDir = effect->attr.q.queueDir;
+			pedqueue.useDir = effect->attr.q.useDir;
+			pedqueue.forwardDir = effect->attr.q.forwardDir;
+
+			strcpy(pedqueue.scriptName, effect->attr.q.scriptName);
+			pedqueue.scriptName[7] = '\0';
+
+			pedqueue.interest = effect->attr.q.interest;
+			pedqueue.lookAt = effect->attr.q.lookAt;
+			pedqueue.flags = effect->attr.q.flags;
+
+			stream->write8(&pedqueue, sizeof(pedqueue));
+			break;
+
+		case ET_INTERIOR:
+			stream->write8(&effect->attr.i, sizeof(effect->attr.i));
+			break;
+
+		case ET_ENTRYEXIT:
+			stream->write8(&effect->attr.e, sizeof(effect->attr.e));
+			break;
+
+		case ET_ROADSIGN:
+			stream->write8(&effect->attr.rs, sizeof(effect->attr.rs));
+			break;
+
+		case ET_TRIGGERPOINT:
+			stream->write8(&effect->attr.t, sizeof(effect->attr.t));
+			break;
+
+		case ET_COVERPOINT:
+			stream->write8(&effect->attr.c, sizeof(effect->attr.c));
+			break;
+
+		case ET_ESCALATOR:
+			stream->write8(&effect->attr.es, sizeof(effect->attr.es));
+			break;
+		}
+	}
+
 	return stream;
 }
 
 static int32
 getSize2dEffect(void *object, int32 offset, int32)
 {
-	SizedData *data = PLUGINOFFSET(SizedData, object, offset);
-	return data->size;
+	int32 numEffects;
+	Effect2d* effects;
+	uint8* buffer;
+
+	buffer = *PLUGINOFFSET(uint8*, object, offset);
+	if (buffer == nil) return 0;
+	
+	numEffects = *(int32*)(buffer);
+	effects = (Effect2d*)(buffer + 4);
+
+	int32 size = 4;
+	for (int32 i = 0; i < numEffects; i++) {
+		Effect2d* effect;
+
+		effect = &effects[i];
+		size += sizeof(Effect2dHeader);
+
+		switch (effect->type) {
+		case ET_LIGHT: size += sizeof(LightAttrFileStream_2); break;
+		case ET_PARTICLE: size += sizeof(effect->attr.p); break;
+		case ET_PEDQUEUE: size += sizeof(PedQueueAttrStream); break;
+		case ET_INTERIOR: size += sizeof(effect->attr.i); break;
+		case ET_ENTRYEXIT: size += sizeof(effect->attr.e); break;
+		case ET_ROADSIGN: size += sizeof(effect->attr.rs); break;
+		case ET_TRIGGERPOINT: size += sizeof(effect->attr.t); break;
+		case ET_COVERPOINT: size += sizeof(effect->attr.c); break;
+		case ET_ESCALATOR: size += sizeof(effect->attr.es); break;
+		}
+	}
+
+	return size;
+}
+
+int32
+getNum2dEffects(rw::Geometry* geom) {
+	uint8* buffer = *PLUGINOFFSET(uint8*, geom, twodEffectOffset);
+	if (buffer == nil) return nil;
+
+	return *(int32*)buffer;
+}
+
+Effect2d*
+get2dEffects(rw::Geometry* geom)
+{
+	uint8* buffer = *PLUGINOFFSET(uint8*, geom, twodEffectOffset);
+	if (buffer == nil) return nil;
+
+	return (Effect2d*)(buffer + 4);
 }
 
 void
 register2dEffectPlugin(void)
 {
-	twodEffectOffset = rw::Geometry::registerPlugin(sizeof(SizedData), ID_2DEFFECT,
+	twodEffectOffset = rw::Geometry::registerPlugin(sizeof(uint8*), ID_2DEFFECT,
 	                                            create2dEffect,
                                                     destroy2dEffect,
                                                     copy2dEffect);
@@ -850,6 +1126,12 @@ register2dEffectPlugin(void)
 }
 
 // Collision
+
+struct SizedData
+{
+	uint32 size;
+	uint8* data;
+};
 
 int32 collisionOffset;
 

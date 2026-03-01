@@ -177,7 +177,254 @@ void attachCustomPipelines(rw::Atomic *atomic);
 
 // 2dEffect
 
+enum e2dEffectType {
+	ET_LIGHT = 0,
+	ET_PARTICLE,
+	ET_PEDQUEUE = 3,
+	ET_SUNGLARE,
+	ET_INTERIOR,
+	ET_ENTRYEXIT,
+	ET_ROADSIGN,
+	ET_TRIGGERPOINT,
+	ET_COVERPOINT,
+	ET_ESCALATOR
+};
+
+enum eFlashiness {
+	FL_CONSTANT = 0,
+	FL_RANDOM,
+	FL_RANDOM_OVERRIDE_IF_WET,
+	FL_ONCE_SECOND,
+	FL_TWICE_SECOND,
+	FL_FIVE_SECOND,
+	FL_RANDOM_FLASHINESS,
+	FL_OFF,
+	FL_RED_LIGHTS_FOR_BRIDGE,
+	FL_ALARM,
+	FL_ON_WHEN_RAINING,
+	FL_CYCLE_1,
+	FL_CYCLE_2,
+	FL_CYCLE_3
+};
+
+enum ePedQueueType {
+	QT_ATM = 0,
+	QT_SEAT,
+	QT_BUS_STOP,
+	QT_PIZZA,
+	QT_SHELTER,
+	QT_TRIGGER_SCRIPT,
+	QT_LOOK_AT,
+	QT_SCRIPTED,
+	QT_PARK,
+	QT_STEP,
+	MAX_NUM_QUEUE_TYPES
+};
+
+enum eInteriorType {
+	IT_SHOP = 0,
+	IT_OFFICE,
+	IT_LOUNGE,
+	IT_BEDROOM,
+	IT_KITCHEN,
+	IT_BATHROOM,
+	IT_OFFLICENSE,
+	IT_HOTELROOM,
+	IT_MISC,
+	MAX_NUM_INTERIOR_TYPES,
+	IT_TESTROOM = 99
+};
+
+struct Effect2dHeader {
+	rw::V3d pos;
+	rw::int32 type;
+	rw::int32 size;
+};
+
+struct LightAttr {
+	rw::RGBA col;
+	float lodDist;
+	float size; // pointlight range
+	float coronaSize;
+	float shadowSize;
+	rw::uint16 flags;
+	rw::uint8 flashiness;
+	rw::uint8 reflectionType;
+	rw::uint8 lensFlareType;
+	rw::uint8 shadowAlpha;
+	rw::uint8 shadowDepth;
+	rw::int8 lightDirX;
+	rw::int8 lightDirY;
+	rw::int8 lightDirZ;
+	char coronaTex[24];
+	char shadowTex[24];
+};
+
+// 0x78 bytes; this is an earlier version according to the DWARF headers
+// Both are read by the game and fully work
+struct LightAttrFileStream_1 {
+	rw::RGBA col;
+	float lodDist;
+	float size;
+	float coronaSize;
+	float shadowSize;
+	rw::uint8 flashiness;
+	rw::uint8 reflectionType;
+	rw::uint8 lensFlareType;
+	rw::uint8 shadowAlpha;
+	rw::uint8 flags;
+	char coronaTex[24];
+	char shadowTex[24];
+	rw::uint8 shadowDepth;
+	rw::uint8 extraFlags;
+};
+
+// 0x80 bytes; final ver
+struct LightAttrFileStream_2 {
+	rw::RGBA col;
+	float lodDist;
+	float size;
+	float coronaSize;
+	float shadowSize;
+	rw::uint8 flashiness;
+	rw::uint8 reflectionType;
+	rw::uint8 lensFlareType;
+	rw::uint8 shadowAlpha;
+	rw::uint8 flags;
+	char coronaTex[24];
+	char shadowTex[24];
+	rw::uint8 shadowDepth;
+	rw::uint8 extraFlags;
+	rw::int8 lightDirX;
+	rw::int8 lightDirY;
+	rw::int8 lightDirZ;
+};
+
+struct ParticleAttr {
+	char name[24];
+};
+
+struct PedQueueAttr {
+	rw::V3d queueDir;
+	rw::V3d useDir;
+	rw::V3d forwardDir;
+
+	rw::uint8 type;
+	rw::uint8 interest;
+	rw::uint8 lookAt;
+	rw::uint8 flags;
+
+	char scriptName[8];
+};
+
+struct PedQueueAttrStream {
+	rw::int32 type;
+
+	rw::V3d queueDir;
+	rw::V3d useDir;
+	rw::V3d forwardDir;
+
+	char scriptName[8];
+
+	rw::int32 interest;
+	rw::int16 lookAt;
+	rw::int16 flags;
+};
+
+struct InteriorAttr {
+	rw::uint8 type;
+	rw::int8 group;
+
+	rw::uint8 width, depth, height;
+	rw::int8 door;
+
+	rw::int8 lDoorStart, lDoorEnd;
+	rw::int8 rDoorStart, rDoorEnd;
+	rw::int8 tDoorStart, tDoorEnd;
+
+	rw::int8 lWindowStart, lWindowEnd;
+	rw::int8 rWindowStart, rWindowEnd;
+	rw::int8 tWindowStart, tWindowEnd;
+
+	rw::int8 noGoLeft[3];
+	rw::int8 noGoBottom[3];
+	rw::int8 noGoWidth[3];
+	rw::int8 noGoDepth[3];
+
+	rw::uint8 seed;
+	rw::uint8 status;
+
+	float rot;
+};
+
+struct EntryExitAttr {
+	float prot;
+	float wx, wy;
+
+	rw::V3d spawn;
+	float spawnrot;
+	rw::int16 areacode;
+	rw::uint8 flags;
+	rw::uint8 extracol;
+
+	char title[8];
+
+	rw::uint8 openTime;
+	rw::uint8 shutTime;
+	rw::uint8 extraFlags;
+};
+
+struct RoadsignAttr {
+	float width, height;
+	float rotX, rotY, rotZ;
+
+	union {
+		struct {
+			rw::uint16 numLines : 2;
+			rw::uint16 numLetters : 2;
+			rw::uint16 paletteID : 2;
+		};
+
+		rw::uint16 flags;
+	};
+
+	char text[4][16];
+};
+
+struct TriggerPointAttr {
+	rw::int32 index;
+};
+
+struct CoverPointAttr {
+	float dirOfCoverX, dirOfCoverY;
+	rw::int8 usage;
+};
+
+struct EscalatorAttr {
+	rw::V3d coords[3];
+	bool goingUp;
+};
+
+struct Effect2d {
+	rw::V3d posn;
+	rw::uint8 type;
+
+	union {
+		LightAttr l;
+		ParticleAttr p;
+		PedQueueAttr q;
+		InteriorAttr i;
+		EntryExitAttr e;
+		RoadsignAttr rs;
+		TriggerPointAttr t;
+		CoverPointAttr c;
+		EscalatorAttr es;
+	} attr;
+};
+
 extern rw::int32 twodEffectOffset;
+rw::int32 getNum2dEffects(rw::Geometry* geom);
+Effect2d* get2dEffects(rw::Geometry* geom);
 
 void register2dEffectPlugin(void);
 

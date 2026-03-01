@@ -201,7 +201,178 @@ dumpgeo(Geometry *g, FILE *f, int ind)
 		pr(--ind, f, "}%s\n", i == h->numMeshes-1 ? "" : ",");
 		m++;
 	}
-	pr(--ind, f, "]\n");
+	pr(--ind, f, "]");
+
+	gta::Effect2d* twodfx = gta::get2dEffects(g);
+	if(twodfx != nil) {
+		pr(0, f, ",\n");
+		pr(ind++, f, "\"2dfx\": [\n");
+		for (i = 0; i < gta::getNum2dEffects(g); i++) {
+			gta::Effect2d* effect2d = &twodfx[i];
+
+			pr(ind++, f, "{\n");
+			pr(ind, f, "\"type\": %d,\n", effect2d->type);
+			pr(ind, f, "\"posn\": [ %f, %f, %f ],\n",
+				effect2d->posn.x,
+				effect2d->posn.y,
+				effect2d->posn.z);
+
+			switch (effect2d->type) {
+			case gta::ET_LIGHT: {
+				gta::LightAttr& l = effect2d->attr.l;
+				pr(ind++, f, "\"light\": {\n");
+				pr(ind, f, "\"color\": [%d, %d, %d, %d],\n", l.col.red, l.col.green, l.col.blue, l.col.alpha);
+				pr(ind, f, "\"lodDist\": %.4f,\n", l.lodDist);
+				pr(ind, f, "\"size\": %.4f,\n", l.size);
+				pr(ind, f, "\"coronaSize\": %.4f,\n", l.coronaSize);
+				pr(ind, f, "\"shadowSize\": %.4f,\n", l.shadowSize);
+				pr(ind, f, "\"flags\": %u,\n", l.flags);
+				pr(ind, f, "\"flashiness\": %d,\n", l.flashiness);
+				pr(ind, f, "\"reflectionType\": %d,\n", l.reflectionType);
+				pr(ind, f, "\"lensFlareType\": %d,\n", l.lensFlareType);
+				pr(ind, f, "\"shadowAlpha\": %d,\n", l.shadowAlpha);
+				pr(ind, f, "\"shadowDepth\": %d,\n", l.shadowDepth);
+				pr(ind, f, "\"lightDir\": [%d, %d, %d],\n",
+					l.lightDirX, l.lightDirY, l.lightDirZ);
+				pr(ind, f, "\"coronaTex\": \"%s\",\n", l.coronaTex);
+				pr(ind, f, "\"shadowTex\": \"%s\"\n", l.shadowTex);
+				pr(--ind, f, "}\n");
+				break;
+			}
+
+			case gta::ET_PARTICLE: {
+				gta::ParticleAttr& p = effect2d->attr.p;
+				pr(ind, f, "\"particle\": {\n");
+				pr(ind + 1, f, "\"name\": \"%s\"\n", p.name);
+				pr(ind, f, "}\n");
+				break;
+			}
+
+			case gta::ET_PEDQUEUE: {
+				gta::PedQueueAttr& q = effect2d->attr.q;
+				pr(ind++, f, "\"pedqueue\": {\n");
+				pr(ind, f, "\"queueDir\": [%.6f, %.6f, %.6f],\n",
+					q.queueDir.x, q.queueDir.y, q.queueDir.z);
+				pr(ind, f, "\"useDir\": [%.6f, %.6f, %.6f],\n",
+					q.useDir.x, q.useDir.y, q.useDir.z);
+				pr(ind, f, "\"forwardDir\": [%.6f, %.6f, %.6f],\n",
+					q.forwardDir.x, q.forwardDir.y, q.forwardDir.z);
+				pr(ind, f, "\"type\": %u,\n", q.type);
+				pr(ind, f, "\"interest\": %u,\n", q.interest);
+				pr(ind, f, "\"lookAt\": %u,\n", q.lookAt);
+				pr(ind, f, "\"flags\": %u,\n", q.flags);
+				pr(ind, f, "\"scriptName\": \"%s\"\n", q.scriptName);
+				pr(--ind, f, "}\n");
+				break;
+			}
+
+			case gta::ET_SUNGLARE:
+				pr(ind, f, "\"sunglare\": {}\n");
+				break;
+
+			case gta::ET_INTERIOR: {
+				gta::InteriorAttr& ii = effect2d->attr.i;
+				pr(ind++, f, "\"interior\": {\n");
+				pr(ind, f, "\"type\": %u,\n", ii.type);
+				pr(ind, f, "\"group\": %d,\n", ii.group);
+				pr(ind, f, "\"dimensions\": [%d, %d, %d],\n", ii.width, ii.depth, ii.height);
+				pr(ind, f, "\"door\": %d,\n", ii.door);
+				pr(ind, f, "\"leftDoor\": [%d, %d],\n", ii.lDoorStart, ii.lDoorEnd);
+				pr(ind, f, "\"rightDoor\": [%d, %d],\n", ii.rDoorStart, ii.rDoorEnd);
+				pr(ind, f, "\"topDoor\": [%d, %d],\n", ii.tDoorStart, ii.tDoorEnd);
+				pr(ind, f, "\"leftWindow\": [%d, %d],\n", ii.lWindowStart, ii.lWindowEnd);
+				pr(ind, f, "\"rightWindow\": [%d, %d],\n", ii.rWindowStart, ii.rWindowEnd);
+				pr(ind, f, "\"topWindow\": [%d, %d],\n", ii.tWindowStart, ii.tWindowEnd);
+				pr(ind, f, "\"noGoLeft\": [%d, %d, %d],\n",
+					ii.noGoLeft[0], ii.noGoLeft[1], ii.noGoLeft[2]);
+				pr(ind, f, "\"noGoBottom\": [%d, %d, %d],\n",
+					ii.noGoBottom[0], ii.noGoBottom[1], ii.noGoBottom[2]);
+				pr(ind, f, "\"noGoWidth\": [%d, %d, %d],\n",
+					ii.noGoWidth[0], ii.noGoWidth[1], ii.noGoWidth[2]);
+				pr(ind, f, "\"noGoDepth\": [%d, %d, %d],\n",
+					ii.noGoDepth[0], ii.noGoDepth[1], ii.noGoDepth[2]);
+				pr(ind, f, "\"seed\": %u,\n", ii.seed);
+				pr(ind, f, "\"status\": %u,\n", ii.status);
+				pr(ind, f, "\"rot\": %.6f\n", ii.rot);
+				pr(--ind, f, "}\n");
+				break;
+			}
+
+			case gta::ET_ENTRYEXIT: {
+				gta::EntryExitAttr& e = effect2d->attr.e;
+				pr(ind++, f, "\"entryexit\": {\n");
+				pr(ind, f, "\"prot\": %.6f,\n", e.prot);
+				pr(ind, f, "\"worldPos\": [%.6f, %.6f],\n", e.wx, e.wy);
+				pr(ind, f, "\"spawn\": [%.6f, %.6f, %.6f],\n",
+					e.spawn.x, e.spawn.y, e.spawn.z);
+				pr(ind, f, "\"spawnrot\": %.6f,\n", e.spawnrot);
+				pr(ind, f, "\"areacode\": %d,\n", e.areacode);
+				pr(ind, f, "\"flags\": %u,\n", e.flags);
+				pr(ind, f, "\"extracol\": %u,\n", e.extracol);
+				pr(ind, f, "\"title\": \"%s\",\n", e.title);
+				pr(ind, f, "\"openTime\": %u,\n", e.openTime);
+				pr(ind, f, "\"shutTime\": %u,\n", e.shutTime);
+				pr(ind, f, "\"extraFlags\": %u\n", e.extraFlags);
+				pr(--ind, f, "}\n");
+				break;
+			}
+
+			case gta::ET_ROADSIGN: {
+				gta::RoadsignAttr& rs = effect2d->attr.rs;
+				pr(ind++, f, "\"roadsign\": {\n");
+				pr(ind, f, "\"size\": [%.4f, %.4f],\n", rs.width, rs.height);
+				pr(ind, f, "\"rotation\": [%.6f, %.6f, %.6f],\n",
+					rs.rotX, rs.rotY, rs.rotZ);
+				pr(ind, f, "\"flags\": %u,\n", rs.flags);
+				pr(ind++, f, "\"text\": [\n");
+				for (int line = 0; line < 4; ++line) {
+					pr(ind, f, "\"%.16s\"%s\n",
+						rs.text[line],
+						(line < 3) ? "," : "");
+				}
+				pr(--ind, f, "]\n");
+				pr(--ind, f, "}\n");
+				break;
+			}
+
+			case gta::ET_TRIGGERPOINT: {
+				gta::TriggerPointAttr& t = effect2d->attr.t;
+				pr(ind, f, "\"triggerpoint\": {\n");
+				pr(ind + 1, f, "\"index\": %d\n", t.index);
+				pr(ind, f, "}\n");
+				break;
+			}
+
+			case gta::ET_COVERPOINT: {
+				gta::CoverPointAttr& c = effect2d->attr.c;
+				pr(ind, f, "\"coverpoint\": {\n");
+				pr(ind + 1, f, "\"dirOfCover\": [%.6f, %.6f],\n", c.dirOfCoverX, c.dirOfCoverY);
+				pr(ind + 1, f, "\"usage\": %d\n", c.usage);
+				pr(ind, f, "}\n");
+				break;
+			}
+
+			case gta::ET_ESCALATOR: {
+				gta::EscalatorAttr& es = effect2d->attr.es;
+				pr(ind++, f, "\"escalator\": {\n");
+				pr(ind++, f, "\"coords\": [\n");
+				for (int k = 0; k < 3; ++k) {
+					pr(ind, f, "[%.6f, %.6f, %.6f]%s\n",
+						es.coords[k].x, es.coords[k].y, es.coords[k].z,
+						(k < 2) ? "," : "");
+				}
+				pr(--ind, f, "],\n");
+				pr(ind, f, "\"goingUp\": %s\n", es.goingUp ? "true" : "false");
+				pr(--ind, f, "}\n");
+				break;
+			}
+			}
+			pr(--ind, f, "}%s\n", i == gta::getNum2dEffects(g) - 1 ? "" : ",");
+		}
+		pr(--ind, f, "]\n");
+	} else {
+		pr(ind, f, "\n");
+	}
 
 	pr(--ind, f, "}");
 }
