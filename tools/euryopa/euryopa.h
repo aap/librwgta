@@ -67,6 +67,22 @@ extern float avgTimeStep;
 
 #define DEGTORAD(d) (d/180.0f*PI)
 
+struct Ray {
+	rw::V3d start;
+	rw::V3d dir;
+};
+inline bool
+SphereIntersect(const CSphere &sph, const Ray &ray)
+{
+	rw::V3d diff = sub(ray.start, sph.center);
+	float a = dot(ray.dir,ray.dir);
+	float b = 2*dot(ray.dir, diff);
+	float c = dot(diff,diff) - sq(sph.radius);
+
+	float discr = sq(b) - 4*a*c;
+	return discr > 0.0f;
+}
+
 //
 // Options
 //
@@ -97,6 +113,7 @@ extern bool gRenderCullZones;
 extern bool gRenderAttribZones;
 extern bool gRenderPedPaths;
 extern bool gRenderCarPaths;
+extern bool gRenderEffects;
 extern bool gRenderTimecycleBoxes;
 
 // SA postfx
@@ -331,11 +348,13 @@ struct ObjectDef
 	int m_id;	// our own id
 	char m_name[MODELNAMELEN];
 	int m_txdSlot;
-	int m_pedPathIndex;
-	int m_carPathIndex;
 	int m_type;
 	CColModel *m_colModel;
 	bool m_gotChildCol;
+	int m_pedPathIndex;
+	int m_carPathIndex;
+	int m_effectIndex;
+	int m_numEffects;
 
 	// flags
 	bool m_normalCull;	// only III
@@ -463,6 +482,66 @@ extern CPtrList selection;
 ObjectInst *GetInstanceByID(int32 id);
 ObjectInst *AddInstance(void);
 void ClearSelection(void);
+
+
+enum EffectType {
+	FX_LIGHT,
+	FX_PARTICLE,
+	FX_LOOKATPOINT,
+	FX_PEDQUEUE,
+	FX_SUNGLARE
+};
+
+// III and VC for now
+struct Effect {
+	int id;
+	rw::V3d pos;
+	rw::RGBA col;
+	int type;
+	struct Light {
+		float lodDist;
+		float size;
+		float coronaSize;
+		float shadowSize;
+		int flashiness;
+		int reflection;
+		int lensFlareType;
+		int shadowAlpha;
+		int flags;
+		char coronaTex[32];
+		char shadowTex[32];
+	};
+	struct Particle {
+		int particleType;
+		rw::V3d dir;
+		float size;
+	};
+	struct LookAtPoint {
+		rw::V3d dir;
+		int type;
+		int probability;
+	};
+	struct PedQueue {
+		rw::V3d queueDir;
+		rw::V3d useDir;
+		int type;
+	};
+	union {
+		Light light;
+		Particle prtcl;
+		LookAtPoint look;
+		PedQueue queue;
+		// glare has no extra data
+	};
+
+	void JumpTo(ObjectInst *inst);
+};
+
+namespace Effects {
+void AddEffect(Effect e);
+Effect *GetEffect(int idx);
+void Render(void);
+}
 
 
 enum PathType {
@@ -646,6 +725,8 @@ void RenderEverything(void);
 void RenderLine(rw::V3d v1, rw::V3d v2, rw::RGBA c1, rw::RGBA c2);
 void RenderWireBoxVerts(rw::V3d *verts, rw::RGBA col);
 void RenderWireBox(CBox *box, rw::RGBA col, rw::Matrix *xform);
+void RenderSphereAsWireBox(CSphere *sphere, rw::RGBA col, rw::Matrix *xform);
+void RenderSphereAsCross(CSphere *sphere, rw::RGBA col, rw::Matrix *xform);
 void RenderWireSphere(CSphere *sphere, rw::RGBA col, rw::Matrix *xform);
 void RenderWireTriangle(rw::V3d *v1, rw::V3d *v2, rw::V3d *v3, rw::RGBA col, rw::Matrix *xform);
 void RenderAxesWidget(rw::V3d pos, rw::V3d x, rw::V3d y, rw::V3d z);

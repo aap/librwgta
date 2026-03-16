@@ -292,6 +292,7 @@ uiView(void)
 		ImGui::Checkbox("Attrib Zones", &gRenderAttribZones);
 		ImGui::Unindent();
 	}
+	if(!isSA()) ImGui::Checkbox("Draw 2dfx", &gRenderEffects);
 	ImGui::Checkbox("Draw Car Paths", &gRenderCarPaths);
 	ImGui::Checkbox("Draw Ped Paths", &gRenderPedPaths);
 
@@ -584,6 +585,52 @@ uiPathInfo(ObjectInst *inst)
 			ImGui::EndTable();
 		}
 		ImGui::PopID();
+	}
+}
+
+static void
+uiFxInfo(ObjectInst *inst)
+{
+	ObjectDef *obj;
+	obj = GetObjectDef(inst->m_objectId);
+
+	PathNode *nd;
+	if(ImGui::BeginTable("Effects", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)){
+		ImGui::TableSetupColumn("type");
+		ImGui::TableSetupColumn("r");
+		ImGui::TableSetupColumn("g");
+		ImGui::TableSetupColumn("b");
+		ImGui::TableSetupColumn("a");
+		ImGui::TableHeadersRow();
+		for(int i = 0; i < obj->m_numEffects; i++){
+			ImGui::TableNextRow();
+		ImGui::PushID(i);
+
+			assert(obj->m_effectIndex >= 0);
+			Effect *e = Effects::GetEffect(obj->m_effectIndex+i);
+
+			int c = 0;
+			ImGui::TableSetColumnIndex(c++);
+			char str[50];
+			sprintf(str, "%d", e->type);
+			if(ImGui::Selectable(str, nd == Path::selectedNode, ImGuiSelectableFlags_SpanAllColumns))
+				;//Path::selectedNode = nd;
+			if(ImGui::IsItemHovered()){
+				//		Path::guiHoveredNode = nd;
+				if(ImGui::IsMouseDoubleClicked(0))
+					e->JumpTo(inst);
+			}
+			ImGui::TableSetColumnIndex(c++);
+			ImGui::Text("%d", e->col.red);
+			ImGui::TableSetColumnIndex(c++);
+			ImGui::Text("%d", e->col.green);
+			ImGui::TableSetColumnIndex(c++);
+			ImGui::Text("%d", e->col.blue);
+			ImGui::TableSetColumnIndex(c++);
+			ImGui::Text("%d", e->col.alpha);
+		ImGui::PopID();
+		}
+		ImGui::EndTable();
 	}
 }
 
@@ -1013,6 +1060,9 @@ uiInstWindow(void)
 			uiInstInfo(inst);
 		if(ImGui::CollapsingHeader("Object"))
 			uiObjInfo(obj);
+		if(obj->m_numEffects)
+			if(ImGui::CollapsingHeader("Effects"))
+				uiFxInfo(inst);
 		if(obj->m_carPathIndex >=0 || obj->m_pedPathIndex >= 0)
 			if(ImGui::CollapsingHeader("Path"))
 				uiPathInfo(inst);

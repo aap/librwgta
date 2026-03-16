@@ -262,7 +262,84 @@ LoadPathLine(char *line)
 		Path::AddNode(pathtype, pathID, node);
 }
 
-void Load2dEffect(char *line) { }
+static int
+readString(char *line, char *buf)
+{
+	char *p;
+	char *lp = line;
+	while(*lp++ != '"');
+	p = buf;
+	while(*lp != '"') *p++ = *lp++;
+	*p = '\0';
+	return ++lp-line;
+}
+
+void
+Load2dEffect(char *line)
+{
+	Effect e;
+	int r,g,b,a;
+	int n;
+
+	// no SA support for now
+	if(isSA())
+		return;
+
+	sscanf(line, "%d %f %f %f %d %d %d %d %d%n",
+		&e.id, &e.pos.x, &e.pos.y, &e.pos.z,
+		&r, &g, &b, &a, &e.type, &n);
+	e.col.red = r;
+	e.col.green = g;
+	e.col.blue = b;
+	e.col.alpha = a;
+	line += n;
+	switch(e.type){
+	case FX_LIGHT:
+		line += readString(line, e.light.coronaTex);
+		line += readString(line, e.light.shadowTex);
+		sscanf(line, "%f %f %f %f %d %d %d %d %d",
+			&e.light.lodDist,
+			&e.light.size,
+			&e.light.coronaSize,
+			&e.light.shadowSize,
+			&e.light.shadowAlpha,
+			&e.light.flashiness,
+			&e.light.reflection,
+			&e.light.lensFlareType,
+			&e.light.flags);
+		break;
+
+	case FX_PARTICLE:
+		sscanf(line, "%d %f %f %f %f",
+			&e.prtcl.particleType,
+			&e.prtcl.dir.x,
+			&e.prtcl.dir.y,
+			&e.prtcl.dir.z,
+			&e.prtcl.size);
+		break;
+
+	case FX_LOOKATPOINT:
+		sscanf(line, "%d %f %f %f %d",
+			&e.look.type,
+			&e.look.dir.x,
+			&e.look.dir.y,
+			&e.look.dir.z,
+			&e.look.probability);
+		break;
+
+	case FX_PEDQUEUE:
+		sscanf(line, "%d %f %f %f %f %f %f",
+			&e.queue.type,
+			&e.queue.queueDir.x,
+			&e.queue.queueDir.y,
+			&e.queue.queueDir.z,
+			&e.queue.useDir.x,
+			&e.queue.useDir.y,
+			&e.queue.useDir.z);
+		break;
+	}
+	Effects::AddEffect(e);
+}
 
 void
 LoadTXDParent(char *line)

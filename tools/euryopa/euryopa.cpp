@@ -40,6 +40,7 @@ bool gRenderCullZones;
 bool gRenderAttribZones;
 bool gRenderPedPaths;
 bool gRenderCarPaths;
+bool gRenderEffects;
 bool gRenderTimecycleBoxes;
 
 // SA postfx
@@ -676,6 +677,8 @@ Draw(void)
 		Path::RenderPedPaths();
 	if(gRenderCarPaths)
 		Path::RenderCarPaths();
+	if(gRenderEffects)
+		Effects::Render();
 
 	rw::SetRenderState(rw::ALPHATESTFUNC, rw::ALPHAALWAYS);	// don't mess up GUI
 	// This fucks up the z buffer, but what else can we do?
