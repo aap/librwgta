@@ -24,6 +24,7 @@ using rw::uint64;
 using rw::float32;
 using rw::bool32;
 using rw::uintptr;
+typedef unsigned int uint;
 
 struct ObjectInst;
 

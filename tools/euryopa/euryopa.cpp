@@ -39,7 +39,7 @@ bool gRenderInfoZones;
 bool gRenderCullZones;
 bool gRenderAttribZones;
 bool gRenderPedPaths;
-bool gRenderCarPaths = true;
+bool gRenderCarPaths;
 bool gRenderTimecycleBoxes;
 
 // SA postfx
