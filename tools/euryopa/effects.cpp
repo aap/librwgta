@@ -27,7 +27,6 @@ AddEffect(Effect e)
 	}
 	assert(def->m_effectIndex >= 0);
 	def->m_numEffects++;
-printf("object %s has %d effects\n", def->m_name, def->m_numEffects);
 	effects.push_back(e);
 }
 
@@ -49,6 +48,9 @@ static const rw::RGBA magenta = { 255, 0, 255, 255 };
 static const rw::RGBA yellow = { 255, 255, 0, 255 };
 static const rw::RGBA white = { 255, 255, 255, 255 };
 
+Effect *hoveredEffect, *guiHoveredEffect;
+Effect *selectedEffect;
+
 static void
 RenderEffect(Effect *e, ObjectInst *inst)
 {
@@ -68,8 +70,10 @@ RenderEffect(Effect *e, ObjectInst *inst)
 	sphere.center = pos;
 	sphere.radius = 1.0f;
 	rw::RGBA c = e->col;
-	if(SphereIntersect(sphere, ray))
+	if(SphereIntersect(sphere, ray) || e == guiHoveredEffect){
+		hoveredEffect = e;
 		c = cyan;
+	}
 	switch(e->type){
 	case FX_LIGHT:
 		sphere.radius = e->light.coronaSize;
@@ -77,8 +81,8 @@ RenderEffect(Effect *e, ObjectInst *inst)
 		break;
 
 	case FX_PARTICLE:
-		RenderWireSphere(&sphere, c, nil);
 		RenderLine(pos, add(pos, scale(e->prtcl.dir,e->prtcl.size)), c, c);
+		RenderWireSphere(&sphere, c, nil);
 		break;
 
 	case FX_LOOKATPOINT:
@@ -96,6 +100,12 @@ RenderEffect(Effect *e, ObjectInst *inst)
 		RenderSphereAsCross(&sphere, c, nil);
 		break;
 	}
+
+	// this kinda sucks but we want to see color
+	if(selectedEffect == e){
+		sphere.radius += 0.1f;
+		RenderSphereAsWireBox(&sphere, white, nil);
+	}
 }
 
 void
@@ -105,7 +115,7 @@ Render(void)
 		ObjectInst *inst = (ObjectInst*)p->item;
 		ObjectDef *obj = GetObjectDef(inst->m_objectId);
 		for(int i = 0; i < obj->m_numEffects; i++)
-			RenderEffect(Effects::GetEffect(obj->m_effectIndex+i), inst);
+			RenderEffect(GetEffect(obj->m_effectIndex+i), inst);
 	}
 }
 

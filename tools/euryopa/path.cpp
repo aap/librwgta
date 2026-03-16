@@ -168,18 +168,10 @@ DrawNodePatch(rw::V3d positions[], NodeTable &nodes, int idx, ObjectInst *inst, 
 			hoveredNode = nd;
 			c = cyan;
 		}
-		if(nodes[idx+i].type == PathNode::NodeInternal){
+		if(nodes[idx+i].type == PathNode::NodeInternal)
 			RenderWireSphere(&sphere, c, nil);
-		}else{
+		else
 			RenderSphereAsWireBox(&sphere, c, nil);
-/*
-			CBox box;
-			rw::V3d sz = { 0.5f, 0.5f, 0.5f };
-			box.min = sub(positions[i], sz);
-			box.max = add(positions[i], sz);
-			RenderWireBox(&box, c, nil);
-*/
-		}
 	}
 
 	for(int i = 0; i < n; i++){
