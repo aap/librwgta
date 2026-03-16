@@ -527,8 +527,8 @@ uiPathInfo(ObjectInst *inst)
 		obj = GetObjectDef(inst->m_objectId);
 
 		if(obj->m_carPathIndex >= 0){
-			ImGui::Text(Path::selectedNode->water ? "WaterPath" : "CarPath");
-			PathNode *nd;
+			PathNode *nd = Path::GetCarNode(obj->m_carPathIndex,0);
+			ImGui::Text(nd->water ? "WaterPath" : "CarPath");
 			if(ImGui::BeginTable("Nodes", uiNumCarPathColumns(), ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)){
 				uiCarPathHeader();
 				for(int i = 0; nd = Path::GetCarNode(obj->m_carPathIndex,i); i++){
