@@ -676,6 +676,7 @@ Draw(void)
 	if(gRenderAttribZones)
 		Zones::RenderAttribZones();
 	Path::hoveredNode = nil;
+	Effects::hoveredEffect = nil;
 	if(gRenderPedPaths)
 		Path::RenderPedPaths();
 	if(gRenderCarPaths)
