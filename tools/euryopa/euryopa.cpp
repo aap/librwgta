@@ -397,10 +397,12 @@ handleTool(void)
 			ClearSelection();
 
 		Path::selectedNode = Path::hoveredNode;
+		Effects::selectedEffect = Effects::hoveredEffect;
 	}else if(CPad::IsMButtonClicked(2)){
-		if(CPad::IsCtrlDown())
+		if(CPad::IsCtrlDown()){
 			Path::selectedNode = Path::hoveredNode;
-		else{
+			Effects::selectedEffect = Effects::hoveredEffect;
+		}else{
 			ClearSelection();
 			ObjectInst *inst = GetInstanceByID(pick());
 			if(inst)
@@ -409,6 +411,7 @@ handleTool(void)
 	}else if(CPad::IsMButtonClicked(3)){
 		ClearSelection();
 		Path::selectedNode = nil;
+		Effects::selectedEffect = nil;
 	}
 }
 

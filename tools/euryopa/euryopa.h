@@ -484,12 +484,19 @@ ObjectInst *AddInstance(void);
 void ClearSelection(void);
 
 
+
 enum EffectType {
 	FX_LIGHT,
 	FX_PARTICLE,
 	FX_LOOKATPOINT,
 	FX_PEDQUEUE,
 	FX_SUNGLARE
+};
+
+enum FlareType {
+        FLARE_NONE,
+        FLARE_SUN,
+        FLARE_HEADLIGHTS
 };
 
 // III and VC for now
@@ -538,6 +545,8 @@ struct Effect {
 };
 
 namespace Effects {
+extern Effect *hoveredEffect, *guiHoveredEffect;
+extern Effect *selectedEffect;
 void AddEffect(Effect e);
 Effect *GetEffect(int idx);
 void Render(void);

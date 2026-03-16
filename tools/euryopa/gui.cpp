@@ -74,6 +74,7 @@ struct ExampleAppLog
 	}
 };
 
+static ImVec4 mkColor(rw::RGBA &c) { return ImVec4(c.red/255.0f, c.green/255.0f, c.blue/255.0f, c.alpha/255.0f); }
 
 static void
 uiMainmenu(void)
@@ -588,51 +589,123 @@ uiPathInfo(ObjectInst *inst)
 	}
 }
 
-static void
-uiFxInfo(ObjectInst *inst)
+static const char *fxTypeNames[] = { "Light", "Particle", "LookAtPoint", "PedQueue", "SunGlare"};
+static const char *flareTypeNames[] = { "None", "Sun", "Headlight" };
+
+void
+uiOneEffect(Effect *e)
 {
+	ImGui::Combo("Effect Type", &e->type, fxTypeNames, IM_ARRAYSIZE(fxTypeNames));
+	ImGui::DragFloat3("Position", &e->pos.x, 0.1f);
+
+	rw::RGBAf col;
+	convColor(&col, &e->col);
+	if(ImGui::ColorEdit4("Color", (float*)&col))
+		convColor(&e->col, &col);
+
+	ImGui::Separator();
+
+	switch(e->type){
+	case FX_LIGHT: {
+		ImGui::DragFloat("LOD dist",     &e->light.lodDist,    1.f);
+		ImGui::DragFloat("Size",         &e->light.size,       0.01f);
+		ImGui::DragFloat("Corona size",  &e->light.coronaSize, 0.01f);
+		ImGui::DragFloat("Shadow size",  &e->light.shadowSize, 0.01f);
+		ImGui::Separator();
+		ImGui::DragInt("Flashiness",     &e->light.flashiness);
+		ImGui::DragInt("Shadow alpha",   &e->light.shadowAlpha, 1, 0, 255);
+
+		ImGui::Combo("Lens flare", &e->light.lensFlareType, flareTypeNames, IM_ARRAYSIZE(flareTypeNames));
+
+		bool refl = !!e->light.reflection;
+		if(ImGui::Checkbox("Reflection", &refl))
+			e->light.reflection = !!refl;
+
+		ImGui::InputInt("Flags", &e->light.flags, 1, 1, ImGuiInputTextFlags_CharsHexadecimal);
+		ImGui::Separator();
+		ImGui::InputText("Corona tex", e->light.coronaTex, 32);
+		ImGui::InputText("Shadow tex", e->light.shadowTex, 32);
+		} break;
+
+	case FX_PARTICLE:
+		ImGui::DragInt   ("Particle type", &e->prtcl.particleType);
+		ImGui::DragFloat3("Direction",     &e->prtcl.dir.x, 0.01f);
+		ImGui::DragFloat ("Size",          &e->prtcl.size,  0.01f);
+		break;
+
+	case FX_LOOKATPOINT:
+		ImGui::DragFloat3("Direction",   &e->look.dir.x, 0.01f);
+		ImGui::DragInt   ("Type",        &e->look.type);
+		ImGui::DragInt   ("Probability", &e->look.probability, 1, 0, 100);
+		break;
+
+	case FX_PEDQUEUE:
+		ImGui::DragFloat3("Queue dir", &e->queue.queueDir.x, 0.01f);
+		ImGui::DragFloat3("Use dir",   &e->queue.useDir.x,   0.01f);
+		ImGui::DragInt   ("Type",      &e->queue.type);
+		break;
+	}
+}
+
+static void
+uiFxTable(ObjectInst *inst)
+{
+	if(inst == nil)
+		return;
+
 	ObjectDef *obj;
 	obj = GetObjectDef(inst->m_objectId);
 
-	PathNode *nd;
-	if(ImGui::BeginTable("Effects", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)){
-		ImGui::TableSetupColumn("type");
-		ImGui::TableSetupColumn("r");
-		ImGui::TableSetupColumn("g");
-		ImGui::TableSetupColumn("b");
-		ImGui::TableSetupColumn("a");
-		ImGui::TableHeadersRow();
-		for(int i = 0; i < obj->m_numEffects; i++){
-			ImGui::TableNextRow();
-		ImGui::PushID(i);
+	ImGui::Text("Effects (%d)", obj->m_numEffects);
+	ImGui::Separator();
 
-			assert(obj->m_effectIndex >= 0);
-			Effect *e = Effects::GetEffect(obj->m_effectIndex+i);
+	ImGui::BeginChild("##effect_list", ImVec2(0, 0), false);
 
-			int c = 0;
-			ImGui::TableSetColumnIndex(c++);
-			char str[50];
-			sprintf(str, "%d", e->type);
-			if(ImGui::Selectable(str, nd == Path::selectedNode, ImGuiSelectableFlags_SpanAllColumns))
-				;//Path::selectedNode = nd;
-			if(ImGui::IsItemHovered()){
-				//		Path::guiHoveredNode = nd;
-				if(ImGui::IsMouseDoubleClicked(0))
-					e->JumpTo(inst);
-			}
-			ImGui::TableSetColumnIndex(c++);
-			ImGui::Text("%d", e->col.red);
-			ImGui::TableSetColumnIndex(c++);
-			ImGui::Text("%d", e->col.green);
-			ImGui::TableSetColumnIndex(c++);
-			ImGui::Text("%d", e->col.blue);
-			ImGui::TableSetColumnIndex(c++);
-			ImGui::Text("%d", e->col.alpha);
-		ImGui::PopID();
+	for(int i = 0; i < obj->m_numEffects; i++) {
+		Effect *e = Effects::GetEffect(obj->m_effectIndex+i);
+		ImGui::ColorButton("##col", mkColor(e->col),
+				ImGuiColorEditFlags_NoTooltip |
+				ImGuiColorEditFlags_NoBorder,
+				ImVec2(12, 12));
+		ImGui::SameLine();
+
+		ImGui::TextDisabled("%2d", i);
+		ImGui::SameLine();
+
+		char label[64];
+		snprintf(label, sizeof(label), "%s##eff%d", fxTypeNames[e->type], i);
+
+		if(ImGui::Selectable(label, e == Effects::selectedEffect, ImGuiSelectableFlags_None, ImVec2(0, 0)))
+			Effects::selectedEffect = e;
+		if(ImGui::IsItemHovered()){
+			Effects::guiHoveredEffect = e;
+			if(ImGui::IsMouseClicked(1))
+				Effects::selectedEffect = e;
+			if(ImGui::IsMouseDoubleClicked(0))
+				e->JumpTo(inst);
 		}
-		ImGui::EndTable();
 	}
+	ImGui::EndChild();
 }
+
+static void
+uiFxInfo(ObjectInst *inst)
+{
+	float listWidth = 200.f;
+	ImGui::BeginChild("##left", ImVec2(listWidth, 0), true);
+	uiFxTable(inst);
+	ImGui::EndChild();
+
+	ImGui::SameLine();
+
+	ImGui::BeginChild("##right", ImVec2(0, 0), true);
+	if(Effects::selectedEffect)
+		uiOneEffect(Effects::selectedEffect);
+	else
+		ImGui::TextDisabled("Select an effect");
+	ImGui::EndChild();
+}
+
 
 static void
 uiInstInfo(ObjectInst *inst)
@@ -1066,9 +1139,17 @@ uiInstWindow(void)
 		if(obj->m_carPathIndex >=0 || obj->m_pedPathIndex >= 0)
 			if(ImGui::CollapsingHeader("Path"))
 				uiPathInfo(inst);
-	}else if(Path::selectedNode)// && Path::selectedNode->isDetached())
+	}else{
+		if(Path::selectedNode)// && Path::selectedNode->isDetached())
 		if(ImGui::CollapsingHeader("Path"))
 			uiPathInfo(nil);
+
+/*
+		if(Effects::selectedEffect)
+		if(ImGui::CollapsingHeader("Effects"))
+			uiFxInfo(nil);
+*/
+	}
 	ImGui::End();
 }
 
