@@ -145,6 +145,32 @@ RenderWireBox(CBox *box, rw::RGBA col, rw::Matrix *xform)
 }
 
 void
+RenderSphereAsWireBox(CSphere *sphere, rw::RGBA col, rw::Matrix *xform)
+{
+	CBox box;
+	rw::V3d sz = { 1.0f, 1.0f, 1.0f };
+	sz = rw::scale(sz,sphere->radius*0.5f);
+	box.min = rw::sub(sphere->center, sz);
+	box.max = rw::add(sphere->center, sz);
+	RenderWireBox(&box, col, xform);
+}
+
+void
+RenderSphereAsCross(CSphere *sphere, rw::RGBA col, rw::Matrix *xform)
+{
+	float off = sphere->radius*0.5f;
+	RenderLine(rw::sub(sphere->center, (rw::V3d){off,0.0f,0.0f}),
+	           rw::add(sphere->center, (rw::V3d){off,0.0f,0.0f}),
+	           col, col);
+	RenderLine(rw::sub(sphere->center, (rw::V3d){0.0f,off,0.0f}),
+	           rw::add(sphere->center, (rw::V3d){0.0f,off,0.0f}),
+	           col, col);
+	RenderLine(rw::sub(sphere->center, (rw::V3d){0.0f,0.0f,off}),
+	           rw::add(sphere->center, (rw::V3d){0.0f,0.0f,off}),
+	           col, col);
+}
+
+void
 RenderWireSphere(CSphere *sphere, rw::RGBA col, rw::Matrix *xform)
 {
 	rw::V3d c;

@@ -136,22 +136,6 @@ static const rw::RGBA white = { 255, 255, 255, 255 };
 
 float gPathDrawDist = 300.0f;
 
-struct Ray {
-	rw::V3d start;
-	rw::V3d dir;
-};
-bool
-SphereIntersect(const CSphere &sph, const Ray &ray)
-{
-	rw::V3d diff = sub(ray.start, sph.center);
-	float a = dot(ray.dir,ray.dir);
-	float b = 2*dot(ray.dir, diff);
-	float c = dot(diff,diff) - sq(sph.radius);
-
-	float discr = sq(b) - 4*a*c;
-	return discr > 0.0f;
-}
-
 PathNode *hoveredNode;
 PathNode *guiHoveredNode;
 PathNode *selectedNode;
@@ -187,11 +171,14 @@ DrawNodePatch(rw::V3d positions[], NodeTable &nodes, int idx, ObjectInst *inst, 
 		if(nodes[idx+i].type == PathNode::NodeInternal){
 			RenderWireSphere(&sphere, c, nil);
 		}else{
+			RenderSphereAsWireBox(&sphere, c, nil);
+/*
 			CBox box;
 			rw::V3d sz = { 0.5f, 0.5f, 0.5f };
 			box.min = sub(positions[i], sz);
 			box.max = add(positions[i], sz);
 			RenderWireBox(&box, c, nil);
+*/
 		}
 	}
 

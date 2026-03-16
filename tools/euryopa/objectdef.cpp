@@ -339,6 +339,8 @@ AddObjectDef(int id)
 	obj->m_imageIndex = -1;
 	obj->m_pedPathIndex = -1;
 	obj->m_carPathIndex = -1;
+	obj->m_effectIndex = -1;
+	obj->m_numEffects = 0;
 	if(objdefs[id])
 		log("warning: id %d already defined as %s %d\n", id, objdefs[id]->m_name, objdefs[id]->m_id);
 	objdefs[id] = obj;
