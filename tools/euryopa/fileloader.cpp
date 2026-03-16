@@ -62,6 +62,7 @@ LoadDataFile(const char *filename, DatDesc *desc)
 
 	if(file = fopen_ci(filename, "rb"), file == nil)
 		return;
+log("Loading data file %s\n", filename);
 	while(line = LoadLine(file)){
 		if(line[0] == '#')
 			continue;
@@ -208,7 +209,59 @@ LoadAnimatedObject(char *line)
 	obj->m_file = currentFile;
 }
 
-void LoadPathLine(char *line) { }
+static int connectionID = -1;
+
+static PathType pathtype;
+static int pathID;
+
+void
+LoadPathLine(char *line)
+{
+	int id;
+	char model[MODELNAMELEN];
+	char type[20];
+	PathNode node;
+
+	memset(&node, 0, sizeof(node));
+	node.density = 1.0f;
+	if(isIII()){
+		if(connectionID == -1){
+			sscanf(line, "%s %d %s", type, &pathID, model);
+			pathtype = strcmp(type, "ped") == 0 ? PedPath : CarPath;
+			connectionID = 0;
+		}else{
+			sscanf(line, "%d %d %d %f %f %f %f %d %d",
+				&node.type, &node.link, &node.linkType,
+				&node.x, &node.y, &node.z, &node.width,
+				&node.lanesIn, &node.lanesOut);
+//			node.width /= 80.0f;	// unused
+			if(++connectionID == 12)
+				connectionID = -1;
+		}
+	}else{
+		if(connectionID == -1){
+			sscanf(line, "%d %d", &pathtype, &pathID);
+			connectionID = 0;
+		}else{
+			sscanf(line, "%d %d %d %f %f %f %f %d %d %d %d %f",
+				&node.type, &node.link, &node.linkType,
+				&node.x, &node.y, &node.z, &node.width,
+				&node.lanesIn, &node.lanesOut,
+				&node.speed, &node.flags, &node.density,
+				&node.special);
+			if(++connectionID == 12)
+				connectionID = -1;
+		}
+	}
+
+	node.x /= 16.0f;
+	node.y /= 16.0f;
+	node.z /= 16.0f;
+
+	if(connectionID)
+		Path::AddNode(pathtype, pathID, node);
+}
+
 void Load2dEffect(char *line) { }
 
 void
@@ -400,7 +453,7 @@ DatDesc iplDesc[] = {
 	{ "zone", LoadZone },
 	{ "cull", LoadCullZone },
 	{ "pick", LoadNothing },
-	{ "path", LoadNothing },
+	{ "path", LoadPathLine },
 
 	{ "occl", LoadNothing },
 	{ "mult", LoadNothing },	// actually no-op

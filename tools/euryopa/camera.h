@@ -9,6 +9,9 @@ public:
 	rw::V3d m_localup;
 	rw::V3d m_at;
 
+	float mx, my;
+	rw::V3d m_mouseDir;
+
 	float m_fov, m_aspectRatio;
 
 	float m_LODmult;
@@ -25,6 +28,7 @@ public:
 	void zoom(float dist);
 	void pan(float x, float y);
 	void setDistanceFromTarget(float dist);
+	void setDistanceToTarget(float dist);
 
 	void update(void);
 	float distanceTo(rw::V3d v);

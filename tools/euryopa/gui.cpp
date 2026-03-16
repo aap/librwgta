@@ -292,6 +292,8 @@ uiView(void)
 		ImGui::Checkbox("Attrib Zones", &gRenderAttribZones);
 		ImGui::Unindent();
 	}
+	ImGui::Checkbox("Draw Car Paths", &gRenderCarPaths);
+	ImGui::Checkbox("Draw Ped Paths", &gRenderPedPaths);
 
 
 	ImGui::Checkbox("Draw Water", &gRenderWater);
@@ -362,6 +364,214 @@ uiRendering(void)
 }
 
 static void
+uiFilteredInstanceList(ObjectDef *obj)
+{
+	static char buf[256];
+	CPtrNode *p;
+	ObjectInst *inst;
+	for(p = instances.first; p; p = p->next){
+		inst = (ObjectInst*)p->item;
+		if(GetObjectDef(inst->m_objectId) != obj)
+			continue;
+		bool pop = false;
+		if(inst->m_selected){
+			ImGui::PushStyleColor(ImGuiCol_Text, (ImVec4)ImColor(255, 0, 0));
+			pop = true;
+		}
+		ImGui::PushID(inst);
+		sprintf(buf, "%-20s %8.2f %8.2f %8.2f", obj->m_name,
+			inst->m_translation.x, inst->m_translation.y, inst->m_translation.z);
+		ImGui::Selectable(buf);
+		ImGui::PopID();
+		if(ImGui::IsItemHovered()){
+			if(ImGui::IsMouseClicked(1))
+				inst->Select();
+			if(ImGui::IsMouseDoubleClicked(0))
+				inst->JumpTo();
+		}
+		if(pop)
+			ImGui::PopStyleColor();
+		if(ImGui::IsItemHovered())
+			inst->m_highlight = HIGHLIGHT_HOVER;
+	}
+}
+
+void
+uiCarPathHeader(void)
+{
+	ImGui::TableSetupColumn("idx");
+	ImGui::TableSetupColumn("type");
+	ImGui::TableSetupColumn("link");
+	ImGui::TableSetupColumn("linkType");
+	ImGui::TableSetupColumn("numLinks");
+	ImGui::TableSetupColumn("x");
+	ImGui::TableSetupColumn("y");
+	ImGui::TableSetupColumn("z");
+	ImGui::TableSetupColumn("width");
+	ImGui::TableSetupColumn("lanesIn");
+	ImGui::TableSetupColumn("lanesOut");
+	ImGui::TableHeadersRow();
+}
+
+void
+uiCarPathNode(PathNode *nd, int i, ObjectInst *inst)
+{
+	int c = 0;
+	ImGui::TableSetColumnIndex(c++);
+	char str[50];
+	sprintf(str, "%d", i);
+	if(ImGui::Selectable(str, nd == Path::selectedNode, ImGuiSelectableFlags_SpanAllColumns))
+		Path::selectedNode = nd;
+	if(ImGui::IsItemHovered()){
+		Path::guiHoveredNode = nd;
+		if(ImGui::IsMouseDoubleClicked(0))
+			nd->JumpTo(inst);
+	}
+	ImGui::TableSetColumnIndex(c++);
+	ImGui::Text(nd->type == PathNode::NodeInternal ? "intern" : "extern");
+	ImGui::TableSetColumnIndex(c++);
+	ImGui::Text("%d", nd->link);
+	ImGui::TableSetColumnIndex(c++);
+	ImGui::Text("%d", nd->linkType);
+	ImGui::TableSetColumnIndex(c++);
+	ImGui::Text("%d", nd->numLinks);
+	ImGui::TableSetColumnIndex(c++);
+	ImGui::Text("%g", nd->x*16);
+	ImGui::TableSetColumnIndex(c++);
+	ImGui::Text("%g", nd->y*16);
+	ImGui::TableSetColumnIndex(c++);
+	ImGui::Text("%g", nd->z*16);
+	ImGui::TableSetColumnIndex(c++);
+	ImGui::Text("%g", nd->width);
+	if(nd->type == PathNode::NodeExternal){
+		ImGui::TableSetColumnIndex(c++);
+		ImGui::Text("%d", nd->lanesIn);
+		ImGui::TableSetColumnIndex(c++);
+		ImGui::Text("%d", nd->lanesOut);
+	}
+	/*
+		// VC
+		int speed;
+		int flags;
+		float density;
+		// SA
+		int special;
+	*/
+}
+
+void
+uiPedPathHeader(void)
+{
+	ImGui::TableSetupColumn("idx");
+	ImGui::TableSetupColumn("type");
+	ImGui::TableSetupColumn("link");
+	ImGui::TableSetupColumn("linkType");
+	ImGui::TableSetupColumn("numLinks");
+	ImGui::TableSetupColumn("x");
+	ImGui::TableSetupColumn("y");
+	ImGui::TableSetupColumn("z");
+	ImGui::TableHeadersRow();
+}
+
+void
+uiPedPathNode(PathNode *nd, int i, ObjectInst *inst)
+{
+	int c = 0;
+	ImGui::TableSetColumnIndex(c++);
+	char str[50];
+	sprintf(str, "%d", i);
+	if(ImGui::Selectable(str, nd == Path::selectedNode, ImGuiSelectableFlags_SpanAllColumns))
+		Path::selectedNode = nd;
+	if(ImGui::IsItemHovered()){
+		Path::guiHoveredNode = nd;
+		if(ImGui::IsMouseDoubleClicked(0))
+			nd->JumpTo(inst);
+	}
+	ImGui::TableSetColumnIndex(c++);
+	ImGui::Text(nd->type == PathNode::NodeInternal ? "intern" : "extern");
+	ImGui::TableSetColumnIndex(c++);
+	ImGui::Text("%d", nd->link);
+	ImGui::TableSetColumnIndex(c++);
+	ImGui::Text("%d", nd->linkType);
+	ImGui::TableSetColumnIndex(c++);
+	ImGui::Text("%d", nd->numLinks);
+	ImGui::TableSetColumnIndex(c++);
+	ImGui::Text("%g", nd->x*16);
+	ImGui::TableSetColumnIndex(c++);
+	ImGui::Text("%g", nd->y*16);
+	ImGui::TableSetColumnIndex(c++);
+	ImGui::Text("%g", nd->z*16);
+}
+
+static void
+uiPathInfo(ObjectInst *inst)
+{
+	if(inst){
+		ObjectDef *obj;
+		obj = GetObjectDef(inst->m_objectId);
+
+		if(obj->m_carPathIndex >= 0){
+			ImGui::Text("Car Path");
+			PathNode *nd;
+			if(ImGui::BeginTable("Nodes", 11, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)){
+				uiCarPathHeader();
+				for(int i = 0; nd = Path::GetCarNode(obj->m_carPathIndex,i); i++){
+					ImGui::TableNextRow();
+					uiCarPathNode(nd, i, inst);
+				}
+				ImGui::EndTable();
+			}
+		}
+		if(obj->m_pedPathIndex >= 0){
+			ImGui::Text("Ped Path");
+			PathNode *nd;
+			if(ImGui::BeginTable("Nodes", 8, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)){
+				uiPedPathHeader();
+				for(int i = 0; nd = Path::GetPedNode(obj->m_pedPathIndex,i); i++){
+					ImGui::TableNextRow();
+					uiPedPathNode(nd, i, inst);
+				}
+				ImGui::EndTable();
+			}
+		}
+	}else if(Path::selectedNode && !Path::selectedNode->isDetached()){
+		ObjectDef *obj = GetObjectDef(Path::selectedNode->objId);
+		ImGui::Text("Object %s", obj->m_name);
+		uiFilteredInstanceList(obj);
+	}else if(Path::selectedNode && Path::selectedNode->tabId == 1){
+		int i = Path::selectedNode->idx;
+		ImGui::Text("CarPath %d", i);
+		ImGui::PushID(i);
+		if(ImGui::BeginTable("Nodes", 11, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)){
+			uiCarPathHeader();
+			for(int j = 0; j < 12; j++){
+				PathNode *nd = Path::GetDetachedCarNode(i,j);
+				if(nd == nil) break;
+				ImGui::TableNextRow();
+				uiCarPathNode(nd, j, nil);
+			}
+			ImGui::EndTable();
+		}
+		ImGui::PopID();
+	}else if(Path::selectedNode && Path::selectedNode->tabId == 3){
+		int i = Path::selectedNode->idx;
+		ImGui::Text("PedPath %d", i);
+		ImGui::PushID(i);
+		if(ImGui::BeginTable("Nodes", 11, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)){
+			uiPedPathHeader();
+			for(int j = 0; j < 12; j++){
+				PathNode *nd = Path::GetDetachedPedNode(i,j);
+				if(nd == nil) break;
+				ImGui::TableNextRow();
+				uiPedPathNode(nd, j, nil);
+			}
+			ImGui::EndTable();
+		}
+		ImGui::PopID();
+	}
+}
+
+static void
 uiInstInfo(ObjectInst *inst)
 {
 	ObjectDef *obj;
@@ -369,7 +579,7 @@ uiInstInfo(ObjectInst *inst)
 
 	static char buf[MODELNAMELEN];
 	strncpy(buf, obj->m_name, MODELNAMELEN);
-	ImGui::InputText("Model", buf, MODELNAMELEN);
+	ImGui::InputText("Model#Inst", buf, MODELNAMELEN);
 
 	ImGui::Text("IPL: %s", inst->m_file->name);
 
@@ -503,6 +713,7 @@ uiObjInfo(ObjectDef *obj)
 		}
 		break;
 	}
+
 }
 
 struct CamSetting {
@@ -621,6 +832,7 @@ uiEditorWindow(void)
 		ImGui::Checkbox("show", &gDrawTarget);
 		ImGui::SliderFloat("FOV", (float*)&TheCamera.m_fov, 1.0f, 150.0f, "%.0f");
 		ImGui::Text("Far: %f", Timecycle::currentColours.farClp);
+		ImGui::Text("mouse: %f %f", TheCamera.mx, TheCamera.my);
 
 		ImGui::InputText("name", name, sizeof(name));
 		if(ImGui::Button("Save")){
@@ -732,6 +944,44 @@ uiEditorWindow(void)
 		ImGui::TreePop();
 	}
 
+	if(ImGui::TreeNode("Car Path Segments")){
+		PathNode *nd;
+		for(int i = 0; nd = Path::GetDetachedCarNode(i,0); i++){
+			static char str[20];
+			sprintf(str,"CarPath %d", i);
+			ImGui::PushID(inst);
+			ImGui::Selectable(str);
+			ImGui::PopID();
+			if(ImGui::IsItemHovered()){
+				Path::guiHoveredNode = nd;
+				if(ImGui::IsMouseClicked(1))
+					Path::selectedNode = nd;
+				if(ImGui::IsMouseDoubleClicked(0))
+					nd->JumpTo(nil);
+			}
+		}
+		ImGui::TreePop();
+	}
+
+	if(ImGui::TreeNode("Ped Path Segments")){
+		PathNode *nd;
+		for(int i = 0; nd = Path::GetDetachedPedNode(i,0); i++){
+			static char str[20];
+			sprintf(str,"PedPath %d", i);
+			ImGui::PushID(inst);
+			ImGui::Selectable(str);
+			ImGui::PopID();
+			if(ImGui::IsItemHovered()){
+				Path::guiHoveredNode = nd;
+				if(ImGui::IsMouseClicked(1))
+					Path::selectedNode = nd;
+				if(ImGui::IsMouseDoubleClicked(0))
+					nd->JumpTo(nil);
+			}
+		}
+		ImGui::TreePop();
+	}
+
 	ImGui::End();
 }
 
@@ -741,11 +991,17 @@ uiInstWindow(void)
 	ImGui::Begin("Object Info", &showInstanceWindow);
 	if(selection.first){
 		ObjectInst *inst = (ObjectInst*)selection.first->item;
+		ObjectDef *obj = GetObjectDef(inst->m_objectId);
 		if(ImGui::CollapsingHeader("Instance"))
 			uiInstInfo(inst);
 		if(ImGui::CollapsingHeader("Object"))
-			uiObjInfo(GetObjectDef(inst->m_objectId));
-	}
+			uiObjInfo(obj);
+		if(obj->m_carPathIndex >=0 || obj->m_pedPathIndex >= 0)
+			if(ImGui::CollapsingHeader("Path"))
+				uiPathInfo(inst);
+	}else if(Path::selectedNode)// && Path::selectedNode->isDetached())
+		if(ImGui::CollapsingHeader("Path"))
+			uiPathInfo(nil);
 	ImGui::End();
 }
 
@@ -786,6 +1042,7 @@ gui(void)
 		camloaded = true;
 	}
 
+	Path::guiHoveredNode = nil;
 	uiMainmenu();
 
 	if(CPad::IsKeyJustDown('C')) gUseViewerCam = !gUseViewerCam;

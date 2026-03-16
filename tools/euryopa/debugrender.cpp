@@ -138,7 +138,8 @@ RenderWireBox(CBox *box, rw::RGBA col, rw::Matrix *xform)
 	verts[7].x = box->max.x;
 	verts[7].y = box->max.y;
 	verts[7].z = box->max.z;
-	rw::V3d::transformPoints(verts, verts, 8, xform);
+	if(xform)
+		rw::V3d::transformPoints(verts, verts, 8, xform);
 
 	RenderWireBoxVerts(verts, col);
 }
@@ -148,7 +149,9 @@ RenderWireSphere(CSphere *sphere, rw::RGBA col, rw::Matrix *xform)
 {
 	rw::V3d c;
 	rw::V3d verts[6];
-	rw::V3d::transformPoints(&c, &sphere->center, 1, xform);
+	c = sphere->center;
+	if(xform)
+		rw::V3d::transformPoints(&c, &c, 1, xform);
 	verts[0] = verts[1] = verts[2] = verts[3] = verts[4] = verts[5] = c;
 	verts[0].z += sphere->radius;	// top
 	verts[1].z -= sphere->radius;	// bottom
@@ -173,7 +176,8 @@ RenderWireTriangle(rw::V3d *v1, rw::V3d *v2, rw::V3d *v3, rw::RGBA col, rw::Matr
 	verts[0] = *v1;
 	verts[1] = *v2;
 	verts[2] = *v3;
-	rw::V3d::transformPoints(verts, verts, 3, xform);
+	if(xform)
+		rw::V3d::transformPoints(verts, verts, 3, xform);
 	RenderLine(verts[0], verts[1], col, col);
 	RenderLine(verts[1], verts[2], col, col);
 	RenderLine(verts[2], verts[0], col, col);

@@ -38,6 +38,8 @@ bool gRenderNavigZones;
 bool gRenderInfoZones;
 bool gRenderCullZones;
 bool gRenderAttribZones;
+bool gRenderPedPaths;
+bool gRenderCarPaths = true;
 bool gRenderTimecycleBoxes;
 
 // SA postfx
@@ -363,16 +365,21 @@ RenderEverythingColourCoded(void)
 	params.alphaRef = aref;
 }
 
+int32
+pick(void)
+{
+	static rw::RGBA black = { 0, 0, 0, 0xFF };
+	TheCamera.m_rwcam->clear(&black, rw::Camera::CLEARIMAGE|rw::Camera::CLEARZ);
+	RenderEverythingColourCoded();
+	return gta::GetColourCode(CPad::newMouseState.x, CPad::newMouseState.y);
+}
+
 void
 handleTool(void)
 {
 	// select
 	if(CPad::IsMButtonClicked(1)){
-		static rw::RGBA black = { 0, 0, 0, 0xFF };
-		TheCamera.m_rwcam->clear(&black, rw::Camera::CLEARIMAGE|rw::Camera::CLEARZ);
-		RenderEverythingColourCoded();
-		int32 c = gta::GetColourCode(CPad::newMouseState.x, CPad::newMouseState.y);
-		ObjectInst *inst = GetInstanceByID(c);
+		ObjectInst *inst = GetInstanceByID(pick());
 		if(inst){
 			if(CPad::IsShiftDown())
 				inst->Select();
@@ -387,6 +394,20 @@ handleTool(void)
 			}
 		}else
 			ClearSelection();
+
+		Path::selectedNode = Path::hoveredNode;
+	}else if(CPad::IsMButtonClicked(2)){
+		if(CPad::IsCtrlDown())
+			Path::selectedNode = Path::hoveredNode;
+		else{
+			ClearSelection();
+			ObjectInst *inst = GetInstanceByID(pick());
+			if(inst)
+				inst->Select();
+		}
+	}else if(CPad::IsMButtonClicked(3)){
+		ClearSelection();
+		Path::selectedNode = nil;
 	}
 }
 
@@ -426,6 +447,7 @@ LoadGame(void)
 
 	TheCamera.m_position = params.initcampos;
 	TheCamera.m_target = params.initcamtarg;
+	TheCamera.setDistanceToTarget(50.0f);
 	gDoBackfaceCulling = params.backfaceCull;
 
 	defaultTxd = rw::TexDictionary::getCurrent();
@@ -649,6 +671,11 @@ Draw(void)
 		Zones::RenderCullZones();
 	if(gRenderAttribZones)
 		Zones::RenderAttribZones();
+	Path::hoveredNode = nil;
+	if(gRenderPedPaths)
+		Path::RenderPedPaths();
+	if(gRenderCarPaths)
+		Path::RenderCarPaths();
 
 	rw::SetRenderState(rw::ALPHATESTFUNC, rw::ALPHAALWAYS);	// don't mess up GUI
 	// This fucks up the z buffer, but what else can we do?

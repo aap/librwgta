@@ -218,13 +218,15 @@ Render(void)
 
 enum
 {
-	NUMCULLZONES = 800,
+//	NUMCULLZONES = 800,
+	NUMCULLZONES = 1000,
 	NUMATTRIBZONES = 2000,
 	NUMMIRRORATTRIBZONES = 200
 };
 
 static CullZone cullZones[NUMCULLZONES];
 static int numCullZones;
+static int numCullZonesNeeded;
 static AttribZone attribZones[NUMATTRIBZONES];
 static int numAttribZones;
 static MirrorAttribZone mirrorAttribZones[NUMMIRRORATTRIBZONES];
@@ -236,10 +238,13 @@ AddAttribZone(CBox box, int flags, int wantedLevelDrop)
 	box.FindMinMax();
 
 	if(isIII() && (flags & ATTRZONE_NOTCULLZONE) == 0){
-		if(numCullZones >= NUMCULLZONES)
-			log("warning: too many cull zones\n");
-		else
+		if(numCullZones >= NUMCULLZONES){
+			numCullZonesNeeded++;
+			log("warning: too many cull zones. need %d\n", numCullZonesNeeded);
+		}else{
 			cullZones[numCullZones++].box = box;
+			numCullZonesNeeded = numCullZones;
+		}
 	}
 
 	if(!isIII() || flags & ~ATTRZONE_NOTCULLZONE){

@@ -94,6 +94,8 @@ extern bool gRenderNavigZones;
 extern bool gRenderInfoZones;
 extern bool gRenderCullZones;
 extern bool gRenderAttribZones;
+extern bool gRenderPedPaths;
+extern bool gRenderCarPaths;
 extern bool gRenderTimecycleBoxes;
 
 // SA postfx
@@ -328,6 +330,8 @@ struct ObjectDef
 	int m_id;	// our own id
 	char m_name[MODELNAMELEN];
 	int m_txdSlot;
+	int m_pedPathIndex;
+	int m_carPathIndex;
 	int m_type;
 	CColModel *m_colModel;
 	bool m_gotChildCol;
@@ -458,6 +462,79 @@ extern CPtrList selection;
 ObjectInst *GetInstanceByID(int32 id);
 ObjectInst *AddInstance(void);
 void ClearSelection(void);
+
+
+enum PathType {
+	PedPath,
+	CarPath,
+	WaterPath
+};
+
+#define LaneWidth 5.0f
+struct PathNode {
+	int type;
+	int link;
+	int linkType;
+	float x, y, z;
+	float width;
+	int lanesIn, lanesOut;
+	// VC
+	int speed;
+	int flags;
+	float density;
+	// SA
+	int special;
+
+	enum Type {
+		NodeNone = 0,
+		NodeExternal,
+		NodeInternal
+	};
+	enum Flags {
+		NodeDisabled = 1,
+		NodeRoadBlock = 2,
+		NodeBetweenLevels = 4,
+		NodeUnderBridge = 8
+	};
+
+	int lanesInX, lanesOutX;
+
+	int idx;
+	int tabId;
+	int objId;
+	// for internal nodes
+	int numLinks;
+	int links[12];
+
+	float laneOffset(void) {
+		if(lanesInX == 0)
+			return 0.5f - 0.5f*lanesOutX;
+		if(lanesOutX == 0)
+			return 0.5f - 0.5f*lanesInX;
+		return 0.5f + width/(2.0f*LaneWidth);
+	}
+	float laneOffsetIII(void) {
+		if(lanesInX == 0)
+			return 0.5f - 0.5f*lanesOutX;
+		if(lanesOutX == 0)
+			return 0.5f - 0.5f*lanesInX;
+		return 0.5f;
+	}
+	void JumpTo(ObjectInst *inst);
+	bool isDetached(void);
+};
+
+namespace Path {
+extern PathNode *hoveredNode, *guiHoveredNode;
+extern PathNode *selectedNode;
+void AddNode(PathType type, int id, PathNode node);
+PathNode *GetPedNode(int base, int i);
+PathNode *GetCarNode(int base, int i);
+PathNode *GetDetachedPedNode(int base, int i);
+PathNode *GetDetachedCarNode(int base, int i);
+void RenderPedPaths(void);
+void RenderCarPaths(void);
+}
 
 
 // World/sectors

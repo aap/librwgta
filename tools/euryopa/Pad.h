@@ -97,7 +97,7 @@ public:
 	static bool IsKeyJustDown(int key);
 	static bool IsKeyDown(int key);
 	static bool IsShiftDown(void) { return IsKeyDown(KEY_LSHIFT) || IsKeyDown(KEY_RSHIFT); }
-	static bool IsCtrlDown(void) { return IsKeyDown(KEY_LCTRL) || IsKeyDown(KEY_RCTRL); }
+	static bool IsCtrlDown(void) { return IsKeyDown(KEY_LCTRL) || IsKeyDown(KEY_RCTRL) || IsKeyDown(KEY_CAPSLK); }
 	static bool IsAltDown(void) { return IsKeyDown(KEY_LALT) || IsKeyDown(KEY_RALT); }
 	static bool IsMButtonJustDown(int btn);
 	static bool IsMButtonJustUp(int btn);

@@ -252,6 +252,8 @@ project "euryopa"
 	files { "tools/euryopa/minilzo/minilzo.c" }
 	removeplatforms { "*null" }
 	removeplatforms { "ps2" }
+		includedirs { "/usr/include/lua5.4" }
+		links { "lua5.4" }
 
 project "gtaclumpview"
 	kind "WindowedApp"

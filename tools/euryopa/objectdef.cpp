@@ -208,7 +208,7 @@ ObjectDef::Load(void)
 		return;
 
 	if(this->m_imageIndex < 0){
-		log("warning: no streaming info for object %s\n", this->m_name);
+		log("warning: no streaming info for object %s %d %X\n", this->m_name, this->m_id, this->m_imageIndex);
 		CantLoad();
 		return;
 	}
@@ -337,7 +337,10 @@ AddObjectDef(int id)
 	ObjectDef *obj = new ObjectDef;
 	memset(obj, 0, sizeof(ObjectDef));
 	obj->m_imageIndex = -1;
-	// TODO: warn if already defined
+	obj->m_pedPathIndex = -1;
+	obj->m_carPathIndex = -1;
+	if(objdefs[id])
+		log("warning: id %d already defined as %s %d\n", id, objdefs[id]->m_name, objdefs[id]->m_id);
 	objdefs[id] = obj;
 	obj->m_id = id;
 	return obj;
