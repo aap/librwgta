@@ -158,15 +158,16 @@ RenderSphereAsWireBox(CSphere *sphere, rw::RGBA col, rw::Matrix *xform)
 void
 RenderSphereAsCross(CSphere *sphere, rw::RGBA col, rw::Matrix *xform)
 {
+	using namespace rw;
 	float off = sphere->radius*0.5f;
-	RenderLine(rw::sub(sphere->center, (rw::V3d){off,0.0f,0.0f}),
-	           rw::add(sphere->center, (rw::V3d){off,0.0f,0.0f}),
+	RenderLine(sub(sphere->center, makeV3d(off,0.0f,0.0f)),
+	           add(sphere->center, makeV3d(off,0.0f,0.0f)),
 	           col, col);
-	RenderLine(rw::sub(sphere->center, (rw::V3d){0.0f,off,0.0f}),
-	           rw::add(sphere->center, (rw::V3d){0.0f,off,0.0f}),
+	RenderLine(sub(sphere->center, makeV3d(0.0f,off,0.0f)),
+	           add(sphere->center, makeV3d(0.0f,off,0.0f)),
 	           col, col);
-	RenderLine(rw::sub(sphere->center, (rw::V3d){0.0f,0.0f,off}),
-	           rw::add(sphere->center, (rw::V3d){0.0f,0.0f,off}),
+	RenderLine(sub(sphere->center, makeV3d(0.0f,0.0f,off)),
+	           add(sphere->center, makeV3d(0.0f,0.0f,off)),
 	           col, col);
 }
 
