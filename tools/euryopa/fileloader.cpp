@@ -243,7 +243,7 @@ LoadPathLine(char *line)
 			sscanf(line, "%d %d", &pathtype, &pathID);
 			connectionID = 0;
 		}else{
-			sscanf(line, "%d %d %d %f %f %f %f %d %d %d %d %f",
+			sscanf(line, "%d %d %d %f %f %f %f %d %d %d %d %f %d",
 				&node.type, &node.link, &node.linkType,
 				&node.x, &node.y, &node.z, &node.width,
 				&node.lanesIn, &node.lanesOut,

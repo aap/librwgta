@@ -579,7 +579,7 @@ uiInstInfo(ObjectInst *inst)
 
 	static char buf[MODELNAMELEN];
 	strncpy(buf, obj->m_name, MODELNAMELEN);
-	ImGui::InputText("Model#Inst", buf, MODELNAMELEN);
+	ImGui::InputText("Model##Inst", buf, MODELNAMELEN);
 
 	ImGui::Text("IPL: %s", inst->m_file->name);
 
@@ -944,12 +944,13 @@ uiEditorWindow(void)
 		ImGui::TreePop();
 	}
 
-	if(ImGui::TreeNode("Car Path Segments")){
-		PathNode *nd;
+	PathNode *nd;
+	if(nd = Path::GetDetachedCarNode(0,0))
+	if(ImGui::TreeNode("Detached Car Paths")){
 		for(int i = 0; nd = Path::GetDetachedCarNode(i,0); i++){
 			static char str[20];
 			sprintf(str,"CarPath %d", i);
-			ImGui::PushID(inst);
+			ImGui::PushID(i);
 			ImGui::Selectable(str);
 			ImGui::PopID();
 			if(ImGui::IsItemHovered()){
@@ -963,12 +964,12 @@ uiEditorWindow(void)
 		ImGui::TreePop();
 	}
 
-	if(ImGui::TreeNode("Ped Path Segments")){
-		PathNode *nd;
+	if(nd = Path::GetDetachedPedNode(0,0))
+	if(ImGui::TreeNode("Detached Ped Paths")){
 		for(int i = 0; nd = Path::GetDetachedPedNode(i,0); i++){
 			static char str[20];
 			sprintf(str,"PedPath %d", i);
-			ImGui::PushID(inst);
+			ImGui::PushID(i);
 			ImGui::Selectable(str);
 			ImGui::PopID();
 			if(ImGui::IsItemHovered()){
