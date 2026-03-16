@@ -498,6 +498,7 @@ struct PathNode {
 		NodeUnderBridge = 8
 	};
 
+	bool water;
 	int lanesInX, lanesOutX;
 
 	int idx;

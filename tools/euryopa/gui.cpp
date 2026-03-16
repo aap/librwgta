@@ -396,20 +396,28 @@ uiFilteredInstanceList(ObjectDef *obj)
 	}
 }
 
+int uiNumCarPathColumns(void) { return isIII() ? 9 : isSA() ? 14 : 13; }
+
 void
 uiCarPathHeader(void)
 {
 	ImGui::TableSetupColumn("idx");
 	ImGui::TableSetupColumn("type");
 	ImGui::TableSetupColumn("link");
-	ImGui::TableSetupColumn("linkType");
 	ImGui::TableSetupColumn("numLinks");
 	ImGui::TableSetupColumn("x");
 	ImGui::TableSetupColumn("y");
 	ImGui::TableSetupColumn("z");
-	ImGui::TableSetupColumn("width");
 	ImGui::TableSetupColumn("lanesIn");
 	ImGui::TableSetupColumn("lanesOut");
+	if(!isIII()){
+		ImGui::TableSetupColumn("width");
+		ImGui::TableSetupColumn("speed");
+		ImGui::TableSetupColumn("flags");
+		ImGui::TableSetupColumn("density");
+		if(isSA())
+			ImGui::TableSetupColumn("special");
+	}
 	ImGui::TableHeadersRow();
 }
 
@@ -432,8 +440,6 @@ uiCarPathNode(PathNode *nd, int i, ObjectInst *inst)
 	ImGui::TableSetColumnIndex(c++);
 	ImGui::Text("%d", nd->link);
 	ImGui::TableSetColumnIndex(c++);
-	ImGui::Text("%d", nd->linkType);
-	ImGui::TableSetColumnIndex(c++);
 	ImGui::Text("%d", nd->numLinks);
 	ImGui::TableSetColumnIndex(c++);
 	ImGui::Text("%g", nd->x*16);
@@ -441,22 +447,32 @@ uiCarPathNode(PathNode *nd, int i, ObjectInst *inst)
 	ImGui::Text("%g", nd->y*16);
 	ImGui::TableSetColumnIndex(c++);
 	ImGui::Text("%g", nd->z*16);
-	ImGui::TableSetColumnIndex(c++);
-	ImGui::Text("%g", nd->width);
 	if(nd->type == PathNode::NodeExternal){
 		ImGui::TableSetColumnIndex(c++);
 		ImGui::Text("%d", nd->lanesIn);
 		ImGui::TableSetColumnIndex(c++);
 		ImGui::Text("%d", nd->lanesOut);
+	}else{
+		ImGui::TableSetColumnIndex(c++);
+		ImGui::Text(" ");
+		ImGui::TableSetColumnIndex(c++);
+		ImGui::Text(" ");
 	}
-	/*
-		// VC
-		int speed;
-		int flags;
-		float density;
-		// SA
-		int special;
-	*/
+
+	if(!isIII()){
+		ImGui::TableSetColumnIndex(c++);
+		ImGui::Text("%g", nd->width);
+		ImGui::TableSetColumnIndex(c++);
+		ImGui::Text("%d", nd->speed);
+		ImGui::TableSetColumnIndex(c++);
+		ImGui::Text("%X", nd->flags);
+		ImGui::TableSetColumnIndex(c++);
+		ImGui::Text("%g", nd->density);
+		if(isSA()){
+			ImGui::TableSetColumnIndex(c++);
+			ImGui::Text("%d", nd->special);
+		}
+	}
 }
 
 void
@@ -465,7 +481,7 @@ uiPedPathHeader(void)
 	ImGui::TableSetupColumn("idx");
 	ImGui::TableSetupColumn("type");
 	ImGui::TableSetupColumn("link");
-	ImGui::TableSetupColumn("linkType");
+	ImGui::TableSetupColumn("cross");
 	ImGui::TableSetupColumn("numLinks");
 	ImGui::TableSetupColumn("x");
 	ImGui::TableSetupColumn("y");
@@ -511,9 +527,9 @@ uiPathInfo(ObjectInst *inst)
 		obj = GetObjectDef(inst->m_objectId);
 
 		if(obj->m_carPathIndex >= 0){
-			ImGui::Text("Car Path");
-			PathNode *nd;
-			if(ImGui::BeginTable("Nodes", 11, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)){
+			PathNode *nd = Path::GetCarNode(obj->m_carPathIndex,0);
+			ImGui::Text(nd->water ? "WaterPath" : "CarPath");
+			if(ImGui::BeginTable("Nodes", uiNumCarPathColumns(), ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)){
 				uiCarPathHeader();
 				for(int i = 0; nd = Path::GetCarNode(obj->m_carPathIndex,i); i++){
 					ImGui::TableNextRow();
@@ -540,9 +556,9 @@ uiPathInfo(ObjectInst *inst)
 		uiFilteredInstanceList(obj);
 	}else if(Path::selectedNode && Path::selectedNode->tabId == 1){
 		int i = Path::selectedNode->idx;
-		ImGui::Text("CarPath %d", i);
+		ImGui::Text(Path::selectedNode->water ? "WaterPath %d" : "CarPath %d", i);
 		ImGui::PushID(i);
-		if(ImGui::BeginTable("Nodes", 11, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)){
+		if(ImGui::BeginTable("Nodes", uiNumCarPathColumns(), ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)){
 			uiCarPathHeader();
 			for(int j = 0; j < 12; j++){
 				PathNode *nd = Path::GetDetachedCarNode(i,j);
@@ -557,7 +573,7 @@ uiPathInfo(ObjectInst *inst)
 		int i = Path::selectedNode->idx;
 		ImGui::Text("PedPath %d", i);
 		ImGui::PushID(i);
-		if(ImGui::BeginTable("Nodes", 11, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)){
+		if(ImGui::BeginTable("Nodes", 8, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)){
 			uiPedPathHeader();
 			for(int j = 0; j < 12; j++){
 				PathNode *nd = Path::GetDetachedPedNode(i,j);
@@ -949,7 +965,7 @@ uiEditorWindow(void)
 	if(ImGui::TreeNode("Detached Car Paths")){
 		for(int i = 0; nd = Path::GetDetachedCarNode(i,0); i++){
 			static char str[20];
-			sprintf(str,"CarPath %d", i);
+			sprintf(str, nd->water ? "WaterPath %d" : "CarPath %d", i);
 			ImGui::PushID(i);
 			ImGui::Selectable(str);
 			ImGui::PopID();

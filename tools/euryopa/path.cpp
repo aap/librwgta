@@ -56,23 +56,20 @@ AddNode(PathType type, int id, PathNode node)
 	if(id < 0){
 		if(type == PedPath)
 			tabid = 3;
-//			tab = &pedDetachedNodes;
 		else
 			tabid = 1;
-//			tab = &carDetachedNodes;
 	}else{
 		ObjectDef *obj = GetObjectDef(id);
 		if(type == PedPath){
 			obj->m_pedPathIndex = pedNodes.size() / 12;
 			tabid = 2;
-//			tab = &pedNodes;
 		}else{
 			obj->m_carPathIndex = carNodes.size() / 12;
 			tabid = 0;
-//			tab = &carNodes;
 		}
 	}
 	node.tabId = tabid;
+	node.water = type == WaterPath;
 	tab = nodeTables[tabid];
 	NodeTable &t = *tab;
 	node.idx = t.size()/12;
