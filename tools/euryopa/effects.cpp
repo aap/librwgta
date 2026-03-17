@@ -57,7 +57,7 @@ RenderEffect(Effect *e, ObjectInst *inst)
 	assert(e);
 	assert(inst);
 
-	rw::V3d pos;
+	rw::V3d pos, dir;
 	rw::V3d::transformPoints(&pos, &e->pos, 1, &inst->m_matrix);
 	if(TheCamera.distanceTo(pos) > gEffectDrawDist)
 		return;
@@ -87,13 +87,16 @@ RenderEffect(Effect *e, ObjectInst *inst)
 
 	case FX_LOOKATPOINT:
 		RenderSphereAsCross(&sphere, c, nil);
-		RenderLine(pos, add(pos, scale(e->prtcl.dir,5)), c, c);
+		rw::V3d::transformVectors(&dir, &e->prtcl.dir, 1, &inst->m_matrix);
+		RenderLine(pos, add(pos, scale(dir,5)), c, c);
 		break;
 
 	case FX_PEDQUEUE:
 		RenderSphereAsWireBox(&sphere, c, nil);
-		RenderLine(pos, add(pos, scale(e->queue.queueDir,5)), c, c);
-		RenderLine(pos, add(pos, scale(e->queue.useDir,5)), c, c);
+		rw::V3d::transformVectors(&dir, &e->queue.queueDir, 1, &inst->m_matrix);
+		RenderLine(pos, add(pos, scale(dir,5)), c, c);
+		rw::V3d::transformVectors(&dir, &e->queue.useDir, 1, &inst->m_matrix);
+		RenderLine(pos, add(pos, scale(dir,5)), c, c);
 		break;
 
 	case FX_SUNGLARE:
