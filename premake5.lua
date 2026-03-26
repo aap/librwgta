@@ -33,6 +33,7 @@ newoption {
 }
 
 Zlibdir = "C:/Users/aap/src/zlib-1.2.11"
+luadir = "/usr/include/lua5.4"
 
 workspace "librwgta"
 	location "build"
@@ -183,6 +184,13 @@ function skeltool(dir)
 	findlibs()
 end
 
+project "selanna"
+	tool("selanna")
+	kind "ConsoleApp"
+	removeplatforms { "*gl3", "*d3d9" }
+	includedirs { luadir }
+	links { "lua5.4" }
+
 project "convdff"
 	tool("convdff")
 	kind "ConsoleApp"
@@ -252,8 +260,6 @@ project "euryopa"
 	files { "tools/euryopa/minilzo/minilzo.c" }
 	removeplatforms { "*null" }
 	removeplatforms { "ps2" }
-		includedirs { "/usr/include/lua5.4" }
-		links { "lua5.4" }
 
 project "gtaclumpview"
 	kind "WindowedApp"

@@ -131,7 +131,7 @@ ObjectInst::JumpTo(void)
 	CSphere *sph = &obj->m_colModel->boundingSphere;
 	rw::V3d::transformPoints(&center, &sph->center, 1, &m_matrix);
 	TheCamera.setTarget(center);
-	TheCamera.setDistanceFromTarget(TheCamera.minDistToSphere(sph->radius));
+	TheCamera.setDistanceFromTarget(TheCamera.minDistToSphere(sph->radius) + 5.0f);
 }
 
 void
@@ -153,6 +153,15 @@ ObjectInst::Deselect(void)
 			selection.RemoveNode(p);
 			return;
 		}
+}
+
+void
+ObjectInst::ToggleSelect(void)
+{
+	if(m_selected)
+		Deselect();
+	else
+		Select();
 }
 
 void

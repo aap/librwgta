@@ -33,13 +33,16 @@ AddTxdSlot(const char *name)
 {
 	int i;
 	i = FindTxdSlot(name);
-	if(i >= 0)
+	if(i >= 0){
+		txdlist[i].refCount++;
 		return i;
+	}
 	i = numTxds++;
 	strncpy(txdlist[i].name, name, MODELNAMELEN);
 	txdlist[i].txd = nil;
 	txdlist[i].parentId = -1;
 	txdlist[i].imageIndex = -1;
+	txdlist[i].refCount = 1;
 	return i;
 }
 

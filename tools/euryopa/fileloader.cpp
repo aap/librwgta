@@ -396,6 +396,7 @@ LoadObjectInstance(char *line)
 		tmpInsts[numTmpInsts++] = nil;
 		return;
 	}
+	obj->m_numInstances++;
 
 	ObjectInst *inst = AddInstance();
 	inst->Init(&fi);
@@ -557,7 +558,7 @@ LoadObjectTypes(const char *filename)
 		firstID = 0;
 		lastID = NUMOBJECTDEFS;
 	}
-	for(i = firstID; i < lastID; i++)
+	for(i = firstID; i <= lastID; i++)
 		if(GetObjectDef(i))
 			GetObjectDef(i)->SetupBigBuilding(firstID, lastID);
 }
