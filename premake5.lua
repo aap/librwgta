@@ -240,7 +240,6 @@ project "vcsconv"
 	kind "ConsoleApp"
 	removeplatforms { "*gl3", "*d3d9" }
 	defines { "VCS" }
-	debugdir "%VCSCONV_DEBUGDIR%"
 
 	local env = os.getenv("VCSCONV_DEBUGDIR")
 	if env then

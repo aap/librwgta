@@ -37,4 +37,4 @@ NOTE: The build script is tailored to an older version of premake, so for conven
 
 ## Additional variables
 It is possible to set a special environment variable for the debug directory. To do this, simply take the tool name and append `_DEBUGDIR` to it.
-So to set one for Euryopa, simply use `%EURYOPA_DEBUGDIR%`.
+So to set one for Euryopa, simply use `EURYOPA_DEBUGDIR`.
