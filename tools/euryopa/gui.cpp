@@ -1343,51 +1343,6 @@ uiEditorWindow(void)
 		ImGui::TreePop();
 	}
 
-/*
-	if(ImGui::TreeNode("Instances")){
-		static ImGuiTextFilter filter;
-		static ImGuiTextFilter filter2;
-		filter.Draw("Model (inc,-exc)"); ImGui::SameLine();
-		if(ImGui::Button("Clear##Model"))
-			filter.Clear();
-		filter2.Draw("Txd (inc,-exc)"); ImGui::SameLine();
-		if(ImGui::Button("Clear##Txd"))
-			filter2.Clear();
-		static bool highlight;
-		ImGui::Checkbox("Highlight matches", &highlight);
-		for(p = instances.first; p; p = p->next){
-			inst = (ObjectInst*)p->item;
-			obj = GetObjectDef(inst->m_objectId);
-			txd = GetTxdDef(obj->m_txdSlot);
-			if(filter.PassFilter(obj->m_name) && filter2.PassFilter(txd->name)){
-				bool pop = false;
-				if(inst->m_selected){
-					ImGui::PushStyleColor(ImGuiCol_Text, (ImVec4)ImColor(255, 0, 0));
-					pop = true;
-				}
-				ImGui::PushID(inst);
-				sprintf(buf, "%-20s %-20s %8.2f %8.2f %8.2f", obj->m_name, txd->name,
-					inst->m_translation.x, inst->m_translation.y, inst->m_translation.z);
-				ImGui::Selectable(buf);
-				ImGui::PopID();
-				if(ImGui::IsItemHovered()){
-					if(ImGui::IsMouseClicked(1))
-						inst->Select();
-					if(ImGui::IsMouseDoubleClicked(0))
-						inst->JumpTo();
-				}
-				if(pop)
-					ImGui::PopStyleColor();
-				if(highlight)
-					inst->m_highlight = HIGHLIGHT_FILTER;
-				if(ImGui::IsItemHovered())
-					inst->m_highlight = HIGHLIGHT_HOVER;
-			}
-		}
-		ImGui::TreePop();
-	}
-*/
-
 	PathNode *nd;
 	if(nd = Path::GetDetachedCarNode(0,0))
 	if(ImGui::TreeNode("Detached Car Paths")){
