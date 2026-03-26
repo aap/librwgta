@@ -1,4 +1,10 @@
 Librw = os.getenv("LIBRW")
+Zlib = os.getenv("ZLIBDIR")
+Lua = os.getenv("LUADIR")
+
+if not Librw then
+    error("Please set the LIBRW environment variable to your librw folder path.")
+end
 
 newoption {
 	trigger		= "gfxlib",
@@ -31,9 +37,6 @@ newoption {
 	description = "Directory of sdl2",
 	default     = "../SDL2-2.0.14",
 }
-
-Zlibdir = "C:/Users/aap/src/zlib-1.2.11"
-luadir = "/usr/include/lua5.4"
 
 workspace "librwgta"
 	location "build"
@@ -188,18 +191,38 @@ project "selanna"
 	tool("selanna")
 	kind "ConsoleApp"
 	removeplatforms { "*gl3", "*d3d9" }
-	includedirs { luadir }
-	links { "lua5.4" }
+
+	if not Lua then
+		includedirs { Lua }
+		links { "lua5.4" }
+	else
+		print("Warning: LUADIR not set; selenna may fail to compile.")
+	end
+
+	local env = os.getenv("SELANNA_DEBUGDIR")
+	if env then
+		debugdir(env)
+	end
 
 project "convdff"
 	tool("convdff")
 	kind "ConsoleApp"
 	removeplatforms { "*gl3", "*d3d9" }
 
+	local env = os.getenv("CONVDFF_DEBUGDIR")
+	if env then
+		debugdir(env)
+	end
+
 project "convtxd"
 	tool("convtxd")
 	kind "ConsoleApp"
 	removeplatforms { "*gl3", "*d3d9" }
+
+	local env = os.getenv("CONVTXD_DEBUGDIR")
+	if env then
+		debugdir(env)
+	end
 
 project "lcsconv"
 	tool("storiesconv")
@@ -207,11 +230,22 @@ project "lcsconv"
 	removeplatforms { "*gl3", "*d3d9" }
 	defines { "LCS" }
 
+	local env = os.getenv("LCSCONV_DEBUGDIR")
+	if env then
+		debugdir(env)
+	end
+
 project "vcsconv"
 	tool("storiesconv")
 	kind "ConsoleApp"
 	removeplatforms { "*gl3", "*d3d9" }
 	defines { "VCS" }
+	debugdir "%VCSCONV_DEBUGDIR%"
+
+	local env = os.getenv("VCSCONV_DEBUGDIR")
+	if env then
+		debugdir(env)
+	end
 
 project "lcsview"
 	kind "WindowedApp"
@@ -223,14 +257,24 @@ project "lcsview"
 	files { "tools/storiesconv/rsl.cpp" }
 	files { "tools/storiesconv/rslconv.cpp" }
 	files { "tools/storiesconv/hash.cpp" }
-	includedirs { Zlibdir }
-	libdirs { Zlibdir }
-	links { "zlib" }
+
+	if not zlib then
+		includedirs { Zlib }
+		libdirs { Zlib }
+		links { "zlib" }
+	else
+		print("Warning: ZLIBDIR not set; lcsview may fail to compile.")
+	end
+
 	removeplatforms { "*null" }
 	removeplatforms { "*amd64*" }
 	removeplatforms { "ps2" } -- for now
 	defines { "LCS" }
-	debugdir "L:/."
+
+	local env = os.getenv("LCSVIEW_DEBUGDIR")
+	if env then
+		debugdir(env)
+	end
 
 project "vcsview"
 	kind "WindowedApp"
@@ -242,14 +286,24 @@ project "vcsview"
 	files { "tools/storiesconv/rsl.cpp" }
 	files { "tools/storiesconv/rslconv.cpp" }
 	files { "tools/storiesconv/hash.cpp" }
-	includedirs { Zlibdir }
-	libdirs { Zlibdir }
-	links { "zlib" }
+
+	if not zlib then
+		includedirs { Zlib }
+		libdirs { Zlib }
+		links { "zlib" }
+	else
+		print("Warning: ZLIBDIR not set; vcsview may fail to compile.")
+	end
+
 	removeplatforms { "*null" }
 	removeplatforms { "*amd64*" }
 	removeplatforms { "ps2" } -- for now
 	defines { "VCS" }
-	debugdir "V:/."
+
+	local env = os.getenv("VCSVIEW_DEBUGDIR")
+	if env then
+		debugdir(env)
+	end
 
 project "euryopa"
 	kind "WindowedApp"
@@ -261,6 +315,11 @@ project "euryopa"
 	removeplatforms { "*null" }
 	removeplatforms { "ps2" }
 
+	local env = os.getenv("EURYOPA_DEBUGDIR")
+	if env then
+		debugdir(env)
+	end
+
 project "gtaclumpview"
 	kind "WindowedApp"
 	characterset ("MBCS")
@@ -270,15 +329,30 @@ project "gtaclumpview"
 	removeplatforms { "*null" }
 	removeplatforms { "ps2" } -- for now
 
+	local env = os.getenv("GTACLUMPVIEW_DEBUGDIR")
+	if env then
+		debugdir(env)
+	end
+
 project "convifp"
 	tool("convifp")
 	kind "ConsoleApp"
 	removeplatforms { "*gl3", "*d3d9" }
 
+	local env = os.getenv("CONVIFP_DEBUGDIR")
+	if env then
+		debugdir(env)
+	end
+
 project "coltest"
 	tool("coltest")
 	kind "ConsoleApp"
 	removeplatforms { "*gl3", "*d3d9" }
+
+	local env = os.getenv("COLTEST_DEBUGDIR")
+	if env then
+		debugdir(env)
+	end
 
 project "d3d9test"
 	tool("d3d9test")
@@ -288,6 +362,11 @@ project "d3d9test"
 	removeplatforms { "*gl3", "*null" }
 	links { "winmm" }
 
+	local env = os.getenv("D3D9TEST_DEBUGDIR")
+	if env then
+		debugdir(env)
+	end
+
 project "IIItest"
 	tool("IIItest")
 	removelinks { "librwgta" }
@@ -296,20 +375,39 @@ project "IIItest"
 	flags { "WinMain" }
 	removeplatforms { "*null" }
 	files { path.join("tools/IIItest/*") }
-	debugdir "C:/Users/aap/games/gta3"
+
+	local env = os.getenv("IIITEST_DEBUGDIR")
+	if env then
+		debugdir(env)
+	end
 
 project "radaredit"
 	tool("radaredit")
 	kind "ConsoleApp"
+
+	local env = os.getenv("RADAREDIT_DEBUGDIR")
+	if env then
+		debugdir(env)
+	end
 
 project "txdbuild"
 	tool("txdbuild")
 	kind "ConsoleApp"
 	removeplatforms { "*gl3", "*d3d9" }
 
+	local env = os.getenv("TXDBUILD_DEBUGDIR")
+	if env then
+		debugdir(env)
+	end
+
 project "convcdimage"
 	tool("convcdimage")
 	kind "ConsoleApp"
 	files { "tools/euryopa/minilzo/minilzo.c" }
 	removeplatforms { "*gl3", "*d3d9" }
+
+	local env = os.getenv("CONVCDIMAGE_DEBUGDIR")
+	if env then
+		debugdir(env)
+	end
 

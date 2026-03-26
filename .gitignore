@@ -1,6 +1,7 @@
 obj/
 bin/
 lib/
+build/
 .vs/
 output/
 customprops.xml
