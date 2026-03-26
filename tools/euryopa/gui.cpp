@@ -11,6 +11,10 @@ static bool showTimeWeatherWindow;
 static bool showViewWindow;
 static bool showRenderingWindow;
 
+static bool showObjWindow;
+static bool showTxdWindow;
+static bool showInstanceFilterWindow;
+
 // From the demo, slightly changed
 struct ExampleAppLog
 {
@@ -89,6 +93,8 @@ uiMainmenu(void)
 			if(ImGui::MenuItem("View", "V", showViewWindow)) { showViewWindow ^= 1; }
 			if(ImGui::MenuItem("Rendering", "R", showRenderingWindow)) { showRenderingWindow ^= 1; }
 			if(ImGui::MenuItem("Object Info", "I", showInstanceWindow)) { showInstanceWindow ^= 1; }
+			if(ImGui::MenuItem("Objects", "O", showObjWindow)) { showObjWindow ^= 1; }
+			if(ImGui::MenuItem("Tex Dictionaries", "X", showTxdWindow)) { showTxdWindow ^= 1; }
 			if(ImGui::MenuItem("Editor", "E", showEditorWindow)) { showEditorWindow ^= 1; }
 			if(ImGui::MenuItem("Log ", nil, showLogWindow)) { showLogWindow ^= 1; }
 			if(ImGui::MenuItem("Demo ", nil, showDemoWindow)) { showDemoWindow ^= 1; }
@@ -919,7 +925,7 @@ saveCamSettings(void)
 	if(f == nil)
 		return;
 
-	for(int i = 0; i < camSettings.size(); i++){
+	for(uint32 i = 0; i < camSettings.size(); i++){
 		CamSetting *cam = &camSettings[i];
 		fprintf(f, "\"%s\" %f %f %f  %f %f %f  %f  %d %d %d %d  %d\n",
 			cam->name,
@@ -946,6 +952,253 @@ getCurrentCamSetting(CamSetting *cam)
 	cam->weather1 = Weather::oldWeather;
 	cam->weather2 = Weather::newWeather;
 	cam->area = currentArea;
+}
+
+static int sortedTxds[NUMTEXDICTS];
+static int numTxds;
+static int sortedObjects[NUMOBJECTDEFS];
+static int numObjects;
+
+static void
+initLists(void)
+{
+	int i;
+	ObjectDef *obj;
+	TxdDef *txd;
+
+	numObjects = 0;
+	for(i = 0; i < NUMOBJECTDEFS; i++){
+		obj = GetObjectDef(i);
+		if(obj && obj->m_numInstances > 0)
+			sortedObjects[numObjects++] = i;
+	}
+
+	numTxds = 0;
+	for(i = 0; i < NUMTEXDICTS; i++){
+		txd = GetTxdDef(i);
+		if(txd && txd->refCount > 1)
+			sortedTxds[numTxds++] = i;
+	}
+}
+
+static ImGuiTableSortSpecs *qsort_spec;
+
+static int
+compareObj(const void *a, const void *b)
+{
+	ObjectDef *obja = GetObjectDef(*(int*)a);
+	ObjectDef *objb = GetObjectDef(*(int*)b);
+	for(int i = 0; i < qsort_spec->SpecsCount; i++){
+		const ImGuiTableColumnSortSpecs *s = &qsort_spec->Specs[i];
+		int diff = 0;
+		switch(s->ColumnUserID){
+		case 0: diff = obja->m_id - objb->m_id; break;
+		case 1: diff = rw::strcmp_ci(obja->m_name, objb->m_name); break;
+		case 2: diff = obja->m_numInstances - objb->m_numInstances; break;
+		default: assert(0);
+		}
+		if(s->SortDirection == ImGuiSortDirection_Descending)
+			diff = -diff;
+		if(diff != 0)
+			return diff;
+	}
+	// if in doubt, compare id
+	return obja->m_id - objb->m_id;
+}
+
+static int
+compareTxd(const void *a, const void *b)
+{
+	TxdDef *txda = GetTxdDef(*(int*)a);
+	TxdDef *txdb = GetTxdDef(*(int*)b);
+	for(int i = 0; i < qsort_spec->SpecsCount; i++){
+		const ImGuiTableColumnSortSpecs *s = &qsort_spec->Specs[i];
+		int diff = 0;
+		switch(s->ColumnUserID){
+		case 0: diff = *(int*)a - *(int*)b; break;
+		case 1: diff = rw::strcmp_ci(txda->name, txdb->name); break;
+		case 2: diff = txda->refCount - txdb->refCount; break;
+		default: assert(0);
+		}
+		if(s->SortDirection == ImGuiSortDirection_Descending)
+			diff = -diff;
+		if(diff != 0)
+			return diff;
+	}
+	// if in doubt, compare slot
+	return *(int*)a - *(int*)b;
+}
+
+static ImGuiTextFilter filterModel;
+static ImGuiTextFilter filterTxd;
+
+static std::vector<ObjectInst*> filterInst;
+
+static void
+uiInstanceFilterList(void)
+{
+	ObjectInst *inst;
+	ObjectDef *obj;
+	TxdDef *txd;
+
+	if(ImGui::BeginTable("insttable", 4, ImGuiTableFlags_Resizable|ImGuiTableFlags_ScrollY)){
+		ImGui::TableSetupColumn("id", ImGuiTableColumnFlags_DefaultSort, 0.0f, 0);
+		ImGui::TableSetupColumn("jump", ImGuiTableColumnFlags_NoSort);
+		ImGui::TableSetupColumn("name", 0, 0.0f, 1);
+		ImGui::TableSetupColumn("txd", 0, 0.0f, 2);
+
+		ImGui::TableHeadersRow();
+		for(uint32 i = 0; i < filterInst.size(); i++){
+			inst = filterInst[i];
+			obj = GetObjectDef(inst->m_objectId);
+			txd = GetTxdDef(obj->m_txdSlot);
+
+			ImGui::PushID(inst);
+			ImGui::TableNextRow();
+			ImGui::TableSetColumnIndex(0);
+			ImGui::Text("%d", obj->m_id);
+
+			ImGui::TableSetColumnIndex(1);
+			if(ImGui::SmallButton("jump"))
+				inst->JumpTo();
+
+			ImGui::TableSetColumnIndex(2);
+			if(inst->m_selected)
+				ImGui::PushStyleColor(ImGuiCol_Text, (ImVec4)ImColor(255, 0, 0));
+			ImGui::Selectable(obj->m_name);
+			if(inst->m_selected)
+				ImGui::PopStyleColor();
+			if(ImGui::IsItemHovered()){
+				if(ImGui::IsMouseClicked(0)){
+					ClearSelection();
+					inst->Select();
+				}
+				if(ImGui::IsMouseClicked(1))
+					inst->Deselect();
+				if(ImGui::IsMouseClicked(2))
+					inst->ToggleSelect();
+			}
+			inst->m_highlight = HIGHLIGHT_FILTER;
+			if(ImGui::IsItemHovered())
+				inst->m_highlight = HIGHLIGHT_HOVER;
+
+			ImGui::TableSetColumnIndex(3);
+			ImGui::Selectable(txd->name);
+			ImGui::PopID();
+		}
+		ImGui::EndTable();
+	}
+}
+
+static void
+uiObjectList(void)
+{
+	static char buf[256];
+	int i;
+	ObjectDef *obj;
+
+	static ImGuiTextFilter filter;
+	if(ImGui::Button("Clear"))
+		filter.Clear();
+	ImGui::SameLine();
+	filter.Draw();
+
+	if(ImGui::BeginTable("objecttable", 3, ImGuiTableFlags_Sortable|ImGuiTableFlags_Resizable|ImGuiTableFlags_ScrollY)){
+		ImGui::TableSetupColumn("ID", ImGuiTableColumnFlags_DefaultSort, 0.0f, 0);
+		ImGui::TableSetupColumn("name", 0, 0.0f, 1);
+		ImGui::TableSetupColumn("num instances", 0, 0.0f, 2);
+
+		ImGuiTableSortSpecs *sort = ImGui::TableGetSortSpecs();
+		if(sort && sort->SpecsDirty){
+			qsort_spec = sort;
+			qsort(sortedObjects, numObjects, sizeof(int), compareObj);
+			sort->SpecsDirty = false;
+		}
+
+		ImGui::TableHeadersRow();
+
+		for(i = 0; i < numObjects; i++){
+			obj = GetObjectDef(sortedObjects[i]);
+			if(!filter.PassFilter(obj->m_name))
+				continue;
+
+			ImGui::PushID(obj);
+			ImGui::TableNextRow();
+			ImGui::TableSetColumnIndex(0);
+			ImGui::Text("%d", obj->m_id);
+			ImGui::TableSetColumnIndex(1);
+			if(ImGui::Selectable(obj->m_name)){
+				filterInst.clear();
+				for(CPtrNode *p = instances.first; p; p = p->next){
+					ObjectInst *inst = (ObjectInst*)p->item;
+					if(inst->m_objectId == obj->m_id)
+						filterInst.push_back(inst);
+				}
+				showInstanceFilterWindow = true;
+			}
+			ImGui::TableSetColumnIndex(2);
+			ImGui::Text("%d", obj->m_numInstances);
+			ImGui::PopID();
+		}
+
+		ImGui::EndTable();
+	}
+}
+
+static void
+uiTxdList(void)
+{
+	static char buf[256];
+	int i;
+	TxdDef *txd;
+
+	static ImGuiTextFilter filter;
+	if(ImGui::Button("Clear"))
+		filter.Clear();
+	ImGui::SameLine();
+	filter.Draw();
+
+	if(ImGui::BeginTable("txdtable", 3, ImGuiTableFlags_Sortable|ImGuiTableFlags_Resizable|ImGuiTableFlags_ScrollY)){
+		ImGui::TableSetupColumn("slot", ImGuiTableColumnFlags_DefaultSort, 0.0f, 0);
+		ImGui::TableSetupColumn("name", 0, 0.0f, 1);
+		ImGui::TableSetupColumn("num refs", 0, 0.0f, 2);
+
+		ImGuiTableSortSpecs *sort = ImGui::TableGetSortSpecs();
+		if(sort && sort->SpecsDirty){
+			qsort_spec = sort;
+			qsort(sortedTxds, numTxds, sizeof(int), compareTxd);
+			sort->SpecsDirty = false;
+		}
+
+		ImGui::TableHeadersRow();
+
+		for(i = 0; i < numTxds; i++){
+			txd = GetTxdDef(sortedTxds[i]);
+			if(!filter.PassFilter(txd->name))
+				continue;
+
+			ImGui::PushID(txd);
+			ImGui::TableNextRow();
+			ImGui::TableSetColumnIndex(0);
+			ImGui::Text("%d", i);
+			ImGui::TableSetColumnIndex(1);
+			if(ImGui::Selectable(txd->name)){
+				filterInst.clear();
+				for(CPtrNode *p = instances.first; p; p = p->next){
+					ObjectInst *inst = (ObjectInst*)p->item;
+					ObjectDef *obj = GetObjectDef(inst->m_objectId);
+					if(obj->m_txdSlot == sortedTxds[i])
+						filterInst.push_back(inst);
+				}
+				showInstanceFilterWindow = true;
+			}
+			ImGui::TableSetColumnIndex(2);
+			ImGui::Text("%d", txd->refCount);
+			ImGui::PopID();
+		}
+
+		ImGui::EndTable();
+	}
 }
 
 static void
@@ -979,7 +1232,7 @@ uiEditorWindow(void)
 			saveCamSettings();
 		}
 
-		for(int i = 0; i < camSettings.size(); i++){
+		for(uint32 i = 0; i < camSettings.size(); i++){
 			CamSetting *cam = &camSettings[i];
 			ImGui::PushID(i);
 			sprintf(buf, "%-20s", cam->name);
@@ -1019,6 +1272,17 @@ uiEditorWindow(void)
 		ImGui::TreePop();
 	}
 
+	if(!showObjWindow)
+	if(ImGui::TreeNode("Objects")){
+		uiObjectList();
+		ImGui::TreePop();
+	}
+	if(!showTxdWindow)
+	if(ImGui::TreeNode("Tex Dictionaries")){
+		uiTxdList();
+		ImGui::TreePop();
+	}
+
 	if(ImGui::TreeNode("Selection")){
 		for(p = selection.first; p; p = p->next){
 			inst = (ObjectInst*)p->item;
@@ -1037,6 +1301,49 @@ uiEditorWindow(void)
 		ImGui::TreePop();
 	}
 
+	if(ImGui::TreeNode("Instances")){
+		filterModel.Draw("Model (inc,-exc)"); ImGui::SameLine();
+		if(ImGui::Button("Clear##Model"))
+			filterModel.Clear();
+		filterTxd.Draw("Txd (inc,-exc)"); ImGui::SameLine();
+		if(ImGui::Button("Clear##Txd"))
+			filterTxd.Clear();
+		static bool highlight = true;
+		ImGui::Checkbox("Highlight matches", &highlight);
+		for(p = instances.first; p; p = p->next){
+			inst = (ObjectInst*)p->item;
+			obj = GetObjectDef(inst->m_objectId);
+			txd = GetTxdDef(obj->m_txdSlot);
+			if(filterModel.PassFilter(obj->m_name) && filterTxd.PassFilter(txd->name)){
+				bool pop = false;
+				if(inst->m_selected){
+					ImGui::PushStyleColor(ImGuiCol_Text, (ImVec4)ImColor(255, 0, 0));
+					pop = true;
+				}
+				ImGui::PushID(inst);
+				sprintf(buf, "%-20s %-20s %8.2f %8.2f %8.2f", obj->m_name, txd->name,
+					inst->m_translation.x, inst->m_translation.y, inst->m_translation.z);
+				ImGui::Selectable(buf);
+				ImGui::PopID();
+				if(ImGui::IsItemHovered()){
+					if(ImGui::IsMouseClicked(1))
+						inst->Select();
+					if(ImGui::IsMouseDoubleClicked(0))
+						inst->JumpTo();
+				}
+				if(pop)
+					ImGui::PopStyleColor();
+				if(filterModel.IsActive() || filterTxd.IsActive())
+					if(highlight)
+						inst->m_highlight = HIGHLIGHT_FILTER;
+				if(ImGui::IsItemHovered())
+					inst->m_highlight = HIGHLIGHT_HOVER;
+			}
+		}
+		ImGui::TreePop();
+	}
+
+/*
 	if(ImGui::TreeNode("Instances")){
 		static ImGuiTextFilter filter;
 		static ImGuiTextFilter filter2;
@@ -1079,6 +1386,7 @@ uiEditorWindow(void)
 		}
 		ImGui::TreePop();
 	}
+*/
 
 	PathNode *nd;
 	if(nd = Path::GetDetachedCarNode(0,0))
@@ -1190,6 +1498,9 @@ gui(void)
 		camloaded = true;
 	}
 
+	if(numObjects == 0 || numTxds == 0)
+		initLists();
+
 	Path::guiHoveredNode = nil;
 	uiMainmenu();
 
@@ -1218,6 +1529,24 @@ gui(void)
 
 	if(CPad::IsKeyJustDown('I')) showInstanceWindow ^= 1;
 	if(showInstanceWindow) uiInstWindow();
+
+	if(CPad::IsKeyJustDown('O')) showObjWindow ^= 1;
+	if(showObjWindow){
+		ImGui::Begin("Objects", &showObjWindow);
+		uiObjectList();
+		ImGui::End();
+	}
+	if(CPad::IsKeyJustDown('X')) showTxdWindow ^= 1;
+	if(showTxdWindow){
+		ImGui::Begin("Tex Dictionaries", &showTxdWindow);
+		uiTxdList();
+		ImGui::End();
+	}
+	if(showInstanceFilterWindow){
+		ImGui::Begin("Instance list", &showInstanceFilterWindow);
+		uiInstanceFilterList();
+		ImGui::End();
+	}
 
 	if(CPad::IsKeyJustDown('E')) showEditorWindow ^= 1;
 	if(showEditorWindow) uiEditorWindow();

@@ -304,6 +304,7 @@ struct TxdDef
 	rw::TexDictionary *txd;
 	int parentId;
 	int32 imageIndex;
+	int32 refCount;	// just for information
 };
 extern rw::TexDictionary *defaultTxd;
 void RegisterTexStorePlugin(void);
@@ -355,6 +356,7 @@ struct ObjectDef
 	int m_carPathIndex;
 	int m_effectIndex;
 	int m_numEffects;
+	int m_numInstances;
 
 	// flags
 	bool m_normalCull;	// only III
@@ -476,6 +478,7 @@ struct ObjectInst
 	void JumpTo(void);
 	void Select(void);
 	void Deselect(void);
+	void ToggleSelect(void);
 };
 extern CPtrList instances;
 extern CPtrList selection;
