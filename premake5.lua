@@ -6,6 +6,11 @@ if not Librw then
     error("Please set the LIBRW environment variable to your librw folder path.")
 end
 
+if not Lua then
+	-- whatever
+	Lua = "/usr/include/lua5.4"
+end
+
 newoption {
 	trigger		= "gfxlib",
 	value       = "LIBRARY",
@@ -174,7 +179,10 @@ end
 function skeltool(dir)
 	targetdir (Bindir)
 	files { path.join("tools", dir, "*.cpp"),
-	        path.join("tools", dir, "*.h") }
+	        path.join("tools", dir, "*.h"),
+	        path.join("tools", dir, "sol", "*.cpp"),
+	        path.join("tools", dir, "sol", "*.h")
+	}
 	vpaths {
 		{["src"] = { path.join("tools", dir, "*") }},
 		{["skeleton"] = { "skeleton/*" }},
@@ -191,15 +199,26 @@ project "selanna"
 	tool("selanna")
 	kind "ConsoleApp"
 	removeplatforms { "*gl3", "*d3d9" }
-
-	if not Lua then
-		includedirs { Lua }
-		links { "lua5.4" }
-	else
-		print("Warning: LUADIR not set; selenna may fail to compile.")
-	end
+	includedirs { Lua }
+	links { "lua5.4" }
 
 	local env = os.getenv("SELANNA_DEBUGDIR")
+	if env then
+		debugdir(env)
+	end
+
+project "selanna3d"
+	kind "WindowedApp"
+	characterset ("MBCS")
+	flags { "WinMain" }
+	skeltool("selanna3d")
+	includedirs { "tools/selanna3d" }
+	removeplatforms { "*null" }
+	removeplatforms { "ps2" } -- for now
+	includedirs { Lua }
+	links { "lua5.4" }
+
+	local env = os.getenv("SELANNA3D_DEBUGDIR")
 	if env then
 		debugdir(env)
 	end
