@@ -23,5 +23,18 @@ Since it depends on LZO, which is GPL, consider my code in this repo dual-licenc
 
 # Building
 
-Set the LIBRW environment variable to point to the librw directory.
-Otherwise just like librw, i.e. premake5.
+To build, you'll need to set the following environment variables, depending on the tool:
+
+| Variable      | Description                  | Used by                  |
+|---------------|------------------------------|--------------------------|
+| `LIBRW`       | Path to librw directory      | All                      |
+| `LUADIR`      | Path to lua directory        | Selanna                  |
+| `ZLIBDIR`     | Path to zlib directory       | lcsview/vcsview          |
+
+Next, just use premake5 as you normally would. These variables should be automatically replaced with the values you configured on your build device.
+
+NOTE: The build script is tailored to an older version of premake, so for convenience it is included in the repository.
+
+## Additional variables
+It is possible to set a special environment variable for the debug directory. To do this, simply take the tool name and append `_DEBUGDIR` to it.
+So to set one for Euryopa, simply use `EURYOPA_DEBUGDIR`.
