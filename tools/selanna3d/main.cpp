@@ -12,6 +12,15 @@ extern sol::state lua;
 rw::EngineOpenParams engineOpenParams;
 
 void
+luaError(const char *msg)
+{
+	fprintf(stderr, "Lua error: %s\n", msg);
+	auto f = lua["conprint"];
+	if(f.valid())
+		f(std::string("Error: ") + msg);
+}
+
+void
 Init(void)
 {
 	sk::globals.windowtitle = "Selanna";
@@ -31,6 +40,34 @@ attachPlugins(void)
 	return true;
 }
 
+rw::RGBA highlightColor;
+rw::ObjPipeline *colourCodePipe;
+
+void
+myRenderCB(rw::Atomic *atomic)
+{
+	using namespace rw;
+	if(gta::renderColourCoded)
+		colourCodePipe->render(atomic);
+	else if(highlightColor.red || highlightColor.green || highlightColor.blue){
+		atomic->getPipeline()->render(atomic);
+		gta::colourCode = highlightColor;
+		gta::colourCode.alpha = 128;
+		int32 zwrite, fog, aref;
+		zwrite = GetRenderState(rw::ZWRITEENABLE);
+		fog = rw::GetRenderState(rw::FOGENABLE);
+		aref = rw::GetRenderState(rw::ALPHATESTREF);
+		SetRenderState(rw::ZWRITEENABLE, 0);
+		SetRenderState(rw::FOGENABLE, 0);
+		SetRenderState(rw::ALPHATESTREF, 10);
+		colourCodePipe->render(atomic);
+		SetRenderState(rw::ZWRITEENABLE, zwrite);
+		SetRenderState(rw::FOGENABLE, fog);
+		SetRenderState(rw::ALPHATESTREF, aref);
+	}else
+		atomic->getPipeline()->render(atomic);
+}
+
 bool
 InitRW(void)
 {
@@ -41,9 +78,12 @@ InitRW(void)
 	rw::d3d::isP8supported = 0;
 	rw::Image::setSearchPath("textures/");
 
+	colourCodePipe = gta::makeColourCodePipeline();
+
 	lua["gWidth"] = sk::globals.width;
 	lua["gHeight"] = sk::globals.height;
 
+/*
 	ImVec4* colors = ImGui::GetStyle().Colors;
 	colors[ImGuiCol_Text]                   = ImVec4(0.75f, 0.75f, 0.75f, 1.00f);
 	colors[ImGuiCol_TextDisabled]           = ImVec4(0.35f, 0.35f, 0.35f, 1.00f);
@@ -100,9 +140,10 @@ InitRW(void)
 	colors[ImGuiCol_NavWindowingHighlight]  = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
 	colors[ImGuiCol_NavWindowingDimBg]      = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
 	colors[ImGuiCol_ModalWindowDimBg]       = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
+*/
 
 	execLua("init.lua");
-	lua["Init"]();
+	luaCall("Init");
 	return true;
 }
 
@@ -126,22 +167,24 @@ AppEventHandler(sk::Event e, void *param)
 	case PLUGINATTACH:
 		return attachPlugins() ? EVENTPROCESSED : EVENTERROR;
 	case KEYDOWN:
-		lua["KeyDown"](*(int*)param);
+		if(!io.WantCaptureKeyboard)
+			luaCall("KeyDown", *(int*)param);
 		return EVENTPROCESSED;
 	case KEYUP:
-		lua["KeyUp"](*(int*)param);
+		if(!io.WantCaptureKeyboard)
+			luaCall("KeyUp", *(int*)param);
 		return EVENTPROCESSED;
 
 	case MOUSEBTN:
 		if(!io.WantCaptureMouse /*&& !ImGuizmo::IsOver()*/){
 			ms = (MouseState*)param;
-			lua["MouseBtn"](ms->buttons);
+			luaCall("MouseBtn", ms->buttons);
 		}else
-			lua["MouseBtn"](0);
+			luaCall("MouseBtn", 0);
 		return EVENTPROCESSED;
 	case MOUSEMOVE:
 		ms = (MouseState*)param;
-		lua["MouseMotion"](ms->posx, ms->posy);
+		luaCall("MouseMotion", ms->posx, ms->posy);
 		return EVENTPROCESSED;
 
 	case RESIZE:
@@ -150,10 +193,10 @@ AppEventHandler(sk::Event e, void *param)
 		if(r->h == 0) r->h = 1;
 		lua["gWidth"] = sk::globals.width = r->w;
 		lua["gHeight"] = sk::globals.height = r->h;
-		lua["Resize"](r->w, r->h);
+		luaCall("Resize", r->w, r->h);
 		break;
 	case IDLE:
-		lua["Draw"](*(float*)param);
+		luaCall("Draw", *(float*)param);
 		return EVENTPROCESSED;
 	}
 	return sk::EVENTNOTPROCESSED;
