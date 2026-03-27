@@ -59,7 +59,7 @@ struct CdImage
 
 	FILE *file;
 };
-static CdImage cdImages[NUMCDIMAGES];
+static CdImage* cdImages;
 static int numCdImages;
 
 static uint32 maxFileSize;
@@ -162,11 +162,11 @@ AddCdImage(const char *path)
 	int imgindex;
 	CdImage *cdimg;
 
-	if(numCdImages < NUMCDIMAGES){
+	if(numCdImages < globalConfig.numCdImages){
 		imgindex = numCdImages++;
 		cdimg = &cdImages[imgindex];
 	}else{
-		log("warning: no room for more than %d cdimages\n", NUMCDIMAGES);
+		log("warning: no room for more than %d cdimages\n", globalConfig.numCdImages);
 		return;
 	}
 
@@ -264,6 +264,13 @@ InitCdImage(CdImage *cdimg)
 
 	if(lzo_init() != LZO_E_OK)
 		panic("LZO init failed");
+}
+
+void
+AllocateCdImageList()
+{
+	cdImages = rwNewT(CdImage, globalConfig.numCdImages, 0);
+	memset(cdImages, 0, sizeof(CdImage) * globalConfig.numCdImages);
 }
 
 void

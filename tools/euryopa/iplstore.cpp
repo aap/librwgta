@@ -1,10 +1,19 @@
 #include "euryopa.h"
 
-static ObjectInst **instArrays[NUMSCENES];
+static ObjectInst ***instArrays;
 static int numInstArrays;
 
-static IplDef ipllist[NUMIPLS];
+static IplDef* ipllist;
 static int numIpls;
+
+void
+InitIplStore()
+{
+	instArrays = rwNewT(ObjectInst**, globalConfig.numScenes, 0);
+	memset(instArrays, 0, sizeof(ObjectInst**)*globalConfig.numScenes);
+	ipllist = rwNewT(IplDef, globalConfig.numIpls, 0);
+	memset(ipllist, 0, sizeof(IplDef)*globalConfig.numIpls);
+}
 
 int
 AddInstArraySlot(int n)

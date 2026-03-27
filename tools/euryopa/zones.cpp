@@ -138,12 +138,38 @@ struct MirrorAttribZone
 	rw::Plane mirror;
 };
 
-static Zone mapZones[NUMZONES];
+static Zone* mapZones;
 static int numMapZones;
-static Zone navigZones[NUMZONES];	// also used for III zones
+static Zone* navigZones;	// also used for III zones
 static int numNavigZones;
-static Zone infoZones[NUMZONES];
+static Zone* infoZones;
 static int numInfoZones;
+
+static CullZone* cullZones;
+static int numCullZones;
+static int numCullZonesNeeded;
+static AttribZone* attribZones;
+static int numAttribZones;
+static MirrorAttribZone* mirrorAttribZones;
+static int numMirrorAttribZones;
+
+void
+Init()
+{
+	mapZones = rwNewT(Zone, globalConfig.numZones, 0);
+	memset(mapZones, 0, sizeof(Zone)*globalConfig.numZones);
+	navigZones = rwNewT(Zone, globalConfig.numZones, 0);
+	memset(navigZones, 0, sizeof(Zone)*globalConfig.numZones);
+	infoZones = rwNewT(Zone, globalConfig.numZones, 0);
+	memset(infoZones, 0, sizeof(Zone)*globalConfig.numZones);
+
+	cullZones = rwNewT(CullZone, globalConfig.numCullZones, 0);
+	memset(cullZones, 0, sizeof(CullZone)*globalConfig.numCullZones);
+	attribZones = rwNewT(AttribZone, globalConfig.numAttribZones, 0);
+	memset(attribZones, 0, sizeof(AttribZone)*globalConfig.numAttribZones);
+	mirrorAttribZones = rwNewT(MirrorAttribZone, globalConfig.numMirrorAttribZones, 0);
+	memset(mirrorAttribZones, 0, sizeof(MirrorAttribZone)*globalConfig.numMirrorAttribZones);
+}
 
 void
 CreateZone(const char *name, int type, CBox box, int level, const char *text)
@@ -153,21 +179,21 @@ CreateZone(const char *name, int type, CBox box, int level, const char *text)
 	switch(type){
 	case ZONE_NAVIG0:
 	case ZONE_NAVIG1:
-		if(numNavigZones >= NUMZONES){
+		if(numNavigZones >= globalConfig.numZones){
 			log("warning: Too many zones\n");
 			return;
 		}
 		z = &navigZones[numNavigZones++];
 		break;
 	case ZONE_INFO:
-		if(numInfoZones >= NUMZONES){
+		if(numInfoZones >= globalConfig.numZones){
 			log("warning: Too many zones\n");
 			return;
 		}
 		z = &infoZones[numInfoZones++];
 		break;
 	case ZONE_MAPZONE:
-		if(numMapZones >= NUMZONES){
+		if(numMapZones >= globalConfig.numZones){
 			log("warning: Too many zones\n");
 			return;
 		}
@@ -216,29 +242,13 @@ Render(void)
 
 // Cull and Attrib zones
 
-enum
-{
-//	NUMCULLZONES = 800,
-	NUMCULLZONES = 1000,
-	NUMATTRIBZONES = 2000,
-	NUMMIRRORATTRIBZONES = 200
-};
-
-static CullZone cullZones[NUMCULLZONES];
-static int numCullZones;
-static int numCullZonesNeeded;
-static AttribZone attribZones[NUMATTRIBZONES];
-static int numAttribZones;
-static MirrorAttribZone mirrorAttribZones[NUMMIRRORATTRIBZONES];
-static int numMirrorAttribZones;
-
 void
 AddAttribZone(CBox box, int flags, int wantedLevelDrop)
 {
 	box.FindMinMax();
 
 	if(isIII() && (flags & ATTRZONE_NOTCULLZONE) == 0){
-		if(numCullZones >= NUMCULLZONES){
+		if(numCullZones >= globalConfig.numCullZones){
 			numCullZonesNeeded++;
 			log("warning: too many cull zones. need %d\n", numCullZonesNeeded);
 		}else{
@@ -248,7 +258,7 @@ AddAttribZone(CBox box, int flags, int wantedLevelDrop)
 	}
 
 	if(!isIII() || flags & ~ATTRZONE_NOTCULLZONE){
-		if(numAttribZones >= NUMATTRIBZONES){
+		if(numAttribZones >= globalConfig.numAttribZones){
 			log("warning: too many attrib zones\n");
 			return;
 		}
@@ -265,7 +275,7 @@ AddAttribZone(rw::V3d pos,
 	float s2x, float s2y,
 	float zmin, float zmax, int flags)
 {
-	if(numAttribZones >= NUMATTRIBZONES){
+	if(numAttribZones >= globalConfig.numAttribZones){
 		log("warning: too many attrib zones\n");
 		return;
 	}
@@ -289,7 +299,7 @@ AddMirrorAttribZone(rw::V3d pos,
 	float zmin, float zmax,
 	int flags, rw::Plane mirror)
 {
-	if(numMirrorAttribZones >= NUMMIRRORATTRIBZONES){
+	if(numMirrorAttribZones >= globalConfig.numMirrorAttribZones){
 		log("warning: too many mirror attrib zones\n");
 		return;
 	}

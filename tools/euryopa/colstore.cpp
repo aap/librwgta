@@ -1,7 +1,14 @@
 #include "euryopa.h"
 
-static ColDef collist[NUMCOLS];
+static ColDef* collist;
 static int numCols;
+
+void
+InitColStore()
+{
+	collist = rwNewT(ColDef, globalConfig.numCols, 0);
+	memset(collist, 0, sizeof(ColDef)*globalConfig.numCols);
+}
 
 static int
 FindColSlot(const char *name)

@@ -38,11 +38,11 @@ struct WaterTri
 	int indices[3];
 	int type;
 };
-static WaterVertex waterVertices[NUMWATERVERTICES];
+static WaterVertex* waterVertices;
 static int numWaterVertices;
-static WaterQuad waterQuads[NUMWATERQUADS];
+static WaterQuad* waterQuads;
 static int numWaterQuads;
-static WaterTri waterTris[NUMWATERTRIS];
+static WaterTri* waterTris;
 static int numWaterTris;
 
 void
@@ -72,6 +72,14 @@ InitialiseWater(void)
 	char *line;
 	if(file = fopen_ci("data/water.dat", "rb"), file == nil)
 		return;
+
+	waterVertices = rwNewT(WaterVertex, globalConfig.numWaterVerts, 0);
+	memset(waterVertices, 0, sizeof(WaterVertex)*globalConfig.numWaterVerts);
+	waterQuads = rwNewT(WaterQuad, globalConfig.numWaterQuads, 0);
+	memset(waterQuads, 0, sizeof(WaterQuad)*globalConfig.numWaterQuads);
+	waterTris = rwNewT(WaterTri, globalConfig.numWaterTris, 0);
+	memset(waterTris, 0, sizeof(WaterTri)*globalConfig.numWaterTris);
+
 	int h = 0, w = 0;
 	while(line = FileLoader::LoadLine(file)){
 		if(line[0] == ';' || line[0] == '*' || line[0] == 'p')
@@ -90,8 +98,8 @@ InitialiseWater(void)
 			&type);
 		if(nfields == 28 || nfields == 29){
 			// quad
-			if(numWaterVertices+4 > NUMWATERVERTICES ||
-			   numWaterQuads+1 > NUMWATERQUADS){
+			if(numWaterVertices+4 > globalConfig.numWaterVerts ||
+			   numWaterQuads+1 > globalConfig.numWaterQuads){
 				log("warning: too much water (%d vertices, %d quads, %d tris)\n",
 					numWaterVertices, numWaterQuads, numWaterTris);
 				continue;
@@ -107,8 +115,8 @@ InitialiseWater(void)
 			waterVertices[q->indices[3]] = v[3];
 			q->type = type;
 		}else{
-			if(numWaterVertices+3 > NUMWATERVERTICES ||
-			   numWaterTris+1 > NUMWATERTRIS){
+			if(numWaterVertices+3 > globalConfig.numWaterVerts ||
+			   numWaterTris+1 > globalConfig.numWaterTris){
 				log("warning: too much water (%d vertices, %d quads, %d tris)\n",
 					numWaterVertices, numWaterQuads, numWaterTris);
 				continue;

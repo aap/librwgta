@@ -556,7 +556,7 @@ LoadObjectTypes(const char *filename)
 	 * but not yet in III */
 	if(isIII()){
 		firstID = 0;
-		lastID = NUMOBJECTDEFS;
+		lastID = globalConfig.numObjectDefs - 1;
 	}
 	for(i = firstID; i <= lastID; i++)
 		if(GetObjectDef(i))
@@ -583,7 +583,7 @@ SetupRelatedIPLs(const char *path, int instArraySlot)
 	strcat(scenename, "_stream");
 	len = strlen(scenename);
 
-	for(i = 0; i < NUMIPLS; i++){
+	for(i = 0; i < globalConfig.numIpls; i++){
 		ipl = GetIplDef(i);
 		if(ipl == nil)
 			continue;
