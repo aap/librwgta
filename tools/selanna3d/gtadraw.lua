@@ -2,7 +2,7 @@ function gta:LoadClump(mdl)
 	if mdl.rwClump then return mdl.rwClump end
 	local txd = self:GetTexDictionary(mdl.txd)
 	rw.setCurrentTexDict(txd)
-	mdl.rwClump = self:GetModelClump(mdl)
+	self:GetModelClump(mdl)
 	for a in mdl.rwClump:atomics() do
 		hideDamagedLOD(a)
 	--	printAtomic(a)
@@ -14,7 +14,7 @@ function gta:LoadAtomics(mdl)
 	if mdl.rwAtomics then return end
 	local txd = self:GetTexDictionary(mdl.txd)
 	rw.setCurrentTexDict(txd)
-	mdl.rwClump = self:GetModelClump(mdl)
+	self:GetModelClump(mdl)
 	if not mdl.rwClump then return end
 	mdl.rwAtomics = {}
 	for a in mdl.rwClump:atomics() do

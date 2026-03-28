@@ -326,12 +326,12 @@ function gta:FinishLoading()
 	end
 	self:LinkStreamingInfo()
 
-	generic.rwtxd = rw.TexDictionaryCreate()
+	generic.rwTxd = rw.TexDictionaryCreate()
 	for _, f in pairs(self.genericTxds) do
 		local txd = rw.readTexDictFile(f.fullPath, 0, 0)
 		sk.ConvertTexDict(txd)
 		for t in txd:textures() do
-			generic.rwtxd:addFront(t)
+			generic.rwTxd:addFront(t)
 		end
 		txd:destroy()
 	end
@@ -343,24 +343,24 @@ function gta:FinishLoading()
 end
 
 function gta:GetModelClump(mdl)
-	if mdl.rwclump then return mdl.rwclump end
+	if mdl.rwClump then return mdl.rwClump end
 	local si = mdl.streamingInfo
 	if not si or si.ext ~= "DFF" then return nil end
 	rw.ImageSetSearchPath(self.imagePath)
-	mdl.rwclump = rw.readClumpFile(si.container.fullPath, si.offset*2048, si.size*2048)
-	return mdl.rwclump
+	mdl.rwClump = rw.readClumpFile(si.container.fullPath, si.offset*2048, si.size*2048)
+	return mdl.rwClump
 end
 
 function gta:GetTexDictionary(txd)
-	if txd.rwtxd then return txd.rwtxd end
+	if txd.rwTxd then return txd.rwTxd end
 	local si = txd.streamingInfo
 	if not si or si.ext ~= "TXD" then
-		txd.rwtxd = rw.TexDictionaryCreate()
+		txd.rwTxd = rw.TexDictionaryCreate()
 		return nil
 	end
-	txd.rwtxd = rw.readTexDictFile(si.container.fullPath, si.offset*2048, si.size*2048)
-	sk.ConvertTexDict(txd.rwtxd)
-	return txd.rwtxd
+	txd.rwTxd = rw.readTexDictFile(si.container.fullPath, si.offset*2048, si.size*2048)
+	sk.ConvertTexDict(txd.rwTxd)
+	return txd.rwTxd
 end
 
 -- file loading
@@ -853,7 +853,7 @@ function gta:ReadFileByDesc(file, desc)
 	self.currentFile = self:GetFileFs(file)
 	local f = io.open(self.currentFile.fullPath, "r")
 	if not f then
-		print("Could not open file: " .. filename)
+		print("Could not open file: " .. self.currentFile.fullPath)
 		return
 	end
 	local sect = 'end'
@@ -881,7 +881,7 @@ function gta:ReadCdImage(imgfile)
 	self.currentFile = self:GetFileFs(dirfile)
 	local imgfile = self:GetFileFs(imgfile)
 	local f = io.open(self.currentFile.fullPath, "rb")
-	if not f then error("couldn't open " .. dirpath) end
+	if not f then error("couldn't open " .. self.currentFile.fullPath) end
 	while true do
 		local data = f:read(32)
 		if not data or #data < 32 then break end
