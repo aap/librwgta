@@ -8,6 +8,7 @@
 #include <args.h>
 
 #include <rwgta.h>
+#include "imgui/ImGuizmo.h"
 #include "sol/sol.hpp"
 
 #include "stuff.h"
@@ -108,7 +109,7 @@ initLuaSkeleton(void)
 
 	sktab.set_function("ImGuiBeginFrame", [](float timestep) {
 		ImGui_ImplRW_NewFrame(timestep);
-//		ImGuizmo::BeginFrame();
+		ImGuizmo::BeginFrame();
 	});
 	sktab.set_function("ImGuiEndFrame", [](void) {
 		ImGui::EndFrame();

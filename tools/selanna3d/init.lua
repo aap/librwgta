@@ -15,7 +15,7 @@ function tV3d(v)
 end
 
 function tQuat(q)
-	return rw.Quat(q.w, -q.x, -q.y, -q.z)
+	return rw.Quat(q.w, q.x, q.y, q.z)
 end
 
 function printHierarchy(frame, indent)
@@ -181,16 +181,23 @@ print("done")
 end
 
 function processCam(cam)
+	local shift = sk.keysdown[sk.KEY_LSHIFT] or sk.keysdown[sk.KEY_RSHIFT]
+	local alt = sk.keysdown[sk.KEY_LALT] or sk.keysdown[sk.KEY_RALT]
 	local dx = sk.mouse.x - sk.prevmouse.x
 	local dy = sk.mouse.y - sk.prevmouse.y
 	local s = 0.01
 	if (sk.mouse.btn & 1) ~= 0 then
 		cam:turn(-dx*s, -dy*s)
+	elseif (sk.mouse.btn & 2) ~= 0 then
+		if alt then
+			cam:orbit(-dx*s, dy*s)
+		else
+			cam:pan(-dx*s*10, dy*s*10)
+		end
 	elseif (sk.mouse.btn & 4) ~= 0 then
-		cam:orbit(-dx*s, dy*s)
+		cam:zoom(-dy*s*10)
 	end
 
-	local shift = sk.keysdown[sk.KEY_LSHIFT] or sk.keysdown[sk.KEY_RSHIFT]
 	s = 1.0
 	if shift then s = s*2 end
 	if sk.keysdown[sk.KEY_W] then
@@ -201,6 +208,10 @@ function processCam(cam)
 		cam:pan(-s, 0)
 	elseif sk.keysdown[sk.KEY_D] then
 		cam:pan(s, 0)
+	elseif sk.keysdown[sk.KEY_J] then
+		if selection and selection.position then
+			activeCam:jumpTo(tV3d(selection.position))
+		end
 	end
 end
 
@@ -233,6 +244,17 @@ function Building:imguiDraw()
 	ImGui.PopID()
 end
 
+function Instance:select()
+	selection = self
+	gizmo.Init(tV3d(self.position), tQuat(self.rotation):conj())
+end
+
+function Instance:gizmo(commit, pos, rot)
+	self.position = pos
+	self.rotation = rot:conj()
+	self:UpdateRW()
+end
+
 function Instance:imguiTitle()
 	return self.show and self.sourceFile.showScene,
 		tostring(self.id) .. "\t" .. self.name
@@ -254,7 +276,8 @@ function Instance:imguiDraw()
 			local value, used = ImGui.InputInt("Area", self.area)
 		end
 		if ImGui.Button("jump to") then
-			activeCam:jumpTo(tV3d(p))
+			local p = tV3d(self.position)
+			activeCam:jumpTo(p)
 		end
 		ImGui.Dummy(0, 20)
 	end
@@ -333,9 +356,46 @@ function guiScenes(g)
 	ImGui.TreePop()
 end
 
+function gizmoUpdate(pos, rot)
+	print(pos, rot)
+end
+
 selection = nil
 hovered = nil
 drawColorCoded = false
+gizmo.op = gizmo.TRANSLATE
+gizmo.mode = gizmo.WORLD
+gizmo.wasUsing = false
+gizmo.stepTrans = 1
+gizmo.stepRot = 5
+gizmo.snapRot = true
+gizmo.snapTrans = true
+
+function gizmo.Process()
+	local step
+	if gizmo.op == gizmo.ROTATE then
+		step = gizmo.stepRot
+		if not gizmo.snapRot then
+			step = 0
+		end
+	else
+		step = gizmo.stepTrans
+		if not gizmo.snapTrans then
+			step = 0
+		end
+	end
+	gizmo.Use(gizmo.op, gizmo.mode, step)
+
+	local using = gizmo.IsUsing()
+	if selection and (using or gizmo.wasUsing) then
+		local mt = getmetatable(selection)
+		if mt and mt.gizmo then
+			local pos, rot = gizmo.GetXform()
+			selection:gizmo(not using, pos, rot)
+		end
+	end
+	gizmo.wasUsing = using
+end
 
 function guiList(list, label, cullhidden)
 	if not ImGui.TreeNode(label) then return end
@@ -348,8 +408,13 @@ function guiList(list, label, cullhidden)
 		end
 		if show or not cullhidden then
 			ImGui.PushID(tostring(v))
-			if ImGui.Selectable(title, v == selection) then
-				selection = v
+			if ImGui.Selectable(title, v == selection) and v ~= selection then
+				local mt = getmetatable(v)
+				if mt and mt.select then
+					v:select()
+				else
+					selection = v
+				end
 			end
 			if ImGui.IsItemHovered() then
 				hovered = v
@@ -443,6 +508,26 @@ function gui()
 			guiSelection()
 			ImGui.EndTabItem()
 		end
+		if ImGui.BeginTabItem("Editor") then
+			if ImGui.CollapsingHeader("Transformation", ImGuiTreeNodeFlags.DefaultOpen) then
+				if ImGui.RadioButton("Local", gizmo.mode == gizmo.LOCAL) then
+					gizmo.mode = gizmo.LOCAL
+				end
+				ImGui.SameLine()
+				if ImGui.RadioButton("World", gizmo.mode == gizmo.WORLD) then
+					gizmo.mode = gizmo.WORLD
+				end
+				gizmo.stepTrans, _ = ImGui.DragFloat("##TransStep",
+					gizmo.stepTrans, 0.5, 0.0, 1000000)
+				ImGui.SameLine()
+				gizmo.snapTrans, _ = ImGui.Checkbox("Translation Snap", gizmo.snapTrans)
+				gizmo.stepRot, _ = ImGui.DragFloat("##RotStep",
+					gizmo.stepRot, 0.5, 0.0, 1000000)
+				ImGui.SameLine()
+				gizmo.snapRot, _ = ImGui.Checkbox("Rotation Snap", gizmo.snapRot)
+			end
+			ImGui.EndTabItem()
+		end
 		if ImGui.BeginTabItem("View") then
 			if game then
 				game.hour, _ = ImGui.InputInt("Hour", game.hour)
@@ -524,7 +609,8 @@ function Draw(timestep)
 		game:RenderMap()
 		drawColorCoded = false
 		local code = gta.GetColourCode(sk.curmouse.x, sk.curmouse.y)
-		selection = game.instances[code]
+		local inst = game.instances[code]
+		if inst then inst:select() end
 	end
 
 	rwCamera:clear(clearCol, rw.Camera_CLEARIMAGE|rw.Camera_CLEARZ)
@@ -533,6 +619,7 @@ function Draw(timestep)
 
 	hovered = nil
 	gui()
+	gizmo.Process()
 
 	if clump then
 		clump:render()
@@ -597,22 +684,10 @@ function KeyDown(k)
 		print(cam.aspectRatio)
 		print(cam.near)
 		print(cam.far)
-	elseif k == sk.KEY_V then
-		if vc then
-			game = vc
-		end
-	elseif k == sk.KEY_B then
-		if iii then
-			game = iii
-		end
-	elseif k == sk.KEY_N then
-		if lcs then
-			game = lcs
-		end
-	elseif k == sk.KEY_M then
-		if vcs then
-			game = vcs
-		end
+	elseif k == sk.KEY_G then
+		gizmo.op = gizmo.TRANSLATE
+	elseif k == sk.KEY_R then
+		gizmo.op = gizmo.ROTATE
 	end
 end
 

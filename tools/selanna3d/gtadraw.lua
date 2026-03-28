@@ -38,6 +38,14 @@ function gta:FindFileFuzzy(name)
 	return nil
 end
 
+function Instance:UpdateRW()
+	local pos = tV3d(self.position)
+	local rot = tQuat(self.rotation):conj()
+	local frm = self.rwAtomic:getFrame()
+	frm:rotateQuat(rot, rw.COMBINEREPLACE)
+	frm:translate(pos, rw.COMBINEPOSTCONCAT)
+end
+
 function gta:Instantiate(inst)
 	if inst.rwAtomic then 
 		inst.show = true
@@ -50,12 +58,9 @@ function gta:Instantiate(inst)
 	end
 	local atomic = inst.mdl.rwAtomics[1]:clone()
 	local frm = rw.FrameCreate()
-	local pos = tV3d(inst.position)
-	local rot = tQuat(inst.rotation)
-	frm:rotateQuat(rot, rw.COMBINEREPLACE)
-	frm:translate(pos, rw.COMBINEPOSTCONCAT)
 	atomic:setFrame(frm)
 	inst.rwAtomic = atomic
+	inst:UpdateRW()
 	inst.show = true
 end
 

@@ -7,6 +7,7 @@
 #include "sol/sol.hpp"
 #include "sol/sol_ImGui.h"
 #include "stuff.h"
+#include "imgui/ImGuizmo.h"
 
 extern sol::state lua;
 rw::EngineOpenParams engineOpenParams;
@@ -68,6 +69,33 @@ myRenderCB(rw::Atomic *atomic)
 		atomic->getPipeline()->render(atomic);
 }
 
+
+static rw::RawMatrix gizobj;
+
+void
+gizmoUse(ImGuizmo::OPERATION operation, ImGuizmo::MODE mode, float snap)
+{
+	rw::Camera *cam;
+	rw::Matrix view;
+	rw::RawMatrix gizview;
+	float *fview, *fproj, *fobj;
+
+	cam = (rw::Camera*)rw::engine->currentCamera;
+	rw::Matrix::invert(&view, cam->getFrame()->getLTM());
+	rw::convMatrix(&gizview, &view);
+	fview = (float*)&cam->devView;
+	fproj = (float*)&cam->devProj;
+	fobj = (float*)&gizobj;
+
+	float snap3[3] = { snap, snap, snap };
+	ImGuiIO &io = ImGui::GetIO();
+	ImGuizmo::SetRect(0, 0, io.DisplaySize.x, io.DisplaySize.y);
+	ImGuizmo::Manipulate(fview, fproj, operation, mode, fobj, nil, snap3);
+
+//	ImGuizmo::DrawCubes(fview, fproj, fobj, 1);
+//	ImGuizmo::DrawCubes((float*)&gizview, (float*)&cam->devProj, (float*)&gizobj, 1);
+}
+
 bool
 InitRW(void)
 {
@@ -83,6 +111,30 @@ InitRW(void)
 	lua["gWidth"] = sk::globals.width;
 	lua["gHeight"] = sk::globals.height;
 
+	sol::table gizmotab = lua["gizmo"].get_or_create<sol::table>();
+	gizmotab.set_function("Use", &gizmoUse);
+	gizmotab.set_function("Init", [](rw::V3d pos, rw::Quat rot) {
+		rw::Matrix m;
+		rw::Matrix::makeRotation(&m, rot);
+		rw::convMatrix(&gizobj, &m);
+		gizobj.pos = pos;
+	});
+	gizmotab.set_function("GetXform", []() -> std::tuple<rw::V3d, rw::Quat> {
+		rw::Matrix m;
+		rw::convMatrix(&m, &gizobj);
+		return { gizobj.pos, m.getRotation() };
+	});
+	gizmotab.set_function("IsUsing", []() { return ImGuizmo::IsUsing(); });
+	gizmotab.set("ROTATE", ImGuizmo::ROTATE);
+	gizmotab.set("TRANSLATE", ImGuizmo::TRANSLATE);
+	gizmotab.set("UNIVERSAL", ImGuizmo::UNIVERSAL);
+	gizmotab.set("LOCAL", ImGuizmo::LOCAL);
+	gizmotab.set("WORLD", ImGuizmo::WORLD);
+
+	rw::Matrix tmp;
+	tmp.setIdentity();
+	convMatrix(&gizobj, &tmp);
+	gizobj.pos = rw::makeV3d(0.0f, 0.0f, 0.0f);
 /*
 	ImVec4* colors = ImGui::GetStyle().Colors;
 	colors[ImGuiCol_Text]                   = ImVec4(0.75f, 0.75f, 0.75f, 1.00f);
@@ -167,16 +219,15 @@ AppEventHandler(sk::Event e, void *param)
 	case PLUGINATTACH:
 		return attachPlugins() ? EVENTPROCESSED : EVENTERROR;
 	case KEYDOWN:
-		if(!io.WantCaptureKeyboard)
+		if(!io.WantCaptureKeyboard && !io.WantTextInput && !ImGuizmo::IsOver())
 			luaCall("KeyDown", *(int*)param);
 		return EVENTPROCESSED;
 	case KEYUP:
-		if(!io.WantCaptureKeyboard)
-			luaCall("KeyUp", *(int*)param);
+		luaCall("KeyUp", *(int*)param);
 		return EVENTPROCESSED;
 
 	case MOUSEBTN:
-		if(!io.WantCaptureMouse /*&& !ImGuizmo::IsOver()*/){
+		if(!io.WantCaptureMouse && !ImGuizmo::IsOver()){
 			ms = (MouseState*)param;
 			luaCall("MouseBtn", ms->buttons);
 		}else

@@ -103,6 +103,9 @@ initLua(void)
 		"x", &rw::Quat::x,
 		"y", &rw::Quat::y,
 		"z", &rw::Quat::z,
+		"conj", [](const rw::Quat &q) {
+			return rw::conj(q);
+		},
 		sol::meta_function::to_string, [](const rw::Quat &q) {
 			return "Quat(" + std::to_string(q.w) + ", "
 			+ std::to_string(q.x) + ", "
