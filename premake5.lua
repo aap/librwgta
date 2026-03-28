@@ -126,14 +126,12 @@ workspace "librwgta"
 
 	libdirs { path.join(Librw, Libdir) }
 	includedirs { Librw }
-	includedirs { "external" }
 	includedirs { "src" }
 
 project "librwgta"
 	kind "StaticLib"
 	targetname "rwgta"
 	targetdir (Libdir)
-	files { "external/*.*" }
 	files { "src/*.*" }
 
 function tool(dir)

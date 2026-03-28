@@ -142,33 +142,42 @@ bool FileExists(const char* filename)
 	return r;
 }
 
-int
-readhex(const char *str)
+char*
+readCfgLine(char* line)
 {
-	int n = 0;
-	if(strlen(str) > 2)
-		sscanf(str+2, "%X", &n);
-	return n;
-}
+	char *p, *key, *val;
 
-int
-readint(const std::string &s, int default)
-{
-	try{
-		return std::stoi(s);
-	}catch(...){
-		return default;
-	}
-}
+	/* Trim leading whitespace */
+	for (p = line; *p && isspace(*p); p++);
+	if (*p == '\0' || *p == '#')
+		return nil;
 
-float
-readfloat(const std::string &s, float default)
-{
-	try{
-		return std::stof(s);
-	}catch(...){
-		return default;
-	}
+	key = p;
+	p = strchr(p, '=');
+	if (p == nil)
+		return nil;
+
+	*p++ = '\0';
+
+	/* Trim trailing whitespace from key */
+	char* end = key + strlen(key) - 1;
+	while (end > key && isspace(*end))
+		*end-- = '\0';
+
+	/* Trim leading whitespace from value */
+	while (*p && isspace(*p))
+		p++;
+	val = p;
+
+	/* Trim trailing whitespace from value (including \n) */
+	end = val + strlen(val) - 1;
+	while (end >= val && isspace(*end))
+		*end-- = '\0';
+
+	if (*key)
+		return val;
+
+	return nil;
 }
 
 void
