@@ -1,3 +1,7 @@
+include('gta.lua')
+include('gtadraw.lua')
+include('console.lua')
+
 function copytab(t)
 	local t2 = {}
 	for k,v in pairs(t) do
@@ -6,22 +10,12 @@ function copytab(t)
 	return t2
 end
 
-function readModel(model, dir, imgfile)
-	local name = model .. ".dff"
-	local entry = dir[name:lower()]
-	if not entry then
-		return nil
-	end
-	return rw.readClumpFile(imgfile, entry.offset*2048, entry.size*2048)
+function tV3d(v)
+	return rw.V3d(v.x, v.y, v.z)
 end
 
-function readTxd(txd, dir, imgfile)
-	local name = txd .. ".dff"
-	local entry = dir[name:lower()]
-	if not entry then
-		return nil
-	end
-	return rw.readTexDictFile(imgfile, entry.offset*2048, entry.size*2048)
+function tQuat(q)
+	return rw.Quat(q.w, q.x, q.y, q.z)
 end
 
 function printHierarchy(frame, indent)
@@ -48,7 +42,6 @@ function printAtomic(a)
 		end
 	end
 end
-
 
 function printtab(t, indent)
 	indent = indent or 2
@@ -136,109 +129,12 @@ function hideDamagedLOD(a)
 	end
 end
 
-function gta:LoadClump(mdl)
-	if mdl.rwClump then return mdl.rwClump end
-	local txd = self:GetTexDictionary(mdl.txd)
-	rw.setCurrentTexDict(txd)
-	mdl.rwClump = self:GetModelClump(mdl)
-	for a in mdl.rwClump:atomics() do
-		hideDamagedLOD(a)
-	--	printAtomic(a)
-	end
-	return mdl.rwClump
-end
-
-function gta:LoadAtomics(mdl)
-	if mdl.rwAtomics then return end
-	local txd = self:GetTexDictionary(mdl.txd)
-	rw.setCurrentTexDict(txd)
-	mdl.rwClump = self:GetModelClump(mdl)
-	if not mdl.rwClump then return end
-	mdl.rwAtomics = {}
-	for a in mdl.rwClump:atomics() do
-		local nodename = a:getFrame():getName()
-		local name, lod = nodename:match("^(.-)_[Ll](%d+)$")
-		if not name then
-			name = nodename
-			lod = 0
-		end
-		mdl.rwAtomics[lod+1] = a:clone()
-	end
-end
-
-function gta:FindFileFuzzy(name)
-	local lname = name:lower()
-	for _, f in pairs(self.files) do
-		if f.fileName:lower():find(lname) then
-			return f
-		end
-	end
-	return nil
-end
-
-function tV3d(v)
-	return rw.V3d(v.x, v.y, v.z)
-end
-
-function tQuat(q)
-	return rw.Quat(q.w, -q.x, -q.y, -q.z)
-end
-
-function gta:Instantiate(inst)
-	if inst.rwAtomic then 
-		inst.show = true
-		return
-	end
-	if inst.mdl.lodDist1 > 300 then return end
-	self:LoadAtomics(inst.mdl)
-	if not inst.mdl.rwAtomics then
-		return
-	end
-	local atomic = inst.mdl.rwAtomics[1]:clone()
-	local frm = rw.FrameCreate()
-	local pos = tV3d(inst.position)
-	local rot = tQuat(inst.rotation)
-	frm:rotateQuat(rot, rw.COMBINEREPLACE)
-	frm:translate(pos, rw.COMBINEPOSTCONCAT)
-	atomic:setFrame(frm)
-	inst.rwAtomic = atomic
-	inst.show = true
-end
-
-function gta:InstantiateScene(name)
-	local file = self:FindFileFuzzy(name)
-	if file == nil then return end
-	for _, inst in pairs(self.instances) do
-		if inst.sourceFile == file then
-			self:Instantiate(inst)
-		end
-	end
-print("done instancing")
-	file.showScene = true
-end
-
-function gta:HideScene(name)
-	local file = self:FindFileFuzzy(name)
-	if file == nil then return end
-	file.showScene = false
-end
-
-function gta:DrawInstance(inst)
-	if not (inst.show and inst.sourceFile.showScene) then return nil end
-	if (inst.mdl.flags & (4|8)) ~= 0 then
-		return inst.rwAtomic
-	end
-	inst.rwAtomic:render()
-	return nil
-end
-
-local clump = nil
-local game = nil
-local sceneCam = nil
-local modelCam = nil
-local activeCam = nil
-local rwCamera = nil
-print("loaded games")
+clump = nil
+game = nil
+sceneCam = nil
+modelCam = nil
+activeCam = nil
+rwCamera = nil
 
 clearCol = rw.RGBA(0x80, 0x80, 0x80, 0xFF)
 
@@ -285,16 +181,23 @@ print("done")
 end
 
 function processCam(cam)
+	local shift = sk.keysdown[sk.KEY_LSHIFT] or sk.keysdown[sk.KEY_RSHIFT]
+	local alt = sk.keysdown[sk.KEY_LALT] or sk.keysdown[sk.KEY_RALT]
 	local dx = sk.mouse.x - sk.prevmouse.x
 	local dy = sk.mouse.y - sk.prevmouse.y
 	local s = 0.01
 	if (sk.mouse.btn & 1) ~= 0 then
-		cam:turn(dx*s, dy*s)
+		cam:turn(-dx*s, -dy*s)
+	elseif (sk.mouse.btn & 2) ~= 0 then
+		if alt then
+			cam:orbit(-dx*s, dy*s)
+		else
+			cam:pan(-dx*s*10, dy*s*10)
+		end
 	elseif (sk.mouse.btn & 4) ~= 0 then
-		cam:orbit(dx*s, -dy*s)
+		cam:zoom(-dy*s*10)
 	end
 
-	local shift = sk.keysdown[sk.KEY_LSHIFT] or sk.keysdown[sk.KEY_RSHIFT]
 	s = 1.0
 	if shift then s = s*2 end
 	if sk.keysdown[sk.KEY_W] then
@@ -305,6 +208,10 @@ function processCam(cam)
 		cam:pan(-s, 0)
 	elseif sk.keysdown[sk.KEY_D] then
 		cam:pan(s, 0)
+	elseif sk.keysdown[sk.KEY_J] then
+		if selection and selection.position then
+			activeCam:jumpTo(tV3d(selection.position))
+		end
 	end
 end
 
@@ -313,17 +220,20 @@ function Building:imguiTitle()
 end
 
 function Building:imguiDraw()
+	if not ImGui.CollapsingHeader("Model", ImGuiTreeNodeFlags.DefaultOpen) then return end
+
+	ImGui.PushID(tostring(self))
 	guiTab(self.sourceFile, "File " .. self.sourceFile.fileName)
-	ImGui.LabelText("id", tostring(self.id))
-	ImGui.LabelText("model", self.model)
-	ImGui.LabelText("txd", self.texDict)
+	local value, used = ImGui.InputInt("Id", self.id)
+	local text, selected = ImGui.InputText("Model", self.model, 24)
+	local text, selected = ImGui.InputText("Txd", self.texDict, 24)
 	for i = 1, self.numAtomics do
-		ImGui.LabelText("lodDist"..i, tostring(self["lodDist"..i]))
+		local value, used = ImGui.InputFloat("LOD dist"..i, self["lodDist"..i])
 	end
-	ImGui.LabelText("flags", tostring(self.flags))
+	local value, used = ImGui.InputInt("Flags", self.flags)
 	if self.timeOn then
-		ImGui.LabelText("timeOn", tostring(self.timeOn))
-		ImGui.LabelText("timeOff", tostring(self.timeOff))
+		local value, used = ImGui.InputInt("Time On", self.timeOn)
+		local value, used = ImGui.InputInt("Time Off", self.timeOff)
 	end
 
 	if ImGui.Button("View") then
@@ -331,6 +241,18 @@ function Building:imguiDraw()
 		modelCam:jumpTo(rw.V3d(0,0,0))
 		clump = self.rwClump
 	end
+	ImGui.PopID()
+end
+
+function Instance:select()
+	selection = self
+	gizmo.Init(tV3d(self.position), tQuat(self.rotation):conj())
+end
+
+function Instance:gizmo(commit, pos, rot)
+	self.position = pos
+	self.rotation = rot:conj()
+	self:UpdateRW()
 end
 
 function Instance:imguiTitle()
@@ -339,22 +261,29 @@ function Instance:imguiTitle()
 end
 
 function Instance:imguiDraw()
-	guiTab(self.sourceFile, "File " .. self.sourceFile.fileName)
-	ImGui.LabelText("id", tostring(self.id))
-	ImGui.LabelText("name", self.name)
-	local p = self.position
-	ImGui.LabelText("position", string.format("%g, %g, %g", p.x, p.y, p.z))
-	local q = self.rotation
-	ImGui.LabelText("rotation", string.format("%g, %g, %g %g", q.x, q.y, q.z, q.w))
-	local s = self.scale
-	ImGui.LabelText("scale", string.format("%g, %g, %g", s.x, s.y, s.z))
-	if ImGui.Button("jump to") then
-		activeCam:jumpTo(tV3d(p))
+	ImGui.PushID(tostring(self))
+	if ImGui.CollapsingHeader("Instance", ImGuiTreeNodeFlags.DefaultOpen) then 
+		guiTab(self.sourceFile, "File " .. self.sourceFile.fileName)
+		local value, used = ImGui.InputInt("Id", self.id)
+		local text, selected = ImGui.InputText("Name", self.name, 24)
+		local p = self.position
+		local values, used = ImGui.InputFloat3("Position", {p.x, p.y, p.z})
+		local s = self.scale
+		local values, used = ImGui.InputFloat3("Scale", {s.x, s.y, s.z})
+		local q = self.rotation
+		local values, used = ImGui.InputFloat4("Rotation", {q.x, q.y, q.z, q.w})
+		if self.area then
+			local value, used = ImGui.InputInt("Area", self.area)
+		end
+		if ImGui.Button("jump to") then
+			local p = tV3d(self.position)
+			activeCam:jumpTo(p)
+		end
+		ImGui.Dummy(0, 20)
 	end
+	ImGui.PopID()
 
 	if self.mdl then
-		ImGui.Separator()
-		ImGui.Text("Object Definition")
 		self.mdl:imguiDraw()
 	end
 end
@@ -427,7 +356,46 @@ function guiScenes(g)
 	ImGui.TreePop()
 end
 
+function gizmoUpdate(pos, rot)
+	print(pos, rot)
+end
+
 selection = nil
+hovered = nil
+drawColorCoded = false
+gizmo.op = gizmo.TRANSLATE
+gizmo.mode = gizmo.WORLD
+gizmo.wasUsing = false
+gizmo.stepTrans = 1
+gizmo.stepRot = 5
+gizmo.snapRot = true
+gizmo.snapTrans = true
+
+function gizmo.Process()
+	local step
+	if gizmo.op == gizmo.ROTATE then
+		step = gizmo.stepRot
+		if not gizmo.snapRot then
+			step = 0
+		end
+	else
+		step = gizmo.stepTrans
+		if not gizmo.snapTrans then
+			step = 0
+		end
+	end
+	gizmo.Use(gizmo.op, gizmo.mode, step)
+
+	local using = gizmo.IsUsing()
+	if selection and (using or gizmo.wasUsing) then
+		local mt = getmetatable(selection)
+		if mt and mt.gizmo then
+			local pos, rot = gizmo.GetXform()
+			selection:gizmo(not using, pos, rot)
+		end
+	end
+	gizmo.wasUsing = using
+end
 
 function guiList(list, label, cullhidden)
 	if not ImGui.TreeNode(label) then return end
@@ -440,13 +408,43 @@ function guiList(list, label, cullhidden)
 		end
 		if show or not cullhidden then
 			ImGui.PushID(tostring(v))
-			if ImGui.Selectable(title, v == selection) then
-				selection = v
+			if ImGui.Selectable(title, v == selection) and v ~= selection then
+				local mt = getmetatable(v)
+				if mt and mt.select then
+					v:select()
+				else
+					selection = v
+				end
+			end
+			if ImGui.IsItemHovered() then
+				hovered = v
 			end
 			ImGui.PopID()
 		end
 	end
 	ImGui.TreePop()
+end
+
+function guiCamera(cam)
+	if not ImGui.CollapsingHeader("Camera", ImGuiTreeNodeFlags.DefaultOpen) then return end
+	local p = cam.position
+	local xyz, used = ImGui.InputFloat3("Position", {p.x, p.y, p.z})
+	cam.position = rw.V3d(xyz[1], xyz[2], xyz[3])
+
+	p = cam.target
+	xyz, used = ImGui.InputFloat3("Target", {p.x, p.y, p.z})
+	cam.target = rw.V3d(xyz[1], xyz[2], xyz[3])
+end
+
+function guiSelection()
+	if selection then
+		local mt = getmetatable(selection)
+		if mt and mt.imguiDraw then
+			selection:imguiDraw()
+		else
+			guiTab(selection, "selection")
+		end
+	end
 end
 
 function gui()
@@ -479,10 +477,6 @@ function gui()
 		end
 		game = vcs
 	end
-	if not game then
-		ImGui.End()
-		return
-	end
 
 	if clump then
 		ImGui.SameLine()
@@ -492,64 +486,140 @@ function gui()
 	end
 
 	local w, h = ImGui.GetContentRegionAvail()
-	ImGui.BeginChild("left", w/2, 0, true)
-	guiTabRaw(game, "GTA")
-	guiList(game.filesOrdered, "Files")
-	guiScenes(game)
-	ImGui.Separator()
-	guiList(game.buildings, "Simple Models")
-	guiList(game.timedBuildings, "Timed Buildings")
-	ImGui.Separator()
-	guiList(game.instances, "Instances")
-	guiList(game.instances, "Visible Instances", true)
+	ImGui.BeginChild("left", w/2, 0, ImGuiChildFlags.ResizeX | ImGuiChildFlags.Borders, 0)
+	if game then
+		guiTabRaw(game, "GTA")
+		guiList(game.filesOrdered, "Files")
+		guiScenes(game)
+		ImGui.Separator()
+		guiList(game.buildings, "Simple Models")
+		guiList(game.timedBuildings, "Timed Buildings")
+		ImGui.Separator()
+		guiList(game.instances, "Instances")
+		guiList(game.instances, "Visible Instances", true)
+	end
 	ImGui.EndChild()
 
 	ImGui.SameLine()
 
 	ImGui.BeginChild("right", 0, 0, true)
-	if selection then
-		local mt = getmetatable(selection)
-		if mt and mt.imguiDraw then
-			selection:imguiDraw()
-		else
-      			guiTab(selection, "selection")
+	if ImGui.BeginTabBar("right_tab", 0) then
+		if ImGui.BeginTabItem("Selection") then
+			guiSelection()
+			ImGui.EndTabItem()
 		end
+		if ImGui.BeginTabItem("Editor") then
+			if ImGui.CollapsingHeader("Transformation", ImGuiTreeNodeFlags.DefaultOpen) then
+				if ImGui.RadioButton("Local", gizmo.mode == gizmo.LOCAL) then
+					gizmo.mode = gizmo.LOCAL
+				end
+				ImGui.SameLine()
+				if ImGui.RadioButton("World", gizmo.mode == gizmo.WORLD) then
+					gizmo.mode = gizmo.WORLD
+				end
+				gizmo.stepTrans, _ = ImGui.DragFloat("##TransStep",
+					gizmo.stepTrans, 0.5, 0.0, 1000000)
+				ImGui.SameLine()
+				gizmo.snapTrans, _ = ImGui.Checkbox("Translation Snap", gizmo.snapTrans)
+				gizmo.stepRot, _ = ImGui.DragFloat("##RotStep",
+					gizmo.stepRot, 0.5, 0.0, 1000000)
+				ImGui.SameLine()
+				gizmo.snapRot, _ = ImGui.Checkbox("Rotation Snap", gizmo.snapRot)
+			end
+			ImGui.EndTabItem()
+		end
+		if ImGui.BeginTabItem("View") then
+			if game then
+				game.hour, _ = ImGui.InputInt("Hour", game.hour)
+				game.hour = game.hour % 24
+			end
+
+			guiCamera(activeCam)
+			ImGui.EndTabItem()
+		end
+		if ImGui.BeginTabItem("Console") then
+			con.gui()
+			ImGui.EndTabItem()
+		end
+		ImGui.EndTabBar()
 	end
 	ImGui.EndChild()
+
 
 	ImGui.End()
 end
 
-function gta:RenderMap()
-	local drawLast = {}
-	for _, inst in pairs(self.instances) do
-		local a = self:DrawInstance(inst)
-		if a then
-			table.insert(drawLast, a)
-		end
+red = rw.RGBA(255, 0, 0, 255)
+green = rw.RGBA(0, 255, 0, 255)
+blue = rw.RGBA(0, 0, 255, 255)
+cyan = rw.RGBA(0, 255, 255, 255)
+magenta = rw.RGBA(255, 0, 255, 255)
+yellow = rw.RGBA(255, 255, 0, 255)
+black = rw.RGBA(0, 0, 0, 255)
+
+function setColor(obj)
+	if obj == hovered then
+		gta.SetHighlightColour(blue)
+	elseif obj == selection then
+		gta.SetHighlightColour(red)
+	else
+		gta.SetHighlightColour(black)
 	end
-	for _, a in pairs(drawLast) do
-		a:render()
+
+	if obj.colorId then
+		gta.SetColourCode(obj.colorId)
 	end
 end
 
+function gta:RenderMap()
+	if drawColorCoded then
+		gta.SetRenderColourCoded(1)
+	end
+	local drawLast = {}
+	for _, inst in pairs(self.instances) do
+		inst.colorId = inst.instId
+		setColor(inst)
+		local a = self:DrawInstance(inst)
+		if a then
+			table.insert(drawLast, inst)
+		end
+	end
+	for _, inst in pairs(drawLast) do
+		setColor(inst)
+		gta.RenderAtomic(inst.rwAtomic)
+	end
+	gta.SetRenderColourCoded(0)
+end
+
 function Draw(timestep)
-	sk.mouse = sk.prevmouse
-	sk.prevmouse = copytab(sk.curmouse)
-	processCam(activeCam)
+	sk.updateMouse()
 
 	if clump then
 		activeCam = modelCam
 	else
 		activeCam = sceneCam
 	end
+	processCam(activeCam)
 	activeCam:update()
-	rwCamera:clear(clearCol, rw.Camera_CLEARIMAGE|rw.Camera_CLEARZ)
 	rwCamera:beginUpdate()
+
+	if game and not clump and sk.isMouseClicked(sk.LMB) then
+		rwCamera:clear(black, rw.Camera_CLEARIMAGE|rw.Camera_CLEARZ)
+		drawColorCoded = true
+		game:RenderMap()
+		drawColorCoded = false
+		local code = gta.GetColourCode(sk.curmouse.x, sk.curmouse.y)
+		local inst = game.instances[code]
+		if inst then inst:select() end
+	end
+
+	rwCamera:clear(clearCol, rw.Camera_CLEARIMAGE|rw.Camera_CLEARZ)
 
 	sk.ImGuiBeginFrame(timestep)
 
+	hovered = nil
 	gui()
+	gizmo.Process()
 
 	if clump then
 		clump:render()
@@ -564,6 +634,40 @@ function Draw(timestep)
 end
 
 sk.keysdown = {}
+
+sk.LMB = 1
+sk.MMB = 2
+sk.RMB = 4
+
+sk.clickstate = 0
+sk.clickx = 0
+sk.clicky = 0
+sk.clickbtn = 0
+
+function sk.isMouseClicked(btn)
+	return sk.clickstate == 2 and sk.clickbtn == btn
+end
+
+function sk.updateMouse()
+	sk.prevmouse = sk.mouse
+	sk.mouse = copytab(sk.curmouse)
+
+	if sk.clickstate == 2 then sk.clickstate = 0 end
+	if sk.clickstate == 0 and (sk.mouse.btn & (sk.mouse.btn ~ sk.prevmouse.btn)) ~= 0 then
+		sk.clickstate = 1
+		sk.clickx = sk.mouse.x
+		sk.clicky = sk.mouse.y
+	elseif sk.clickstate == 1 and sk.mouse.btn == 0 then
+		if sk.mouse.x == sk.clickx and sk.mouse.y == sk.clicky then
+			sk.clickstate = 2
+			sk.clickbtn = sk.prevmouse.btn & ~(sk.prevmouse.btn-1)
+			local logtab = { 0, 1, 2, 0, 3 }
+			sk.clickbtn = logtab[(sk.clickbtn&7)+1]
+		else
+			sk.clickstate = 0
+		end
+	end
+end
 
 function KeyUp(k)
 	sk.keysdown[k] = false
@@ -580,22 +684,10 @@ function KeyDown(k)
 		print(cam.aspectRatio)
 		print(cam.near)
 		print(cam.far)
-	elseif k == sk.KEY_V then
-		if vc then
-			game = vc
-		end
-	elseif k == sk.KEY_B then
-		if iii then
-			game = iii
-		end
-	elseif k == sk.KEY_N then
-		if lcs then
-			game = lcs
-		end
-	elseif k == sk.KEY_M then
-		if vcs then
-			game = vcs
-		end
+	elseif k == sk.KEY_G then
+		gizmo.op = gizmo.TRANSLATE
+	elseif k == sk.KEY_R then
+		gizmo.op = gizmo.ROTATE
 	end
 end
 

@@ -8,6 +8,7 @@
 
 #include <rwgta.h>
 #include "sol/sol.hpp"
+#include "stuff.h"
 
 using namespace std;
 using namespace rw;
@@ -65,6 +66,10 @@ initLua(void)
 	});
 */
 
+	lua["include"] = [](const char *path){
+		lua.script_file(path);
+	};
+
 	rwtab.set_function("makePath", [](const char *path){
 		char *x = strdup(path);
 		rw::makePath(x);
@@ -98,6 +103,9 @@ initLua(void)
 		"x", &rw::Quat::x,
 		"y", &rw::Quat::y,
 		"z", &rw::Quat::z,
+		"conj", [](const rw::Quat &q) {
+			return rw::conj(q);
+		},
 		sol::meta_function::to_string, [](const rw::Quat &q) {
 			return "Quat(" + std::to_string(q.w) + ", "
 			+ std::to_string(q.x) + ", "
@@ -387,11 +395,37 @@ initLua(void)
 		return sol::make_object(lua, txd);
 	});
 
-	lua.script_file("gta.lua");
+
+	// librwgta stuff
+	gtatab.set("SetColourCode", [](rw::uint32 code){
+		gta::colourCode.red = code & 0xFF;
+		gta::colourCode.green = code>>8 & 0xFF;
+		gta::colourCode.blue = code>>16 & 0xFF;
+		gta::colourCode.alpha = 255;
+	});
+	gtatab.set("GetColourCode", [](int x, int y){
+		return gta::GetColourCode(x, y);
+	});
+	gtatab.set("SetRenderColourCoded", [](int colour){
+		gta::renderColourCoded = colour;
+	});
+	gtatab.set("SetHighlightColour", [](rw::RGBA col){
+extern rw::RGBA highlightColor;
+		highlightColor = col;
+	});
+void myRenderCB(rw::Atomic *atomic);
+	gtatab.set("RenderAtomic", [](rw::Atomic *a){
+		myRenderCB(a);
+	});
 }
 
 void
 execLua(const char *str)
 {
-	lua.script_file(str);
+	auto result = lua.script_file(str, sol::script_pass_on_error);
+	if(!result.valid()){
+		sol::error err = result;
+		luaError(err.what());
+	}
 }
+

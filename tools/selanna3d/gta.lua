@@ -131,7 +131,7 @@ function Instance.new()
 	return setmetatable({}, Instance)
 end
 
-gta = {}
+--gta = {} -- done in C++
 gta.__index = gta
 
 gta.GameIII = 0
@@ -175,6 +175,8 @@ function gta.make(game, gameDir)
 	g.occluders = {}
 
 	g.pathSegments = {}
+
+	g.hour = 12
 	return g
 end
 
@@ -334,8 +336,9 @@ function gta:FinishLoading()
 		txd:destroy()
 	end
 
-	for _, inst in pairs(self.instances) do
+	for i, inst in pairs(self.instances) do
 		inst.mdl = self.modelsById[inst.id]
+		inst.instId = i
 	end
 end
 
