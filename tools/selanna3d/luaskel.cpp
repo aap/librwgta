@@ -20,7 +20,7 @@ extern sol::state lua;
 
 static rw::Raster*
 ConvertTexRaster(rw::Raster *ras)
-{                       
+{
 	using namespace rw;
 
 	if(ras->platform == rw::platform)
@@ -31,25 +31,25 @@ ConvertTexRaster(rw::Raster *ras)
 		return ras;
 
 	Image *img = ras->toImage();
-	ras->destroy(); 
+	ras->destroy();
 	img->unpalettize();
 	ras = Raster::createFromImage(img);
 	img->destroy();
 	return ras;
-}               
+}
 
 void
 ConvertTxd(rw::TexDictionary *txd)
-{       
+{
 	rw::Texture *tex;
 	FORLIST(lnk, txd->textures){
 		tex = rw::Texture::fromDict(lnk);
 		rw::Raster *ras = tex->raster;
 		if(ras)
 			tex->raster = ConvertTexRaster(ras);
-		tex->setFilter(rw::Texture::LINEAR); 
+		tex->setFilter(rw::Texture::LINEAR);
 	}
-}       
+}
 
 void
 initLuaSkeleton(void)
@@ -75,6 +75,7 @@ initLuaSkeleton(void)
 			rw::V3d fwd = normalize(sub(cam->m_target, cam->m_position));
 			cam->m_target = add(cam->m_position, scale(fwd, d));
 		},
+		"distanceTo", &Camera::distanceTo,
 		"jumpTo", [](Camera *cam, rw::V3d pos) {
 			rw::V3d dist = sub(pos, cam->m_target);
 			cam->m_position = add(cam->m_position, dist);

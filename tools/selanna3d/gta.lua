@@ -40,35 +40,35 @@ end
 TokenStream = {}
 TokenStream.__index = TokenStream
 
-function TokenStream:make(line)
+function TokenStream.make(line)
 	local fields = split(line)
 	local t = { fields = fields, i = 1 }
 	setmetatable(t, TokenStream)
 	return t
 end
 
-function TokenStream:next(line)
+function TokenStream:next()
 	local f = self.fields[self.i]
 	self.i = self.i + 1
 	return f
 end
 
-function TokenStream:nextInt(line)
+function TokenStream:nextInt()
 	return tonumber(self:next())
 end
 
-function TokenStream:nextFloat(line)
+function TokenStream:nextFloat()
 	return tonumber(self:next())
 end
 
-function TokenStream:nextXYZ(line)
+function TokenStream:nextXYZ()
 	local x = self:nextFloat()
 	local y = self:nextFloat()
 	local z = self:nextFloat()
 	return { x = x, y = y, z = z }
 end
 
-function TokenStream:nextXYZW(line)
+function TokenStream:nextXYZW()
 	local x = self:nextFloat()
 	local y = self:nextFloat()
 	local z = self:nextFloat()
@@ -76,13 +76,62 @@ function TokenStream:nextXYZW(line)
 	return { x = x, y = y, z = z, w = w }
 end
 
-function TokenStream:nextRGBA(line)
+function TokenStream:nextRGBA()
 	local r = self:nextFloat()
 	local g = self:nextFloat()
 	local b = self:nextFloat()
 	local a = self:nextFloat()
 	return { r = r, g = g, b = b, a = a }
 end
+
+BinaryStream = {}
+BinaryStream.__index = BinaryStream
+
+function BinaryStream.make(data)
+	local s = { data = data, pos = 1 }
+	setmetatable(s, BinaryStream)
+	return s
+end
+
+function BinaryStream:nextU32()
+	local n = string.unpack("<I4", self.data, self.pos)
+	self.pos = self.pos + 4
+	return n
+end
+
+function BinaryStream:nextI32()
+	local n = string.unpack("<i4", self.data, self.pos)
+	self.pos = self.pos + 4
+	return n
+end
+
+function BinaryStream:nextI16()
+	local n = string.unpack("<i2", self.data, self.pos)
+	self.pos = self.pos + 2
+	return n
+end
+
+function BinaryStream:nextFloat()
+	local n = string.unpack("<f", self.data, self.pos)
+	self.pos = self.pos + 4
+	return n
+end
+
+-- identical to text tokens actually....
+function BinaryStream:nextXYZ()
+	local x = self:nextFloat()
+	local y = self:nextFloat()
+	local z = self:nextFloat()
+	return { x = x, y = y, z = z }
+end
+function BinaryStream:nextXYZW()
+	local x = self:nextFloat()
+	local y = self:nextFloat()
+	local z = self:nextFloat()
+	local w = self:nextFloat()
+	return { x = x, y = y, z = z, w = w }
+end
+
 
 function addString(line, s)
 	if line == "" then
@@ -121,14 +170,23 @@ end
 
 Building = {}
 Building.__index = Building
-function Building.new()
+function Building.make()
 	return setmetatable({}, Building)
 end
 
 Instance = {}
 Instance.__index = Instance
-function Instance.new()
+function Instance.make()
 	return setmetatable({}, Instance)
+end
+
+Scene = {}
+Scene.__index = Scene
+function Scene.make(name, file)
+	local scene = setmetatable({ name = name, file = file,
+		instances = {}, streamed = {} }, Scene)
+	file.scene = scene
+	return scene
 end
 
 --gta = {} -- done in C++
@@ -139,12 +197,11 @@ gta.GameVC = 1
 gta.GameSA = 2
 
 -- model types
-gta.MT_BUILDING = 1
-gta.MT_TIMEDBUILDING = 2
-gta.MT_CLUMP = 3
-gta.MT_PED = 4
-gta.MT_VEHICLE = 5
-gta.MT_WEAPON = 6
+gta.MT_ATOMIC = 1
+gta.MT_CLUMP = 2
+gta.MT_PED = 3
+gta.MT_VEHICLE = 4
+gta.MT_WEAPON = 5
 
 function gta.make(game, gameDir)
 	local g = {}
@@ -155,6 +212,10 @@ function gta.make(game, gameDir)
 	g.filesOrdered = {}
 	g.imagePath = "none"
 
+	g.scenes = {}
+	g.scenesByName = {}
+
+	g.cdImageFiles = {}
 	g.streamedFiles = {}
 	g.modelsById = {}
 	g.modelsByName = {}
@@ -162,11 +223,14 @@ function gta.make(game, gameDir)
 	g.buildings = {}
 	g.timedBuildings = {}
 	g.clumps = {}
+	g.animClumps = {}
 	g.peds = {}
 	g.vehicles = {}
 	g.weapons = {}
 	g.effects = {}
+	g.txdParents = {}
 	g.genericTxds = {}
+	g.streamIplsByName = {}
 
 	g.instances = {}
 	g.cullZones = {}
@@ -218,20 +282,31 @@ function gta:PopulateGameDir()
 	end
 end
 
+function gta:AddScene(name, file)
+	local scene = Scene.make(name, file)
+	table.insert(self.scenes, scene)
+	self.scenesByName[name:lower()] = scene
+	return scene
+end
+
 function gta:AddModel(obj, tab, type)
 	obj.sourceFile = self.currentFile
 	obj.type = type
 	table.insert(tab, obj)
 	self.modelsById[obj.id] = obj
-	self.modelsByName[obj.model:lower()] = obj
+	self.modelsByName[obj.modelName:lower()] = obj
 end
 
 function gta:AddBuilding(obj)
-	self:AddModel(obj, self.buildings, gta.MT_BUILDING)
+	self:AddModel(obj, self.buildings, gta.MT_ATOMIC)
 end
 
 function gta:AddTimedBuilding(obj)
-	self:AddModel(obj, self.timedBuildings, gta.MT_TIMEDBUILDING)
+	self:AddModel(obj, self.timedBuildings, gta.MT_ATOMIC)
+end
+
+function gta:AddAnimClump(obj)
+	self:AddModel(obj, self.animClumps, gta.MT_CLUMP)
 end
 
 function gta:AddClump(obj)
@@ -255,9 +330,13 @@ function gta:AddEffect(e)
 	table.insert(self.effects, e)
 end
 
-function gta:AddInstance(inst)
-	inst.sourceFile = self.currentFile
+function gta:AddInstance(inst, file)
+	inst.sourceFile = file
+	inst.instId = #self.instances + 1
 	table.insert(self.instances, inst)
+
+	local scene = inst.sourceFile.scene
+	table.insert(scene.instances, inst)
 end
 
 function gta:AddCullZone(zone)
@@ -286,6 +365,11 @@ function gta:AddPathSegment(seg)
 	table.insert(self.pathSegments, seg)
 end
 
+function gta:AddTxdParent(txdp)
+	txdp.sourceFile = self.currentFile
+	table.insert(self.txdParents, txdp)
+end
+
 function gta:LinkStreamingInfo()
 	for _, s in pairs(self.streamedFiles) do
 		if s.ext == "DFF" then
@@ -302,6 +386,9 @@ function gta:LinkStreamingInfo()
 			else
 --				print("did not find txd", s.name)
 			end
+		elseif s.ext == "IPL" then
+			local ipl = { streamingInfo = s }
+			self.streamIplsByName[s.name:lower()] = ipl
 		end
 	end
 end
@@ -312,20 +399,52 @@ function gta:AddTxdSlot(name)
 	return txd
 end
 
+function gta:GetTxdSlot(name)
+	local txd = self.txdsByName[name]
+	if not txd then
+		txd = self:AddTxdSlot(name)
+	end
+	return txd
+end
+
+function gta:GetStreamBuffer(si)
+	local f = io.open(si.container.fullPath, "rb")
+	if not f then
+		print("Could not open file: " .. si.container.fullPath)
+		return nil
+	end
+	f:seek("set", si.offset*2048)
+	local data = f:read(si.size*2048)
+	f:close()
+	return BinaryStream.make(data)
+end
+
 function gta:FinishLoading()
 	self.currentFile = nil
+
+	-- link TXDs to models
 	local generic = self:AddTxdSlot('generic')
 	for id, mdl in pairs(self.modelsById) do
-		local name = mdl.texDict:lower()
-		local txd = self.txdsByName[name]
-		if not txd then
-			txd = self:AddTxdSlot(name)
-		end
+		local name = mdl.txdName:lower()
+		local txd = self:GetTxdSlot(name)
 		mdl.txd = txd
 		txd.refCount = txd.refCount+1
 	end
+
+	-- link TXD parents
+	for _, txdp in pairs(self.txdParents) do
+		local txd = self:GetTxdSlot(txdp.txdName:lower())
+		local parent = self:GetTxdSlot(txdp.parentName:lower())
+		txd.parent = parent
+	end
+
+	-- load CD images
+	for _, f in pairs(self.cdImageFiles) do
+		self:ReadCdImage(f.fileName)
+	end
 	self:LinkStreamingInfo()
 
+	-- load generic textures
 	generic.rwTxd = rw.TexDictionaryCreate()
 	for _, f in pairs(self.genericTxds) do
 		local txd = rw.readTexDictFile(f.fullPath, 0, 0)
@@ -336,9 +455,10 @@ function gta:FinishLoading()
 		txd:destroy()
 	end
 
+	-- link models to instances
+	-- TODO: put this into AddInstance?
 	for i, inst in pairs(self.instances) do
 		inst.mdl = self.modelsById[inst.id]
-		inst.instId = i
 	end
 end
 
@@ -353,6 +473,9 @@ end
 
 function gta:GetTexDictionary(txd)
 	if txd.rwTxd then return txd.rwTxd end
+	if txd.parent then
+		self:GetTexDictionary(txd.parent)
+	end
 	local si = txd.streamingInfo
 	if not si or si.ext ~= "TXD" then
 		txd.rwTxd = rw.TexDictionaryCreate()
@@ -360,19 +483,31 @@ function gta:GetTexDictionary(txd)
 	end
 	txd.rwTxd = rw.readTexDictFile(si.container.fullPath, si.offset*2048, si.size*2048)
 	sk.ConvertTexDict(txd.rwTxd)
+	if txd.parent then
+		gta.TxdSetParent(txd.rwTxd, txd.parent.rwTxd)
+	end
 	return txd.rwTxd
 end
 
+
+
 -- file loading
+
+function gta:ReadNothing(line)
+end
 
 function gta:ReadObjLine(line)
 --	print("obj ", line)
-	local t = TokenStream:make(line)
-	local obj = Building.new()
+	local t = TokenStream.make(line)
+	local obj = Building.make()
 	obj.id = t:nextInt()
-	obj.model = t:next()
-	obj.texDict = t:next()
-	obj.numAtomics = t:nextInt()
+	obj.modelName = t:next()
+	obj.txdName = t:next()
+	if self.game == gta.GameSA and #t.fields == 5 then
+		obj.numAtomics = 1
+	else
+		obj.numAtomics = t:nextInt()
+	end
 	for i = 1,obj.numAtomics do
 		obj["lodDist" .. i] = t:nextFloat()
 	end
@@ -381,10 +516,11 @@ function gta:ReadObjLine(line)
 end
 
 function gta:WriteObjLine(obj)
+-- TODO: SA
 	local line = ""
 	line = addInt(line, obj.id)
-	line = addString(line, obj.model)
-	line = addString(line, obj.texDict)
+	line = addString(line, obj.modelName)
+	line = addString(line, obj.txdName)
 	line = addInt(line, obj.numAtomics)
 	for i = 1,obj.numAtomics do
 		line = addFloat(line, obj["lodDist" .. i])
@@ -396,12 +532,16 @@ end
 
 function gta:ReadTObjLine(line)
 --	print("tobj ", line)
-	local t = TokenStream:make(line)
-	local obj = Building.new()
+	local t = TokenStream.make(line)
+	local obj = Building.make()
 	obj.id = t:nextInt()
-	obj.model = t:next()
-	obj.texDict = t:next()
-	obj.numAtomics = t:nextInt()
+	obj.modelName = t:next()
+	obj.txdName = t:next()
+	if self.game == gta.GameSA and #t.fields == 7 then
+		obj.numAtomics = 1
+	else
+		obj.numAtomics = t:nextInt()
+	end
 	for i = 1,obj.numAtomics do
 		obj["lodDist" .. i] = t:nextFloat()
 	end
@@ -412,10 +552,11 @@ function gta:ReadTObjLine(line)
 end
 
 function gta:WriteTObjLine(obj)
+-- TODO: SA
 	local line = ""
 	line = addInt(line, obj.id)
-	line = addString(line, obj.model)
-	line = addString(line, obj.texDict)
+	line = addString(line, obj.modelName)
+	line = addString(line, obj.txdName)
 	line = addInt(line, obj.numAtomics)
 	for i = 1,obj.numAtomics do
 		line = addFloat(line, obj["lodDist" .. i])
@@ -426,33 +567,54 @@ function gta:WriteTObjLine(obj)
 	return line
 end
 
+function gta:ReadAnimLine(line)
+--	print("anim ", line)
+	local t = TokenStream.make(line)
+	local obj = {}
+	obj.id = t:nextInt()
+	obj.modelName = t:next()
+	obj.txdName = t:next()
+	obj.animName = t:next()
+	obj.lodDist = t:nextFloat()
+	obj.flags = t:nextInt()
+	self:AddAnimClump(obj)
+end
+
+function gta:WriteAnimLine(line)
+--	TODO
+end
+
 
 function gta:ReadHierLine(line)
 --	print("hier ", line)
-	local t = TokenStream:make(line)
+	local t = TokenStream.make(line)
 	local clp = {}
 	clp.id = t:nextInt()
-	clp.model = t:next()
-	clp.texDict = t:next()
+	clp.modelName = t:next()
+	clp.txdName = t:next()
 	self:AddClump(clp)
 end
 
 function gta:WriteHierLine(clp)
 	local line = ""
 	line = addInt(line, clp.id)
-	line = addString(line, clp.model)
-	line = addString(line, clp.texDict)
+	line = addString(line, clp.modelName)
+	line = addString(line, clp.txdName)
 	return line
 end
 
 
 function gta:ReadPedLine(line)
+if self.game == gta.GameSA then
+return
+end
+-- TODO: SA
 --	print("peds ", line)
-	local t = TokenStream:make(line)
+	local t = TokenStream.make(line)
 	local ped = {}
 	ped.id = t:nextInt()
-	ped.model = t:next()
-	ped.texDict = t:next()
+	ped.modelName = t:next()
+	ped.txdName = t:next()
 	ped.pedType = t:next()
 	ped.pedStats = t:next()
 	ped.animGroup = t:next()
@@ -466,10 +628,11 @@ function gta:ReadPedLine(line)
 end
 
 function gta:WritePedLine(ped)
+-- TODO: SA
 	local line = ""
 	line = addInt(line, ped.id)
-	line = addString(line, ped.model)
-	line = addString(line, ped.texDict)
+	line = addString(line, ped.modelName)
+	line = addString(line, ped.txdName)
 	line = addString(line, ped.pedType)
 	line = addString(line, ped.pedStats)
 	line = addString(line, ped.animGroup)
@@ -483,12 +646,16 @@ function gta:WritePedLine(ped)
 end
 
 function gta:ReadVehicleLine(line)
+-- TODO: SA
+if self.game == gta.GameSA then
+return
+end
 --	print("cars ", line)
-	local t = TokenStream:make(line)
+	local t = TokenStream.make(line)
 	local veh = {}
 	veh.id = t:nextInt()
-	veh.model = t:next()
-	veh.texDict = t:next()
+	veh.modelName = t:next()
+	veh.txdName = t:next()
 	veh.vehicleType = t:next()
 	veh.handlingName = t:next()
 	veh.gameName = t:next()
@@ -512,10 +679,11 @@ function gta:ReadVehicleLine(line)
 end
 
 function gta:WriteVehicleLine(veh)
+-- TODO: SA
 	local line = ""
 	line = addInt(line, veh.id)
-	line = addString(line, veh.model)
-	line = addString(line, veh.texDict)
+	line = addString(line, veh.modelName)
+	line = addString(line, veh.txdName)
 	line = addString(line, veh.vehicleType)
 	line = addString(line, veh.handlingName)
 	line = addString(line, veh.gameName)
@@ -540,11 +708,11 @@ end
 
 function gta:ReadWeaponLine(line)
 --	print("weap ", line)
-	local t = TokenStream:make(line)
+	local t = TokenStream.make(line)
 	local weap = {}
 	weap.id = t:nextInt()
-	weap.model = t:next()
-	weap.texDict = t:next()
+	weap.modelName = t:next()
+	weap.txdName = t:next()
 	weap.animFile = t:next()
 	t:next()	-- unused - 1
 	weap.lodDist = t:nextFloat()
@@ -554,8 +722,8 @@ end
 function gta:WriteWeaponLine(weap)
 	local line = ""
 	line = addInt(line, weap.id)
-	line = addString(line, weap.model)
-	line = addString(line, weap.texDict)
+	line = addString(line, weap.modelName)
+	line = addString(line, weap.txdName)
 	line = addString(line, weap.animFile)
 	line = addInt(line, 1)
 	line = addFloat(line, weap.loadDist)
@@ -563,7 +731,7 @@ function gta:WriteWeaponLine(weap)
 end
 
 function gta:ReadPathLine(line)
-	local t = TokenStream:make(line)
+	local t = TokenStream.make(line)
 
 	if not self._pathSegment then
 		self._pathSegment = { }
@@ -656,7 +824,7 @@ local FX_PEDQUEUE = 3
 local FX_SUNGLARE = 4
 
 function gta:Read2dfxLine(line)
-	local t = TokenStream:make(line)
+	local t = TokenStream.make(line)
 
 	local e = {}
 	e.id = t:nextInt()
@@ -727,6 +895,14 @@ function gta:Write2dfxLine(e)
 	return line
 end
 
+function gta:ReadTxdParentLine(line)
+	local t = TokenStream.make(line)
+	local txdp = {}
+	txdp.txdName = t:next()
+	txdp.parentName = t:next()
+	self:AddTxdParent(txdp)
+end
+
 local IDEdesc = {}
 IDEdesc["objs"] = gta.ReadObjLine
 IDEdesc["tobj"] = gta.ReadTObjLine
@@ -736,25 +912,36 @@ IDEdesc["cars"] = gta.ReadVehicleLine
 IDEdesc["weap"] = gta.ReadWeaponLine
 IDEdesc["path"] = gta.ReadPathLine
 IDEdesc["2dfx"] = gta.Read2dfxLine
+--SA
+IDEdesc["txdp"] = gta.ReadTxdParentLine
+IDEdesc["anim"] = gta.ReadAnimLine
 
 
 
 function gta:ReadInstLine(line)
-	local t = TokenStream:make(line)
+	local t = TokenStream.make(line)
 
-	local inst = Instance.new()
+	local inst = Instance.make()
 	inst.id = t:nextInt()
 	inst.name = t:next()
 	if self.game > gta.GameIII then
 		inst.area = t:nextInt()
 	end
 	inst.position = t:nextXYZ()
-	inst.scale = t:nextXYZ()
-	inst.rotation = t:nextXYZW()
-	self:AddInstance(inst)
+	if self.game == gta.GameSA then
+		inst.rotation = t:nextXYZW()
+		inst.lodIndex = t:nextInt()
+		inst.flags = inst.area >> 8
+		inst.area = inst.area & 0xFF
+	else
+		inst.scale = t:nextXYZ()
+		inst.rotation = t:nextXYZW()
+	end
+	self:AddInstance(inst, self.currentFile)
 end
 
 function gta:WriteInstLine(inst)
+-- TODO: SA
 	local line = ""
 	line = addInt(line, inst.id)
 	line = addString(line, inst.name)
@@ -768,7 +955,7 @@ function gta:WriteInstLine(inst)
 end
 
 function gta:ReadCullLine(line)
-	local t = TokenStream:make(line)
+	local t = TokenStream.make(line)
 	local cull = {}
 	cull.pos = t:nextXYZ()
 	cull.min = t:nextXYZ()
@@ -789,7 +976,7 @@ function gta:WriteCullLine(cull)
 end
 
 function gta:ReadZoneLine(line)
-	local t = TokenStream:make(line)
+	local t = TokenStream.make(line)
 	local zone = {}
 	zone.name = t:next()
 	zone.type = t:nextInt()
@@ -800,7 +987,7 @@ function gta:ReadZoneLine(line)
 end
 
 function gta:ReadMapZoneLine(line)
-	local t = TokenStream:make(line)
+	local t = TokenStream.make(line)
 	local zone = {}
 	zone.name = t:next()
 	zone.type = t:nextInt()
@@ -821,7 +1008,7 @@ function gta:WriteZoneLine(zone)
 end
 
 function gta:ReadOccluderLine(line)
-	local t = TokenStream:make(line)
+	local t = TokenStream.make(line)
 	local occl = {}
 	occl.pos = t:nextXYZ()
 	occl.dimension = t:nextXYZ()
@@ -844,10 +1031,96 @@ IPLdesc["zone"] = gta.ReadZoneLine
 -- VC
 IPLdesc["path"] = gta.ReadPathLine
 IPLdesc["occl"] = gta.ReadOccluderLine
+-- SA
+IPLdesc["grge"] = gta.ReadNothing
+IPLdesc["enex"] = gta.ReadNothing
+IPLdesc["pick"] = gta.ReadNothing
+IPLdesc["cars"] = gta.ReadNothing
+IPLdesc["jump"] = gta.ReadNothing
+IPLdesc["tcyc"] = gta.ReadNothing
+IPLdesc["auzo"] = gta.ReadNothing
+IPLdesc["mult"] = gta.ReadNothing
 
 local ZONdesc = {}
 ZONdesc["zone"] = gta.ReadMapZoneLine
 
+
+function gta:ReadBinaryIPLHeader(strm)
+	local header = {}
+	header.numInstances = strm:nextI16()
+	header.numMultiBuildings = strm:nextI16()
+	header.numZones = strm:nextI16()
+	header.numCullZones = strm:nextI16()
+	header.numOcclusionVolumes = strm:nextI16()
+	header.numEntryExit = strm:nextI16()
+	header.numGarages = strm:nextI16()
+	header.numPickups = strm:nextI16()
+	header.numCarGenerators = strm:nextI16()
+	header.numStuntJumps = strm:nextI16()
+	header.numTimeCycleMods = strm:nextI16()
+	header.numPaths = strm:nextI16()
+
+	header.offInstances = strm:nextI32()
+	header.offMultiBuildings = strm:nextI32()
+	header.offZones = strm:nextI32()
+	header.offCullZones = strm:nextI32()
+	header.offOcclusionVolumes = strm:nextI32()
+	header.offEntryExit = strm:nextI32()
+	header.offGarages = strm:nextI32()
+	header.offPickups = strm:nextI32()
+	header.offCarGenerators = strm:nextI32()
+	header.offStuntJumps = strm:nextI32()
+	header.offTimeCycleMods = strm:nextI32()
+	header.offPaths = strm:nextI32()
+	return header
+end
+
+function gta:ReadBinaryInstance(strm)
+	local inst = Instance.make()
+
+	inst.position = strm:nextXYZ()
+	inst.rotation = strm:nextXYZW()
+	inst.id = strm:nextI32()
+	inst.area = strm:nextI32()
+	inst.lodIndex = strm:nextI32()
+
+	inst.flags = inst.area >> 8
+	inst.area = inst.area & 0xFF
+	local mdl = self.modelsById[inst.id]
+	if mdl then
+		inst.mdl = mdl
+		inst.name = mdl.modelName
+	end
+	return inst
+end
+
+function gta:LoadStreamedIPLs()
+	for name, ipl in pairs(self.streamIplsByName) do
+		local scene = Scene.make(name, ipl.streamingInfo)
+		local strm = self:GetStreamBuffer(ipl.streamingInfo)
+		local type = strm:nextU32()
+		if type ~= 0x79726e62 then
+			print("not binary IPL", name)
+		end
+		local header = self:ReadBinaryIPLHeader(strm)
+		strm.pos = header.offInstances + 1
+		for i = 1,header.numInstances do
+			self:AddInstance(self:ReadBinaryInstance(strm), ipl.streamingInfo)
+		end
+	end
+
+	-- link streamed scenes to parents
+	for _, scene in ipairs(self.scenes) do
+		for i=0,10000 do
+			local name = scene.name .. "_stream" .. tostring(i)
+			local ipl = self.streamIplsByName[name:lower()]
+			if not ipl then break end
+			local scn = ipl.streamingInfo.scene
+			table.insert(scene.streamed, scn)
+			scn.parentScene = scene
+		end
+	end
+end
 
 function gta:ReadFileByDesc(file, desc)
 	self.currentFile = self:GetFileFs(file)
@@ -877,24 +1150,43 @@ function gta:ReadFileByDesc(file, desc)
 end
 
 function gta:ReadCdImage(imgfile)
-	local dirfile = string.sub(imgfile, 0, -4) .. "dir"
-	self.currentFile = self:GetFileFs(dirfile)
-	local imgfile = self:GetFileFs(imgfile)
+	local img = self:GetFileFs(imgfile)
+	if self.game == gta.GameSA then
+		self.currentFile = img
+	else
+		local dirfile = string.sub(imgfile, 0, -4) .. "dir"
+		self.currentFile = self:GetFileFs(dirfile)
+	end
 	local f = io.open(self.currentFile.fullPath, "rb")
 	if not f then error("couldn't open " .. self.currentFile.fullPath) end
-	while true do
+	local num = 100000000	 -- dumb, whatever
+	if self.game == gta.GameSA then
+		local data = f:read(8)
+		local ver, n = string.unpack("<I4I4", data)
+		num = n
+	end
+	for i=1,num do
 		local data = f:read(32)
 		if not data or #data < 32 then break end
+		-- this kinda doubles as a file as well
 		local item = {}
 		item.offset, item.size = string.unpack("<I4I4", data)
-		item.file = data:sub(9):match("^([^%z]+)")
-		item.name = item.file:match("[^.]+")
-		item.ext = item.file:sub(string.len(item.name)+2):upper()
-		item.container = imgfile
+		item.fileName = data:sub(9):match("^([^%z]+)")
+		item.name = item.fileName:match("[^.]+")
+		item.ext = item.fileName:sub(string.len(item.name)+2):upper()
+		item.container = img
 		item.sourceFile = self.currentFile
 		table.insert(self.streamedFiles, item)
 	end
 	f:close()
+end
+
+function gta:AddCdImage(imgfile)
+	table.insert(self.cdImageFiles, self:GetFileFs(imgfile))
+end
+
+function JustFileName(path)
+	return path:gsub(".*[/\\]", ""):gsub("[.].*", " "):gsub(" ", "")
 end
 
 function gta:ReadDataFile(file)
@@ -910,18 +1202,19 @@ function gta:ReadDataFile(file)
 		if line == "" then goto continue end
 		local fields = split(line)
 
---		print(line)
+		print(line)
 		if fields[1] == "IDE" then
 			self:ReadFileByDesc(fields[2], IDEdesc)
 		elseif fields[1] == "IPL" then
+			local scene = self:AddScene(JustFileName(fields[2]), self:GetFileFs(fields[2]))
 			self:ReadFileByDesc(fields[2], IPLdesc)
 		elseif fields[1] == "MAPZONE" then
 			self:ReadFileByDesc(fields[2], ZONdesc)
 		elseif fields[1] == "COLFILE" then
 --			print("COL FILE", fields[2], fields[3])
 			self.currentFile = self:GetFileFs(fields[3])
-		elseif fields[1] == "CDIMAGE" then
-			self:ReadCdImage(fields[2])
+		elseif fields[1] == "CDIMAGE" or fields[1] == 'IMG' then
+			self:AddCdImage(fields[2])
 		elseif fields[1] == "SPLASH" then
 			self.currentFile = {}
 		elseif fields[1] == "MODELFILE" then
@@ -985,7 +1278,6 @@ function gta:WriteIDE(file)
 			f:write(self:WritePathSegment(seg) .. "\n")
 		end
 	end
-	-- TODO
 	f:write("end\n")
 
 	f:write("2dfx\n")

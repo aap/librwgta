@@ -35,10 +35,64 @@ Init(void)
 	sol_ImGui::Init(lua);
 }
 
+static rw::int32 txdStoreOffset;
+
+void
+TxdSetParent(rw::TexDictionary *child, rw::TexDictionary *parent)
+{
+	*PLUGINOFFSET(rw::TexDictionary*, child, txdStoreOffset) = parent;
+}
+
+rw::Texture*
+TxdStoreFindCB(const char *name)
+{
+	rw::TexDictionary *txd = rw::TexDictionary::getCurrent();
+	rw::Texture *tex;
+	while(txd){
+		tex = txd->find(name);
+		if(tex) return tex;
+		txd = *PLUGINOFFSET(rw::TexDictionary*, txd, txdStoreOffset);
+	}
+	return nil;
+}
+
+static void*
+createTxdStore(void *object, rw::int32 offset, rw::int32)
+{
+	*PLUGINOFFSET(rw::TexDictionary*, object, offset) = nil;
+	return object;
+}
+
+static void*
+copyTxdStore(void *dst, void *src, rw::int32 offset, rw::int32)
+{
+	*PLUGINOFFSET(rw::TexDictionary*, dst, offset) = *PLUGINOFFSET(rw::TexDictionary*, src, offset);
+	return dst;
+}
+
+static void*
+destroyTxdStore(void *object, rw::int32, rw::int32)
+{
+	return object;
+}
+
+void
+RegisterTexStorePlugin(void)
+{
+	txdStoreOffset = rw::TexDictionary::registerPlugin(sizeof(void*), gta::ID_TXDSTORE,
+			createTxdStore,
+			destroyTxdStore,
+			copyTxdStore);
+	rw::Texture::findCB = TxdStoreFindCB;
+}
+
+
 bool
 attachPlugins(void)
 {
 	gta::attachPlugins();
+	// probably should go into the thing above
+	RegisterTexStorePlugin();
 	return true;
 }
 
@@ -66,8 +120,11 @@ myRenderCB(rw::Atomic *atomic)
 		SetRenderState(rw::ZWRITEENABLE, zwrite);
 		SetRenderState(rw::FOGENABLE, fog);
 		SetRenderState(rw::ALPHATESTREF, aref);
-	}else
+	}else{
+// tmp until we have pipelines integrated better
+atomic->pipeline = nil;
 		atomic->getPipeline()->render(atomic);
+	}
 }
 
 

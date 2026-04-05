@@ -417,6 +417,12 @@ void myRenderCB(rw::Atomic *atomic);
 	gtatab.set("RenderAtomic", [](rw::Atomic *a){
 		myRenderCB(a);
 	});
+
+void TxdSetParent(rw::TexDictionary *child, rw::TexDictionary *parent);
+	gtatab.set("TxdSetParent", [](rw::TexDictionary *child, rw::TexDictionary *parent){
+			TxdSetParent(child, parent);
+	});
+
 }
 
 void
