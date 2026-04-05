@@ -252,7 +252,10 @@ InitRW(void)
 	colors[ImGuiCol_NavWindowingDimBg]      = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
 	colors[ImGuiCol_ModalWindowDimBg]       = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
 
-	execLua("init.lua");
+	if(sk::args.argc > 1)
+		execLua(sk::args.argv[1]);
+	else
+		execLua("init.lua");
 	luaCall("Init");
 	return true;
 }
