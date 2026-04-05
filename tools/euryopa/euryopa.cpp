@@ -48,7 +48,7 @@ int  gColourFilter;
 bool gRadiosity;
 
 // SA building pipe
-int gBuildingPipeSwitch = PLATFORM_PS2;
+int gBuildingPipeSwitch;	// also leeds pipe
 float gDayNightBalance;
 float gWetRoadEffect;
 
@@ -372,7 +372,7 @@ pick(void)
 	static rw::RGBA black = { 0, 0, 0, 0xFF };
 	TheCamera.m_rwcam->clear(&black, rw::Camera::CLEARIMAGE|rw::Camera::CLEARZ);
 	RenderEverythingColourCoded();
-	return gta::GetColourCode(CPad::newMouseState.x, CPad::newMouseState.y);
+	return gta::getColourCode(CPad::newMouseState.x, CPad::newMouseState.y);
 }
 
 void
@@ -521,6 +521,28 @@ LoadGame(void)
 }
 
 void
+UpdateDayNightBalance(void)
+{
+	float minute = currentHour*60.0f + currentMinute;
+	const float morningStart = 6 * 60.0f;
+	const float morningEnd = 7 * 60.0f;
+	const float eveningStart = 20 * 60.0f;
+	const float eveningEnd = 21 * 60.0f;
+
+	// 1.0 is night, 0.0 is day
+	if(minute < morningStart)
+		gDayNightBalance = 1.0f;
+	else if(minute < morningEnd)
+		gDayNightBalance = (morningEnd - minute) / (morningEnd - morningStart);
+	else if(minute < eveningStart)
+		gDayNightBalance = 0.0f;
+	else if(minute < eveningEnd)
+		gDayNightBalance = 1.0f - (eveningEnd - minute) / (eveningEnd - eveningStart);
+	else
+		gDayNightBalance = 1.0f;
+}
+
+void
 dogizmo(void)
 {
 	rw::Camera *cam;
@@ -591,7 +613,6 @@ Draw(void)
 	Weather::Update();
 	Timecycle::Update();
 	Timecycle::SetLights();
-
 	UpdateDayNightBalance();
 
 	TheCamera.m_rwcam->setFarPlane(Timecycle::currentColours.farClp);
@@ -623,6 +644,9 @@ Draw(void)
 //	dogizmo();
 
 	handleTool();
+
+	// set these after gui
+	CustomPipeSettings();
 
 	DefinedState();
 	Scene.camera->clear(&clearcol, rw::Camera::CLEARIMAGE|rw::Camera::CLEARZ);

@@ -1,14 +1,8 @@
 Librw = os.getenv("LIBRW")
 Zlib = os.getenv("ZLIBDIR")
-Lua = os.getenv("LUADIR")
 
 if not Librw then
-    error("Please set the LIBRW environment variable to your librw folder path.")
-end
-
-if not Lua then
-	-- whatever
-	Lua = "/usr/include/lua5.4"
+	Librw = "../librw"
 end
 
 newoption {
@@ -127,20 +121,13 @@ workspace "librwgta"
 	libdirs { path.join(Librw, Libdir) }
 	includedirs { Librw }
 	includedirs { "src" }
+	includedirs { "lua" }
 
 project "librwgta"
 	kind "StaticLib"
 	targetname "rwgta"
 	targetdir (Libdir)
 	files { "src/*.*" }
-
-function tool(dir)
-	targetdir (Bindir)
-	files { path.join("tools", dir, "*") }
-	libdirs { Libdir }
-	links { "rw", "librwgta" }
-	findlibs()
-end
 
 function findlibs()
 	filter { "platforms:linux*gl3" }
@@ -176,9 +163,33 @@ function skeleton()
 	includedirs { path.join(Librw, "skeleton") }
 end
 
+function setdebugdir(dir)
+	local env = os.getenv(dir:upper() .. "_DEBUGDIR")
+	if env then
+		debugdir(env)
+	else
+		debugdir(path.join("tools", dir))
+	end
+end
+
+function tool(dir)
+	targetdir (Bindir)
+	files { path.join("tools", dir, "*.cpp"),
+	        path.join("tools", dir, "*.c"),
+	        path.join("tools", dir, "*.h"),
+	        path.join("tools", dir, "sol", "*.cpp"),
+	        path.join("tools", dir, "sol", "*.h")
+	}
+	setdebugdir(dir)
+	libdirs { Libdir }
+	links { "rw", "librwgta" }
+	findlibs()
+end
+
 function skeltool(dir)
 	targetdir (Bindir)
 	files { path.join("tools", dir, "*.cpp"),
+	        path.join("tools", dir, "*.c"),
 	        path.join("tools", dir, "*.h"),
 	        path.join("tools", dir, "sol", "*.cpp"),
 	        path.join("tools", dir, "sol", "*.h")
@@ -188,7 +199,7 @@ function skeltool(dir)
 		{["skeleton"] = { "skeleton/*" }},
 	}
 	skeleton()
-	debugdir ( path.join("tools", dir) )
+	setdebugdir(dir)
 	includedirs { "." }
 	libdirs { Libdir }
 	links { "rw", "librwgta" }
@@ -196,18 +207,13 @@ function skeltool(dir)
 end
 
 project "selanna"
+	cppdialect("c++17")
 	tool("selanna")
 	kind "ConsoleApp"
 	removeplatforms { "*gl3", "*d3d9" }
-	includedirs { Lua }
-	links { "lua5.4" }
-
-	local env = os.getenv("SELANNA_DEBUGDIR")
-	if env then
-		debugdir(env)
-	end
 
 project "selanna3d"
+	cppdialect("c++17")
 	kind "WindowedApp"
 	characterset ("MBCS")
 	flags { "WinMain" }
@@ -215,33 +221,16 @@ project "selanna3d"
 	includedirs { "tools/selanna3d" }
 	removeplatforms { "*null" }
 	removeplatforms { "ps2" } -- for now
-	includedirs { Lua }
-	links { "lua5.4" }
-
-	local env = os.getenv("SELANNA3D_DEBUGDIR")
-	if env then
-		debugdir(env)
-	end
 
 project "convdff"
 	tool("convdff")
 	kind "ConsoleApp"
 	removeplatforms { "*gl3", "*d3d9" }
 
-	local env = os.getenv("CONVDFF_DEBUGDIR")
-	if env then
-		debugdir(env)
-	end
-
 project "convtxd"
 	tool("convtxd")
 	kind "ConsoleApp"
 	removeplatforms { "*gl3", "*d3d9" }
-
-	local env = os.getenv("CONVTXD_DEBUGDIR")
-	if env then
-		debugdir(env)
-	end
 
 project "lcsconv"
 	tool("storiesconv")
@@ -249,21 +238,11 @@ project "lcsconv"
 	removeplatforms { "*gl3", "*d3d9" }
 	defines { "LCS" }
 
-	local env = os.getenv("LCSCONV_DEBUGDIR")
-	if env then
-		debugdir(env)
-	end
-
 project "vcsconv"
 	tool("storiesconv")
 	kind "ConsoleApp"
 	removeplatforms { "*gl3", "*d3d9" }
 	defines { "VCS" }
-
-	local env = os.getenv("VCSCONV_DEBUGDIR")
-	if env then
-		debugdir(env)
-	end
 
 project "lcsview"
 	kind "WindowedApp"
@@ -289,11 +268,6 @@ project "lcsview"
 	removeplatforms { "ps2" } -- for now
 	defines { "LCS" }
 
-	local env = os.getenv("LCSVIEW_DEBUGDIR")
-	if env then
-		debugdir(env)
-	end
-
 project "vcsview"
 	kind "WindowedApp"
 	characterset ("MBCS")
@@ -318,11 +292,6 @@ project "vcsview"
 	removeplatforms { "ps2" } -- for now
 	defines { "VCS" }
 
-	local env = os.getenv("VCSVIEW_DEBUGDIR")
-	if env then
-		debugdir(env)
-	end
-
 project "euryopa"
 	kind "WindowedApp"
 	characterset ("MBCS")
@@ -332,11 +301,6 @@ project "euryopa"
 	files { "tools/euryopa/minilzo/minilzo.c" }
 	removeplatforms { "*null" }
 	removeplatforms { "ps2" }
-
-	local env = os.getenv("EURYOPA_DEBUGDIR")
-	if env then
-		debugdir(env)
-	end
 
 project "gtaclumpview"
 	kind "WindowedApp"

@@ -56,7 +56,8 @@ function gta:Instantiate(inst)
 
 --	if inst.mdl.lodDist1 > 300 then return end
 	self:LoadAtomics(inst.mdl)
-	if not inst.mdl.rwAtomics then
+	if not inst.mdl.rwAtomics or
+	   #inst.mdl.rwAtomics < 1 then
 		return
 	end
 	local atomic = inst.mdl.rwAtomics[1]:clone()
@@ -142,7 +143,7 @@ function gta:DrawInstance(inst)
 	if (mdl.flags & (4|8)) ~= 0 then
 		return inst.rwAtomic
 	end
-	gta.RenderAtomic(inst.rwAtomic)
+	inst.rwAtomic:render()
 	return nil
 end
 

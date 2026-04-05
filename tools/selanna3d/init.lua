@@ -105,6 +105,8 @@ end
 
 function LoadSA()
 	local g = gta.make(gta.GameSA, "/u/aap/other/gta/gtasa")
+	g.dayNightBalance = 0
+	g.wetRoads = 0
 	g:AddCdImage("models/gta3.img")
 	g:AddCdImage("models/gta_int.img")
 	g:ReadDataFile("data/default.dat")
@@ -149,6 +151,9 @@ sceneCam = nil
 modelCam = nil
 activeCam = nil
 rwCamera = nil
+-- should go into camera maybe?
+camspeed = 0
+camspeedSide = 0
 
 clearCol = rw.RGBA(0x80, 0x80, 0x80, 0xFF)
 
@@ -173,57 +178,81 @@ function Init()
 	local activeCam = sceneCam
 	sceneCam.rwCamera = rwCamera
 	sceneCam.aspectRatio = gWidth/gHeight
-	sceneCam.fov = 80;
-	sceneCam.near = 0.1;
-	sceneCam.far = 2000;
+	sceneCam.fov = 80
+	sceneCam.near = 0.1
+	sceneCam.far = 2000
 	sceneCam.position = rw.V3d(679, -1006, 96)
 	sceneCam.target = rw.V3d(1700, -455, -274)
 	sceneCam:setDistance(30)
-	sceneCam:update();
+	sceneCam:update()
 
 	modelCam = Camera.new()
 	modelCam.rwCamera = rwCamera
 	modelCam.aspectRatio = gWidth/gHeight
-	modelCam.fov = 80;
-	modelCam.near = 0.1;
-	modelCam.far = 1000;
+	modelCam.fov = 80
+	modelCam.near = 0.1
+	modelCam.far = 1000
 	modelCam.position = rw.V3d(20, 20, 20)
 	modelCam.target = rw.V3d(0, 0, 0)
-	modelCam:update();
+	modelCam:update()
 
 print("done")
 end
 
+function clamp(val, min, max)
+	if val < min then return min end
+	if val > max then return max end
+	return val
+end
+
 function processCam(cam, timestep)
 	timestep = timestep*30
+
 	local shift = sk.keysdown[sk.KEY_LSHIFT] or sk.keysdown[sk.KEY_RSHIFT]
 	local alt = sk.keysdown[sk.KEY_LALT] or sk.keysdown[sk.KEY_RALT]
-	local dx = sk.mouse.x - sk.prevmouse.x
-	local dy = sk.mouse.y - sk.prevmouse.y
-	local s = 0.01*timestep
+	local dx = (sk.mouse.x - sk.prevmouse.x)/gWidth
+	local dy = (sk.mouse.y - sk.prevmouse.y)/gHeight
+
+	local s = 4.5
 	if (sk.mouse.btn & 1) ~= 0 then
 		cam:turn(-dx*s, -dy*s)
 	elseif (sk.mouse.btn & 2) ~= 0 then
 		if alt then
 			cam:orbit(-dx*s, dy*s)
 		else
-			cam:pan(-dx*s*10, dy*s*10)
+			local d = cam:distanceTo(cam.target)/5
+			cam:pan(-dx*s*d, dy*s*d)
 		end
 	elseif (sk.mouse.btn & 4) ~= 0 then
 		cam:zoom(-dy*s*10)
 	end
 
-	s = 1.0*timestep
+	cam:zoom(sk.mouse.dwheel*2)
+
+	s = timestep
 	if shift then s = s*2 end
+
 	if sk.keysdown[sk.KEY_W] then
-		cam:dolly(s)
+		camspeed = camspeed + 0.1
 	elseif sk.keysdown[sk.KEY_S] then
-		cam:dolly(-s)
-	elseif sk.keysdown[sk.KEY_A] then
-		cam:pan(-s, 0)
+		camspeed = camspeed - 0.1
+	else
+		camspeed = 0
+	end
+	camspeed = clamp(camspeed, -70, 70)
+	cam:dolly(camspeed*s)
+
+	if sk.keysdown[sk.KEY_A] then
+		camspeedSide = camspeedSide - 0.1
 	elseif sk.keysdown[sk.KEY_D] then
-		cam:pan(s, 0)
-	elseif sk.keysdown[sk.KEY_J] then
+		camspeedSide = camspeedSide + 0.1
+	else
+		camspeedSide = 0
+	end
+	camspeedSide = clamp(camspeedSide, -70, 70)
+	cam:pan(camspeedSide*s, 0)
+
+	if sk.keysdown[sk.KEY_J] then
 		if selection and selection.position then
 			activeCam:jumpTo(tV3d(selection.position))
 		end
@@ -512,7 +541,6 @@ function guiList(list, label, cullhidden)
 end
 
 function guiCamera(cam)
-	if not ImGui.CollapsingHeader("Camera", ImGuiTreeNodeFlags.DefaultOpen) then return end
 	local p = cam.position
 	local xyz, used = ImGui.InputFloat3("Position", {p.x, p.y, p.z})
 	cam.position = rw.V3d(xyz[1], xyz[2], xyz[3])
@@ -520,6 +548,32 @@ function guiCamera(cam)
 	p = cam.target
 	xyz, used = ImGui.InputFloat3("Target", {p.x, p.y, p.z})
 	cam.target = rw.V3d(xyz[1], xyz[2], xyz[3])
+
+	cam.fov, _ = ImGui.DragFloat("FOV", cam.fov, 0.1, 10, 130)
+end
+
+function guiRendering(g)
+	if ImGui.RadioButton("Draw HD", viewer.lodMode == 1) then viewer.lodMode = 1 end
+	ImGui.SameLine()
+	if ImGui.RadioButton("Draw LOD", viewer.lodMode == 2) then viewer.lodMode = 2 end
+	ImGui.SameLine()
+	if ImGui.RadioButton("Draw Normal", viewer.lodMode == 3) then viewer.lodMode = 3 end
+	viewer.lodMult, _ = ImGui.DragFloat("LOD multiplier",
+			viewer.lodMult, 0.05, 0.5, 10.0)
+
+	if g then
+		g.hour, _ = ImGui.InputInt("Hour", g.hour)
+		g.hour = g.hour % 24
+
+		if g.dayNightBalance then
+			g.dayNightBalance, _ = ImGui.DragFloat("Day/Night",
+					g.dayNightBalance, 0.005, 0, 1)
+		end
+		if g.wetRoads then
+			g.wetRoads, _ = ImGui.DragFloat("Wet Roads",
+					g.wetRoads, 0.005, 0, 1)
+		end
+	end
 end
 
 function guiItem(item, title)
@@ -625,20 +679,14 @@ function gui()
 			ImGui.EndTabItem()
 		end
 		if ImGui.BeginTabItem("View") then
-			if game then
-				game.hour, _ = ImGui.InputInt("Hour", game.hour)
-				game.hour = game.hour % 24
+--			ImGui.LabelText("Framerate", tostring(gFramerate))
+--			ImGui.LabelText("DeltaTime", tostring(gDeltaTime))
+			if ImGui.CollapsingHeader("Rendering", ImGuiTreeNodeFlags.DefaultOpen) then
+				guiRendering(game)
 			end
-			if ImGui.RadioButton("Draw HD", viewer.lodMode == 1) then viewer.lodMode = 1 end
-			ImGui.SameLine()
-			if ImGui.RadioButton("Draw LOD", viewer.lodMode == 2) then viewer.lodMode = 2 end
-			ImGui.SameLine()
-			if ImGui.RadioButton("Draw Normal", viewer.lodMode == 3) then viewer.lodMode = 3 end
-
-			viewer.lodMult, _ = ImGui.DragFloat("LOD multiplier",
-					viewer.lodMult, 0.05, 0.5, 10.0)
-
-			guiCamera(activeCam)
+			if ImGui.CollapsingHeader("Camera", ImGuiTreeNodeFlags.DefaultOpen) then
+				guiCamera(activeCam)
+			end
 			ImGui.EndTabItem()
 		end
 		if ImGui.BeginTabItem("Console") then
@@ -701,7 +749,7 @@ function gta:RenderMap()
 	end
 	for _, inst in pairs(drawLast) do
 		setColor(inst)
-		gta.RenderAtomic(inst.rwAtomic)
+		inst.rwAtomic:render()
 	end
 	gta.SetRenderColourCoded(0)
 end
@@ -729,6 +777,9 @@ function Draw(timestep)
 		else selection = nil
 		end
 	end
+	if sk.isMouseClicked(sk.RMB) then
+		selection = nil
+	end
 
 	rwCamera:clear(clearCol, rw.Camera_CLEARIMAGE|rw.Camera_CLEARZ)
 
@@ -741,13 +792,15 @@ function Draw(timestep)
 	if clump then
 		clump:render()
 	elseif game then
+		if game.dayNightBalance then gta.SetDayNightBalance(game.dayNightBalance) end
+		if game.wetRoads then gta.SetWetRoads(game.wetRoads) end
 		game:RenderMap()
 	end
 
 	sk.ImGuiEndFrame()
 
 	rwCamera:endUpdate()
-	rwCamera:showRaster(0)
+	rwCamera:showRaster(1)
 end
 
 sk.keysdown = {}
@@ -765,9 +818,16 @@ function sk.isMouseClicked(btn)
 	return sk.clickstate == 2 and sk.clickbtn == btn
 end
 
+function sk.mouseNotMoved()
+	local dx = sk.mouse.x - sk.clickx
+	local dy = sk.mouse.y - sk.clicky
+	return dx*dx + dy*dy < 3*3
+end
+
 function sk.updateMouse()
 	sk.prevmouse = sk.mouse
 	sk.mouse = copytab(sk.curmouse)
+	sk.curmouse.dwheel = 0
 
 	if sk.clickstate == 2 then sk.clickstate = 0 end
 	if sk.clickstate == 0 and (sk.mouse.btn & (sk.mouse.btn ~ sk.prevmouse.btn)) ~= 0 then
@@ -775,11 +835,9 @@ function sk.updateMouse()
 		sk.clickx = sk.mouse.x
 		sk.clicky = sk.mouse.y
 	elseif sk.clickstate == 1 and sk.mouse.btn == 0 then
-		if sk.mouse.x == sk.clickx and sk.mouse.y == sk.clicky then
+		if sk.mouseNotMoved() then
 			sk.clickstate = 2
 			sk.clickbtn = sk.prevmouse.btn & ~(sk.prevmouse.btn-1)
-			local logtab = { 0, 1, 2, 0, 3 }
-			sk.clickbtn = logtab[(sk.clickbtn&7)+1]
 		else
 			sk.clickstate = 0
 		end
@@ -793,22 +851,14 @@ end
 function KeyDown(k)
 	sk.keysdown[k] = true
 
-	if k == sk.KEY_C then
-		local cam = activeCam
-		print(cam.position)
-		print(cam.target)
-		print(cam.fov)
-		print(cam.aspectRatio)
-		print(cam.near)
-		print(cam.far)
-	elseif k == sk.KEY_G then
+	if k == sk.KEY_G then
 		gizmo.op = gizmo.TRANSLATE
 	elseif k == sk.KEY_R then
 		gizmo.op = gizmo.ROTATE
 	end
 end
 
-sk.curmouse = { x = 0, y = 0, btn = 0 }
+sk.curmouse = { x = 0, y = 0, btn = 0, dwheel = 0 }
 sk.mouse = copytab(sk.curmouse)
 sk.prevmouse = copytab(sk.curmouse)
 
@@ -824,4 +874,7 @@ function Resize(w, h)
 	sk.CameraSize(rwCamera, w, h)
 	sceneCam.aspectRatio = w/h
 	modelCam.aspectRatio = w/h
+end
+function MouseWheel(delta)
+	sk.curmouse.dwheel = sk.curmouse.dwheel + delta
 end

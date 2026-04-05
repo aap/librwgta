@@ -599,8 +599,12 @@ RenderEverythingCollisions(void)
 }
 
 void
-setupLeedsPipe(void)
+CustomPipeSettings(void)
 {
+	gta::buildingPipe_platformSwitch = gBuildingPipeSwitch;
+	gta::buildingPipe_dayNightBalance = gDayNightBalance;
+	gta::buildingPipe_wetRoad = gWetRoadEffect;
+
 	gta::leedsPipe_amb = Timecycle::currentColours.amb;
 	gta::leedsPipe_emiss = Timecycle::currentColours.amb_bl;
 	switch(gBuildingPipeSwitch){
@@ -616,50 +620,10 @@ setupLeedsPipe(void)
 	}
 }
 
-#ifdef RW_D3D9
-static void
-leedsRenderCB(rw::Atomic *atomic, rw::d3d9::InstanceDataHeader *header)
-{
-	setupLeedsPipe();
-	gta::leedsRenderCB(atomic, header);
-}
-
-void
-MakeLeedsPipe(void)
-{
-	gta::MakeLeedsPipe();
-	((rw::d3d9::ObjPipeline*)gta::leedsPipe)->renderCB = leedsRenderCB;
-}
-#endif
-
-#ifdef RW_GL3
-static void
-leedsRenderCB(rw::Atomic *atomic, rw::gl3::InstanceDataHeader *header)
-{
-	setupLeedsPipe();
-	gta::leedsRenderCB(atomic, header);
-}
-
-void
-MakeLeedsPipe(void)
-{
-	gta::MakeLeedsPipe();
-	((rw::gl3::ObjPipeline*)gta::leedsPipe)->renderCB = leedsRenderCB;
-}
-#endif
-
 void
 RegisterPipes(void)
 {
 #ifdef RW_GL3
-	rw::gl3::registerUniform("u_dayparam");
-	rw::gl3::registerUniform("u_nightparam");
-	rw::gl3::registerUniform("u_texmat");
-	rw::gl3::registerUniform("u_envmat");
-	rw::gl3::registerUniform("u_envXform");
-	rw::gl3::registerUniform("u_shininess");
-	rw::gl3::registerUniform("u_colorscale");
-
 	rw::gl3::registerUniform("tex0");
 	rw::gl3::registerUniform("tex1");
 	rw::gl3::registerUniform("u_lm");
@@ -667,9 +631,6 @@ RegisterPipes(void)
 	rw::gl3::registerUniform("u_postfxCol1");
 	rw::gl3::registerUniform("u_postfxCol2");
 	rw::gl3::registerUniform("u_postfxParams");
-
-	rw::gl3::registerUniform("u_amb");
-	rw::gl3::registerUniform("u_emiss");
 #endif
 }
 
@@ -677,7 +638,7 @@ void
 RenderInit(void)
 {
 	colourCodePipe = gta::makeColourCodePipeline();
-	MakeCustomBuildingPipelines();
+	gta::makeCustomBuildingPipelines();
 	MakeNeoWorldPipe();
-	MakeLeedsPipe();
+	gta::makeLeedsPipe();
 }

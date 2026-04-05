@@ -52,9 +52,40 @@ ConvertTxd(rw::TexDictionary *txd)
 }
 
 void
+ConvertClump(rw::Clump *clump)
+{
+	FORLIST(lnk, clump->atomics){
+		rw::Atomic *atm = rw::Atomic::fromClump(lnk);
+		gta::attachCustomPipelines(atm);
+		int32 driver = rw::platform;
+		int32 platform = rw::findPlatform(atm);
+		if(platform){
+			rw::platform = platform;
+			rw::switchPipes(atm, rw::platform);
+		}
+		if(atm->geometry->flags & rw::Geometry::NATIVE)
+			atm->uninstance();
+		rw::ps2::unconvertADC(atm->geometry);
+		rw::platform = driver;
+
+void myRenderCB(rw::Atomic *atomic);
+		atm->setRenderCB(myRenderCB);
+	}
+}
+
+void
+SetupAtomicPipelines(rw::Atomic *atm)
+{
+	// SA
+	if(gta::isBuildingPipeAttached(atm))
+		gta::setupBuildingPipe(atm);
+}
+
+void
 initLuaSkeleton(void)
 {
 	sol::table sktab = lua["sk"].get_or_create<sol::table>();
+	sol::table gtatab = lua["gta"].get_or_create<sol::table>();
 
 	lua.new_usertype<Camera>("Camera",
 		"new", sol::constructors<Camera()>(),
@@ -76,6 +107,7 @@ initLuaSkeleton(void)
 			cam->m_target = add(cam->m_position, scale(fwd, d));
 		},
 		"distanceTo", &Camera::distanceTo,
+		"getHeading", &Camera::getHeading,
 		"jumpTo", [](Camera *cam, rw::V3d pos) {
 			rw::V3d dist = sub(pos, cam->m_target);
 			cam->m_position = add(cam->m_position, dist);
@@ -117,7 +149,7 @@ initLuaSkeleton(void)
 		ImGui::Render();
 		ImGui_ImplRW_RenderDrawLists(ImGui::GetDrawData());
 	});
-	sktab.set_function("ConvertTexDict", [](rw::TexDictionary *txd) {
-		ConvertTxd(txd);
-	});
+	sktab.set_function("ConvertTexDict", &ConvertTxd);
+	sktab.set_function("ConvertClump", &ConvertClump);
+	gtatab.set_function("SetupAtomicPipelines", &SetupAtomicPipelines);
 }

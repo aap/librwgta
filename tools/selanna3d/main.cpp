@@ -35,7 +35,7 @@ Init(void)
 	sol_ImGui::Init(lua);
 }
 
-static rw::int32 txdStoreOffset;
+static int32 txdStoreOffset;
 
 void
 TxdSetParent(rw::TexDictionary *child, rw::TexDictionary *parent)
@@ -57,21 +57,21 @@ TxdStoreFindCB(const char *name)
 }
 
 static void*
-createTxdStore(void *object, rw::int32 offset, rw::int32)
+createTxdStore(void *object, int32 offset, int32)
 {
 	*PLUGINOFFSET(rw::TexDictionary*, object, offset) = nil;
 	return object;
 }
 
 static void*
-copyTxdStore(void *dst, void *src, rw::int32 offset, rw::int32)
+copyTxdStore(void *dst, void *src, int32 offset, int32)
 {
 	*PLUGINOFFSET(rw::TexDictionary*, dst, offset) = *PLUGINOFFSET(rw::TexDictionary*, src, offset);
 	return dst;
 }
 
 static void*
-destroyTxdStore(void *object, rw::int32, rw::int32)
+destroyTxdStore(void *object, int32, int32)
 {
 	return object;
 }
@@ -120,11 +120,8 @@ myRenderCB(rw::Atomic *atomic)
 		SetRenderState(rw::ZWRITEENABLE, zwrite);
 		SetRenderState(rw::FOGENABLE, fog);
 		SetRenderState(rw::ALPHATESTREF, aref);
-	}else{
-// tmp until we have pipelines integrated better
-atomic->pipeline = nil;
+	}else
 		atomic->getPipeline()->render(atomic);
-	}
 }
 
 
@@ -165,6 +162,7 @@ InitRW(void)
 	rw::Image::setSearchPath("textures/");
 
 	colourCodePipe = gta::makeColourCodePipeline();
+	gta::makeCustomBuildingPipelines();
 
 	lua["gWidth"] = sk::globals.width;
 	lua["gHeight"] = sk::globals.height;
@@ -279,7 +277,8 @@ AppEventHandler(sk::Event e, void *param)
 	case PLUGINATTACH:
 		return attachPlugins() ? EVENTPROCESSED : EVENTERROR;
 	case KEYDOWN:
-		if(!io.WantCaptureKeyboard && !io.WantTextInput && !ImGuizmo::IsOver())
+//		if(!io.WantCaptureKeyboard && !io.WantTextInput && !ImGuizmo::IsOver())
+		if(!io.WantCaptureKeyboard && !io.WantTextInput)
 			luaCall("KeyDown", *(int*)param);
 		return EVENTPROCESSED;
 	case KEYUP:
@@ -287,7 +286,7 @@ AppEventHandler(sk::Event e, void *param)
 		return EVENTPROCESSED;
 
 	case MOUSEBTN:
-		if(!io.WantCaptureMouse && !ImGuizmo::IsOver()){
+		if(!io.WantCaptureMouse && !ImGuizmo::IsOver()) {
 			ms = (MouseState*)param;
 			luaCall("MouseBtn", ms->buttons);
 		}else
@@ -298,6 +297,14 @@ AppEventHandler(sk::Event e, void *param)
 		luaCall("MouseMotion", ms->posx, ms->posy);
 		return EVENTPROCESSED;
 
+	case MOUSEWHEEL:
+		if(!io.WantCaptureMouse) {
+			ms = (MouseState*)param;
+			luaCall("MouseWheel", ms->wheelDelta);
+		}
+		return EVENTPROCESSED;
+
+
 	case RESIZE:
 		r = (Rect*)param;
 		if(r->w == 0) r->w = 1;
@@ -307,6 +314,8 @@ AppEventHandler(sk::Event e, void *param)
 		luaCall("Resize", r->w, r->h);
 		break;
 	case IDLE:
+		lua["gFramerate"] = ImGui::GetIO().Framerate;
+		lua["gDeltaTime"] = ImGui::GetIO().DeltaTime;
 		luaCall("Draw", *(float*)param);
 		return EVENTPROCESSED;
 	}

@@ -468,6 +468,12 @@ function gta:GetModelClump(mdl)
 	if not si or si.ext ~= "DFF" then return nil end
 	rw.ImageSetSearchPath(self.imagePath)
 	mdl.rwClump = rw.readClumpFile(si.container.fullPath, si.offset*2048, si.size*2048)
+	if mdl.rwClump then
+		sk.ConvertClump(mdl.rwClump)
+		for a in mdl.rwClump:atomics() do
+			gta.SetupAtomicPipelines(a)
+		end
+	end
 	return mdl.rwClump
 end
 

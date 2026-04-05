@@ -78,7 +78,7 @@ makeColourCodePipeline(void)
 }
 
 int32
-GetColourCode(int x, int y)
+getColourCode(int x, int y)
 {
 	int32 res = 0;
 	IDirect3DSurface9 *backbuffer = nil;
@@ -176,7 +176,7 @@ makeColourCodePipeline(void)
 }
 
 int32
-GetColourCode(int x, int y)
+getColourCode(int x, int y)
 {
 	rw::RGBA col;
 	int viewport[4];
