@@ -432,6 +432,9 @@ function Scene:imguiDraw()
 		end
 		guiList(self.instances, "Instances")
 		guiList(self.instances, "Visible Instances", true)
+		if self.carGenerators then
+			guiList(self.carGenerators, "Car Generators")
+		end
 
 		ImGui.TreePop()
 	end

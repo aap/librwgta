@@ -406,9 +406,13 @@ function gta:AddPickup(pick)
 	table.insert(self.pickups, pick)
 end
 
-function gta:AddCarGenerator(cargen)
-	cargen.sourceFile = self.currentFile
+function gta:AddCarGenerator(cargen, file)
+	cargen.sourceFile = file
 	table.insert(self.carGenerators, cargen)
+
+	local scene = cargen.sourceFile.scene
+	if not scene.carGenerators then scene.carGenerators = {} end
+	table.insert(scene.carGenerators, cargen)
 end
 
 function gta:AddStuntJump(jump)
@@ -1402,7 +1406,7 @@ function gta:ReadCarGenLine(line)
 	cargen.lockedChance = t:nextInt()
 	cargen.minDelay = t:nextInt()
 	cargen.maxDelay = t:nextInt()
-	self:AddCarGenerator(cargen)
+	self:AddCarGenerator(cargen, self.currentFile)
 end
 
 function gta:WriteCarGenLine(cargen)
@@ -1577,6 +1581,21 @@ function gta:ReadBinaryInstance(strm)
 	return inst
 end
 
+function gta:ReadBinaryCarGen(strm)
+	local cargen = {}
+	cargen.position = strm:nextXYZ()
+	cargen.rot = strm:nextFloat()
+	cargen.modelId = strm:nextI32()
+	cargen.col1 = strm:nextI32()
+	cargen.col2 = strm:nextI32()
+	cargen.flags = strm:nextI32()
+	cargen.alarmChance = strm:nextI32()
+	cargen.lockedChance = strm:nextI32()
+	cargen.minDelay = strm:nextI32()
+	cargen.maxDelay = strm:nextI32()
+	return cargen
+end
+
 function gta:LoadStreamedIPLs()
 	for name, ipl in pairs(self.streamIplsByName) do
 		local scene = Scene.make(name, ipl.streamingInfo)
@@ -1589,6 +1608,10 @@ function gta:LoadStreamedIPLs()
 		strm.pos = header.offInstances + 1
 		for i = 1,header.numInstances do
 			self:AddInstance(self:ReadBinaryInstance(strm), ipl.streamingInfo)
+		end
+		strm.pos = header.offCarGenerators + 1
+		for i = 1,header.numCarGenerators do
+			self:AddCarGenerator(self:ReadBinaryCarGen(strm), ipl.streamingInfo)
 		end
 	end
 
