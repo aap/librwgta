@@ -125,6 +125,7 @@ function LoadSA()
 	g:AddCdImage("models/gta_int.img")
 	g:ReadDataFile("data/default.dat")
 	g:ReadDataFile("data/gta_nopaths.dat")
+--	g:ReadDataFile("data/gta.dat")
 	g:FinishLoading()
 
 	g:LoadStreamedIPLs()

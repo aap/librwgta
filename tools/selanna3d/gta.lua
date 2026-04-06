@@ -156,8 +156,8 @@ function addFloat(line, f)
 	return addString(line, tostring(f))
 end
 function addXY(line, xy)
-	line = addFloat(line, xyz.x)
-	return addFloat(line, xyz.y)
+	line = addFloat(line, xy.x)
+	return addFloat(line, xy.y)
 end
 function addXYZ(line, xyz)
 	line = addFloat(line, xyz.x)
@@ -225,8 +225,12 @@ function gta.make(game, gameDir)
 	g.scenes = {}
 	g.scenesByName = {}
 
+	g.genericTxds = {}
 	g.cdImageFiles = {}
 	g.streamedFiles = {}
+	g.streamIplsByName = {}
+
+	-- IDE
 	g.modelsById = {}
 	g.modelsByName = {}
 	g.txdsByName = {}
@@ -239,14 +243,20 @@ function gta.make(game, gameDir)
 	g.weapons = {}
 	g.effects = {}
 	g.txdParents = {}
-	g.genericTxds = {}
-	g.streamIplsByName = {}
 
+	-- IPL
 	g.instances = {}
 	g.cullZones = {}
 	g.zones = {}
 	g.mapZones = {}
 	g.occluders = {}
+	g.garages = {}
+	g.entryExits = {}
+	g.pickups = {}
+	g.carGenerators = {}
+	g.stuntJumps = {}
+	g.timecycMods = {}
+	g.audioZones = {}
 
 	g.pathSegments = {}
 
@@ -375,9 +385,45 @@ function gta:AddPathSegment(seg)
 	table.insert(self.pathSegments, seg)
 end
 
+
 function gta:AddTxdParent(txdp)
 	txdp.sourceFile = self.currentFile
 	table.insert(self.txdParents, txdp)
+end
+
+function gta:AddGarage(grge)
+	grge.sourceFile = self.currentFile
+	table.insert(self.garages, grge)
+end
+
+function gta:AddEntryExit(enex)
+	enex.sourceFile = self.currentFile
+	table.insert(self.entryExits, enex)
+end
+
+function gta:AddPickup(pick)
+	pick.sourceFile = self.currentFile
+	table.insert(self.pickups, pick)
+end
+
+function gta:AddCarGenerator(cargen)
+	cargen.sourceFile = self.currentFile
+	table.insert(self.carGenerators, cargen)
+end
+
+function gta:AddStuntJump(jump)
+	jump.sourceFile = self.currentFile
+	table.insert(self.stuntJumps, jump)
+end
+
+function gta:AddTimeCycleMod(tcyc)
+	tcyc.sourceFile = self.currentFile
+	table.insert(self.timecycMods, tcyc)
+end
+
+function gta:AddAudioZone(auzo)
+	auzo.sourceFile = self.currentFile
+	table.insert(self.audioZones, auzo)
 end
 
 function gta:LinkStreamingInfo()
@@ -1259,6 +1305,208 @@ function gta:WriteOccluderLine(occl)
 	return line
 end
 
+function gta:ReadGarageLine(line)
+	local t = TokenStream.make(line)
+	local grge = {}
+	grge.pos1 = t:nextXY()
+	grge.zbot = t:nextFloat()
+	grge.pos2 = t:nextXY()
+	grge.pos3 = t:nextXY()
+	grge.ztop = t:nextFloat()
+	grge.flag = t:nextInt()
+	grge.type = t:nextInt()
+	grge.name = t:next()
+	if not grge.name then
+		grge.name = ""
+	end
+	self:AddGarage(grge)
+end
+
+function gta:WriteGarageLine(grge)
+	local line = ""
+	line = addXY(line, grge.pos1)
+	line = addFloat(line, grge.zbot)
+	line = addXY(line, grge.pos2)
+	line = addXY(line, grge.pos3)
+	line = addFloat(line, grge.ztop)
+	line = addInt(line, grge.flag)
+	line = addInt(line, grge.type)
+	line = addString(line, grge.name)
+	return line
+end
+
+function gta:ReadEntryExitLine(line)
+	local t = TokenStream.make(line)
+	local enex = {}
+	enex.position = t:nextXYZ()
+	enex.prot = t:nextFloat()
+	enex.wx = t:nextFloat()
+	enex.wy = t:nextFloat()
+	enex.wz = t:nextFloat()
+	enex.spawnPos = t:nextXYZ()
+	enex.spawnRot = t:nextFloat()
+	enex.area = t:nextInt()
+	enex.flags = t:nextInt()
+	enex.name = t:next()
+	enex.extracol = t:nextInt()
+	enex.numRandomPeds = t:nextInt()
+	enex.openTime = t:nextInt()
+	enex.shutTime = t:nextInt()
+	self:AddEntryExit(enex)
+end
+
+function gta:WriteEntryExitLine(enex)
+	local line = ""
+	line = addXYZ(line, enex.position)
+	line = addFloat(line, enex.prot)
+	line = addFloat(line, enex.wx)
+	line = addFloat(line, enex.wy)
+	line = addFloat(line, enex.wz)
+	line = addXYZ(line, enex.spawnPos)
+	line = addFloat(line, enex.spawnRot)
+	line = addInt(line, enex.area)
+	line = addString(line, '"' .. enex.name .. '"')
+	line = addInt(line, enex.extracol)
+	line = addInt(line, enex.numRandomPeds)
+	line = addInt(line, enex.openTime)
+	line = addInt(line, enex.shutTime)
+	return line
+end
+
+function gta:ReadPickupLine(line)
+	local t = TokenStream.make(line)
+	local pick = {}
+	pick.type = t:nextInt()
+	pick.position = t:nextXYZ()
+	self:AddPickup(pick)
+end
+
+function gta:WritePickupLine(pick)
+	local line = ""
+	line = addInt(line, pick.type)
+	line = addXYZ(line, pick.position)
+	return line
+end
+
+function gta:ReadCarGenLine(line)
+	-- doesn't occur
+	local t = TokenStream.make(line)
+	local cargen = {}
+	cargen.position = t:nextXYZ()
+	cargen.rot = t:nextFloat()
+	cargen.modelId = t:nextInt()
+	cargen.col1 = t:nextInt()
+	cargen.col2 = t:nextInt()
+	cargen.flags = t:nextInt()
+	cargen.alarmChance = t:nextInt()
+	cargen.lockedChance = t:nextInt()
+	cargen.minDelay = t:nextInt()
+	cargen.maxDelay = t:nextInt()
+	self:AddCarGenerator(cargen)
+end
+
+function gta:WriteCarGenLine(cargen)
+	local line = ""
+	line = addXYZ(line, cargen.position)
+	line = addFloat(line, cargen.rot)
+	line = addInt(line, cargen.modelId)
+	line = addInt(line, cargen.col1)
+	line = addInt(line, cargen.col2)
+	line = addInt(line, cargen.flags)
+	line = addInt(line, cargen.alarmChance)
+	line = addInt(line, cargen.lockedChance)
+	line = addInt(line, cargen.minDelay)
+	line = addInt(line, cargen.maxDelay)
+	return line
+end
+
+function gta:ReadStuntJumpLine(line)
+	-- doesn't occur
+	local t = TokenStream.make(line)
+	local jump = {}
+	jump.startMin = t:nextXYZ()
+	jump.startMax = t:nextXYZ()
+	jump.endMin = t:nextXYZ()
+	jump.endMax = t:nextXYZ()
+	jump.cam = t:nextXYZ()
+	jump.score = t:nextInt()
+	self:AddStuntJump(jump)
+end
+
+function gta:WriteStuntJumpLine(jump)
+	local line = ""
+	line = addXYZ(line, jump.startMin)
+	line = addXYZ(line, jump.startMax)
+	line = addXYZ(line, jump.endMin)
+	line = addXYZ(line, jump.endMax)
+	line = addXYZ(line, jump.cam)
+	line = addInt(line, jump.score)
+	return line
+end
+
+function gta:ReadTimeCycleModLine(line)
+	local t = TokenStream.make(line)
+	local tcyc = {}
+	tcyc.min = t:nextXYZ()
+	tcyc.max = t:nextXYZ()
+	tcyc.farClip = t:nextInt()
+	tcyc.index = t:nextInt()
+	tcyc.percentage = t:nextFloat()
+	tcyc.range = t:nextFloat()
+	tcyc.dirLightMult = t:nextFloat()
+	tcyc.lodMult = t:nextFloat()
+	self:AddTimeCycleMod(tcyc)
+end
+
+function gta:WriteTimeCycleModLine(tcyc)
+	local line = ""
+	line = addXYZ(line, tcyc.min)
+	line = addXYZ(line, tcyc.max)
+	line = addInt(line, tcyc.farClip)
+	line = addInt(line, tcyc.index)
+	line = addFloat(line, tcyc.percentage)
+	line = addFloat(line, tcyc.range)
+	line = addFloat(line, tcyc.dirLightMult)
+	line = addFloat(line, tcyc.lodMult)
+	return line
+end
+
+function gta:ReadAudioZoneLine(line)
+	local t = TokenStream.make(line)
+	local auzo = {}
+	auzo.name = t:next()
+	auzo.active = t:nextInt() ~= 0
+	auzo.sound = t:nextInt()
+	if #t.fields > 7 then
+		auzo.min = t:nextXYZ()
+		auzo.max = t:nextXYZ()
+	else
+		auzo.position = t:nextXYZ()
+		auzo.range = t:nextFloat()
+	end
+	self:AddAudioZone(auzo)
+end
+
+function bool2int(b)
+	if b then return 1
+	else return 0 end
+end
+
+function gta:WriteAudioZoneLine(auzo)
+	local line = ""
+	line = addString(line, auzo.name)
+	line = addInt(line, bool2int(auzo.active))
+	if auzo.range then
+		line = addXYZ(line, auzo.position)
+		line = addFloat(line, auzo.range)
+	else
+		line = addXYZ(line, auzo.min)
+		line = addXYZ(line, auzo.max)
+	end
+	return line
+end
+
+
 local IPLdesc = {}
 IPLdesc["inst"] = gta.ReadInstLine
 IPLdesc["cull"] = gta.ReadCullLine
@@ -1267,14 +1515,14 @@ IPLdesc["zone"] = gta.ReadZoneLine
 IPLdesc["path"] = gta.ReadPathLine
 IPLdesc["occl"] = gta.ReadOccluderLine
 -- SA
-IPLdesc["grge"] = gta.ReadNothing
-IPLdesc["enex"] = gta.ReadNothing
-IPLdesc["pick"] = gta.ReadNothing
-IPLdesc["cars"] = gta.ReadNothing
-IPLdesc["jump"] = gta.ReadNothing
-IPLdesc["tcyc"] = gta.ReadNothing
-IPLdesc["auzo"] = gta.ReadNothing
-IPLdesc["mult"] = gta.ReadNothing
+IPLdesc["grge"] = gta.ReadGarageLine
+IPLdesc["enex"] = gta.ReadEntryExitLine
+IPLdesc["pick"] = gta.ReadPickupLine
+IPLdesc["cars"] = gta.ReadCarGenLine
+IPLdesc["jump"] = gta.ReadStuntJumpLine
+IPLdesc["tcyc"] = gta.ReadTimeCycleModLine
+IPLdesc["auzo"] = gta.ReadAudioZoneLine
+IPLdesc["mult"] = gta.ReadNothing	-- multi-building, unused
 
 local ZONdesc = {}
 ZONdesc["zone"] = gta.ReadMapZoneLine
@@ -1517,7 +1765,15 @@ function gta:WriteIPL(file)
 		self:WriteDataSection(f, file, "path", self.pathSegments, self.WritePathSegment)
 		self:WriteDataSection(f, file, "occl", self.occluders, self.WriteOccluderLine)
 	end
-	-- TODO: SA
+	if self.game == gta.GameSA then
+		self:WriteDataSection(f, file, "grge", self.garages, self.WriteGarageLine)
+		self:WriteDataSection(f, file, "enex", self.entryExits, self.WriteEntryExitLine)
+		self:WriteDataSection(f, file, "pick", self.pickups, self.WritePickupLine)
+		self:WriteDataSection(f, file, "cars", self.carGenerators, self.WriteCarGenLine)
+		self:WriteDataSection(f, file, "jump", self.stuntJumps, self.WriteStuntJumpLine)
+		self:WriteDataSection(f, file, "tcyc", self.timecycMods, self.WriteTimeCycleModLine)
+		self:WriteDataSection(f, file, "auzo", self.audioZones, self.WriteAudioZoneLine)
+	end
 
 	f:close()
 end
