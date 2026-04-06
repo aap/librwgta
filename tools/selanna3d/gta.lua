@@ -61,6 +61,12 @@ function TokenStream:nextFloat()
 	return tonumber(self:next())
 end
 
+function TokenStream:nextXY()
+	local x = self:nextFloat()
+	local y = self:nextFloat()
+	return { x = x, y = y }
+end
+
 function TokenStream:nextXYZ()
 	local x = self:nextFloat()
 	local y = self:nextFloat()
@@ -148,6 +154,10 @@ function addHex(line, i)
 end
 function addFloat(line, f)
 	return addString(line, tostring(f))
+end
+function addXY(line, xy)
+	line = addFloat(line, xyz.x)
+	return addFloat(line, xyz.y)
 end
 function addXYZ(line, xyz)
 	line = addFloat(line, xyz.x)
@@ -503,7 +513,6 @@ function gta:ReadNothing(line)
 end
 
 function gta:ReadObjLine(line)
---	print("obj ", line)
 	local t = TokenStream.make(line)
 	local obj = Building.make()
 	obj.id = t:nextInt()
@@ -522,12 +531,13 @@ function gta:ReadObjLine(line)
 end
 
 function gta:WriteObjLine(obj)
--- TODO: SA
 	local line = ""
 	line = addInt(line, obj.id)
 	line = addString(line, obj.modelName)
 	line = addString(line, obj.txdName)
-	line = addInt(line, obj.numAtomics)
+	if self.game < gta.GameSA or obj.numAtomics > 1 then
+		line = addInt(line, obj.numAtomics)
+	end
 	for i = 1,obj.numAtomics do
 		line = addFloat(line, obj["lodDist" .. i])
 	end
@@ -537,7 +547,6 @@ end
 
 
 function gta:ReadTObjLine(line)
---	print("tobj ", line)
 	local t = TokenStream.make(line)
 	local obj = Building.make()
 	obj.id = t:nextInt()
@@ -558,12 +567,13 @@ function gta:ReadTObjLine(line)
 end
 
 function gta:WriteTObjLine(obj)
--- TODO: SA
 	local line = ""
 	line = addInt(line, obj.id)
 	line = addString(line, obj.modelName)
 	line = addString(line, obj.txdName)
-	line = addInt(line, obj.numAtomics)
+	if self.game < gta.GameSA or obj.numAtomics > 1 then
+		line = addInt(line, obj.numAtomics)
+	end
 	for i = 1,obj.numAtomics do
 		line = addFloat(line, obj["lodDist" .. i])
 	end
@@ -574,7 +584,6 @@ function gta:WriteTObjLine(obj)
 end
 
 function gta:ReadAnimLine(line)
---	print("anim ", line)
 	local t = TokenStream.make(line)
 	local obj = {}
 	obj.id = t:nextInt()
@@ -586,13 +595,19 @@ function gta:ReadAnimLine(line)
 	self:AddAnimClump(obj)
 end
 
-function gta:WriteAnimLine(line)
---	TODO
+function gta:WriteAnimLine(obj)
+	local line = ""
+	line = addInt(line, obj.id)
+	line = addString(line, obj.modelName)
+	line = addString(line, obj.txdName)
+	line = addString(line, obj.animName)
+	line = addFloat(line, obj.lodDist)
+	line = addInt(line, obj.flags)
+	return line
 end
 
 
 function gta:ReadHierLine(line)
---	print("hier ", line)
 	local t = TokenStream.make(line)
 	local clp = {}
 	clp.id = t:nextInt()
@@ -611,11 +626,6 @@ end
 
 
 function gta:ReadPedLine(line)
-if self.game == gta.GameSA then
-return
-end
--- TODO: SA
---	print("peds ", line)
 	local t = TokenStream.make(line)
 	local ped = {}
 	ped.id = t:nextInt()
@@ -626,15 +636,22 @@ end
 	ped.animGroup = t:next()
 	ped.carMask = tonumber("0x" .. t:next())
 	if self.game > gta.GameIII then
+		if self.game == gta.GameSA then
+			ped.flags = tonumber("0x" .. t:next())
+		end
 		ped.animFile = t:next()
 		ped.radio1 = t:nextInt()
 		ped.radio2 = t:nextInt()
+		if self.game == gta.GameSA then
+			ped.audioType = t:next()
+			ped.firstVoice = t:next()
+			ped.lastVoice = t:next()
+		end
 	end
 	self:AddPed(ped)
 end
 
 function gta:WritePedLine(ped)
--- TODO: SA
 	local line = ""
 	line = addInt(line, ped.id)
 	line = addString(line, ped.modelName)
@@ -644,19 +661,22 @@ function gta:WritePedLine(ped)
 	line = addString(line, ped.animGroup)
 	line = addHex(line, ped.carMask)
 	if self.game > gta.GameIII then
+		if self.game == gta.GameSA then
+			line = addHex(line, ped.flags)
+		end
 		line = addString(line, ped.animFile)
 		line = addInt(line, ped.radio1)
 		line = addInt(line, ped.radio2)
+		if self.game == gta.GameSA then
+			line = addString(line, ped.audioType)
+			line = addString(line, ped.firstVoice)
+			line = addString(line, ped.lastVoice)
+		end
 	end
 	return line
 end
 
 function gta:ReadVehicleLine(line)
--- TODO: SA
-if self.game == gta.GameSA then
-return
-end
---	print("cars ", line)
 	local t = TokenStream.make(line)
 	local veh = {}
 	veh.id = t:nextInt()
@@ -672,20 +692,39 @@ end
 	veh.freq = t:nextInt()
 	veh.levels = t:nextInt()
 	veh.compRules = tonumber("0x" .. t:next())
-	if veh.vehicleType == "car" then
-		veh.wheelId = t:nextInt()
-		veh.wheelScale = t:nextFloat()
-	elseif veh.vehicleType == "plane" then
-		veh.planeLodId = t:nextInt()
-	elseif veh.vehicleType == "bike" then
-		veh.bikeSteerAngle = t:nextInt()
-		veh.wheelScale = t:nextFloat()
+	if self.game < gta.GameSA then
+		if veh.vehicleType == "car" then
+			veh.wheelId = t:nextInt()
+			veh.wheelScale = t:nextFloat()
+		elseif veh.vehicleType == "plane" then
+			veh.planeLodId = t:nextInt()
+		elseif veh.vehicleType == "bike" then
+			veh.steerAngle = t:nextInt()
+			veh.wheelScale = t:nextFloat()
+		end
+	else
+		if veh.vehicleType == "car" or
+		   veh.vehicleType == "mtruck" or
+		   veh.vehicleType == "quad" or
+		   veh.vehicleType == "heli" or
+		   veh.vehicleType == "plane" or
+		   veh.vehicleType == "trailer" then
+			veh.wheelId = t:nextInt()
+			veh.wheelScale = t:nextFloat()
+			veh.wheelScaleRear = t:nextFloat()
+			veh.wheelClass = t:nextInt()
+		elseif veh.vehicleType == "bike" or
+		       veh.vehicleType == "bmx" then
+			veh.steerAngle = t:nextInt()
+			veh.wheelScale = t:nextFloat()
+			veh.wheelScaleRear = t:nextFloat()
+			veh.wheelClass = t:nextInt()
+		end
 	end
 	self:AddVehicle(veh)
 end
 
 function gta:WriteVehicleLine(veh)
--- TODO: SA
 	local line = ""
 	line = addInt(line, veh.id)
 	line = addString(line, veh.modelName)
@@ -700,20 +739,39 @@ function gta:WriteVehicleLine(veh)
 	line = addInt(line, veh.freq)
 	line = addInt(line, veh.levels)
 	line = addHex(line, veh.compRules)
-	if veh.vehicleType == "car" then
-		line = addInt(line, veh.wheelId)
-		line = addFloat(line, veh.wheelScale)
-	elseif veh.vehicleType == "plane" then
-		line = addInt(line, veh.planeLodId)
-	elseif veh.vehicleType == "bike" then
-		line = addInt(line, veh.bikeSteerAngle)
-		line = addFloat(line, veh.wheelScale)
+	if self.game < gta.GameSA then
+		if veh.vehicleType == "car" then
+			line = addInt(line, veh.wheelId)
+			line = addFloat(line, veh.wheelScale)
+		elseif veh.vehicleType == "plane" then
+			line = addInt(line, veh.planeLodId)
+		elseif veh.vehicleType == "bike" then
+			line = addInt(line, veh.steerAngle)
+			line = addFloat(line, veh.wheelScale)
+		end
+	else
+		if veh.vehicleType == "car" or
+		   veh.vehicleType == "mtruck" or
+		   veh.vehicleType == "quad" or
+		   veh.vehicleType == "heli" or
+		   veh.vehicleType == "plane" or
+		   veh.vehicleType == "trailer" then
+			line = addInt(line, veh.wheelId)
+			line = addFloat(line, veh.wheelScale)
+			line = addFloat(line, veh.wheelScaleRear)
+			line = addInt(line, veh.wheelClass)
+		elseif veh.vehicleType == "bike" or
+		       veh.vehicleType == "bmx" then
+			line = addInt(line, veh.steerAngle)
+			line = addFloat(line, veh.wheelScale)
+			line = addFloat(line, veh.wheelScaleRear)
+			line = addInt(line, veh.wheelClass)
+		end
 	end
 	return line
 end
 
 function gta:ReadWeaponLine(line)
---	print("weap ", line)
 	local t = TokenStream.make(line)
 	local weap = {}
 	weap.id = t:nextInt()
@@ -826,8 +884,16 @@ end
 local FX_LIGHT = 0
 local FX_PARTICLE = 1
 local FX_LOOKATPOINT = 2
+-- VC
 local FX_PEDQUEUE = 3
 local FX_SUNGLARE = 4
+-- SA
+local FX_INTERIOR = 5
+local FX_ENTRYEXIT = 6
+local FX_ROADSIGN = 7
+local FX_TRIGGERPOINT = 8
+local FX_COVERPOINT = 9
+local FX_ESCALATOR = 10
 
 function gta:Read2dfxLine(line)
 	local t = TokenStream.make(line)
@@ -835,10 +901,15 @@ function gta:Read2dfxLine(line)
 	local e = {}
 	e.id = t:nextInt()
 	e.position = t:nextXYZ(t)
-	e.color = t:nextRGBA(t)
+	if self.game < gta.GameSA then
+		e.color = t:nextRGBA(t)
+	end
 	e.type = t:nextInt()
 
 	if e.type == FX_LIGHT then
+		if self.game == gta.GameSA then
+			e.color = t:nextRGBA(t)
+		end
 		e.coronaTex = t:next()
 		e.shadowTex = t:next()
 		e.lodDist = t:nextFloat()
@@ -851,10 +922,15 @@ function gta:Read2dfxLine(line)
 		e.lensFlareType = t:nextInt()
 		e.flags = t:nextInt()
 	elseif e.type == FX_PARTICLE then
-		e.particleType = t:nextInt()
-		e.dir = t:nextXYZ()
-		e.size = t:nextFloat()
+		if self.game < gta.GameSA then
+			e.particleType = t:nextInt()
+			e.dir = t:nextXYZ()
+			e.size = t:nextFloat()
+		else
+			e.particleName = t:next()
+		end
 	elseif e.type == FX_LOOKATPOINT then
+		-- gone in SA
 		e.lookType = t:nextInt()
 		e.dir = t:nextXYZ()
 		e.probability = t:nextInt()
@@ -862,6 +938,73 @@ function gta:Read2dfxLine(line)
 		e.queueType = t:nextInt()
 		e.queueDir = t:nextXYZ()
 		e.useDir = t:nextXYZ()
+		if self.game == gta.GameSA then
+			e.forwardDir = t:nextXYZ()
+			e.interest = t:nextInt()
+			e.lookAt = t:nextInt()
+			e.scriptName = t:next(t)
+		end
+	elseif e.type == FX_INTERIOR then
+		e.interiorType = t:nextInt()
+		e.width = t:nextFloat()
+		e.depth = t:nextFloat()
+		e.height = t:nextFloat()
+		e.rot = t:nextFloat()
+		e.door = t:nextInt()
+		e.seed = t:nextInt()
+		e.group = t:nextInt()
+		e.status = t:nextInt()
+		e.lDoorStart = t:nextInt()
+		e.lDoorEnd = t:nextInt()
+		e.tDoorStart = t:nextInt()
+		e.tDoorEnd = t:nextInt()
+		e.rDoorStart = t:nextInt()
+		e.rDoorEnd = t:nextInt()
+		e.lWindowStart = t:nextInt()
+		e.lWindowEnd = t:nextInt()
+		e.tWindowStart = t:nextInt()
+		e.tWindowEnd = t:nextInt()
+		e.rWindowStart = t:nextInt()
+		e.rWindowEnd = t:nextInt()
+		e.noGoLeft = { -1, -1, -1 }
+		e.noGoBottom = { -1, -1, -1 }
+		e.noGoWidth = { -1, -1, -1 }
+		e.noGoDepth = { -1, -1, -1 }
+		for i=1,3 do
+			e.noGoLeft[i] = t:nextInt()
+			e.noGoBottom[i] = t:nextInt()
+			e.noGoWidth[i] = t:nextInt()
+			e.noGoDepth[i] = t:nextInt()
+		end
+	elseif e.type == FX_ENTRYEXIT then
+		e.prot = t:nextFloat()
+		e.wx = t:nextFloat()
+		e.wy = t:nextFloat()
+		e.spawnPos = t:nextXYZ()
+		e.spawnRot = t:nextFloat()
+		e.area = t:nextInt()
+		e.flags = t:nextInt()
+		e.name = t:next()
+		e.extracol = t:nextInt()
+	elseif e.type == FX_ROADSIGN then
+		e.width = t:nextFloat()
+		e.height = t:nextFloat()
+		e.rotation = t:nextXYZ()
+		e.flags = t:nextInt()
+		e.text1 = t:next()
+		e.text2 = t:next()
+		e.text3 = t:next()
+		e.text4 = t:next()
+	elseif e.type == FX_TRIGGERPOINT then
+		e.index = t:nextInt()
+	elseif e.type == FX_COVERPOINT then
+		e.dir = t:nextXY()
+		e.usage = t:nextInt()
+	elseif e.type == FX_ESCALATOR then
+		e.coords1 = t:nextXYZ()
+		e.coords2 = t:nextXYZ()
+		e.coords3 = t:nextXYZ()
+		e.goingUp = t:nextInt()
 	end
 	self:AddEffect(e)
 end
@@ -870,10 +1013,15 @@ function gta:Write2dfxLine(e)
 	local line = ""
 	line = addInt(line, e.id)
 	line = addXYZ(line, e.position)
-	line = addRGBA(line, e.color)
+	if self.game < gta.GameSA then
+		line = addRGBA(line, e.color)
+	end
 	line = addInt(line, e.type)
 
 	if e.type == FX_LIGHT then
+		if self.game == gta.GameSA then
+			line = addRGBA(line, e.color)
+		end
 		line = addString(line, '"' .. e.coronaTex .. '"')
 		line = addString(line, '"' .. e.shadowTex .. '"')
 		line = addFloat(line, e.lodDist)
@@ -886,9 +1034,13 @@ function gta:Write2dfxLine(e)
 		line = addInt(line, e.lensFlareType)
 		line = addInt(line, e.flags)
 	elseif e.type == FX_PARTICLE then
-		line = addInt(line, e.particleType)
-		line = addXYZ(line, e.dir)
-		line = addFloat(line, e.size)
+		if self.game < gta.GameSA then
+			line = addInt(line, e.particleType)
+			line = addXYZ(line, e.dir)
+			line = addFloat(line, e.size)
+		else
+			line = addString(line, e.particleName)
+		end
 	elseif e.type == FX_LOOKATPOINT then
 		line = addInt(line, e.lookType)
 		line = addXYZ(line, e.dir)
@@ -897,6 +1049,69 @@ function gta:Write2dfxLine(e)
 		line = addInt(line, e.queueType)
 		line = addXYZ(line, e.queueDir)
 		line = addXYZ(line, e.useDir)
+		if self.game == gta.GameSA then
+			line = addXYZ(line, e.forwardDir)
+			line = addInt(line, e.interest)
+			line = addInt(line, e.lookAt)
+			line = addString(line, e.scriptName)
+		end
+	elseif e.type == FX_INTERIOR then
+		line = addInt(line, e.interiorType)
+		line = addFloat(line, e.width)
+		line = addFloat(line, e.depth)
+		line = addFloat(line, e.height)
+		line = addFloat(line, e.rot)
+		line = addInt(line, e.door)
+		line = addInt(line, e.seed)
+		line = addInt(line, e.group)
+		line = addInt(line, e.status)
+		line = addInt(line, e.lDoorStart)
+		line = addInt(line, e.lDoorEnd)
+		line = addInt(line, e.tDoorStart)
+		line = addInt(line, e.tDoorEnd)
+		line = addInt(line, e.rDoorStart)
+		line = addInt(line, e.rDoorEnd)
+		line = addInt(line, e.lWindowStart)
+		line = addInt(line, e.lWindowEnd)
+		line = addInt(line, e.tWindowStart)
+		line = addInt(line, e.tWindowEnd)
+		line = addInt(line, e.rWindowStart)
+		line = addInt(line, e.rWindowEnd)
+		for i=1,3 do
+			line = addInt(line, e.noGoLeft[i])
+			line = addInt(line, e.noGoBottom[i])
+			line = addInt(line, e.noGoWidth[i])
+			line = addInt(line, e.noGoDepth[i])
+		end
+	elseif e.type == FX_ENTRYEXIT then
+		line = addFloat(line, e.prot)
+		line = addFloat(line, e.wx)
+		line = addFloat(line, e.wy)
+		line = addXYZ(line, e.spawnPos)
+		line = addFloat(line, e.spawnRot)
+		line = addInt(line, e.area)
+		line = addInt(line, e.flags)
+		line = addString(line, e.name)
+		line = addInt(line, e.extracol)
+	elseif e.type == FX_ROADSIGN then
+		line = addFloat(line, e.width)
+		line = addFloat(line, e.height)
+		line = addXYZ(line, e.rotation)
+		line = addInt(line, e.flags)
+		line = addString(line, e.text1)
+		line = addString(line, e.text2)
+		line = addString(line, e.text3)
+		line = addString(line, e.text4)
+	elseif e.type == FX_TRIGGERPOINT then
+		line = addInt(line, e.index)
+	elseif e.type == FX_COVERPOINT then
+		line = addXY(line, e.dir)
+		line = addInt(line, e.usage)
+	elseif e.type == FX_ESCALATOR then
+		line = addXYZ(line, e.coords1)
+		line = addXYZ(line, e.coords2)
+		line = addXYZ(line, e.coords3)
+		line = addInt(line, e.goingUp)
 	end
 	return line
 end
@@ -909,15 +1124,23 @@ function gta:ReadTxdParentLine(line)
 	self:AddTxdParent(txdp)
 end
 
+function gta:WriteTxdParentLine(txdp)
+	local line = ""
+	line = addString(line, txdp.txdName)
+	line = addString(line, txdp.parentName)
+	return line
+end
+
 local IDEdesc = {}
 IDEdesc["objs"] = gta.ReadObjLine
 IDEdesc["tobj"] = gta.ReadTObjLine
 IDEdesc["hier"] = gta.ReadHierLine
 IDEdesc["peds"] = gta.ReadPedLine
 IDEdesc["cars"] = gta.ReadVehicleLine
-IDEdesc["weap"] = gta.ReadWeaponLine
 IDEdesc["path"] = gta.ReadPathLine
 IDEdesc["2dfx"] = gta.Read2dfxLine
+--VC
+IDEdesc["weap"] = gta.ReadWeaponLine
 --SA
 IDEdesc["txdp"] = gta.ReadTxdParentLine
 IDEdesc["anim"] = gta.ReadAnimLine
@@ -934,29 +1157,35 @@ function gta:ReadInstLine(line)
 		inst.area = t:nextInt()
 	end
 	inst.position = t:nextXYZ()
-	if self.game == gta.GameSA then
+	if self.game < gta.GameSA then
+		inst.scale = t:nextXYZ()
+		inst.rotation = t:nextXYZW()
+	else
 		inst.rotation = t:nextXYZW()
 		inst.lodIndex = t:nextInt()
 		inst.flags = inst.area >> 8
 		inst.area = inst.area & 0xFF
-	else
-		inst.scale = t:nextXYZ()
-		inst.rotation = t:nextXYZW()
 	end
 	self:AddInstance(inst, self.currentFile)
 end
 
 function gta:WriteInstLine(inst)
--- TODO: SA
 	local line = ""
 	line = addInt(line, inst.id)
 	line = addString(line, inst.name)
-	if self.game > gta.GameIII then
-		line = addInt(line, inst.area)
+	if self.game < gta.GameSA then
+		if self.game > gta.GameIII then
+			line = addInt(line, inst.area)
+		end
+		line = addXYZ(line, inst.position)
+		line = addXYZ(line, inst.scale)
+		line = addXYZW(line, inst.rotation)
+	else
+		line = addInt(line, inst.area | (inst.flags << 8))
+		line = addXYZ(line, inst.position)
+		line = addXYZW(line, inst.rotation)
+		line = addInt(line, inst.lodIndex)
 	end
-	line = addXYZ(line, inst.position)
-	line = addXYZ(line, inst.scale)
-	line = addXYZW(line, inst.rotation)
 	return line
 end
 
@@ -1138,7 +1367,7 @@ function gta:ReadFileByDesc(file, desc)
 	local sect = 'end'
 	self._pathSegment = nil
 	for line in f:lines() do
-		line = line:gsub(","," "):gsub("#.*", ""):gsub("\r","")
+		line = line:gsub(","," "):gsub("#.*", ""):gsub("\r",""):gsub("[\t ]*$", "")
 		if line == "" then goto continue end
 		local fields = split(line)
 		if sect == 'end' then
@@ -1242,74 +1471,38 @@ print("unknown", fields[1])
 	f:close()
 end
 
+function gta:WriteDataSection(f, source, name, list, func)
+	local content = ""
+	for _, elt in pairs(list) do
+		if elt.sourceFile == source then
+			content = content .. func(self, elt) .. "\n"
+		end
+	end
+	if content ~= "" then
+		f:write(name .. "\n")
+		f:write(content)
+		f:write("end\n")
+	end
+end
+
 function gta:WriteIDE(file)
 	local f = io.open(file.fullPath, "w")
 	if not f then error("couldn't open " .. file.fullPath) end
 
-	f:write("peds\n")
-	for _, obj in pairs(self.peds) do
-		if obj.sourceFile == file then
-			f:write(self:WritePedLine(obj) .. "\n")
-		end
+	self:WriteDataSection(f, file, "peds", self.peds, self.WritePedLine)
+	self:WriteDataSection(f, file, "cars", self.vehicles, self.WriteVehicleLine)
+	self:WriteDataSection(f, file, "objs", self.buildings, self.WriteObjLine)
+	self:WriteDataSection(f, file, "tobj", self.timedBuildings, self.WriteTObjLine)
+	self:WriteDataSection(f, file, "path", self.pathSegments, self.WritePathSegment)
+	self:WriteDataSection(f, file, "2dfx", self.effects, self.Write2dfxLine)
+	if self.game > gta.GameIII then
+		self:WriteDataSection(f, file, "weap", self.weapons, self.WriteWeaponLine)
 	end
-	f:write("end\n")
-
-	f:write("cars\n")
-	for _, obj in pairs(self.vehicles) do
-		if obj.sourceFile == file then
-			f:write(self:WriteVehicleLine(obj) .. "\n")
-		end
+	self:WriteDataSection(f, file, "hier", self.clumps, self.WriteHierLine)
+	if self.game == gta.GameSA then
+		self:WriteDataSection(f, file, "txdp", self.txdParents, self.WriteTxdParentLine)
+		self:WriteDataSection(f, file, "anim", self.animClumps, self.WriteAnimLine)
 	end
-	f:write("end\n")
-
-	f:write("objs\n")
-	for _, obj in pairs(self.buildings) do
-		if obj.sourceFile == file then
-			f:write(self:WriteObjLine(obj) .. "\n")
-		end
-	end
-	f:write("end\n")
-
-	f:write("tobj\n")
-	for _, obj in pairs(self.timedBuildings) do
-		if obj.sourceFile == file then
-			f:write(self:WriteTObjLine(obj) .. "\n")
-		end
-	end
-	f:write("end\n")
-
-	f:write("path\n")
-	for _, seg in pairs(self.pathSegments) do
-		if seg.sourceFile == file then
-			f:write(self:WritePathSegment(seg) .. "\n")
-		end
-	end
-	f:write("end\n")
-
-	f:write("2dfx\n")
-	for _, seg in pairs(self.effects) do
-		if seg.sourceFile == file then
-			f:write(self:Write2dfxLine(seg) .. "\n")
-		end
-	end
-	f:write("end\n")
-
-	f:write("weap\n")
-	for _, obj in pairs(self.weapons) do
-		if obj.sourceFile == file then
-			f:write(self:WriteWeaponLine(obj) .. "\n")
-		end
-	end
-	f:write("end\n")
-
-	f:write("hier\n")
-	for _, obj in pairs(self.clumps) do
-		if obj.sourceFile == file then
-			f:write(self:WriteHierLine(obj) .. "\n")
-		end
-	end
-	f:write("end\n")
-
 	f:close()
 end
 
@@ -1317,45 +1510,14 @@ function gta:WriteIPL(file)
 	local f = io.open(file.fullPath, "w")
 	if not f then error("couldn't open " .. file.fullPath) end
 
-	f:write("inst\n")
-	for _, inst in pairs(self.instances) do
-		if inst.sourceFile == file then
-			f:write(self:WriteInstLine(inst) .. "\n")
-		end
+	self:WriteDataSection(f, file, "inst", self.instances, self.WriteInstLine)
+	self:WriteDataSection(f, file, "cull", self.cullZones, self.WriteCullLine)
+	self:WriteDataSection(f, file, "zone", self.zones, self.WriteZoneLine)
+	if self.game > gta.GameIII then
+		self:WriteDataSection(f, file, "path", self.pathSegments, self.WritePathSegment)
+		self:WriteDataSection(f, file, "occl", self.occluders, self.WriteOccluderLine)
 	end
-	f:write("end\n")
-
-	f:write("cull\n")
-	for _, inst in pairs(self.cullZones) do
-		if inst.sourceFile == file then
-			f:write(self:WriteCullLine(inst) .. "\n")
-		end
-	end
-	f:write("end\n")
-
-	f:write("zone\n")
-	for _, inst in pairs(self.zones) do
-		if inst.sourceFile == file then
-			f:write(self:WriteZoneLine(inst) .. "\n")
-		end
-	end
-	f:write("end\n")
-
-	f:write("path\n")
-	for _, seg in pairs(self.pathSegments) do
-		if seg.sourceFile == file then
-			f:write(self:WritePathSegment(seg) .. "\n")
-		end
-	end
-	f:write("end\n")
-
-	f:write("occl\n")
-	for _, inst in pairs(self.occluders) do
-		if inst.sourceFile == file then
-			f:write(self:WriteOccluderLine(inst) .. "\n")
-		end
-	end
-	f:write("end\n")
+	-- TODO: SA
 
 	f:close()
 end
@@ -1364,13 +1526,7 @@ function gta:WriteZON(file)
 	local f = io.open(file.fullPath, "w")
 	if not f then error("couldn't open " .. file.fullPath) end
 
-	f:write("zone\n")
-	for _, inst in pairs(self.mapZones) do
-		if inst.sourceFile == file then
-			f:write(self:WriteZoneLine(inst) .. "\n")
-		end
-	end
-	f:write("end\n")
+	self:WriteDataSection(f, file, "zone", self.mapZones, self.WriteZoneLine)
 
 	f:close()
 end

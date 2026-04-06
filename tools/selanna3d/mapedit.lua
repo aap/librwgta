@@ -18,6 +18,20 @@ function tQuat(q)
 	return rw.Quat(q.w, q.x, q.y, q.z)
 end
 
+function pairsSorted(t, f)
+	local a = {}
+	for n in pairs(t) do table.insert(a, n) end
+	table.sort(a, f)
+	local i = 0
+	local iter = function()
+		i = i + 1
+		if a[i] == nil then return nil
+		else return a[i], t[a[i]]
+		end
+	end
+	return iter
+end
+
 function printHierarchy(frame, indent)
 	indent = indent or 0
 	print(string.rep("  ", indent) .. frame:getName() .. "  " .. frame:count())
@@ -46,7 +60,7 @@ end
 function printtab(t, indent)
 	indent = indent or 2
 	local pref = string.rep("  ", indent)
-	for k,v in pairs(t)  do
+	for k,v in pairsSorted(t)  do
 		if type(v)=="table" then
 			print(pref .. k)
 			printtab(v, indent+1)
@@ -344,7 +358,7 @@ end
 function guiTabRaw(t, label)
 	label = label or "table"
 	if ImGui.TreeNode(label) then
-		for k, v in pairs(t) do
+		for k, v in pairsSorted(t) do
 			local key = tostring(k)
 			ImGui.PushID(key)
 			if type(v) == "table" then
@@ -372,7 +386,7 @@ function guiTab(t, label, cullhidden)
 		if mt and mt.imguiDraw then
 			t:imguiDraw()
 		else
-			for k, v in pairs(t) do
+			for k, v in pairsSorted(t) do
 				local key = tostring(k)
 				ImGui.PushID(key)
 				if type(v) == "table" then
@@ -586,6 +600,10 @@ function guiItem(item, title)
 		end
 	end
 end
+
+test3 = "/u/aap/gta/test3"
+testvc = "/u/aap/gta/testvc"
+testsa = "/u/aap/gta/testsa"
 
 function gui()
 	guiWindows()
