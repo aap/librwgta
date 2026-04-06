@@ -364,12 +364,15 @@ initLua(void)
 
 		ChunkHeaderInfo header;
 		readChunkHeaderInfo(&stream, &header);
-		if(header.type != ID_CLUMP)
-			return lose;
-
-		Clump *clump = Clump::streamRead(&stream);
+		rw::UVAnimDictionary *dict = rw::currentUVAnimDictionary;
+		if(header.type == ID_UVANIMDICT) {
+			rw::currentUVAnimDictionary = rw::UVAnimDictionary::streamRead(&stream);
+			readChunkHeaderInfo(&stream, &header);
+		}
+		Clump *clump = header.type == ID_CLUMP ? Clump::streamRead(&stream) : nil;
+		rw::currentUVAnimDictionary = dict;
 		stream.close();
-		if(clump == NULL)
+		if(clump == nil)
 			return lose;
 		return sol::make_object(lua, clump);
 	});
@@ -390,7 +393,7 @@ initLua(void)
 
 		rw::TexDictionary *txd = rw::TexDictionary::streamRead(&stream);
 		stream.close();
-		if(txd == NULL)
+		if(txd == nil)
 			return lose;
 		return sol::make_object(lua, txd);
 	});
