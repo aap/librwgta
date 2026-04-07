@@ -223,8 +223,8 @@ end
 function processCam(cam, timestep)
 	timestep = timestep*30
 
-	local shift = sk.keysdown[sk.KEY_LSHIFT] or sk.keysdown[sk.KEY_RSHIFT]
-	local alt = sk.keysdown[sk.KEY_LALT] or sk.keysdown[sk.KEY_RALT]
+	local shift = IsShiftDown()
+	local alt = IsAltDown()
 	local dx = (sk.mouse.x - sk.prevmouse.x)/gWidth
 	local dy = (sk.mouse.y - sk.prevmouse.y)/gHeight
 
@@ -308,10 +308,29 @@ function Instance:select()
 	gizmo.Init(tV3d(self.position), tQuat(self.rotation):conj())
 end
 
-function Instance:gizmo(commit, pos, rot)
+function Instance:setXform(pos, rot)
 	self.position = pos
-	self.rotation = rot:conj()
+	self.rotation = rot
 	self:UpdateRW()
+	if self == selection then
+		gizmo.Init(tV3d(self.position), tQuat(self.rotation):conj())
+	end
+end
+
+function Instance:gizmo(phase, pos, rot)
+	if phase == 0 then
+		undoStart = {pos, rot:conj()}
+	elseif phase == 2 then
+		local posBefore = undoStart[1]
+		local rotBefore = undoStart[2]
+		local posAfter = pos
+		local rotAfter = rot:conj()
+		local inst = self
+		local undo = function(self) inst:setXform(posBefore, rotBefore) end
+		local redo = function(self) inst:setXform(posAfter, rotAfter) end
+		History:push({undo=undo, redo=redo})
+	end
+	self:setXform(pos, rot:conj())
 end
 
 function Instance:imguiTitle()
@@ -483,10 +502,18 @@ function gizmo.Process()
 
 	local using = gizmo.IsUsing()
 	if selection and (using or gizmo.wasUsing) then
+		if not gizmo.wasUsing then
+			local pos, rot = gizmo.GetXform()
+			selection:gizmo(0, pos, rot)
+		end
 		local mt = getmetatable(selection)
 		if mt and mt.gizmo then
 			local pos, rot = gizmo.GetXform()
-			selection:gizmo(not using, pos, rot)
+			if using then
+				selection:gizmo(1, pos, rot)
+			else
+				selection:gizmo(2, pos, rot)
+			end
 		end
 	end
 	gizmo.wasUsing = using
@@ -570,14 +597,61 @@ function guiCamera(cam)
 	cam.fov, _ = ImGui.DragFloat("FOV", cam.fov, 0.1, 10, 130)
 end
 
+local undoStart;
+
+History = {}
+History.undoStack = {}
+History.redoStack = {}
+History.maxDepth = 200
+
+function History:push(action)
+	table.insert(self.undoStack, action)
+	table.redoStack = {}
+	if #self.undoStack > self.maxDepth then
+		table.remove(self.undoStack, 1)
+	end
+end
+
+function History:PushAction(tab, field, before, after)
+	local undo = function(self) tab[field] = before; end
+	local redo = function(self) tab[field] = after; end
+	self:push({undo=undo, redo=redo})
+end
+
+function History:undo()
+	local a = table.remove(self.undoStack)
+	if a then
+		a:undo()
+		table.insert(self.redoStack, a)
+	end
+end
+
+function History:redo()
+	local a = table.remove(self.redoStack)
+	if a then
+		a:redo()
+		table.insert(self.undoStack, a)
+	end
+end
+
+function ImGui.DragFloatX(title, tab, field, step, lo, hi)
+	local used
+	tab[field], used = ImGui.DragFloat(title, tab[field], step, lo, hi)
+	if ImGui.IsItemActivated() then
+		undoStart = tab[field]
+	end
+	if ImGui.IsItemDeactivatedAfterEdit() then
+		History:PushAction(tab, field, undoStart, tab[field])
+	end
+end
+
 function guiRendering(g)
 	if ImGui.RadioButton("Draw HD", viewer.lodMode == 1) then viewer.lodMode = 1 end
 	ImGui.SameLine()
 	if ImGui.RadioButton("Draw LOD", viewer.lodMode == 2) then viewer.lodMode = 2 end
 	ImGui.SameLine()
 	if ImGui.RadioButton("Draw Normal", viewer.lodMode == 3) then viewer.lodMode = 3 end
-	viewer.lodMult, _ = ImGui.DragFloat("LOD multiplier",
-			viewer.lodMult, 0.05, 0.5, 10.0)
+	ImGui.DragFloatX("LOD multiplier", viewer, "lodMult", 0.05, 0.5, 10.0)
 
 	if g then
 		g.hour, _ = ImGui.InputInt("Hour", g.hour)
@@ -866,6 +940,18 @@ function sk.updateMouse()
 	end
 end
 
+function IsCtrlDown()
+	return sk.keysdown[sk.KEY_CAPSLK] or sk.keysdown[sk.KEY_LCTRL] or sk.keysdown[sk.KEY_RCTRL]
+end
+
+function IsShiftDown()
+	return sk.keysdown[sk.KEY_LSHIFT] or sk.keysdown[sk.KEY_RSHIFT]
+end
+
+function IsAltDown()
+	return sk.keysdown[sk.KEY_LALT] or sk.keysdown[sk.KEY_RALT]
+end
+
 function KeyUp(k)
 	sk.keysdown[k] = false
 end
@@ -873,10 +959,19 @@ end
 function KeyDown(k)
 	sk.keysdown[k] = true
 
+	local ctrl = IsCtrlDown()
 	if k == sk.KEY_G then
 		gizmo.op = gizmo.TRANSLATE
 	elseif k == sk.KEY_R then
-		gizmo.op = gizmo.ROTATE
+		if ctrl then
+			History:redo()
+		else
+			gizmo.op = gizmo.ROTATE
+		end
+	elseif k == sk.KEY_Z then
+		if ctrl then
+			History:undo()
+		end
 	end
 end
 

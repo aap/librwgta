@@ -123,6 +123,7 @@ initLuaSkeleton(void)
 	sktab.set("KEY_RSHIFT", sk::KEY_RSHIFT);
 	sktab.set("KEY_LCTRL", sk::KEY_LCTRL);
 	sktab.set("KEY_RCTRL", sk::KEY_RCTRL);
+	sktab.set("KEY_CAPSLK", sk::KEY_CAPSLK);
 	sktab.set("KEY_LALT", sk::KEY_LALT);
 	sktab.set("KEY_RALT", sk::KEY_RALT);
 	char keystr[] = "KEY_.";

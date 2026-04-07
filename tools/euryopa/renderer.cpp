@@ -514,7 +514,7 @@ BuildRenderList(void)
 				ScanInstList(&s->buildings, ProcessBuilding);
 				ScanInstList(&s->buildings_overlap, ProcessBuilding);
 			}
-		ScanInstList(&outOfBoundsSector.buildings, ProcessBigBuilding);
+		ScanInstList(&outOfBoundsSector.buildings, ProcessBuilding);
 	}
 	if(!gRenderOnlyHD){
 		for(x = xstart; x <= xend; x++)
