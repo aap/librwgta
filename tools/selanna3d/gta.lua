@@ -556,6 +556,74 @@ function gta:GetTexDictionary(txd)
 end
 
 
+FlagSet = {}
+FlagSet.__index = FlagSet
+
+function FlagSet.make(bits, desc)
+	local flags = { bits = bits, desc=desc }
+	return flags
+end
+
+objflagsIII = {}
+objflagsIII[1] = "Normal Cull"
+objflagsIII[2] = "No Fade"
+objflagsIII[4] = "Draw Last"
+objflagsIII[8] = "Additive Blend"
+objflagsIII[0x10] = "Is Subway"
+objflagsIII[0x20] = "Ignore Light"
+objflagsIII[0x40] = "No Z-Write"
+
+objflagsVC = {}
+objflagsVC[1] = "Wet Road Effect"
+objflagsVC[2] = "No Fade"
+objflagsVC[4] = "Draw Last"
+objflagsVC[8] = "Additive Blend"
+objflagsVC[0x10] = "Is Subway"
+objflagsVC[0x20] = "Ignore Light"
+objflagsVC[0x40] = "No Z-Write"
+objflagsVC[0x80] = "No Shadows"
+objflagsVC[0x100] = "Ingore Draw Dist"
+objflagsVC[0x200] = "Code Glass"
+objflagsVC[0x400] = "Artist Glass"
+
+objflagsSA = {}
+atmflagsSA = {}
+clpflagsSA = {}
+objflagsSA[4] = "Draw Last"
+objflagsSA[8] = "Additive Blend"
+objflagsSA[0x40] = "No Z-Write"
+objflagsSA[0x80] = "No Shadows"
+objflagsSA[0x200000] = "No Backface Culling"
+for i=0,31 do
+	local bit = 1<<i
+	if objflagsSA[bit] then
+		atmflagsSA[bit] = objflagsSA[bit]
+		clpflagsSA[bit] = objflagsSA[bit]
+	end
+end
+atmflagsSA[1] = "Wet Road Effect"
+atmflagsSA[0x200] = "Code Glass"
+atmflagsSA[0x400] = "Artist Glass"
+atmflagsSA[0x800] = "Garage Door"
+atmflagsSA[0x2000] = "Tree"
+atmflagsSA[0x4000] = "Palm Tree"
+atmflagsSA[0x8000] = "Don't collide with Flyer"
+atmflagsSA[0x80000] = "Wet Only"
+atmflagsSA[0x100000] = "Tag"
+atmflagsSA[0x400000] = "No Cover"
+clpflagsSA[0x20] = "Door"
+
+objflags = {}
+objflags[gta.GameIII] = objflagsIII
+objflags[gta.GameVC] = objflagsVC
+objflags[gta.GameSA] = atmflagsSA
+
+instflagsSA = {}
+instflagsSA[1] = "Unimportant"
+instflagsSA[4] = "Under Water"
+instflagsSA[8] = "Tunnel"
+instflagsSA[0x10] = "Tunnel Transition"
+
 
 -- file loading
 
@@ -576,7 +644,7 @@ function gta:ReadObjLine(line)
 	for i = 1,obj.numAtomics do
 		obj["lodDist" .. i] = t:nextFloat()
 	end
-	obj.flags = t:nextInt()
+	obj.flags = FlagSet.make(t:nextInt(), objflags[self.game])
 	self:AddBuilding(obj)
 end
 
@@ -591,7 +659,7 @@ function gta:WriteObjLine(obj)
 	for i = 1,obj.numAtomics do
 		line = addFloat(line, obj["lodDist" .. i])
 	end
-	line = addInt(line, obj.flags)
+	line = addInt(line, obj.flags.bits)
 	return line
 end
 
@@ -610,7 +678,7 @@ function gta:ReadTObjLine(line)
 	for i = 1,obj.numAtomics do
 		obj["lodDist" .. i] = t:nextFloat()
 	end
-	obj.flags = t:nextInt()
+	obj.flags = FlagSet.make(t:nextInt(), objflags[self.game])
 	obj.timeOn = t:nextInt()
 	obj.timeOff = t:nextInt()
 	self:AddTimedBuilding(obj)
@@ -627,7 +695,7 @@ function gta:WriteTObjLine(obj)
 	for i = 1,obj.numAtomics do
 		line = addFloat(line, obj["lodDist" .. i])
 	end
-	line = addInt(line, obj.flags)
+	line = addInt(line, obj.flags.bits)
 	line = addInt(line, obj.timeOn)
 	line = addInt(line, obj.timeOff)
 	return line
@@ -641,7 +709,7 @@ function gta:ReadAnimLine(line)
 	obj.txdName = t:next()
 	obj.animName = t:next()
 	obj.lodDist = t:nextFloat()
-	obj.flags = t:nextInt()
+	obj.flags = FlagSet.make(t:nextInt(), clpflagsSA)
 	self:AddAnimClump(obj)
 end
 
@@ -652,7 +720,7 @@ function gta:WriteAnimLine(obj)
 	line = addString(line, obj.txdName)
 	line = addString(line, obj.animName)
 	line = addFloat(line, obj.lodDist)
-	line = addInt(line, obj.flags)
+	line = addInt(line, obj.flags.bits)
 	return line
 end
 
@@ -1213,7 +1281,7 @@ function gta:ReadInstLine(line)
 	else
 		inst.rotation = t:nextXYZW()
 		inst.lodIndex = t:nextInt()
-		inst.flags = inst.area >> 8
+		inst.flags = FlagSet.make(inst.area>>8, instflagsSA)
 		inst.area = inst.area & 0xFF
 	end
 	self:AddInstance(inst, self.currentFile)
@@ -1231,7 +1299,7 @@ function gta:WriteInstLine(inst)
 		line = addXYZ(line, inst.scale)
 		line = addXYZW(line, inst.rotation)
 	else
-		line = addInt(line, inst.area | (inst.flags << 8))
+		line = addInt(line, inst.area | (inst.flags.bits << 8))
 		line = addXYZ(line, inst.position)
 		line = addXYZW(line, inst.rotation)
 		line = addInt(line, inst.lodIndex)
@@ -1571,7 +1639,7 @@ function gta:ReadBinaryInstance(strm)
 	inst.area = strm:nextI32()
 	inst.lodIndex = strm:nextI32()
 
-	inst.flags = inst.area >> 8
+	inst.flags = FlagSet.make(inst.area>>8, instflagsSA)
 	inst.area = inst.area & 0xFF
 	local mdl = self.modelsById[inst.id]
 	if mdl then

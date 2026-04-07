@@ -289,11 +289,11 @@ function Building:imguiDraw()
 	for i = 1, self.numAtomics do
 		local value, used = ImGui.InputFloat("LOD dist"..i, self["lodDist"..i])
 	end
-	local value, used = ImGui.InputInt("Flags", self.flags)
 	if self.timeOn then
 		local value, used = ImGui.InputInt("Time On", self.timeOn)
 		local value, used = ImGui.InputInt("Time Off", self.timeOff)
 	end
+	ImGui.Flags("Flags##Object", self.flags)
 
 	if ImGui.Button("View") then
 		game:LoadAtomics(self)
@@ -356,7 +356,7 @@ function Instance:imguiDraw()
 			local value, used = ImGui.InputInt("Area", self.area)
 		end
 		if self.flags then
-			local value, used = ImGui.InputInt("Flags", self.flags)
+			ImGui.Flags("Flags##Instance", self.flags)
 		end
 		if ImGui.Button("jump to") then
 			local p = tV3d(self.position)
@@ -610,11 +610,23 @@ function History:push(action)
 	if #self.undoStack > self.maxDepth then
 		table.remove(self.undoStack, 1)
 	end
+	action:redo()
 end
 
-function History:PushAction(tab, field, before, after)
+function History:PushSetValue(tab, field, before, after)
 	local undo = function(self) tab[field] = before; end
 	local redo = function(self) tab[field] = after; end
+	self:push({undo=undo, redo=redo})
+end
+
+function History:PushFlagSet(flags, bit)
+	local undo = function(self) flags.bits = flags.bits & ~bit; end
+	local redo = function(self) flags.bits = flags.bits | bit; end
+	self:push({undo=undo, redo=redo})
+end
+function History:PushFlagClear(flags, bit)
+	local undo = function(self) flags.bits = flags.bits | bit; end
+	local redo = function(self) flags.bits = flags.bits & ~bit; end
 	self:push({undo=undo, redo=redo})
 end
 
@@ -641,7 +653,30 @@ function ImGui.DragFloatX(title, tab, field, step, lo, hi)
 		undoStart = tab[field]
 	end
 	if ImGui.IsItemDeactivatedAfterEdit() then
-		History:PushAction(tab, field, undoStart, tab[field])
+		History:PushSetValue(tab, field, undoStart, tab[field])
+	end
+end
+
+function ImGui.Flags(title, flags)
+--	ImGui.SetNextItemStorageID(ImGui.GetID(title))	 --don't have it here
+	local open = ImGui.TreeNode(title)
+	ImGui.SameLine()
+	ImGui.Text(string.format("%x", flags.bits))
+	if open then
+		for i=0,31 do
+			local bit = 1<<i
+			if flags.desc[bit] then
+				local val, changed = ImGui.Checkbox(flags.desc[bit], (flags.bits & bit) ~= 0)
+				if changed then
+					if val then
+						History:PushFlagSet(flags, bit)
+					else
+						History:PushFlagClear(flags, bit)
+					end
+				end
+			end
+		end
+		ImGui.TreePop()
 	end
 end
 

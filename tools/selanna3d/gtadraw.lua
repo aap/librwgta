@@ -140,7 +140,7 @@ function gta:DrawInstance(inst)
 			return nil
 		end
 	end
-	if (mdl.flags & (4|8)) ~= 0 then
+	if (mdl.flags.bits & (4|8)) ~= 0 then
 		return inst.rwAtomic
 	end
 	inst.rwAtomic:render()

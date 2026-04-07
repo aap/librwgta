@@ -318,11 +318,11 @@ ObjectDef::SetFlags(int flags)
 				if(flags & 0x1000) m_isDamageable = true;
 			if(flags &   0x2000) m_isTree = true;
 			if(flags &   0x4000) m_isPalmTree = true;
+			if(flags &  0x80000) m_wetOnly = true;
 			if(flags & 0x100000) m_isTag = true;
 			if(flags & 0x400000) m_noCover = true;
-			if(flags & 0x800000) m_wetOnly = true;
 
-//			if(flags & ~0xF0FECD)
+//			if(flags & ~0x38FECD)
 //				printf("Object has unknown flags: %s %x %x\n", m_name, flags, flags&~0xF0FECD);
 		}else if(m_type == CLUMP){
 			if(flags & 0x20) m_isDoor = true;
