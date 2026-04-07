@@ -12,6 +12,11 @@
 using namespace std;
 using namespace rw;
 
+#ifndef min
+#define min(a,b) ((a) < (b) ? (a) : (b))
+#define max(a,b) ((a) > (b) ? (a) : (b))
+#endif
+
 static int32
 replaceID(int32 *ids, int32 num, int32 from, int32 to)
 {

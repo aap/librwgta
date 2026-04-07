@@ -122,7 +122,7 @@ extern int  gColourFilter;
 extern bool gRadiosity;
 
 // SA building pipe
-extern int gBuildingPipeSwitch;
+extern int gBuildingPipeSwitch;	// also leeds pipe
 extern float gDayNightBalance;
 extern float gWetRoadEffect;
 
@@ -1001,19 +1001,7 @@ void myRenderCB(rw::Atomic *atomic);
 extern rw::ObjPipeline *neoWorldPipe;
 void MakeNeoWorldPipe(void);
 
-// SA DN building pipeline
-bool IsBuildingPipeAttached(rw::Atomic *atm);
-void SetupBuildingPipe(rw::Atomic *atm);
-void UpdateDayNightBalance(void);
-// this should perhaps not be public
-void GetBuildingEnvMatrix(rw::Atomic *atomic, rw::Frame *envframe, rw::RawMatrix *envmat);
-extern rw::ObjPipeline *buildingPipe;
-extern rw::ObjPipeline *buildingDNPipe;
-void MakeCustomBuildingPipelines(void);
-
-// Leeds building pipeline
-extern rw::ObjPipeline *leedsPipe;
-void MakeLeedsPipe(void);
+void CustomPipeSettings(void);
 
 void RegisterPipes(void);
 void RenderInit(void);

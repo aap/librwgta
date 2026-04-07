@@ -13,14 +13,17 @@ using rw::V3d;
 void
 CCamera::Process(void)
 {
-	float scl = avgTimeStep*30.0f;
-	float sensitivity = 1.0f;
+	float dt = avgTimeStep*30.0f;
+	float sensitivity = 4.5f;
 
 	ImGuiIO &io = ImGui::GetIO();
 	this->mx = CPad::newMouseState.x/io.DisplaySize.x;
 	this->my = CPad::newMouseState.y/io.DisplaySize.y;
 	this->mx = this->mx*2.0f - 1.0f;
 	this->my = this->my*2.0f - 1.0f;
+
+	float dx = (CPad::oldMouseState.x - CPad::newMouseState.x)/io.DisplaySize.x;
+	float dy = (CPad::oldMouseState.y - CPad::newMouseState.y)/io.DisplaySize.y;
 
 	using namespace rw;
 	V3d dir = normalize(sub(TheCamera.m_target, TheCamera.m_position));
@@ -34,28 +37,20 @@ CCamera::Process(void)
 	// first person
 	if(CPad::IsMButtonDown(1)){
 		if(CPad::IsAltDown() && CPad::IsCtrlDown()){
-			float dy = (CPad::oldMouseState.y - CPad::newMouseState.y);
-			dolly(dy*scl);
+			dolly(dy*sensitivity);
 		}else{
-			float dx = (CPad::oldMouseState.x - CPad::newMouseState.x);
-			float dy = (CPad::oldMouseState.y - CPad::newMouseState.y);
-			turn(DEGTORAD(dx)/2.0f*scl, DEGTORAD(dy)/2.0f*scl);
+			turn(dx*sensitivity, dy*sensitivity);
 		}
 	}
 	// roughly 3ds max controls
 	if(CPad::IsMButtonDown(2)){
 		if(CPad::IsAltDown() && CPad::IsCtrlDown()){
-			float dy = (CPad::oldMouseState.y - CPad::newMouseState.y);
-			zoom(dy*scl);
+			zoom(dy*sensitivity);
 		}else if(CPad::IsAltDown()){
-			float dx = (CPad::oldMouseState.x - CPad::newMouseState.x);
-			float dy = (CPad::oldMouseState.y - CPad::newMouseState.y);
-			orbit(DEGTORAD(dx)/2.0f*scl, -DEGTORAD(dy)/2.0f*scl);
+			orbit(dx*sensitivity, -dy*sensitivity);
 		}else{
-			float dx = (CPad::oldMouseState.x - CPad::newMouseState.x);
-			float dy = (CPad::oldMouseState.y - CPad::newMouseState.y);
-			float dist = distanceToTarget();
-			pan(dx*scl*dist/100.0f, -dy*scl*dist/100.0f);
+			float dist = distanceToTarget()/5.0f;
+			pan(dx*sensitivity*dist, -dy*sensitivity*dist);
 		}
 	}
 
@@ -69,7 +64,7 @@ CCamera::Process(void)
 		speed = 0.0f;
 	if(speed > 70.0f) speed = 70.0f;
 	if(speed < -70.0f) speed = -70.0f;
-	dolly(speed*scl);
+	dolly(speed*dt);
 
 	static float sidespeed = 0.0f;
 	if(CPad::IsKeyDown('A'))
@@ -80,7 +75,7 @@ CCamera::Process(void)
 		sidespeed = 0.0f;
 	if(sidespeed > 70.0f) sidespeed = 70.0f;
 	if(sidespeed < -70.0f) sidespeed = -70.0f;
-	pan(sidespeed*scl, 0.0f);
+	pan(sidespeed*dt, 0.0f);
 
 
 
@@ -93,16 +88,16 @@ CCamera::Process(void)
 			sensitivity = 4.0f;
 	}else if(pad->NewState.l2)
 		sensitivity = 0.5f;
-	if(pad->NewState.square) zoom(0.4f*sensitivity*scl);
-	if(pad->NewState.cross) zoom(-0.4f*sensitivity*scl);
-	orbit(pad->NewState.getLeftX()/25.0f*sensitivity*scl,
-	                -pad->NewState.getLeftY()/25.0f*sensitivity*scl);
-	turn(-pad->NewState.getRightX()/25.0f*sensitivity*scl,
-	               pad->NewState.getRightY()/25.0f*sensitivity*scl);
+	if(pad->NewState.square) zoom(0.4f*sensitivity*dt);
+	if(pad->NewState.cross) zoom(-0.4f*sensitivity*dt);
+	orbit(pad->NewState.getLeftX()/25.0f*sensitivity*dt,
+	                -pad->NewState.getLeftY()/25.0f*sensitivity*dt);
+	turn(-pad->NewState.getRightX()/25.0f*sensitivity*dt,
+	               pad->NewState.getRightY()/25.0f*sensitivity*dt);
 	if(pad->NewState.up)
-		dolly(2.0f*sensitivity*scl);
+		dolly(2.0f*sensitivity*dt);
 	if(pad->NewState.down)
-		dolly(-2.0f*sensitivity*scl);
+		dolly(-2.0f*sensitivity*dt);
 
 //	if(IsButtonJustDown(pad, start)){
 //		printf("cam.position: %f, %f, %f\n", m_position.x, m_position.y, m_position.z);

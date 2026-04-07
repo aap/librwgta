@@ -2,7 +2,7 @@ function gta:LoadClump(mdl)
 	if mdl.rwClump then return mdl.rwClump end
 	local txd = self:GetTexDictionary(mdl.txd)
 	rw.setCurrentTexDict(txd)
-	mdl.rwClump = self:GetModelClump(mdl)
+	self:GetModelClump(mdl)
 	for a in mdl.rwClump:atomics() do
 		hideDamagedLOD(a)
 	--	printAtomic(a)
@@ -14,7 +14,7 @@ function gta:LoadAtomics(mdl)
 	if mdl.rwAtomics then return end
 	local txd = self:GetTexDictionary(mdl.txd)
 	rw.setCurrentTexDict(txd)
-	mdl.rwClump = self:GetModelClump(mdl)
+	self:GetModelClump(mdl)
 	if not mdl.rwClump then return end
 	mdl.rwAtomics = {}
 	for a in mdl.rwClump:atomics() do
@@ -51,9 +51,13 @@ function gta:Instantiate(inst)
 		inst.show = true
 		return
 	end
-	if inst.mdl.lodDist1 > 300 then return end
+-- quick sanity check
+	if not inst.mdl.lodDist1 then return end
+
+--	if inst.mdl.lodDist1 > 300 then return end
 	self:LoadAtomics(inst.mdl)
-	if not inst.mdl.rwAtomics then
+	if not inst.mdl.rwAtomics or
+	   #inst.mdl.rwAtomics < 1 then
 		return
 	end
 	local atomic = inst.mdl.rwAtomics[1]:clone()
@@ -64,22 +68,45 @@ function gta:Instantiate(inst)
 	inst.show = true
 end
 
-function gta:InstantiateScene(name)
-	local file = self:FindFileFuzzy(name)
-	if file == nil then return end
-	for _, inst in pairs(self.instances) do
-		if inst.sourceFile == file then
-			self:Instantiate(inst)
+function gta:InstantiateScene(scene, deep)
+	if type(scene) == "string" then
+		scene = self.scenesByName[scene:lower()]
+		if not scene then return end
+	end
+	for _, inst in pairs(scene.instances) do
+		self:Instantiate(inst)
+	end
+	if deep then
+		for _, scn in ipairs(scene.streamed) do
+			self:InstantiateScene(scn, deep)
 		end
 	end
-print("done instancing")
-	file.showScene = true
+	scene.showScene = true
 end
 
-function gta:HideScene(name)
-	local file = self:FindFileFuzzy(name)
-	if file == nil then return end
-	file.showScene = false
+function gta:InstantiateStreamedScene(name)
+	local ipl = self.streamIplsByName[name:lower()]
+	if not ipl then return end
+	local scene = ipl.streamingInfo.scene
+	for _, inst in pairs(scene.instances) do
+		self:Instantiate(inst)
+	end
+	scene.showScene = true
+end
+
+
+function gta:HideScene(scene, deep)
+	if type(scene) == "string" then
+		local file = self:FindFileFuzzy(scene)
+		if file == nil then return end
+		scene = file.scene
+	end
+	if deep then
+		for _, scn in ipairs(scene.streamed) do
+			self:HideScene(scn, deep)
+		end
+	end
+	scene.showScene = false
 end
 
 function Building:IsTimeInRange(hour)
@@ -91,8 +118,23 @@ function Building:IsTimeInRange(hour)
 end
 
 function gta:DrawInstance(inst)
-	if not (inst.show and inst.sourceFile.showScene) then return nil end
+	if not (inst.show and inst.sourceFile.scene.showScene) then return nil end
 	local mdl = inst.mdl
+
+	local isLod = mdl.lodDist1 > 300
+	-- TODO
+	if viewer.lodMode == 1 then
+		-- render HD
+		if isLod then return end
+	elseif viewer.lodMode == 2 then
+		-- render LOD
+		if not isLod then return end
+	else
+		if activeCam:distanceTo(tV3d(inst.position)) > mdl.lodDist1*viewer.lodMult then
+			return
+		end
+	end
+
 	if mdl.timeOn then
 		if not mdl:IsTimeInRange(self.hour) then
 			return nil
@@ -101,7 +143,7 @@ function gta:DrawInstance(inst)
 	if (mdl.flags & (4|8)) ~= 0 then
 		return inst.rwAtomic
 	end
-	gta.RenderAtomic(inst.rwAtomic)
+	inst.rwAtomic:render()
 	return nil
 end
 

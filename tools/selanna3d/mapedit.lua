@@ -18,6 +18,20 @@ function tQuat(q)
 	return rw.Quat(q.w, q.x, q.y, q.z)
 end
 
+function pairsSorted(t, f)
+	local a = {}
+	for n in pairs(t) do table.insert(a, n) end
+	table.sort(a, f)
+	local i = 0
+	local iter = function()
+		i = i + 1
+		if a[i] == nil then return nil
+		else return a[i], t[a[i]]
+		end
+	end
+	return iter
+end
+
 function printHierarchy(frame, indent)
 	indent = indent or 0
 	print(string.rep("  ", indent) .. frame:getName() .. "  " .. frame:count())
@@ -46,7 +60,7 @@ end
 function printtab(t, indent)
 	indent = indent or 2
 	local pref = string.rep("  ", indent)
-	for k,v in pairs(t)  do
+	for k,v in pairsSorted(t)  do
 		if type(v)=="table" then
 			print(pref .. k)
 			printtab(v, indent+1)
@@ -58,48 +72,65 @@ end
 
 function LoadIII()
 	local g = gta.make(gta.GameIII, "/u/aap/gta/gta3_re")
-	g:ReadCdImage("models/gta3.img")
+	g:AddCdImage("models/gta3.img")
 	g:ReadDataFile("data/default.dat")
 	g:ReadDataFile("data/gta3.dat")
 	g:FinishLoading()
 
-	g:InstantiateScene("industsw.ipl")
-	g:InstantiateScene("industse.ipl")
-	g:InstantiateScene("industnw.ipl")
-	g:InstantiateScene("industne.ipl")
+	g:InstantiateScene("industsw")
+	g:InstantiateScene("industse")
+	g:InstantiateScene("industnw")
+	g:InstantiateScene("industne")
 	return g
 end
 
 function LoadVC()
 	local g = gta.make(gta.GameVC, "/u/aap/gta/gta_miami")
-	g:ReadCdImage("models/gta3.img")
+	g:AddCdImage("models/gta3.img")
 	g:ReadDataFile("data/default.dat")
 	g:ReadDataFile("data/gta_vc.dat")
 	g:FinishLoading()
 
-	g:InstantiateScene("oceandn.ipl")
-	g:InstantiateScene("oceandrv.ipl")
+	g:InstantiateScene("oceandn")
+	g:InstantiateScene("oceandrv")
 	return g
 end
 
 function LoadLCS()
 	local g = gta.make(gta.GameVC, "/u/aap/other/gta/gta_lcs")
-	g:ReadCdImage("models/gta3.img")
+	g:AddCdImage("models/gta3.img")
 	g:ReadDataFile("data/gta_lcs.dat")
 	g:FinishLoading()
 
-	g:InstantiateScene("indust.ipl")
+	g:InstantiateScene("indust")
 	return g
 end
 
 function LoadVCS()
 	local g = gta.make(gta.GameVC, "/u/aap/gta/vcs_map")
-	g:ReadCdImage("models/gta3.img")
+	g:AddCdImage("models/gta3.img")
 	g:ReadDataFile("data/gta_vcs.dat")
 	g:FinishLoading()
 
-	g:InstantiateScene("oceandn.ipl")
-	g:InstantiateScene("oceandrv.ipl")
+	g:InstantiateScene("oceandn")
+	g:InstantiateScene("oceandrv")
+	return g
+end
+
+function LoadSA()
+	local g = gta.make(gta.GameSA, "/u/aap/other/gta/gtasa")
+	g.dayNightBalance = 0
+	g.wetRoads = 0
+	g:AddCdImage("models/gta3.img")
+	g:AddCdImage("models/gta_int.img")
+	g:ReadDataFile("data/default.dat")
+	g:ReadDataFile("data/gta_nopaths.dat")
+--	g:ReadDataFile("data/gta.dat")
+	g:FinishLoading()
+
+	g:LoadStreamedIPLs()
+	g:InstantiateScene("lae", true)
+
 	return g
 end
 
@@ -135,6 +166,9 @@ sceneCam = nil
 modelCam = nil
 activeCam = nil
 rwCamera = nil
+-- should go into camera maybe?
+camspeed = 0
+camspeedSide = 0
 
 clearCol = rw.RGBA(0x80, 0x80, 0x80, 0xFF)
 
@@ -159,56 +193,81 @@ function Init()
 	local activeCam = sceneCam
 	sceneCam.rwCamera = rwCamera
 	sceneCam.aspectRatio = gWidth/gHeight
-	sceneCam.fov = 80;
-	sceneCam.near = 0.1;
-	sceneCam.far = 2000;
+	sceneCam.fov = 80
+	sceneCam.near = 0.1
+	sceneCam.far = 2000
 	sceneCam.position = rw.V3d(679, -1006, 96)
 	sceneCam.target = rw.V3d(1700, -455, -274)
 	sceneCam:setDistance(30)
-	sceneCam:update();
+	sceneCam:update()
 
 	modelCam = Camera.new()
 	modelCam.rwCamera = rwCamera
 	modelCam.aspectRatio = gWidth/gHeight
-	modelCam.fov = 80;
-	modelCam.near = 0.1;
-	modelCam.far = 1000;
+	modelCam.fov = 80
+	modelCam.near = 0.1
+	modelCam.far = 1000
 	modelCam.position = rw.V3d(20, 20, 20)
 	modelCam.target = rw.V3d(0, 0, 0)
-	modelCam:update();
+	modelCam:update()
 
 print("done")
 end
 
-function processCam(cam)
+function clamp(val, min, max)
+	if val < min then return min end
+	if val > max then return max end
+	return val
+end
+
+function processCam(cam, timestep)
+	timestep = timestep*30
+
 	local shift = sk.keysdown[sk.KEY_LSHIFT] or sk.keysdown[sk.KEY_RSHIFT]
 	local alt = sk.keysdown[sk.KEY_LALT] or sk.keysdown[sk.KEY_RALT]
-	local dx = sk.mouse.x - sk.prevmouse.x
-	local dy = sk.mouse.y - sk.prevmouse.y
-	local s = 0.01
+	local dx = (sk.mouse.x - sk.prevmouse.x)/gWidth
+	local dy = (sk.mouse.y - sk.prevmouse.y)/gHeight
+
+	local s = 4.5
 	if (sk.mouse.btn & 1) ~= 0 then
 		cam:turn(-dx*s, -dy*s)
 	elseif (sk.mouse.btn & 2) ~= 0 then
 		if alt then
 			cam:orbit(-dx*s, dy*s)
 		else
-			cam:pan(-dx*s*10, dy*s*10)
+			local d = cam:distanceTo(cam.target)/5
+			cam:pan(-dx*s*d, dy*s*d)
 		end
 	elseif (sk.mouse.btn & 4) ~= 0 then
 		cam:zoom(-dy*s*10)
 	end
 
-	s = 1.0
+	cam:zoom(sk.mouse.dwheel*2)
+
+	s = timestep
 	if shift then s = s*2 end
+
 	if sk.keysdown[sk.KEY_W] then
-		cam:dolly(s)
+		camspeed = camspeed + 0.1
 	elseif sk.keysdown[sk.KEY_S] then
-		cam:dolly(-s)
-	elseif sk.keysdown[sk.KEY_A] then
-		cam:pan(-s, 0)
+		camspeed = camspeed - 0.1
+	else
+		camspeed = 0
+	end
+	camspeed = clamp(camspeed, -70, 70)
+	cam:dolly(camspeed*s)
+
+	if sk.keysdown[sk.KEY_A] then
+		camspeedSide = camspeedSide - 0.1
 	elseif sk.keysdown[sk.KEY_D] then
-		cam:pan(s, 0)
-	elseif sk.keysdown[sk.KEY_J] then
+		camspeedSide = camspeedSide + 0.1
+	else
+		camspeedSide = 0
+	end
+	camspeedSide = clamp(camspeedSide, -70, 70)
+	cam:pan(camspeedSide*s, 0)
+
+	if sk.keysdown[sk.KEY_J] then
 		if selection and selection.position then
 			activeCam:jumpTo(tV3d(selection.position))
 		end
@@ -216,7 +275,7 @@ function processCam(cam)
 end
 
 function Building:imguiTitle()
-	return true, tostring(self.id) .. "\t" .. self.model
+	return true, tostring(self.id) .. "\t" .. self.modelName
 end
 
 function Building:imguiDraw()
@@ -225,8 +284,8 @@ function Building:imguiDraw()
 	ImGui.PushID(tostring(self))
 	guiTab(self.sourceFile, "File " .. self.sourceFile.fileName)
 	local value, used = ImGui.InputInt("Id", self.id)
-	local text, selected = ImGui.InputText("Model", self.model, 24)
-	local text, selected = ImGui.InputText("Txd", self.texDict, 24)
+	local text, selected = ImGui.InputText("Model", self.modelName, 24)
+	local text, selected = ImGui.InputText("Txd", self.txdName, 24)
 	for i = 1, self.numAtomics do
 		local value, used = ImGui.InputFloat("LOD dist"..i, self["lodDist"..i])
 	end
@@ -256,7 +315,7 @@ function Instance:gizmo(commit, pos, rot)
 end
 
 function Instance:imguiTitle()
-	return self.show and self.sourceFile.showScene,
+	return self.show and self.sourceFile.scene.showScene,
 		tostring(self.id) .. "\t" .. self.name
 end
 
@@ -268,12 +327,17 @@ function Instance:imguiDraw()
 		local text, selected = ImGui.InputText("Name", self.name, 24)
 		local p = self.position
 		local values, used = ImGui.InputFloat3("Position", {p.x, p.y, p.z})
-		local s = self.scale
-		local values, used = ImGui.InputFloat3("Scale", {s.x, s.y, s.z})
+		if self.scale then
+			local s = self.scale
+			local values, used = ImGui.InputFloat3("Scale", {s.x, s.y, s.z})
+		end
 		local q = self.rotation
 		local values, used = ImGui.InputFloat4("Rotation", {q.x, q.y, q.z, q.w})
 		if self.area then
 			local value, used = ImGui.InputInt("Area", self.area)
+		end
+		if self.flags then
+			local value, used = ImGui.InputInt("Flags", self.flags)
 		end
 		if ImGui.Button("jump to") then
 			local p = tV3d(self.position)
@@ -288,10 +352,14 @@ function Instance:imguiDraw()
 	end
 end
 
+function Scene:imguiTitle()
+	return true, self.name
+end
+
 function guiTabRaw(t, label)
 	label = label or "table"
 	if ImGui.TreeNode(label) then
-		for k, v in pairs(t) do
+		for k, v in pairsSorted(t) do
 			local key = tostring(k)
 			ImGui.PushID(key)
 			if type(v) == "table" then
@@ -319,7 +387,7 @@ function guiTab(t, label, cullhidden)
 		if mt and mt.imguiDraw then
 			t:imguiDraw()
 		else
-			for k, v in pairs(t) do
+			for k, v in pairsSorted(t) do
 				local key = tostring(k)
 				ImGui.PushID(key)
 				if type(v) == "table" then
@@ -334,24 +402,49 @@ function guiTab(t, label, cullhidden)
 	end
 end
 
+function Scene:imguiDraw()
+	ImGui.PushID(self.name)
+
+	local show, clicked = ImGui.Checkbox("##visible", self.showScene or false)
+	if clicked then
+		if show then
+			game:InstantiateScene(self, true)
+		else
+			game:HideScene(self, true)
+		end
+	end
+	if #self.streamed > 0 then
+		ImGui.SameLine()
+		show, clicked = ImGui.Checkbox("##onevisible", self.showScene or false)
+		if clicked then
+			if show then
+				game:InstantiateScene(self, false)
+			else
+				game:HideScene(self, false)
+			end
+		end
+	end
+	ImGui.SameLine()
+	if ImGui.TreeNode(self.name) then
+		ImGui.Text(self.file.fileName)
+		for _, scn in ipairs(self.streamed) do
+			scn:imguiDraw()
+		end
+		guiList(self.instances, "Instances")
+		guiList(self.instances, "Visible Instances", true)
+		if self.carGenerators then
+			guiList(self.carGenerators, "Car Generators")
+		end
+
+		ImGui.TreePop()
+	end
+	ImGui.PopID()
+end
+
 function guiScenes(g)
 	if not ImGui.TreeNode("Scenes") then return end
-	for _, f in ipairs(g.filesOrdered) do
-		if f.type == 'IPL' then
-			ImGui.PushID(f.fileName)
-			local clicked
-			f.showScene, clicked = ImGui.Checkbox("visible", f.showScene or false)
-			if clicked then
-				if f.showScene then
-					g:InstantiateScene(f.fileName)
-				else
-					g:HideScene(f.fileName)
-				end
-			end
-			ImGui.SameLine()
-			ImGui.Text(f.fileName)
-			ImGui.PopID()
-		end
+	for _, scene in ipairs(g.scenes) do
+		scene:imguiDraw()
 	end
 	ImGui.TreePop()
 end
@@ -370,6 +463,8 @@ gizmo.stepTrans = 1
 gizmo.stepRot = 5
 gizmo.snapRot = true
 gizmo.snapTrans = true
+
+viewer = { lodMode = 1, lodMult = 1.5 }
 
 function gizmo.Process()
 	local step
@@ -397,8 +492,43 @@ function gizmo.Process()
 	gizmo.wasUsing = using
 end
 
+local ListWindows = {}
+function NewListWindow(item, title)
+	ListWindows[item] = title
+end
+local ItemWindows = {}
+function NewItemWindow(item, title)
+	ItemWindows[item] = title
+end
+
+function guiWindows()
+	for item, title in pairs(ItemWindows) do
+		if ImGui.Begin(title, true) then
+			guiItem(item, title)
+		else
+			ItemWindows[item] = nil
+		end
+		ImGui.End()
+	end
+	for item, title in pairs(ListWindows) do
+		if ImGui.Begin(title, true) then
+			ImGui.SetNextItemOpen(true)
+			guiList(item, title)
+		else
+			ListWindows[item] = nil
+		end
+		ImGui.End()
+	end
+end
+
 function guiList(list, label, cullhidden)
-	if not ImGui.TreeNode(label) then return end
+	local open = ImGui.TreeNode(label)
+	if ImGui.IsItemHovered() then
+		if ImGui.IsMouseClicked(2) then
+			NewListWindow(list, label)
+		end
+	end
+	if not open then return end
 	for _, v in ipairs(list) do
 		local mt = getmetatable(v)
 		local show = true
@@ -417,6 +547,9 @@ function guiList(list, label, cullhidden)
 				end
 			end
 			if ImGui.IsItemHovered() then
+				if ImGui.IsMouseClicked(2) then
+					NewItemWindow(v, title)
+				end
 				hovered = v
 			end
 			ImGui.PopID()
@@ -426,7 +559,6 @@ function guiList(list, label, cullhidden)
 end
 
 function guiCamera(cam)
-	if not ImGui.CollapsingHeader("Camera", ImGuiTreeNodeFlags.DefaultOpen) then return end
 	local p = cam.position
 	local xyz, used = ImGui.InputFloat3("Position", {p.x, p.y, p.z})
 	cam.position = rw.V3d(xyz[1], xyz[2], xyz[3])
@@ -434,20 +566,52 @@ function guiCamera(cam)
 	p = cam.target
 	xyz, used = ImGui.InputFloat3("Target", {p.x, p.y, p.z})
 	cam.target = rw.V3d(xyz[1], xyz[2], xyz[3])
+
+	cam.fov, _ = ImGui.DragFloat("FOV", cam.fov, 0.1, 10, 130)
 end
 
-function guiSelection()
-	if selection then
-		local mt = getmetatable(selection)
-		if mt and mt.imguiDraw then
-			selection:imguiDraw()
-		else
-			guiTab(selection, "selection")
+function guiRendering(g)
+	if ImGui.RadioButton("Draw HD", viewer.lodMode == 1) then viewer.lodMode = 1 end
+	ImGui.SameLine()
+	if ImGui.RadioButton("Draw LOD", viewer.lodMode == 2) then viewer.lodMode = 2 end
+	ImGui.SameLine()
+	if ImGui.RadioButton("Draw Normal", viewer.lodMode == 3) then viewer.lodMode = 3 end
+	viewer.lodMult, _ = ImGui.DragFloat("LOD multiplier",
+			viewer.lodMult, 0.05, 0.5, 10.0)
+
+	if g then
+		g.hour, _ = ImGui.InputInt("Hour", g.hour)
+		g.hour = g.hour % 24
+
+		if g.dayNightBalance then
+			g.dayNightBalance, _ = ImGui.DragFloat("Day/Night",
+					g.dayNightBalance, 0.005, 0, 1)
+		end
+		if g.wetRoads then
+			g.wetRoads, _ = ImGui.DragFloat("Wet Roads",
+					g.wetRoads, 0.005, 0, 1)
 		end
 	end
 end
 
+function guiItem(item, title)
+	if item then
+		local mt = getmetatable(item)
+		if mt and mt.imguiDraw then
+			item:imguiDraw()
+		else
+			guiTab(item, title)
+		end
+	end
+end
+
+test3 = "/u/aap/gta/test3"
+testvc = "/u/aap/gta/testvc"
+testsa = "/u/aap/gta/testsa"
+
 function gui()
+	guiWindows()
+
 	ImGui.Begin("Game")
 
 	if ImGui.Button("III") then
@@ -477,6 +641,14 @@ function gui()
 		end
 		game = vcs
 	end
+	ImGui.SameLine()
+	if ImGui.Button("SA") then
+		if not sa then
+			sa = LoadSA()
+		end
+		game = sa
+	end
+
 
 	if clump then
 		ImGui.SameLine()
@@ -505,7 +677,7 @@ function gui()
 	ImGui.BeginChild("right", 0, 0, true)
 	if ImGui.BeginTabBar("right_tab", 0) then
 		if ImGui.BeginTabItem("Selection") then
-			guiSelection()
+			guiItem(selection, "selection")
 			ImGui.EndTabItem()
 		end
 		if ImGui.BeginTabItem("Editor") then
@@ -529,12 +701,14 @@ function gui()
 			ImGui.EndTabItem()
 		end
 		if ImGui.BeginTabItem("View") then
-			if game then
-				game.hour, _ = ImGui.InputInt("Hour", game.hour)
-				game.hour = game.hour % 24
+--			ImGui.LabelText("Framerate", tostring(gFramerate))
+--			ImGui.LabelText("DeltaTime", tostring(gDeltaTime))
+			if ImGui.CollapsingHeader("Rendering", ImGuiTreeNodeFlags.DefaultOpen) then
+				guiRendering(game)
 			end
-
-			guiCamera(activeCam)
+			if ImGui.CollapsingHeader("Camera", ImGuiTreeNodeFlags.DefaultOpen) then
+				guiCamera(activeCam)
+			end
 			ImGui.EndTabItem()
 		end
 		if ImGui.BeginTabItem("Console") then
@@ -571,12 +745,9 @@ function setColor(obj)
 	end
 end
 
-function gta:RenderMap()
-	if drawColorCoded then
-		gta.SetRenderColourCoded(1)
-	end
-	local drawLast = {}
-	for _, inst in pairs(self.instances) do
+function gta:RenderScene(scene, drawLast)
+	if not scene.showScene then return drawLast end
+	for _, inst in pairs(scene.instances) do
 		inst.colorId = inst.instId
 		setColor(inst)
 		local a = self:DrawInstance(inst)
@@ -584,9 +755,23 @@ function gta:RenderMap()
 			table.insert(drawLast, inst)
 		end
 	end
+	return drawLast
+end
+
+function gta:RenderMap()
+	if drawColorCoded then
+		gta.SetRenderColourCoded(1)
+	end
+	local drawLast = {}
+	for _, scene in ipairs(self.scenes) do
+		drawLast = self:RenderScene(scene, drawLast)
+		for _, scn in ipairs(scene.streamed) do
+			drawLast = self:RenderScene(scn, drawLast)
+		end
+	end
 	for _, inst in pairs(drawLast) do
 		setColor(inst)
-		gta.RenderAtomic(inst.rwAtomic)
+		inst.rwAtomic:render()
 	end
 	gta.SetRenderColourCoded(0)
 end
@@ -599,7 +784,7 @@ function Draw(timestep)
 	else
 		activeCam = sceneCam
 	end
-	processCam(activeCam)
+	processCam(activeCam, timestep)
 	activeCam:update()
 	rwCamera:beginUpdate()
 
@@ -610,7 +795,12 @@ function Draw(timestep)
 		drawColorCoded = false
 		local code = gta.GetColourCode(sk.curmouse.x, sk.curmouse.y)
 		local inst = game.instances[code]
-		if inst then inst:select() end
+		if inst then inst:select()
+		else selection = nil
+		end
+	end
+	if sk.isMouseClicked(sk.RMB) then
+		selection = nil
 	end
 
 	rwCamera:clear(clearCol, rw.Camera_CLEARIMAGE|rw.Camera_CLEARZ)
@@ -624,13 +814,15 @@ function Draw(timestep)
 	if clump then
 		clump:render()
 	elseif game then
+		if game.dayNightBalance then gta.SetDayNightBalance(game.dayNightBalance) end
+		if game.wetRoads then gta.SetWetRoads(game.wetRoads) end
 		game:RenderMap()
 	end
 
 	sk.ImGuiEndFrame()
 
 	rwCamera:endUpdate()
-	rwCamera:showRaster(0)
+	rwCamera:showRaster(1)
 end
 
 sk.keysdown = {}
@@ -648,9 +840,16 @@ function sk.isMouseClicked(btn)
 	return sk.clickstate == 2 and sk.clickbtn == btn
 end
 
+function sk.mouseNotMoved()
+	local dx = sk.mouse.x - sk.clickx
+	local dy = sk.mouse.y - sk.clicky
+	return dx*dx + dy*dy < 3*3
+end
+
 function sk.updateMouse()
 	sk.prevmouse = sk.mouse
 	sk.mouse = copytab(sk.curmouse)
+	sk.curmouse.dwheel = 0
 
 	if sk.clickstate == 2 then sk.clickstate = 0 end
 	if sk.clickstate == 0 and (sk.mouse.btn & (sk.mouse.btn ~ sk.prevmouse.btn)) ~= 0 then
@@ -658,11 +857,9 @@ function sk.updateMouse()
 		sk.clickx = sk.mouse.x
 		sk.clicky = sk.mouse.y
 	elseif sk.clickstate == 1 and sk.mouse.btn == 0 then
-		if sk.mouse.x == sk.clickx and sk.mouse.y == sk.clicky then
+		if sk.mouseNotMoved() then
 			sk.clickstate = 2
 			sk.clickbtn = sk.prevmouse.btn & ~(sk.prevmouse.btn-1)
-			local logtab = { 0, 1, 2, 0, 3 }
-			sk.clickbtn = logtab[(sk.clickbtn&7)+1]
 		else
 			sk.clickstate = 0
 		end
@@ -676,22 +873,14 @@ end
 function KeyDown(k)
 	sk.keysdown[k] = true
 
-	if k == sk.KEY_C then
-		local cam = activeCam
-		print(cam.position)
-		print(cam.target)
-		print(cam.fov)
-		print(cam.aspectRatio)
-		print(cam.near)
-		print(cam.far)
-	elseif k == sk.KEY_G then
+	if k == sk.KEY_G then
 		gizmo.op = gizmo.TRANSLATE
 	elseif k == sk.KEY_R then
 		gizmo.op = gizmo.ROTATE
 	end
 end
 
-sk.curmouse = { x = 0, y = 0, btn = 0 }
+sk.curmouse = { x = 0, y = 0, btn = 0, dwheel = 0 }
 sk.mouse = copytab(sk.curmouse)
 sk.prevmouse = copytab(sk.curmouse)
 
@@ -707,4 +896,7 @@ function Resize(w, h)
 	sk.CameraSize(rwCamera, w, h)
 	sceneCam.aspectRatio = w/h
 	modelCam.aspectRatio = w/h
+end
+function MouseWheel(delta)
+	sk.curmouse.dwheel = sk.curmouse.dwheel + delta
 end

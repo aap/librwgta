@@ -109,6 +109,22 @@ attachPlugins(void)
 	gta::register2dEffectPlugin();
 	gta::registerPipelinePlugin();
 
+#ifdef RW_GL3
+	// may not be necessary but just in case
+	// SA pipes
+	rw::gl3::registerUniform("u_dayparam");
+	rw::gl3::registerUniform("u_nightparam");
+	rw::gl3::registerUniform("u_texmat");
+	rw::gl3::registerUniform("u_envmat");
+	rw::gl3::registerUniform("u_envXform");
+	rw::gl3::registerUniform("u_shininess");
+	rw::gl3::registerUniform("u_colorscale");
+
+	// Leeds pipe
+	rw::gl3::registerUniform("u_amb");
+	rw::gl3::registerUniform("u_emiss");
+#endif
+
 	registerNTLmaterialPlugin();
 }
 
@@ -1100,7 +1116,7 @@ getSize2dEffect(void *object, int32 offset, int32)
 int32
 getNum2dEffects(rw::Geometry* geom) {
 	uint8* buffer = *PLUGINOFFSET(uint8*, geom, twodEffectOffset);
-	if (buffer == nil) return nil;
+	if (buffer == nil) return 0;
 
 	return *(int32*)buffer;
 }

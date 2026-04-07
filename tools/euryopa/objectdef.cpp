@@ -112,12 +112,12 @@ SetupAtomic(rw::Atomic *atm)
 		atm->pipeline = neoWorldPipe;
 	else if(params.leedsPipe)
 		atm->pipeline = gta::leedsPipe;
-	else if(params.daynightPipe && IsBuildingPipeAttached(atm))
-		SetupBuildingPipe(atm);
+	else if(params.daynightPipe && gta::isBuildingPipeAttached(atm))
+		gta::setupBuildingPipe(atm);
 	else{
 		if(params.daynightPipe)
 			// TEMPORARY because our MatFX can't do UV anim yet
-			SetupBuildingPipe(atm);
+			gta::setupBuildingPipe(atm);
 		else
 			atm->pipeline = nil;
 	}

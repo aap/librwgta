@@ -367,7 +367,7 @@ InitRW(void)
 
 	makeCube();
 
-	gta::MakeLeedsPipe();
+	gta::makeLeedsPipe();
 	Renderer::buildingPipe = gta::leedsPipe;
 	Renderer::colourCodePipe = gta::makeColourCodePipeline();
 
@@ -879,7 +879,7 @@ pickWorldObject(void)
 	static rw::RGBA white = { 0xFF, 0xFF, 0xFF, 0xFF };
 	TheCamera.m_rwcam->clear(&white, rw::Camera::CLEARIMAGE|rw::Camera::CLEARZ);
 	Renderer::renderEverythingColourCoded();
-	int32 c = gta::GetColourCode(CPad::newMouseState.x, CPad::newMouseState.y);
+	int32 c = gta::getColourCode(CPad::newMouseState.x, CPad::newMouseState.y);
 	BuildingExt *build = FindBuildingExt(c);
 	if(build){
 		if(CPad::IsShiftDown())
@@ -908,7 +908,7 @@ pickColModel(void)
 	gta::renderColourCoded = 0;
 	RenderDebugTris();
 	RenderDebugLines();
-	int32 c = gta::GetColourCode(CPad::newMouseState.x, CPad::newMouseState.y);
+	int32 c = gta::getColourCode(CPad::newMouseState.x, CPad::newMouseState.y);
 	switch(c >> 16){
 	case 1: e = pBuildingPool->GetSlot(c & 0xFFFF); break;
 	case 2: e = pTreadablePool->GetSlot(c & 0xFFFF); break;

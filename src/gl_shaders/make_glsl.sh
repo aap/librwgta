@@ -1,4 +1,4 @@
-#!sh
+#!/bin/sh
 for i in *.vert; do
 	echo $i
 	./makeinc_glsl.sh $i

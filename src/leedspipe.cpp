@@ -78,7 +78,7 @@ leedsRenderCB(rw::Atomic *atomic, rw::d3d9::InstanceDataHeader *header)
 }
 
 void
-MakeLeedsPipe(void)
+makeLeedsPipe(void)
 {
 #include "d3d_shaders/leedsBuilding_VS.inc"
 	leedsBuilding_VS = rw::d3d::createVertexShader(leedsBuilding_VS_cso);
@@ -157,7 +157,7 @@ leedsRenderCB(Atomic *atomic, gl3::InstanceDataHeader *header)
 }
 
 void
-MakeLeedsPipe(void)
+makeLeedsPipe(void)
 {
 	u_colorscale = registerUniform("u_colorscale");
 	u_amb = registerUniform("u_amb");

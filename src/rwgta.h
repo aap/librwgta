@@ -452,7 +452,21 @@ void registerPDSPipes(void);
 extern bool renderColourCoded;
 extern rw::RGBA colourCode;
 rw::ObjPipeline *makeColourCodePipeline(void);
-rw::int32 GetColourCode(int x, int y);
+rw::int32 getColourCode(int x, int y);
+
+//
+// SA Custom building pipe
+//
+
+extern float buildingPipe_dayNightBalance;
+extern float buildingPipe_wetRoad;
+extern float buildingPipe_platformSwitch;
+extern rw::ObjPipeline *buildingPipe;
+extern rw::ObjPipeline *buildingDNPipe;
+
+void makeCustomBuildingPipelines(void);
+bool isBuildingPipeAttached(rw::Atomic *atm);
+void setupBuildingPipe(rw::Atomic *atm);
 
 //
 // Leeds building pipe
@@ -463,14 +477,7 @@ extern rw::RGBAf leedsPipe_emiss;
 extern rw::int32 leedsPipe_platformSwitch;	// 0 - psp, 1 - ps2, 2 - mobile
 extern rw::ObjPipeline *leedsPipe;
 
-void MakeLeedsPipe(void);
-#ifdef RW_D3D9
-void leedsRenderCB(rw::Atomic *atomic, rw::d3d9::InstanceDataHeader *header);
-#else
-#ifdef RWDEVICE
-void leedsRenderCB(rw::Atomic *atomic, rw::RWDEVICE::InstanceDataHeader *header);
-#endif
-#endif
+void makeLeedsPipe(void);
 
 }
 

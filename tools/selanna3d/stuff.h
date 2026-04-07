@@ -19,3 +19,11 @@ luaCall(const char *name, Args&&... args)
 		luaError(err.what());
 	}
 }
+
+using rw::int32;
+using rw::uint32;
+using rw::int16;
+using rw::uint16;
+using rw::int8;
+using rw::uint8;
+using rw::float32;

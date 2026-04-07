@@ -35,10 +35,64 @@ Init(void)
 	sol_ImGui::Init(lua);
 }
 
+static int32 txdStoreOffset;
+
+void
+TxdSetParent(rw::TexDictionary *child, rw::TexDictionary *parent)
+{
+	*PLUGINOFFSET(rw::TexDictionary*, child, txdStoreOffset) = parent;
+}
+
+rw::Texture*
+TxdStoreFindCB(const char *name)
+{
+	rw::TexDictionary *txd = rw::TexDictionary::getCurrent();
+	rw::Texture *tex;
+	while(txd){
+		tex = txd->find(name);
+		if(tex) return tex;
+		txd = *PLUGINOFFSET(rw::TexDictionary*, txd, txdStoreOffset);
+	}
+	return nil;
+}
+
+static void*
+createTxdStore(void *object, int32 offset, int32)
+{
+	*PLUGINOFFSET(rw::TexDictionary*, object, offset) = nil;
+	return object;
+}
+
+static void*
+copyTxdStore(void *dst, void *src, int32 offset, int32)
+{
+	*PLUGINOFFSET(rw::TexDictionary*, dst, offset) = *PLUGINOFFSET(rw::TexDictionary*, src, offset);
+	return dst;
+}
+
+static void*
+destroyTxdStore(void *object, int32, int32)
+{
+	return object;
+}
+
+void
+RegisterTexStorePlugin(void)
+{
+	txdStoreOffset = rw::TexDictionary::registerPlugin(sizeof(void*), gta::ID_TXDSTORE,
+			createTxdStore,
+			destroyTxdStore,
+			copyTxdStore);
+	rw::Texture::findCB = TxdStoreFindCB;
+}
+
+
 bool
 attachPlugins(void)
 {
 	gta::attachPlugins();
+	// probably should go into the thing above
+	RegisterTexStorePlugin();
 	return true;
 }
 
@@ -108,6 +162,7 @@ InitRW(void)
 	rw::Image::setSearchPath("textures/");
 
 	colourCodePipe = gta::makeColourCodePipeline();
+	gta::makeCustomBuildingPipelines();
 
 	lua["gWidth"] = sk::globals.width;
 	lua["gHeight"] = sk::globals.height;
@@ -197,7 +252,10 @@ InitRW(void)
 	colors[ImGuiCol_NavWindowingDimBg]      = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
 	colors[ImGuiCol_ModalWindowDimBg]       = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
 
-	execLua("init.lua");
+	if(sk::args.argc > 1)
+		execLua(sk::args.argv[1]);
+	else
+		execLua("init.lua");
 	luaCall("Init");
 	return true;
 }
@@ -222,7 +280,8 @@ AppEventHandler(sk::Event e, void *param)
 	case PLUGINATTACH:
 		return attachPlugins() ? EVENTPROCESSED : EVENTERROR;
 	case KEYDOWN:
-		if(!io.WantCaptureKeyboard && !io.WantTextInput && !ImGuizmo::IsOver())
+//		if(!io.WantCaptureKeyboard && !io.WantTextInput && !ImGuizmo::IsOver())
+		if(!io.WantCaptureKeyboard && !io.WantTextInput)
 			luaCall("KeyDown", *(int*)param);
 		return EVENTPROCESSED;
 	case KEYUP:
@@ -230,7 +289,7 @@ AppEventHandler(sk::Event e, void *param)
 		return EVENTPROCESSED;
 
 	case MOUSEBTN:
-		if(!io.WantCaptureMouse && !ImGuizmo::IsOver()){
+		if(!io.WantCaptureMouse && !ImGuizmo::IsOver()) {
 			ms = (MouseState*)param;
 			luaCall("MouseBtn", ms->buttons);
 		}else
@@ -241,6 +300,14 @@ AppEventHandler(sk::Event e, void *param)
 		luaCall("MouseMotion", ms->posx, ms->posy);
 		return EVENTPROCESSED;
 
+	case MOUSEWHEEL:
+		if(!io.WantCaptureMouse) {
+			ms = (MouseState*)param;
+			luaCall("MouseWheel", ms->wheelDelta);
+		}
+		return EVENTPROCESSED;
+
+
 	case RESIZE:
 		r = (Rect*)param;
 		if(r->w == 0) r->w = 1;
@@ -250,6 +317,8 @@ AppEventHandler(sk::Event e, void *param)
 		luaCall("Resize", r->w, r->h);
 		break;
 	case IDLE:
+		lua["gFramerate"] = ImGui::GetIO().Framerate;
+		lua["gDeltaTime"] = ImGui::GetIO().DeltaTime;
 		luaCall("Draw", *(float*)param);
 		return EVENTPROCESSED;
 	}
