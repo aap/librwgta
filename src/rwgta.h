@@ -481,4 +481,6 @@ void makeLeedsPipe(void);
 
 }
 
+#include "collisions.h"
+
 #endif

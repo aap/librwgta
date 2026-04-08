@@ -26,6 +26,11 @@ using rw::bool32;
 using rw::uintptr;
 typedef unsigned int uint;
 
+using gta::CColModel;
+using gta::CSphere;
+using gta::CBox;
+using gta::CColTriangle;
+
 struct ObjectInst;
 
 #ifdef RWHALFPIXEL
@@ -36,7 +41,6 @@ struct ObjectInst;
 
 #include "Pad.h"
 #include "camera.h"
-#include "collision.h"
 
 void panic(const char *fmt, ...);
 void debug(const char *fmt, ...);
@@ -320,6 +324,15 @@ void TxdMakeCurrent(int i);
 void TxdSetParent(const char *child, const char *parent);
 
 
+struct CColModelX : CColModel
+{
+	char name[24];
+	GameFile *file;
+
+};
+
+void RenderColModelWire(CColModel *col, rw::Matrix *xform, bool onlyBounds);
+
 struct ColFileHeader
 {
 	uint32 fourcc;
@@ -349,7 +362,7 @@ struct ObjectDef
 	char m_name[MODELNAMELEN];
 	int m_txdSlot;
 	int m_type;
-	CColModel *m_colModel;
+	CColModelX *m_colModel;
 	bool m_gotChildCol;
 	int m_pedPathIndex;
 	int m_carPathIndex;

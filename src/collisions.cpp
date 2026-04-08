@@ -6,66 +6,43 @@
 #include <rw.h>
 
 #include "rwgta.h"
-#include "collisions.h"
 
-void
-CColSphere::Set(float radius, rw::V3d *center, rw::uint8 surf, rw::uint8 piece)
-{
-	this->radius = radius;
-	this->center = *center;
-	this->surface = surf;
-	this->piece = piece;
-}
+using namespace rw;
 
-void
-CColBox::Set(rw::V3d *min, rw::V3d *max, rw::uint8 surf, rw::uint8 piece)
-{
-	this->min = *min;
-	this->max = *max;
-	this->surface = surf;
-	this->piece = piece;
-}
-
-void
-CColLine::Set(rw::V3d *p0, rw::V3d *p1)
-{
-	this->p0 = *p0;
-	this->p1 = *p1;
-}
-
-void
-CColTriangle::Set(int a, int b, int c, rw::uint8 surf)
-{
-	this->a = a;
-	this->b = b;
-	this->c = c;
-	this->surface = surf;
-}
+namespace gta {
 
 CColModel::CColModel(void)
 {
 	this->numSpheres = 0;
-	this->spheres = NULL;
+	this->spheres = nil;
 	this->numLines = 0;
-	this->lines = NULL;
+	this->lines = nil;
 	this->numBoxes = 0;
-	this->boxes = NULL;
+	this->boxes = nil;
 	this->numTriangles = 0;
-	this->vertices = NULL;
-	this->triangles = NULL;
+	this->vertices = nil;
+	this->triangles = nil;
+
+	this->flags = 0;
+	this->allocFlag = 0;	// SA does something strange here
+	this->rawdata = nil;
 }
 
 CColModel::~CColModel(void)
 {
-	delete[] this->spheres;
-	delete[] this->lines;
-	delete[] this->boxes;
-	delete[] this->vertices;
-	delete[] this->triangles;
+	if(this->allocFlag & 2)
+		rwFree(this->rawdata);
+	else{
+		rwFree(this->spheres);
+		rwFree(this->lines);
+		rwFree(this->boxes);
+		rwFree(this->vertices);
+		rwFree(this->triangles);
+	}
 }
 
 void
-readColModel(CColModel *colmodel, rw::uint8 *buf)
+readColModel(CColModel *colmodel, rw::uint8 *buf, int size)
 {
 	float *fp = (float*)buf;
 	colmodel->boundingSphere.radius = *fp++;
@@ -79,55 +56,60 @@ readColModel(CColModel *colmodel, rw::uint8 *buf)
 	colmodel->boundingBox.max.y = *fp++;
 	colmodel->boundingBox.max.z = *fp++;
 	buf = (rw::uint8*)fp;
-	colmodel->numSpheres = *(rw::int16*)buf;
+	colmodel->numSpheres = *(int16*)buf;
 	buf += 4;
 	if(colmodel->numSpheres){
-		colmodel->spheres = new CColSphere[colmodel->numSpheres];
+		colmodel->spheres = rwNewT(CColSphere, colmodel->numSpheres, 0);
 		for(int i = 0; i < colmodel->numSpheres; i++){
-			colmodel->spheres[i].Set(*(float*)buf, (rw::V3d*)(buf+4), buf[16], buf[17]); // buf[19] light
+			colmodel->spheres[i].Set(*(float*)buf, (rw::V3d*)(buf+4), buf[16], buf[17], buf[19]);
 			buf += 20;
 		}
 	}
 
-	colmodel->numLines = *(rw::int16*)buf;
+	colmodel->numLines = *(int16*)buf;
 	buf += 4;
 	if(colmodel->numLines){
-		colmodel->lines = new CColLine[colmodel->numLines];
+		// lines aren't really used...
+		colmodel->lines = rwNewT(CColLine, colmodel->numLines, 0);
 		for(int i = 0; i < colmodel->numLines; i++){
 			colmodel->lines[i].Set((rw::V3d*)buf, (rw::V3d*)(buf+12));
 			buf += 24;
 		}
 	}
 
-	colmodel->numBoxes = *(rw::int16*)buf;
+	colmodel->numBoxes = *(int16*)buf;
 	buf += 4;
 	if(colmodel->numBoxes){
-		colmodel->boxes = new CColBox[colmodel->numBoxes];
+		colmodel->boxes = rwNewT(CColBox, colmodel->numBoxes, 0);
 		for(int i = 0; i < colmodel->numBoxes; i++){
-			colmodel->boxes[i].Set((rw::V3d*)buf, (rw::V3d*)(buf+12), buf[24], buf[25]); // buf[27] light
+			colmodel->boxes[i].Set((rw::V3d*)buf, (rw::V3d*)(buf+12), buf[24], buf[25], buf[27]);
 			buf += 28;
 		}
 	}
 
-	rw::int32 numVertices = *(rw::int16*)buf;
+	int32 numVertices = *(int16*)buf;
 	buf += 4;
 	if(numVertices){
-		colmodel->vertices = new rw::V3d[numVertices];
+		colmodel->vertices = rwNewT(rw::V3d, numVertices, 0);
 		for(int i = 0; i < numVertices; i++){
 			colmodel->vertices[i] = *(rw::V3d*)buf;
 			buf += 12;
 		}
 	}
 
-	colmodel->numTriangles = *(rw::int16*)buf;
+	colmodel->numTriangles = *(int16*)buf;
 	buf += 4;
 	if(colmodel->numTriangles){
-		colmodel->triangles = new CColTriangle[colmodel->numTriangles];
+		colmodel->triangles = rwNewT(CColTriangle, colmodel->numTriangles, 0);
 		for(int i = 0; i < colmodel->numTriangles; i++){
-			colmodel->triangles[i].Set(*(rw::int32*)buf, *(rw::int32*)(buf+4), *(rw::int32*)(buf+8), buf[12]); // buf[15] light
+			colmodel->triangles[i].Set(*(int32*)buf, *(int32*)(buf+4), *(int32*)(buf+8), buf[12], buf[15]);
 			buf += 16;
 		}
 	}
+
+	colmodel->allocFlag = 0;
+	if(colmodel->numSpheres || colmodel->numLines || colmodel->numBoxes || colmodel->numTriangles)
+		colmodel->allocFlag |= 1;
 }
 
 rw::uint32
@@ -168,11 +150,11 @@ writeColModel(CColModel *colmodel, rw::uint8 **bufp)
 	*(rw::int32*)buf = colmodel->numSpheres;
 	buf += 4;
 	for(int i = 0; i < colmodel->numSpheres; i++){
-		*(float*)(buf+0) = colmodel->spheres[i].radius;
-		*(rw::V3d*)(buf+4) = colmodel->spheres[i].center;
+		*(float*)(buf+0) = colmodel->spheres[i].sph.radius;
+		*(rw::V3d*)(buf+4) = colmodel->spheres[i].sph.center;
 		buf[16] = colmodel->spheres[i].surface;
 		buf[17] = colmodel->spheres[i].piece;
-		buf[19] = 0;	// light
+		buf[19] = colmodel->spheres[i].lighting;
 		buf += 20;
 	}
 
@@ -187,11 +169,11 @@ writeColModel(CColModel *colmodel, rw::uint8 **bufp)
 	*(rw::int32*)buf = colmodel->numBoxes;
 	buf += 4;
 	for(int i = 0; i < colmodel->numBoxes; i++){
-		*(rw::V3d*)(buf+0) = colmodel->boxes[i].min;
-		*(rw::V3d*)(buf+12) = colmodel->boxes[i].max;
+		*(rw::V3d*)(buf+0) = colmodel->boxes[i].box.min;
+		*(rw::V3d*)(buf+12) = colmodel->boxes[i].box.max;
 		buf[24] = colmodel->boxes[i].surface;
 		buf[25] = colmodel->boxes[i].piece;
-		buf[27] = 0; // light
+		buf[27] = colmodel->boxes[i].lighting;
 		buf += 28;
 	}
 
@@ -209,9 +191,172 @@ writeColModel(CColModel *colmodel, rw::uint8 **bufp)
 		*(rw::int32*)(buf+4) = colmodel->triangles[i].b;
 		*(rw::int32*)(buf+8) = colmodel->triangles[i].c;
 		buf[12] = colmodel->triangles[i].surface;
-		buf[15] = 0; // light
+		buf[15] = colmodel->triangles[i].lighting;
 		buf += 16;
 	}
 	assert(buf == end);
 	return size;
+}
+
+struct Col4Header
+{
+	CBox boundingBox;
+	CSphere boundingSphere;
+	int16 numSpheres;
+	int16 numBoxes;
+	int16 numTriangles;
+	int16 numLines;
+	uint8 flags;
+	uint32 sphereOffset;
+	uint32 boxOffset;
+	uint32 lineOffset;
+	uint32 vertexOffset;
+	uint32 triangleOffset;
+	uint32 unused;	// triangle planes
+
+	// Ver3
+	int32 numShadowTriangles;
+	uint32 shadowVertexOffset;
+	uint32 shadowTriangleOffset;
+
+	// Ver4
+	uint32 unused2;
+};
+
+void
+readColModelVer2(CColModel *colmodel, uint8 *buf, int32 size)
+{
+#define COLHEADERSIZE 0x4C
+	Col4Header *header = (Col4Header*)buf;
+	int datasize = size - COLHEADERSIZE;
+	colmodel->boundingBox = header->boundingBox;
+	colmodel->boundingSphere = header->boundingSphere;
+	// flag 2
+	colmodel->allocFlag = (colmodel->allocFlag&~1) | (header->flags>>1)&1;
+	if(datasize <= 0)
+		return;
+	colmodel->rawdata = rwNewT(uint8, datasize, 0);
+	memcpy(colmodel->rawdata, buf+COLHEADERSIZE, datasize);
+	colmodel->numSpheres = header->numSpheres;
+	colmodel->numBoxes = header->numBoxes;
+	colmodel->numLines = header->numLines;
+	colmodel->numTriangles = header->numTriangles;
+	colmodel->flags &= ~1;
+	colmodel->flags &= ~4;
+	// flag 8
+	colmodel->flags = (colmodel->flags&~2) | (header->flags>>2)&2;
+
+	colmodel->spheres = header->sphereOffset ?
+		(CColSphere*)(colmodel->rawdata + header->sphereOffset - COLHEADERSIZE - 0x1C) :
+		nil;
+	colmodel->boxes = header->boxOffset ?
+		(CColBox*)(colmodel->rawdata + header->boxOffset - COLHEADERSIZE - 0x1C) :
+		nil;
+	colmodel->lines = header->lineOffset ?
+		(CColLine*)(colmodel->rawdata + header->lineOffset - COLHEADERSIZE - 0x1C) :
+		nil;
+	colmodel->compVertices = header->vertexOffset ?
+		(CompressedVector*)(colmodel->rawdata + header->vertexOffset - COLHEADERSIZE - 0x1C) :
+		nil;
+	colmodel->triangles = header->triangleOffset ?
+		(CColTriangle*)(colmodel->rawdata + header->triangleOffset - COLHEADERSIZE - 0x1C) :
+		nil;
+	colmodel->allocFlag |= 2;
+
+	colmodel->flags = 0x80;	// compressed vertices
+#undef COLHEADERSIZE
+}
+
+void
+readColModelVer3(CColModel *colmodel, uint8 *buf, int32 size)
+{
+#define COLHEADERSIZE 0x58
+	Col4Header *header = (Col4Header*)buf;
+	int datasize = size - COLHEADERSIZE;
+	colmodel->boundingBox = header->boundingBox;
+	colmodel->boundingSphere = header->boundingSphere;
+	// flag 2
+	colmodel->allocFlag = (colmodel->allocFlag&~1) | (header->flags>>1)&1;
+	if(datasize <= 0)
+		return;
+	colmodel->rawdata = rwNewT(uint8, datasize, 0);
+	memcpy(colmodel->rawdata, buf+COLHEADERSIZE, datasize);
+	colmodel->numSpheres = header->numSpheres;
+	colmodel->numBoxes = header->numBoxes;
+	colmodel->numLines = header->numLines;
+	colmodel->numTriangles = header->numTriangles;
+	colmodel->flags &= ~1;
+	colmodel->flags &= ~4;
+	// flag 8
+	colmodel->flags = (colmodel->flags&~2) | (header->flags>>2)&2;
+
+	colmodel->spheres = header->sphereOffset ?
+		(CColSphere*)(colmodel->rawdata + header->sphereOffset - COLHEADERSIZE - 0x1C) :
+		nil;
+	colmodel->boxes = header->boxOffset ?
+		(CColBox*)(colmodel->rawdata + header->boxOffset - COLHEADERSIZE - 0x1C) :
+		nil;
+	colmodel->lines = header->lineOffset ?
+		(CColLine*)(colmodel->rawdata + header->lineOffset - COLHEADERSIZE - 0x1C) :
+		nil;
+	colmodel->compVertices = header->vertexOffset ?
+		(CompressedVector*)(colmodel->rawdata + header->vertexOffset - COLHEADERSIZE - 0x1C) :
+		nil;
+	colmodel->triangles = header->triangleOffset ?
+		(CColTriangle*)(colmodel->rawdata + header->triangleOffset - COLHEADERSIZE - 0x1C) :
+		nil;
+	colmodel->allocFlag |= 2;
+
+	// TODO: read shadow mesh
+
+	colmodel->flags = 0x80;	// compressed vertices
+#undef COLHEADERSIZE
+}
+
+void
+readColModelVer4(CColModel *colmodel, uint8 *buf, int32 size)
+{
+#define COLHEADERSIZE 0x5C
+	Col4Header *header = (Col4Header*)buf;
+	int datasize = size - COLHEADERSIZE;
+	colmodel->boundingBox = header->boundingBox;
+	colmodel->boundingSphere = header->boundingSphere;
+	// flag 2
+	colmodel->allocFlag = (colmodel->allocFlag&~1) | (header->flags>>1)&1;
+	if(datasize <= 0)
+		return;
+	colmodel->rawdata = rwNewT(uint8, datasize, 0);
+	memcpy(colmodel->rawdata, buf+COLHEADERSIZE, datasize);
+	colmodel->numSpheres = header->numSpheres;
+	colmodel->numBoxes = header->numBoxes;
+	colmodel->numLines = header->numLines;
+	colmodel->numTriangles = header->numTriangles;
+	colmodel->flags &= ~1;
+	colmodel->flags &= ~4;
+	// flag 8
+	colmodel->flags = (colmodel->flags&~2) | (header->flags>>2)&2;
+
+	colmodel->spheres = header->sphereOffset ?
+		(CColSphere*)(colmodel->rawdata + header->sphereOffset - COLHEADERSIZE - 0x1C) :
+		nil;
+	colmodel->boxes = header->boxOffset ?
+		(CColBox*)(colmodel->rawdata + header->boxOffset - COLHEADERSIZE - 0x1C) :
+		nil;
+	colmodel->lines = header->lineOffset ?
+		(CColLine*)(colmodel->rawdata + header->lineOffset - COLHEADERSIZE - 0x1C) :
+		nil;
+	colmodel->compVertices = header->vertexOffset ?
+		(CompressedVector*)(colmodel->rawdata + header->vertexOffset - COLHEADERSIZE - 0x1C) :
+		nil;
+	colmodel->triangles = header->triangleOffset ?
+		(CColTriangle*)(colmodel->rawdata + header->triangleOffset - COLHEADERSIZE - 0x1C) :
+		nil;
+	colmodel->allocFlag |= 2;
+
+	// TODO: read shadow mesh
+
+	colmodel->flags = 0x80;	// compressed vertices
+#undef COLHEADERSIZE
+}
+
 }

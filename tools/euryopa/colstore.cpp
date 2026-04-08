@@ -93,14 +93,14 @@ LoadCol(int slot)
 
 		obj = GetObjectDef(header->name, nil);
 		if(obj){
-			CColModel *col = new CColModel;
+			CColModelX *col = new CColModelX;
 			col->file = file;
 			obj->m_colModel = col;
 			switch(version){
-			case 1: ReadColModel(col, buffer+offset, header->modelsize-24); break;
-			case 2: ReadColModelVer2(col, buffer+offset, header->modelsize-24); break;
-			case 3: ReadColModelVer3(col, buffer+offset, header->modelsize-24); break;
-			case 4: ReadColModelVer4(col, buffer+offset, header->modelsize-24); break;
+			case 1: gta::readColModel(col, buffer+offset, header->modelsize-24); break;
+			case 2: gta::readColModelVer2(col, buffer+offset, header->modelsize-24); break;
+			case 3: gta::readColModelVer3(col, buffer+offset, header->modelsize-24); break;
+			case 4: gta::readColModelVer4(col, buffer+offset, header->modelsize-24); break;
 			default:
 				printf("unknown COL version %d\n", version);
 				obj->m_colModel = nil;

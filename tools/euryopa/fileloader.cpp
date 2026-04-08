@@ -716,15 +716,15 @@ LoadCollisionFile(const char *path)
 
 		obj = GetObjectDef(colfile.name, nil);
 		if(obj){
-			CColModel *col = new CColModel;
+			CColModelX *col = new CColModelX;
 			strncpy(col->name, colfile.name, 24);
 			col->file = currentFile;
 			obj->m_colModel = col;
 			switch(version){
-			case 1: ReadColModel(col, buffer, colfile.modelsize-24); break;
-			case 2: ReadColModelVer2(col, buffer, colfile.modelsize-24); break;
-			case 3: ReadColModelVer3(col, buffer, colfile.modelsize-24); break;
-			case 4: ReadColModelVer4(col, buffer, colfile.modelsize-24); break;
+			case 1: readColModel(col, buffer, colfile.modelsize-24); break;
+			case 2: readColModelVer2(col, buffer, colfile.modelsize-24); break;
+			case 3: readColModelVer3(col, buffer, colfile.modelsize-24); break;
+			case 4: readColModelVer4(col, buffer, colfile.modelsize-24); break;
 			default:
 				printf("unknown COL version %d\n", version);
 				obj->m_colModel = nil;
