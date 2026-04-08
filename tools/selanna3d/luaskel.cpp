@@ -95,6 +95,12 @@ registerSkeleton(sol::state &lua)
 			cam->m_target = add(cam->m_position, scale(fwd, d));
 		},
 		"distanceTo", &Camera::distanceTo,
+		"isSphereVisible", [](Camera *cam, const gta::CSphere &sph, rw::Matrix *xform) {
+			rw::Sphere rwsph;
+			rwsph.center = sph.center;
+			rwsph.radius = sph.radius;
+			return cam->isSphereVisible(&rwsph, xform);
+		},
 		"getHeading", &Camera::getHeading,
 		"jumpTo", [](Camera *cam, rw::V3d pos) {
 			rw::V3d dist = sub(pos, cam->m_target);

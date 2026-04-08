@@ -185,10 +185,10 @@ function addRGBA(line, rgba)
 end
 
 
-Building = {}
-Building.__index = Building
-function Building.make()
-	return setmetatable({}, Building)
+AtomicModel = {}
+AtomicModel.__index = AtomicModel
+function AtomicModel.make()
+	return setmetatable({}, AtomicModel)
 end
 
 Instance = {}
@@ -243,8 +243,8 @@ function gta.make(game, gameDir)
 	g.modelsById = {}
 	g.modelsByName = {}
 	g.txdsByName = {}
-	g.buildings = {}
-	g.timedBuildings = {}
+	g.atomicModels = {}
+	g.timedModels = {}
 	g.clumps = {}
 	g.animClumps = {}
 	g.peds = {}
@@ -326,12 +326,12 @@ function gta:AddModel(obj, tab, type)
 	self.modelsByName[obj.modelName:lower()] = obj
 end
 
-function gta:AddBuilding(obj)
-	self:AddModel(obj, self.buildings, gta.MT_ATOMIC)
+function gta:AddAtomicModel(obj)
+	self:AddModel(obj, self.atomicModels, gta.MT_ATOMIC)
 end
 
-function gta:AddTimedBuilding(obj)
-	self:AddModel(obj, self.timedBuildings, gta.MT_ATOMIC)
+function gta:AddTimedModel(obj)
+	self:AddModel(obj, self.timedModels, gta.MT_ATOMIC)
 end
 
 function gta:AddAnimClump(obj)
@@ -650,7 +650,7 @@ end
 
 function gta:ReadObjLine(line)
 	local t = TokenStream.make(line)
-	local obj = Building.make()
+	local obj = AtomicModel.make()
 	obj.id = t:nextInt()
 	obj.modelName = t:next()
 	obj.txdName = t:next()
@@ -663,7 +663,7 @@ function gta:ReadObjLine(line)
 		obj["lodDist" .. i] = t:nextFloat()
 	end
 	obj.flags = FlagSet.make(t:nextInt(), objflags[self.game])
-	self:AddBuilding(obj)
+	self:AddAtomicModel(obj)
 end
 
 function gta:WriteObjLine(obj)
@@ -684,7 +684,7 @@ end
 
 function gta:ReadTObjLine(line)
 	local t = TokenStream.make(line)
-	local obj = Building.make()
+	local obj = AtomicModel.make()
 	obj.id = t:nextInt()
 	obj.modelName = t:next()
 	obj.txdName = t:next()
@@ -699,7 +699,7 @@ function gta:ReadTObjLine(line)
 	obj.flags = FlagSet.make(t:nextInt(), objflags[self.game])
 	obj.timeOn = t:nextInt()
 	obj.timeOff = t:nextInt()
-	self:AddTimedBuilding(obj)
+	self:AddTimedModel(obj)
 end
 
 function gta:WriteTObjLine(obj)
@@ -1895,8 +1895,8 @@ function gta:WriteIDE(file)
 
 	self:WriteDataSection(f, file, "peds", self.peds, self.WritePedLine)
 	self:WriteDataSection(f, file, "cars", self.vehicles, self.WriteVehicleLine)
-	self:WriteDataSection(f, file, "objs", self.buildings, self.WriteObjLine)
-	self:WriteDataSection(f, file, "tobj", self.timedBuildings, self.WriteTObjLine)
+	self:WriteDataSection(f, file, "objs", self.atomicModels, self.WriteObjLine)
+	self:WriteDataSection(f, file, "tobj", self.timedModels, self.WriteTObjLine)
 	self:WriteDataSection(f, file, "path", self.pathSegments, self.WritePathSegment)
 	self:WriteDataSection(f, file, "2dfx", self.effects, self.Write2dfxLine)
 	if self.game > gta.GameIII then

@@ -22,5 +22,6 @@ public:
 
 	void update(void);
 	float distanceTo(rw::V3d v);
+	bool isSphereVisible(rw::Sphere *sph, rw::Matrix *xform);
 	Camera(void);
 };

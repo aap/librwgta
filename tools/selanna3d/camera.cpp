@@ -119,6 +119,15 @@ Camera::distanceTo(V3d v)
 	return length(sub(m_position, v));
 }
 
+bool
+Camera::isSphereVisible(rw::Sphere *sph, rw::Matrix *xform)
+{
+	rw::Sphere sphere = *sph;
+	if(xform)
+		rw::V3d::transformPoints(&sphere.center, &sphere.center, 1, xform);
+	return m_rwcam->frustumTestSphere(&sphere) != rw::Camera::SPHEREOUTSIDE;
+}
+
 Camera::Camera()
 {
 	m_position.set(0.0f, 6.0f, 0.0f);

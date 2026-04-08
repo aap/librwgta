@@ -109,12 +109,19 @@ function gta:HideScene(scene, deep)
 	scene.showScene = false
 end
 
-function Building:IsTimeInRange(hour)
+function AtomicModel:IsTimeInRange(hour)
 	if self.timeOn > self.timeOff then
 		return hour >= self.timeOn or hour < self.timeOff
 	else
 		return hour >= self.timeOn and hour < self.timeOff
 	end
+end
+
+function Instance:IsOnScreen()
+	if not self.rwAtomic then return true end
+	local matrix = self.rwAtomic:getFrame():getLTM()
+	local col = self.mdl.colModel
+	return not col or activeCam:isSphereVisible(col.boundingSphere, matrix)
 end
 
 function gta:DrawInstance(inst)
@@ -136,10 +143,9 @@ function gta:DrawInstance(inst)
 	end
 
 	if mdl.timeOn then
-		if not mdl:IsTimeInRange(self.hour) then
-			return nil
-		end
+		if not mdl:IsTimeInRange(self.hour) then return nil end
 	end
+	if not inst:IsOnScreen() then return nil end
 	if (mdl.flags.bits & (4|8)) ~= 0 then
 		return inst.rwAtomic
 	end

@@ -87,6 +87,9 @@ registerRW(sol::state &lua)
 		sol::meta_function::multiplication, [](const rw::Quat& a, float s)          { return rw::scale(a, s); }
 	);
 
+	lua.new_usertype<rw::Matrix>("Matrix",
+		sol::no_constructor
+	);
 	rwtab.set("COMBINEREPLACE", rw::COMBINEREPLACE);
 	rwtab.set("COMBINEPRECONCAT", rw::COMBINEPRECONCAT);
 	rwtab.set("COMBINEPOSTCONCAT", rw::COMBINEPOSTCONCAT);
@@ -189,6 +192,7 @@ registerRW(sol::state &lua)
 		"removeChild", &rw::Frame::removeChild,
 		"addChild", &rw::Frame::addChild,
 		"count", &rw::Frame::count,
+		"getLTM", &rw::Frame::getLTM,
 		"rotate", [](rw::Frame *f, const rw::V3d *axis, rw::float32 angle, rw::CombineOp op) {
 			f->rotate(axis, angle, op);
 		},
