@@ -274,6 +274,22 @@ function processCam(cam, timestep)
 	end
 end
 
+function ColModel:imguiDraw()
+	if ImGui.TreeNode("Col Model") then
+		local c = self.boundingSphere.center
+		local r = self.boundingSphere.radius
+		local values, used = ImGui.InputFloat4("Bounding Sphere", {c.x, c.y, c.z, r})
+
+		local min = self.boundingBox.min
+		local max = self.boundingBox.max
+		values, used = ImGui.InputFloat3("Bounding Box Min", {min.x, min.y, min.z})
+		values, used = ImGui.InputFloat3("Bounding Box Max", {max.x, max.y, max.z})
+		-- TODO
+
+		ImGui.TreePop()
+	end
+end
+
 function Building:imguiTitle()
 	return true, tostring(self.id) .. "\t" .. self.modelName
 end
@@ -294,6 +310,10 @@ function Building:imguiDraw()
 		local value, used = ImGui.InputInt("Time Off", self.timeOff)
 	end
 	ImGui.Flags("Flags##Object", self.flags)
+
+	if self.colModel then
+		self.colModel:imguiDraw()
+	end
 
 	if ImGui.Button("View") then
 		game:LoadAtomics(self)

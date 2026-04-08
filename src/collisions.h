@@ -41,7 +41,7 @@ struct CColSphere
 	rw::uint8 piece;
 	rw::uint8 lighting;
 
-	void Set(float radius, rw::V3d *center, rw::uint8 surf, rw::uint8 piece, rw::uint8 lighting){
+	void Set(float radius, const rw::V3d *center, rw::uint8 surf, rw::uint8 piece, rw::uint8 lighting){
 		this->sph.center = *center;
 		this->sph.radius = radius;
 		this->surface = surf;
@@ -57,7 +57,7 @@ struct CColBox
 	rw::uint8 piece;
 	rw::uint8 lighting;
 
-	void Set(rw::V3d *min, rw::V3d *max, rw::uint8 surf, rw::uint8 piece, rw::uint8 lighting){
+	void Set(const rw::V3d *min, const rw::V3d *max, rw::uint8 surf, rw::uint8 piece, rw::uint8 lighting){
 		this->box.min = *min;
 		this->box.max = *max;
 		this->surface = surf;
@@ -73,7 +73,7 @@ struct CColLine
 	rw::V3d p1;
 	int pad1;
 
-	void Set(rw::V3d *p0, rw::V3d *p1){
+	void Set(const rw::V3d *p0, const rw::V3d *p1){
 		this->p0 = *p0;
 		this->p1 =*p1;
 	}

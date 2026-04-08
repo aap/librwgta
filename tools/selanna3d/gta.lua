@@ -123,6 +123,13 @@ function BinaryStream:nextFloat()
 	return n
 end
 
+-- file-like interface
+function BinaryStream:read(n)
+	local data = self.data:sub(self.pos, self.pos+n-1)
+	self.pos = self.pos + n
+	return data
+end
+
 -- identical to text tokens actually....
 function BinaryStream:nextXYZ()
 	local x = self:nextFloat()
@@ -229,6 +236,8 @@ function gta.make(game, gameDir)
 	g.cdImageFiles = {}
 	g.streamedFiles = {}
 	g.streamIplsByName = {}
+	g.streamColsByName = {}
+	g.colModelsByName = {}
 
 	-- IDE
 	g.modelsById = {}
@@ -446,6 +455,9 @@ function gta:LinkStreamingInfo()
 			else
 --				print("did not find txd", s.name)
 			end
+		elseif s.ext == "COL" then
+			local col = { streamingInfo = s }
+			self.streamColsByName[s.name:lower()] = col
 		elseif s.ext == "IPL" then
 			local ipl = { streamingInfo = s }
 			self.streamIplsByName[s.name:lower()] = ipl
@@ -485,8 +497,7 @@ function gta:FinishLoading()
 	-- link TXDs to models
 	local generic = self:AddTxdSlot('generic')
 	for id, mdl in pairs(self.modelsById) do
-		local name = mdl.txdName:lower()
-		local txd = self:GetTxdSlot(name)
+		local txd = self:GetTxdSlot(mdl.txdName:lower())
 		mdl.txd = txd
 		txd.refCount = txd.refCount+1
 	end
@@ -503,6 +514,13 @@ function gta:FinishLoading()
 		self:ReadCdImage(f.fileName)
 	end
 	self:LinkStreamingInfo()
+
+	-- link COLs to models
+	self:LoadStreamedCOLs()
+	for id, mdl in pairs(self.modelsById) do
+		local col = self.colModelsByName[mdl.modelName:lower()]
+		mdl.colModel = col
+	end
 
 	-- load generic textures
 	generic.rwTxd = rw.TexDictionaryCreate()
@@ -1696,6 +1714,51 @@ function gta:LoadStreamedIPLs()
 	end
 end
 
+function gta:ReadColModel(fourcc, data, len)
+	local name = data:sub(1,24):match("^([^%z]+)")
+	data = data:sub(25)
+	len = len - 24
+	local colmodel = gta.ColModel()
+	if fourcc == "COLL" then colmodel:read(data, len)
+	elseif fourcc == "COL2" then colmodel:readV2(data, len)
+	elseif fourcc == "COL3" then colmodel:readV3(data, len)
+	elseif fourcc == "COL4" then colmodel:readV4(data, len)
+	else print("unknown version", fourcc)
+	end
+	return colmodel, name
+end
+
+function gta:ReadColBundle(f, level)
+	while true do
+		local header = f:read(8)
+		if not header or #header < 8 then break end
+		local fourcc, size = string.unpack("<c4I4", header)
+		if size == 0 then break end
+		local data = f:read(size)
+		local colmodel, name = self:ReadColModel(fourcc, data, size)
+		colmodel.level = level
+		self.colModelsByName[name:lower()] = colmodel
+	end
+end
+
+function gta:LoadStreamedCOLs()
+	for name, col in pairs(self.streamColsByName) do
+		local strm = self:GetStreamBuffer(col.streamingInfo)
+		self:ReadColBundle(strm, -1)
+	end
+end
+
+function gta:ReadColFile(file, level)
+	self.currentFile = self:GetFileFs(file)
+	local f = io.open(self.currentFile.fullPath, "rb")
+	if not f then
+		print("Could not open file: " .. self.currentFile.fullPath)
+		return
+	end
+	self:ReadColBundle(f, level)
+	f:close()
+end
+
 function gta:ReadFileByDesc(file, desc)
 	self.currentFile = self:GetFileFs(file)
 	local f = io.open(self.currentFile.fullPath, "r")
@@ -1785,15 +1848,17 @@ function gta:ReadDataFile(file)
 		elseif fields[1] == "MAPZONE" then
 			self:ReadFileByDesc(fields[2], ZONdesc)
 		elseif fields[1] == "COLFILE" then
---			print("COL FILE", fields[2], fields[3])
-			self.currentFile = self:GetFileFs(fields[3])
+			self:ReadColFile(fields[3], tonumber(fields[2]))
 		elseif fields[1] == "CDIMAGE" or fields[1] == 'IMG' then
 			self:AddCdImage(fields[2])
 		elseif fields[1] == "SPLASH" then
 			self.currentFile = {}
 		elseif fields[1] == "MODELFILE" then
 			self.currentFile = self:GetFileFs(fields[2])
--- TODO
+-- TODO. load unstreamed atomic
+		elseif fields[1] == "HIERFILE" then
+			self.currentFile = self:GetFileFs(fields[2])
+-- TODO, but unused. load unstreamed clump
 		elseif fields[1] == "TEXDICTION" then
 			self.currentFile = self:GetFileFs(fields[2])
 			table.insert(self.genericTxds, self.currentFile)
