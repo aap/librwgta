@@ -15,9 +15,6 @@
 
 using namespace std;
 
-extern sol::state lua;
-
-
 static rw::Raster*
 ConvertTexRaster(rw::Raster *ras)
 {
@@ -74,18 +71,9 @@ void myRenderCB(rw::Atomic *atomic);
 }
 
 void
-SetupAtomicPipelines(rw::Atomic *atm)
-{
-	// SA
-	if(gta::isBuildingPipeAttached(atm))
-		gta::setupBuildingPipe(atm);
-}
-
-void
-initLuaSkeleton(void)
+registerSkeleton(sol::state &lua)
 {
 	sol::table sktab = lua["sk"].get_or_create<sol::table>();
-	sol::table gtatab = lua["gta"].get_or_create<sol::table>();
 
 	lua.new_usertype<Camera>("Camera",
 		"new", sol::constructors<Camera()>(),
@@ -152,5 +140,4 @@ initLuaSkeleton(void)
 	});
 	sktab.set_function("ConvertTexDict", &ConvertTxd);
 	sktab.set_function("ConvertClump", &ConvertClump);
-	gtatab.set_function("SetupAtomicPipelines", &SetupAtomicPipelines);
 }

@@ -10,7 +10,7 @@
 #include "stuff.h"
 #include "imgui/ImGuizmo.h"
 
-extern sol::state lua;
+sol::state lua;
 rw::EngineOpenParams engineOpenParams;
 
 void
@@ -30,8 +30,10 @@ Init(void)
 	sk::globals.height = 800;
 	sk::globals.quit = 0;
 
-	initLua();
-	initLuaSkeleton();
+	initLua(lua);
+	registerRW(lua);
+	registerGTA(lua);
+	registerSkeleton(lua);
 	sol_ImGui::Init(lua);
 }
 

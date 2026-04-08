@@ -4,8 +4,6 @@
 #include <cassert>
 
 #include <rw.h>
-#include <args.h>
-
 #include <rwgta.h>
 #include "sol/sol.hpp"
 #include "stuff.h"
@@ -37,38 +35,10 @@ getFrameName(Frame *f)
 	return name;
 }
 
-sol::state lua;
-
 void
-initLua(void)
+registerRW(sol::state &lua)
 {
-	lua.open_libraries(sol::lib::base,
-		sol::lib::io,
-		sol::lib::os,
-		sol::lib::string,
-		sol::lib::math,
-		sol::lib::table);
-
 	sol::table rwtab = lua["rw"].get_or_create<sol::table>();
-	sol::table gtatab = lua["gta"].get_or_create<sol::table>();
-
-/*
-	rwtab.set_function("init", [](){
-		rw::version = 0x34003;
-		rw::platform = rw::PLATFORM_D3D8;
-
-		rw::Engine::init();
-		gta::attachPlugins();
-		rw::Engine::open(nil);
-		rw::Engine::start();
-
-		rw::Texture::setCreateDummies(1);
-	});
-*/
-
-	lua["include"] = [](const char *path){
-		lua.script_file(path);
-	};
 
 	rwtab.set_function("makePath", [](const char *path){
 		char *x = strdup(path);
@@ -398,33 +368,21 @@ initLua(void)
 		return sol::make_object(lua, txd);
 	});
 
+}
 
-	// librwgta stuff
-	gtatab.set_function("SetColourCode", [](rw::uint32 code){
-		gta::colourCode.red = code & 0xFF;
-		gta::colourCode.green = code>>8 & 0xFF;
-		gta::colourCode.blue = code>>16 & 0xFF;
-		gta::colourCode.alpha = 255;
-	});
-	gtatab.set_function("GetColourCode", [](int x, int y){
-		return gta::getColourCode(x, y);
-	});
-	gtatab.set_function("SetRenderColourCoded", [](int colour){
-		gta::renderColourCoded = colour;
-	});
-	gtatab.set_function("SetHighlightColour", [](rw::RGBA col){
-extern rw::RGBA highlightColor;
-		highlightColor = col;
-	});
+void
+initLua(sol::state &lua)
+{
+	lua.open_libraries(sol::lib::base,
+		sol::lib::io,
+		sol::lib::os,
+		sol::lib::string,
+		sol::lib::math,
+		sol::lib::table);
 
-	gtatab.set_function("SetDayNightBalance", [](float f){ gta::buildingPipe_dayNightBalance = f; });
-	gtatab.set_function("SetWetRoads", [](float f){ gta::buildingPipe_wetRoad = f; });
-
-void TxdSetParent(rw::TexDictionary *child, rw::TexDictionary *parent);
-	gtatab.set_function("TxdSetParent", [](rw::TexDictionary *child, rw::TexDictionary *parent){
-			TxdSetParent(child, parent);
-	});
-
+	lua["include"] = [&lua](const char *path){
+		lua.script_file(path);
+	};
 }
 
 void

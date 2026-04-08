@@ -1,7 +1,9 @@
 #include "camera.h"
 
-void initLua(void);
-void initLuaSkeleton(void);
+void initLua(sol::state &lua);
+void registerRW(sol::state &lua);
+void registerGTA(sol::state &lua);
+void registerSkeleton(sol::state &lua);
 void execLua(const char *str);
 void luaError(const char *msg);
 
