@@ -94,6 +94,7 @@ LoadCol(int slot)
 		obj = GetObjectDef(header->name, nil);
 		if(obj){
 			CColModelX *col = new CColModelX;
+			strncpy(col->name, obj->m_name, 24);
 			col->file = file;
 			obj->m_colModel = col;
 			switch(version){

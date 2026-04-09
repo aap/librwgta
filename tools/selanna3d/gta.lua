@@ -491,6 +491,17 @@ function gta:GetStreamBuffer(si)
 	return BinaryStream.make(data)
 end
 
+function Instance:SetupLod()
+	local scn = self.sourceFile.scene
+	local lodScn = scn
+	if scn.parentScene then lodScn = scn.parentScene end
+	local lod = lodScn.instances[self.lodIndex+1]
+	self.lodInst = lod
+	if not lod.children then lod.children = { self }
+	else table.insert(lod.children, self)
+	end
+end
+
 function gta:FinishLoading()
 	self.currentFile = nil
 
@@ -515,14 +526,6 @@ function gta:FinishLoading()
 	end
 	self:LinkStreamingInfo()
 
-	-- link COLs to models
-	self:LoadStreamedCOLs()
-	for id, mdl in pairs(self.modelsById) do
-		local col = self.colModelsByName[mdl.modelName:lower()]
-		mdl.colModel = col
-		-- TODO: LODs can get their col model from HD child in SA
-	end
-
 	-- load generic textures
 	generic.rwTxd = rw.TexDictionaryCreate()
 	for _, f in pairs(self.genericTxds) do
@@ -534,10 +537,36 @@ function gta:FinishLoading()
 		txd:destroy()
 	end
 
-	-- link models to instances
-	-- TODO: put this into AddInstance?
-	for i, inst in pairs(self.instances) do
+	-- need this before linking collision
+	self:LoadStreamedIPLs()
+
+	-- link colmodels to models
+	self:LoadStreamedCOLs()
+	for _, mdl in pairs(self.modelsById) do
+		local col = self.colModelsByName[mdl.modelName:lower()]
+		mdl.colModel = col
+	end
+
+	-- link models to instances, and link LOD instances
+	for _, inst in pairs(self.instances) do
 		inst.mdl = self.modelsById[inst.id]
+		if inst.lodIndex and inst.lodIndex >= 0 then
+			inst:SetupLod()
+		end
+	end
+
+	-- final LOD colmodel assignment
+	for _, inst in pairs(self.instances) do
+		if inst.lodInst then
+			if not inst.lodInst.mdl.colModel then
+				inst.lodInst.mdl.colModel = inst.mdl.colModel
+			end
+		end
+	end
+	for _, inst in pairs(self.instances) do
+		if not inst.mdl.colModel then
+			print("inst still has no col model", inst.name)
+		end
 	end
 end
 

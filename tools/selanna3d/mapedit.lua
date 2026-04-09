@@ -129,7 +129,6 @@ function LoadSA()
 --	g:ReadDataFile("data/gta.dat")
 	g:FinishLoading()
 
-	g:LoadStreamedIPLs()
 	g:InstantiateScene("lae", true)
 
 	return g
@@ -437,7 +436,7 @@ function gta:RenderScene(scene, drawLast)
 	for _, inst in pairs(scene.instances) do
 		inst.colorId = inst.instId
 		setColor(inst)
-		local a = self:DrawInstance(inst)
+		local a = self:DrawInstance(inst, inst == selection)
 		if a then
 			table.insert(drawLast, inst)
 		end

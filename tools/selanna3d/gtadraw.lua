@@ -130,35 +130,43 @@ function Instance:DrawColModel()
 	gta.renderColModelWire(self.mdl.colModel, self:GetMatrix(), false)
 end
 
-function gta:DrawInstance(inst)
-	if not (inst.show and inst.sourceFile.scene.showScene) then return nil end
+function gta:IsInstanceVisible(inst, forceshow)
+	if forceshow then return true end
+	if not (inst.show and inst.sourceFile.scene.showScene) then return false end
 	local mdl = inst.mdl
 
 	local dist = activeCam:distanceTo(tV3d(inst.position))
-	local isLod = mdl.lodDist1 > 300
+	local isLod = inst.children or mdl.lodDist1 > 300
 	-- TODO
 	if viewer.lodMode == 1 then
 		-- render HD
-		if isLod then return end
+		if isLod then return false end
 	elseif viewer.lodMode == 2 then
 		-- render LOD
-		if not isLod then return end
+		if not isLod then return false end
 	else
 		if dist > mdl.lodDist1*viewer.lodMult then
-			return
+			return false
 		end
 	end
 
 	if mdl.timeOn then
-		if not mdl:IsTimeInRange(self.hour) then return nil end
+		if not mdl:IsTimeInRange(self.hour) then return false end
 	end
-	if not inst:IsOnScreen() then return nil end
+	if not inst:IsOnScreen() then return false end
 
+	return true
+end
+
+function gta:DrawInstance(inst, forceshow)
+	if not self:IsInstanceVisible(inst, forceshow) then return nil end
+
+	local dist = activeCam:distanceTo(tV3d(inst.position))
 	if dist < 100 and viewer.drawCollision then
 		inst:DrawColModel()
 	end
 
-	if (mdl.flags.bits & (4|8)) ~= 0 then
+	if (inst.mdl.flags.bits & (4|8)) ~= 0 then
 		return inst.rwAtomic
 	end
 	inst.rwAtomic:render()

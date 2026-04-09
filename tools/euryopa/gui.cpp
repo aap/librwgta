@@ -761,8 +761,9 @@ uiObjInfo(ObjectDef *obj)
 	ImGui::InputText("TXD", buf, MODELNAMELEN);
 
 	ImGui::Text("IDE: %s", obj->m_file->name);
-	if(obj->m_colModel && !obj->m_gotChildCol)
-		ImGui::Text("COL: %s", obj->m_colModel->file->name);
+//	if(obj->m_colModel && !obj->m_gotChildCol)
+	if(obj->m_colModel)
+		ImGui::Text("COL: %s %s", obj->m_colModel->name, obj->m_colModel->file->name);
 
 	ImGui::Text("Draw dist:");
 	for(i = 0; i < obj->m_numAtomics; i++){

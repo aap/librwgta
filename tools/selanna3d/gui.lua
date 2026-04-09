@@ -256,6 +256,14 @@ function Instance:imguiDraw()
 		if self.flags then
 			ImGui.Flags("Flags##Instance", self.flags)
 		end
+		if self.lodInst then
+			guiListItem(self.lodInst)
+		end
+		if self.children then
+			for _, c in ipairs(self.children) do
+				guiListItem(c)
+			end
+		end
 		if ImGui.Button("jump to") then
 			local p = tV3d(self.position)
 			activeCam:jumpTo(p)
@@ -425,6 +433,33 @@ function guiTab(t, label, cullhidden)
 	end
 end
 
+function guiListItem(v, cullhidden)
+	local mt = getmetatable(v)
+	local show = true
+	local title = tostring(v)
+	if mt and mt.imguiTitle then
+		show, title = v:imguiTitle()
+	end
+	if show or not cullhidden then
+		ImGui.PushID(tostring(v))
+		if ImGui.Selectable(title, v == selection) and v ~= selection then
+			local mt = getmetatable(v)
+			if mt and mt.select then
+				v:select()
+			else
+				selection = v
+			end
+		end
+		if ImGui.IsItemHovered() then
+			if ImGui.IsMouseClicked(2) then
+				NewItemWindow(v, title)
+			end
+			hovered = v
+		end
+		ImGui.PopID()
+	end
+end
+
 function guiList(list, label, cullhidden)
 	if #list < 1 then
 		return
@@ -437,30 +472,7 @@ function guiList(list, label, cullhidden)
 	end
 	if not open then return end
 	for _, v in ipairs(list) do
-		local mt = getmetatable(v)
-		local show = true
-		local title = tostring(v)
-		if mt and mt.imguiTitle then
-			show, title = v:imguiTitle()
-		end
-		if show or not cullhidden then
-			ImGui.PushID(tostring(v))
-			if ImGui.Selectable(title, v == selection) and v ~= selection then
-				local mt = getmetatable(v)
-				if mt and mt.select then
-					v:select()
-				else
-					selection = v
-				end
-			end
-			if ImGui.IsItemHovered() then
-				if ImGui.IsMouseClicked(2) then
-					NewItemWindow(v, title)
-				end
-				hovered = v
-			end
-			ImGui.PopID()
-		end
+		guiListItem(v, cullhidden)
 	end
 	ImGui.TreePop()
 end

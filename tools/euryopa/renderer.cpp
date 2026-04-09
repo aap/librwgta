@@ -245,12 +245,16 @@ SetupBigBuildingVisibilitySA(ObjectInst *inst, float *distout)
 		if(lodinst)
 			lodinst->m_numChildrenRendered++;
 
-		if(inst->m_numChildren > 1)
+		if(inst->m_numChildren > 1) {
 			// might still have to render this LOD,
 			// if not all children are rendered
 			// We actually don't test for frustum culling here...TODO?
+		if(inst->m_rwObject == nil)
+			if(inst->CreateRwObject() == nil)
+				return VIS_INVISIBLE;	// this shouldn't happen
+
 			AddToLodRenderList(inst, camdist);
-		else
+		} else
 			// otherwise...???
 			inst->m_numChildrenRendered = 0;
 		return VIS_INVISIBLE;
