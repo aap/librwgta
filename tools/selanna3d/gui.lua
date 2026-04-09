@@ -146,6 +146,7 @@ function guiRendering(g)
 	ImGui.SameLine()
 	if ImGui.RadioButton("Draw Normal", viewer.lodMode == 3) then viewer.lodMode = 3 end
 	ImGui.DragFloatX("LOD multiplier", viewer, "lodMult", 0.05, 0.5, 10.0)
+	viewer.drawCollision, _ = ImGui.Checkbox("Draw Collision", viewer.drawCollision)
 
 	if g then
 		g.hour, _ = ImGui.InputInt("Hour", g.hour)

@@ -117,17 +117,24 @@ function AtomicModel:IsTimeInRange(hour)
 	end
 end
 
+function Instance:GetMatrix() return self.rwAtomic:getFrame():getLTM() end
+
 function Instance:IsOnScreen()
 	if not self.rwAtomic then return true end
-	local matrix = self.rwAtomic:getFrame():getLTM()
-	local col = self.mdl.colModel
-	return not col or activeCam:isSphereVisible(col.boundingSphere, matrix)
+	local matrix = self:GetMatrix()
+	return not col or activeCam:isSphereVisible(col.boundingSphere, self:GetMatrix())
+end
+
+function Instance:DrawColModel()
+	if not self.mdl.colModel then return end
+	gta.renderColModelWire(self.mdl.colModel, self:GetMatrix(), false)
 end
 
 function gta:DrawInstance(inst)
 	if not (inst.show and inst.sourceFile.scene.showScene) then return nil end
 	local mdl = inst.mdl
 
+	local dist = activeCam:distanceTo(tV3d(inst.position))
 	local isLod = mdl.lodDist1 > 300
 	-- TODO
 	if viewer.lodMode == 1 then
@@ -137,7 +144,7 @@ function gta:DrawInstance(inst)
 		-- render LOD
 		if not isLod then return end
 	else
-		if activeCam:distanceTo(tV3d(inst.position)) > mdl.lodDist1*viewer.lodMult then
+		if dist > mdl.lodDist1*viewer.lodMult then
 			return
 		end
 	end
@@ -146,6 +153,11 @@ function gta:DrawInstance(inst)
 		if not mdl:IsTimeInRange(self.hour) then return nil end
 	end
 	if not inst:IsOnScreen() then return nil end
+
+	if dist < 100 and viewer.drawCollision then
+		inst:DrawColModel()
+	end
+
 	if (mdl.flags.bits & (4|8)) ~= 0 then
 		return inst.rwAtomic
 	end

@@ -34,6 +34,8 @@ Init(void)
 	registerRW(lua);
 	registerGTA(lua);
 	registerSkeleton(lua);
+void registerDebugRender(sol::state &lua);
+	registerDebugRender(lua);
 	sol_ImGui::Init(lua);
 }
 

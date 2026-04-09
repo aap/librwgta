@@ -72,6 +72,7 @@ end
 
 function LoadIII()
 	local g = gta.make(gta.GameIII, "/u/aap/gta/gta3_re")
+--	local g = gta.make(gta.GameIII, "/u/aap/other/gta/gta3_upstate")
 	g:AddCdImage("models/gta3.img")
 	g:ReadDataFile("data/default.dat")
 	g:ReadDataFile("data/gta3.dat")
@@ -318,7 +319,7 @@ gizmo.stepRot = 5
 gizmo.snapRot = true
 gizmo.snapTrans = true
 
-viewer = { lodMode = 1, lodMult = 1.5 }
+viewer = { lodMode = 1, lodMult = 1.5, drawCollision = false }
 
 function gizmo.Process()
 	local step
@@ -462,6 +463,10 @@ function gta:RenderMap()
 	gta.SetRenderColourCoded(0)
 end
 
+xaxis = rw.V3d(1,0,0)
+yaxis = rw.V3d(0,1,0)
+zaxis = rw.V3d(0,0,1)
+
 function Draw(timestep)
 	sk.updateMouse()
 
@@ -497,6 +502,8 @@ function Draw(timestep)
 	gui()
 	gizmo.Process()
 
+	gta.renderAxesWidget(activeCam.target, xaxis, yaxis, zaxis)
+
 	if clump then
 		clump:render()
 	elseif game then
@@ -504,6 +511,8 @@ function Draw(timestep)
 		if game.wetRoads then gta.SetWetRoads(game.wetRoads) end
 		game:RenderMap()
 	end
+
+	gta.renderDebugLines()
 
 	sk.ImGuiEndFrame()
 

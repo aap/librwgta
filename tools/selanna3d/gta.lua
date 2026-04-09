@@ -520,6 +520,7 @@ function gta:FinishLoading()
 	for id, mdl in pairs(self.modelsById) do
 		local col = self.colModelsByName[mdl.modelName:lower()]
 		mdl.colModel = col
+		-- TODO: LODs can get their col model from HD child in SA
 	end
 
 	-- load generic textures
@@ -566,6 +567,9 @@ function gta:GetTexDictionary(txd)
 		return nil
 	end
 	txd.rwTxd = rw.readTexDictFile(si.container.fullPath, si.offset*2048, si.size*2048)
+	if not txd.rwTxd then
+		print("couldn't load txd", si.name)
+	end
 	sk.ConvertTexDict(txd.rwTxd)
 	if txd.parent then
 		gta.TxdSetParent(txd.rwTxd, txd.parent.rwTxd)
