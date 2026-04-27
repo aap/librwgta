@@ -19,7 +19,7 @@ rwCamera = nil
 camspeed = 0
 camspeedSide = 0
 
-clearCol = rw.RGBA(0x80, 0x80, 0x80, 0xFF)
+clearCol = rw.RGBA(0xA1, 0xA1, 0xA1, 0xFF)
 --filedir = "/u/aap/gta/gta_miami/models/gta3_img"
 --filedir = "/u/aap/gta/gta3_re/models/gta3_img"
 filedir = "/u/aap/other/gta/gtasa/models/gta3_img"
@@ -46,7 +46,7 @@ function Init()
 	modelCam.aspectRatio = gWidth/gHeight
 	modelCam.fov = 80
 	modelCam.near = 0.1
-	modelCam.far = 1000
+	modelCam.far = 100
 	modelCam.position = rw.V3d(4, 4, 2)
 	modelCam.target = rw.V3d(0, 0, 0)
 	modelCam:update()
@@ -148,7 +148,7 @@ end
 selection = nil
 hovered = nil
 drawColorCoded = false
-viewer = { lodMode = 1, lodMult = 1.5, drawCollision = false }
+viewer = { drawGrid = true, drawShaded = true, drawWire = false }
 
 -- Layout constants (pixels).
 local statusH = 32   -- bottom status bar height
@@ -776,25 +776,31 @@ function gui()
 	ImGui.SameLine()
 
 	-- Snap toggles.
-	local vs, vc = ImGui.Checkbox("Snap T", gizmo.snapTrans)
-	if vc then gizmo.snapTrans = vs end
+	gizmo.snapTrans, _ = ImGui.Checkbox("Snap T", gizmo.snapTrans)
 	ImGui.SameLine()
 	if gizmo.snapTrans then
 		ImGui.SetNextItemWidth(60)
-		local sv, sc = ImGui.DragFloat("##snaptval", gizmo.stepTrans, 0.1, 0.01, 100, "%.2f")
-		if sc then gizmo.stepTrans = sv end
+		gizmo.stepTrans, _ = ImGui.DragFloat("##snaptval", gizmo.stepTrans, 0.1, 0.01, 100, "%.2f")
 		ImGui.SameLine()
 	end
 
-	local rs, rc = ImGui.Checkbox("Snap R", gizmo.snapRot)
-	if rc then gizmo.snapRot = rs end
+	gizmo.snapRot, _ = ImGui.Checkbox("Snap R", gizmo.snapRot)
 	ImGui.SameLine()
 	if gizmo.snapRot then
 		ImGui.SetNextItemWidth(60)
-		local rv, rc2 = ImGui.DragFloat("##snaprval", gizmo.stepRot, 0.5, 0.1, 90, "%.1f")
-		if rc2 then gizmo.stepRot = rv end
+		gizmo.stepRot, _ = ImGui.DragFloat("##snaprval", gizmo.stepRot, 0.5, 0.1, 90, "%.1f")
 		ImGui.SameLine()
 	end
+
+	ImGui.Text("|")
+	ImGui.SameLine()
+
+	viewer.drawGrid, _ = ImGui.Checkbox("Draw Grid", viewer.drawGrid)
+	ImGui.SameLine()
+	viewer.drawWire, _ = ImGui.Checkbox("Draw Wire", viewer.drawWire)
+	ImGui.SameLine()
+	viewer.drawShaded, _ = ImGui.Checkbox("Draw Shaded", viewer.drawShaded)
+	ImGui.SameLine()
 
 	ImGui.Text("|")
 	ImGui.SameLine()
@@ -817,6 +823,8 @@ end
 red   = rw.RGBA(255, 0,   0,   255)
 blue  = rw.RGBA(0,   0,   255, 255)
 black = rw.RGBA(0,   0,   0,   255)
+white = rw.RGBA(255, 255, 255, 255)
+darkblue = rw.RGBA(0,   4,   96, 255)
 
 -- Atomic colour-coded picking tables.
 -- Lazily assigned: first time an atomic is rendered we give it an id.
@@ -834,18 +842,14 @@ local function atomicPickId(a)
 	return id
 end
 
-local function atomicRenderVisible(a)
-	if (a:getFlags() & rw.ATOMIC_RENDER) ~= 0 then
-		a:render()
-	end
-end
-
 -- Render all clump atomics, setting colour code per atomic for picking.
 local function renderClumpCoded(c)
 	gta.SetRenderColourCoded(1)
 	for a in c:atomics() do
 		gta.SetColourCode(atomicPickId(a))
-		atomicRenderVisible(a)
+		if a:isVisible() then
+			a:render()
+		end
 	end
 	gta.SetRenderColourCoded(0)
 end
@@ -854,12 +858,14 @@ end
 local function renderClump(c)
 	local selFrame = selection and selection.frame or nil
 	for a in c:atomics() do
+		local wirecol = darkblue
 		if a:getFrame() == selFrame then
-			gta.SetHighlightColour(red)
-		else
-			gta.SetHighlightColour(black)
+			wirecol = white
 		end
-		atomicRenderVisible(a)
+		if a:isVisible() then
+			if viewer.drawShaded then a:render() end
+			if viewer.drawWire then gta.renderWireAtomic(a, wirecol) end
+		end
 	end
 end
 
@@ -900,6 +906,9 @@ function Draw(timestep)
 	gizmo.Process()
 
 --	gta.renderAxesWidget(activeCam.target, xaxis, yaxis, zaxis)
+	if viewer.drawGrid then
+		gta.renderGrid(20, 20, 0.5)
+	end
 
 	if clump then
 		renderClump(clump)

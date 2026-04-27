@@ -212,4 +212,7 @@ void TxdSetParent(rw::TexDictionary *child, rw::TexDictionary *parent);
 			gta::readColModelVer4(c, (rw::uint8*)data, len);
 		}
 	);
+
+void renderWireAtomic(rw::Atomic *atomic, const rw::RGBA &col);
+	gtatab.set_function("renderWireAtomic", &renderWireAtomic);
 }

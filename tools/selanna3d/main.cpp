@@ -128,7 +128,6 @@ myRenderCB(rw::Atomic *atomic)
 		atomic->getPipeline()->render(atomic);
 }
 
-
 static rw::RawMatrix gizobj;
 
 void

@@ -28,20 +28,20 @@ struct DebugLine
 static DebugLine debugLines[MAXDEBUGLINES];
 static int numDebugLines;
 
-#define TEMPBUFFERVERTSIZE 256
-#define TEMPBUFFERINDEXSIZE 1024
+#define TEMPBUFFERVERTSIZE 10000
+#define TEMPBUFFERINDEXSIZE 10000
 static int TempBufferIndicesStored;
 static int TempBufferVerticesStored;
 static rw::RWDEVICE::Im3DVertex TempVertexBuffer[TEMPBUFFERVERTSIZE];
 static uint16 TempIndexBuffer[TEMPBUFFERINDEXSIZE];
 
 static void
-RenderAndEmptyRenderBuffer(void)
+RenderAndEmptyRenderBuffer(rw::Matrix *matrix = nil)
 {
 	assert(TempBufferVerticesStored <= TEMPBUFFERVERTSIZE);
 	assert(TempBufferIndicesStored <= TEMPBUFFERINDEXSIZE);
 	if(TempBufferVerticesStored){
-		rw::im3d::Transform(TempVertexBuffer, TempBufferVerticesStored, nil, rw::im3d::EVERYTHING);
+		rw::im3d::Transform(TempVertexBuffer, TempBufferVerticesStored, matrix, rw::im3d::EVERYTHING);
 		rw::im3d::RenderIndexedPrimitive(rw::PRIMTYPELINELIST, TempIndexBuffer, TempBufferIndicesStored);
 		rw::im3d::End();
 	}
@@ -237,6 +237,31 @@ RenderAxesWidget(rw::V3d pos, rw::V3d x, rw::V3d y, rw::V3d z)
 }
 
 void
+RenderGrid(int nx, int ny, float spacing)
+{
+	rw::RGBA col = { 0x8e, 0x8e, 0x8e, 0xFF };
+	rw::RGBA black = { 0, 0, 0, 0xFF };
+	int sx = - nx/2; int ex = nx - nx/2;
+	int sy = - ny/2; int ey = nx - nx/2;
+	for(int x = sx; x <= ex; x++) {
+		rw::V3d start = { x*spacing, sy*spacing, 0.0f };
+		rw::V3d end = { x*spacing, ey*spacing, 0.0f };
+		if(x == 0)
+			RenderLine(start, end, black, black);
+		else
+			RenderLine(start, end, col, col);
+	}
+	for(int y = sy; y <= ey; y++) {
+		rw::V3d start = { sx*spacing, y*spacing, 0.0f };
+		rw::V3d end = { ex*spacing, y*spacing, 0.0f };
+		if(y == 0)
+			RenderLine(start, end, black, black);
+		else
+			RenderLine(start, end, col, col);
+	}
+}
+
+void
 RenderColModelWire(gta::CColModel *col, rw::Matrix *xform, bool onlyBounds)
 {
 	static const rw::RGBA red = { 255, 0, 0, 255 };
@@ -279,6 +304,42 @@ registerDebugRender(sol::state &lua)
 	gtatab.set_function("renderWireSphere", &RenderWireSphere);
 	gtatab.set_function("renderWireTriangle", &RenderWireTriangle);
 	gtatab.set_function("renderAxesWidget", &RenderAxesWidget);
+	gtatab.set_function("renderGrid", &RenderGrid);
 	gtatab.set_function("renderColModelWire", &RenderColModelWire);
 	gtatab.set_function("renderDebugLines", &RenderDebugLines);
+}
+
+void
+renderWireAtomic(rw::Atomic *atomic, const rw::RGBA &col)
+{
+	rw::Geometry *geo = atomic->geometry;
+
+	int i;
+	RenderAndEmptyRenderBuffer();
+
+	rw::SetRenderStatePtr(rw::TEXTURERASTER, nil);
+	rw::Camera *cam = (rw::Camera*)rw::engine->currentCamera;
+	rw::V3d fwd = cam->getFrame()->getLTM()->at;
+
+	rw::V3d *verts = geo->morphTargets[0].vertices;
+	for(int i = 0; i < geo->numVertices; i++) {
+		TempVertexBuffer[i].setX(verts[i].x - fwd.x*0.005);
+		TempVertexBuffer[i].setY(verts[i].y - fwd.y*0.005);
+		TempVertexBuffer[i].setZ(verts[i].z - fwd.z*0.005);
+		TempVertexBuffer[i].setColor(col.red, col.green, col.blue, col.alpha);
+	}
+	TempBufferVerticesStored = geo->numVertices;
+
+	rw::Triangle *tris = geo->triangles;
+	for(int i = 0; i < geo->numTriangles; i++) {
+		TempIndexBuffer[i*6+0] = tris[i].v[0];
+		TempIndexBuffer[i*6+1] = tris[i].v[1];
+		TempIndexBuffer[i*6+2] = tris[i].v[1];
+		TempIndexBuffer[i*6+3] = tris[i].v[2];
+		TempIndexBuffer[i*6+4] = tris[i].v[2];
+		TempIndexBuffer[i*6+5] = tris[i].v[0];
+	}
+	TempBufferIndicesStored = geo->numTriangles*6;
+
+	RenderAndEmptyRenderBuffer(atomic->getFrame()->getLTM());
 }
