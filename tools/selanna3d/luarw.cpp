@@ -253,7 +253,9 @@ registerRW(sol::state &lua)
 				a->object.object.flags |= rw::Atomic::RENDER;
 			else
 				a->object.object.flags &= ~rw::Atomic::RENDER;
-		}
+		},
+		"getPipelineID",   [](rw::Atomic *a) -> uint32_t { auto p = a->getPipeline(); return p ? p->pluginID   : 0; },
+		"getPipelineData", [](rw::Atomic *a) -> uint32_t { auto p = a->getPipeline(); return p ? p->pluginData : 0; }
 	);
 
 	lua.new_usertype<rw::Geometry>("rwGeometry",

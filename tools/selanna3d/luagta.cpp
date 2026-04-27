@@ -17,6 +17,8 @@ SetupAtomicPipelines(rw::Atomic *atm)
 	// SA
 	if(gta::isBuildingPipeAttached(atm))
 		gta::setupBuildingPipe(atm);
+	if(gta::isCarPipeAttached(atm))
+		gta::setupPCCarPipe(atm);
 }
 
 void
@@ -51,7 +53,29 @@ void TxdSetParent(rw::TexDictionary *child, rw::TexDictionary *parent);
 
 	gtatab.set_function("SetupAtomicPipelines", &SetupAtomicPipelines);
 
+	// GTA material plugins
 
+	lua.new_usertype<gta::EnvMat>("EnvMat",
+		sol::no_constructor,
+		"scaleX",      [](gta::EnvMat *e) { return e->getScaleX(); },
+		"scaleY",      [](gta::EnvMat *e) { return e->getScaleY(); },
+		"transScaleX", [](gta::EnvMat *e) { return e->getTransScaleX(); },
+		"transScaleY", [](gta::EnvMat *e) { return e->getTransScaleY(); },
+		"shininess",   [](gta::EnvMat *e) { return e->getShininess(); },
+		"texture",     &gta::EnvMat::texture
+	);
+	gtatab.set_function("getEnvMat", [](rw::Material *m) -> gta::EnvMat* {
+		return gta::getEnvMat(m);
+	});
+
+	lua.new_usertype<gta::SpecMat>("SpecMat",
+		sol::no_constructor,
+		"specularity", &gta::SpecMat::specularity,
+		"texture",     &gta::SpecMat::texture
+	);
+	gtatab.set_function("getSpecMat", [](rw::Material *m) -> gta::SpecMat* {
+		return gta::getSpecMat(m);
+	});
 
 	// Collision
 

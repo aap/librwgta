@@ -230,10 +230,6 @@ function Instance:gizmo(phase, pos, rot)
 	self:setXform(pos, rot:conj())
 end
 
-function gizmoUpdate(pos, rot)
-	print(pos, rot)
-end
-
 selection = nil
 hovered = nil
 drawColorCoded = false

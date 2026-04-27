@@ -20,7 +20,9 @@ camspeed = 0
 camspeedSide = 0
 
 clearCol = rw.RGBA(0x80, 0x80, 0x80, 0xFF)
-filedir = "/u/aap/gta/gta_miami/models/gta3_img"
+--filedir = "/u/aap/gta/gta_miami/models/gta3_img"
+--filedir = "/u/aap/gta/gta3_re/models/gta3_img"
+filedir = "/u/aap/other/gta/gtasa/models/gta3_img"
 
 function Init()
 	world = rw.WorldCreate(nil)
@@ -49,7 +51,11 @@ function Init()
 	modelCam.target = rw.V3d(0, 0, 0)
 	modelCam:update()
 
---	rw.ImageSetSearchPath(self.imagePath)
+	gizmo.stepTrans = 0.1
+	gizmo.stepRot   = 5
+	gizmo.snapTrans = true
+	gizmo.snapRot   = true
+	rw.ImageSetSearchPath("/u/aap/other/gta/gtasa/models/generic/generic_txd/")
 	clump, texdict = LoadClumpWithTxd(filedir, "cheetah.dff", "cheetah.txd")
 --	clump, texdict = LoadClumpWithTxd(filedir, "player.dff", "player.txd")
 print("done")
@@ -78,6 +84,7 @@ function LoadClump(path)
 			hideDamagedLOD(a)
 			gta.SetupAtomicPipelines(a)
 		end
+		carColScanClump(c)
 	end
 	return c
 end
@@ -143,6 +150,10 @@ hovered = nil
 drawColorCoded = false
 viewer = { lodMode = 1, lodMult = 1.5, drawCollision = false }
 
+-- Layout constants (pixels).
+local statusH = 32   -- bottom status bar height
+local propW   = 320  -- right properties panel initial width (resizable)
+
 -- Frame metatable with gizmo support.
 -- gizmo.Process() calls selection:gizmo(phase, pos, rot) when the gizmo is active.
 -- pos/rot are the new world-space position and rotation from ImGuizmo.
@@ -158,9 +169,12 @@ function frameMeta:gizmo(phase, pos, rot)
 		gizmo.InitMatrix(f:getLTM())
 		frameGizmoBefore = f:copyMatrix()
 	else
-		local worldM = gizmo.GetMatrix()
+		-- RW mult(A,B) means "A then B" (B is outer/parent transform),
+		-- so LTM = mult(localM, parentLTM).
+		-- Inverting: newLocalM = mult(ltmCur, inv(parentLTM)).
+		local ltmCur = gizmo.GetMatrix()
 		local parent = f:getParent()
-		local localM = parent and rw.matInvert(parent:getLTM()) * worldM or worldM
+		local localM = parent and ltmCur * rw.matInvert(parent:getLTM()) or ltmCur
 		f:transform(localM, rw.COMBINEREPLACE)
 
 		if phase == 2 then
@@ -362,24 +376,7 @@ function guiTexDict(txd)
 	ImGui.EndChild()
 end
 
-function guiMaterialProps(m)
-	prop.begin("mat_props")
-
-	local c, changed = prop.color("Color", m:getColor())
-	if changed then m:setColor(c) end
-
-	prop.header("Surface")
-	local s = m:getSurfaceProps()
-	local v, changed = prop.dragFloat("Ambient",  s.ambient)
-	if changed then s.ambient = v end
-	v, changed = prop.dragFloat("Diffuse",  s.diffuse)
-	if changed then s.diffuse = v end
-	v, changed = prop.dragFloat("Specular", s.specular)
-	if changed then s.specular = v end
-
-	prop.header("Texture")
-	prop.texture("Diffuse", m:getTexture(), function(t) m:setTexture(t) end)
-
+function guiMatFXProps(m)
 	-- MatFX effect combo: always shown so you can switch to Nothing or add an effect.
 	-- setEffects handles union clearing internally when switching type.
 	prop.header("MatFX")
@@ -448,6 +445,46 @@ function guiMaterialProps(m)
 			prop.label("UV Transform", "(runtime animated)")
 		end
 	end
+end
+
+function guiGTAMatProps(m)
+	local env = gta.getEnvMat(m)
+	if env then
+		prop.header("Env Mat")
+		prop.label("Scale",      string.format("%.3f, %.3f", env:scaleX(), env:scaleY()))
+		prop.label("Trans Scale", string.format("%.3f, %.3f", env:transScaleX(), env:transScaleY()))
+		prop.label("Shininess",  string.format("%.3f", env:shininess()))
+		prop.texture("Env Tex",  env.texture)
+	end
+
+	local spec = gta.getSpecMat(m)
+	if spec then
+		prop.header("Spec Mat")
+		prop.label("Specularity", string.format("%.3f", spec.specularity))
+		prop.texture("Spec Tex",  spec.texture)
+	end
+
+end
+
+function guiMaterialProps(m)
+	prop.begin("mat_props")
+
+	prop.header("Material")
+	local c, changed = prop.color("Color", m:getColor())
+	if changed then m:setColor(c) end
+
+	local s = m:getSurfaceProps()
+	local v, changed = prop.dragFloat("Ambient",  s.ambient)
+	if changed then s.ambient = v end
+	v, changed = prop.dragFloat("Diffuse",  s.diffuse)
+	if changed then s.diffuse = v end
+	v, changed = prop.dragFloat("Specular", s.specular)
+	if changed then s.specular = v end
+
+	prop.texture("Texture", m:getTexture(), function(t) m:setTexture(t) end)
+
+	guiMatFXProps(m)
+	guiGTAMatProps(m)
 
 	prop.finish()
 end
@@ -479,11 +516,8 @@ function guiGeometry(g)
 		i = i + 1
 	end
 
-	ImGui.Separator()
 	if selectedMaterial then
 		guiMaterialProps(selectedMaterial)
-	else
-		ImGui.TextDisabled("Select a material above")
 	end
 end
 
@@ -492,6 +526,8 @@ function guiAtomic(a)
 		prop.begin("atomic_props")
 		prop.flags("Atomic Flags", a:getFlags(), atomicFlagBits,
 			function(v) a:setFlags(v) end)
+		prop.label("Pipeline ID",   string.format("0x%08X", a:getPipelineID()))
+		prop.label("Pipeline Data", string.format("0x%08X", a:getPipelineData()))
 		prop.finish()
 	end
 	guiGeometry(a:getGeometry())
@@ -576,23 +612,205 @@ function guiFrame(f)
 	end
 end
 
+local showHierarchyWin = true
+local showTxdWin = false
+local showCarColWin = false
+
+-- ---------------------------------------------------------------------------
+-- Vehicle colour slots
+-- ---------------------------------------------------------------------------
+-- Each slot has a magic material color key (24-bit RGB 0xRRGGBB) that the
+-- game bakes into materials to mark which colour slot they belong to.
+-- After scanning, s.mats holds all matched materials and s.chosen mirrors
+-- the colour currently applied to them (initialized from the first match,
+-- or the key itself when none are found).
+
+local carColSlots = {
+	{ name = "Body 1",   key = 0x3cff00 },
+	{ name = "Body 2",   key = 0xff00af },
+	{ name = "Body 3",   key = 0x00ffff },
+	{ name = "Body 4",   key = 0xff00ff },
+	{ name = "Light FL", key = 0xffaf00 },
+	{ name = "Light FR", key = 0x00ffc8 },
+	{ name = "Light RL", key = 0xb9ff00 },
+	{ name = "Light RR", key = 0xff3c00 },
+}
+
+local carColKeyToSlot = {}
+for i, s in ipairs(carColSlots) do
+	s.mats   = {}
+	s.chosen = { ((s.key>>16)&0xff)/255, ((s.key>>8)&0xff)/255, (s.key&0xff)/255, 1 }
+	carColKeyToSlot[s.key] = i
+end
+
+-- Scan all materials in clump c, bucket by key color.
+-- chosen is set from the first matched material's actual current color
+-- so the picker always reflects what is in the scene.
+function carColScanClump(c)
+	for _, s in ipairs(carColSlots) do s.mats = {} end
+	if not c then return end
+	for a in c:atomics() do
+		for m in a:getGeometry():materials() do
+			local col = m:getColor()
+			local key = col.r * 0x10000 + col.g * 0x100 + col.b
+			local si = carColKeyToSlot[key]
+			if si then
+				local s = carColSlots[si]
+				if #s.mats == 0 then
+					-- Initialise chosen from scene color of first match.
+					s.chosen = { col.r/255, col.g/255, col.b/255, col.a/255 }
+				end
+				table.insert(s.mats, m)
+			end
+		end
+	end
+end
+
+local function carColSetSlot(s, rgba)
+	s.chosen = rgba
+	local r = math.floor(rgba[1]*255 + 0.5)
+	local g = math.floor(rgba[2]*255 + 0.5)
+	local b = math.floor(rgba[3]*255 + 0.5)
+	local a = math.floor(rgba[4]*255 + 0.5)
+	for _, m in ipairs(s.mats) do
+		m:setColor(rw.RGBA(r, g, b, a))
+	end
+end
+
+local function carColReset()
+	for _, s in ipairs(carColSlots) do
+		local r = (s.key>>16)&0xff
+		local g = (s.key>>8) &0xff
+		local b =  s.key     &0xff
+		carColSetSlot(s, { r/255, g/255, b/255, 1 })
+	end
+end
+
+local function guiCarColWin()
+	ImGui.SetNextWindowSize(260, 0)
+	showCarColWin = ImGui.Begin("Vehicle Colours", showCarColWin,
+		ImGuiWindowFlags.AlwaysAutoResize)
+	for i, s in ipairs(carColSlots) do
+		local n = #s.mats
+		local col, changed = ImGui.ColorEdit4(
+			s.name .. " (" .. n .. ")##cc" .. i,
+			s.chosen,
+			ImGuiColorEditFlags.NoInputs | ImGuiColorEditFlags.AlphaBar)
+		if changed then carColSetSlot(s, col) end
+	end
+	ImGui.Spacing()
+	if ImGui.Button("Reset to key colours") then carColReset() end
+	ImGui.End()
+end
+
 function gui()
-	ImGui.Begin("Hierarchy")
-	guiHierarchy(clump:getFrame())
-	ImGui.End()
+	if showHierarchyWin then
+		showHierarchyWin = ImGui.Begin("Hierarchy", showHierarchyWin)
+		if clump then
+			guiHierarchy(clump:getFrame())
+		end
+		ImGui.End()
+	end
 
-	ImGui.Begin("Properties")
-	if selection then
-		guiFrame(selection.frame)
+
+	if showCarColWin then guiCarColWin() end
+
+	if showTxdWin then
+		showTxdWin = ImGui.Begin("Textures", showTxdWin)
+		if texdict then
+			guiTexDict(texdict)
+		end
+		ImGui.End()
+	end
+
+	-- Right properties panel: fixed to right edge, full height minus status bar.
+	-- Only horizontal resize is allowed (drag the left edge).
+	ImGui.SetNextWindowPos(gWidth - propW, 0, ImGuiCond.Always)
+	ImGui.SetNextWindowSize(propW, gHeight - statusH, ImGuiCond.Always)
+	ImGui.SetNextWindowSizeConstraints(120, gHeight - statusH, gWidth - 60, gHeight - statusH)
+	local propFlags = ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoTitleBar |
+	                  ImGuiWindowFlags.NoBringToFrontOnFocus | ImGuiWindowFlags.NoCollapse
+	local _, propVisible = ImGui.Begin("##props", true, propFlags)
+	if propVisible then
+		-- Sync propW so the panel sticks to the right edge when the user drags.
+		local pw, ph = ImGui.GetWindowSize()
+		propW = math.floor(pw)
+
+		if selection then
+			guiFrame(selection.frame)
+		end
 	end
 	ImGui.End()
 
-	ImGui.Begin("Textures")
-	if texdict then
-		guiTexDict(texdict)
-	else
-		ImGui.TextDisabled("No texture dictionary loaded")
+	-- Bottom status bar: fixed to bottom edge, full width.
+	ImGui.SetNextWindowPos(0, gHeight - statusH, ImGuiCond.Always)
+	ImGui.SetNextWindowSize(gWidth, statusH, ImGuiCond.Always)
+	local sbFlags = ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoResize |
+	                ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoBringToFrontOnFocus |
+	                ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar
+	ImGui.Begin("##statusbar", true, sbFlags)  -- returns open, visible; we ignore both
+
+	-- Gizmo op buttons.
+	local function opBtn(label, op)
+		local active = gizmo.op == op
+		if active then ImGui.PushStyleColor(ImGuiCol.Button, 0.3, 0.6, 0.9, 1.0) end
+		if ImGui.Button(label) then gizmo.op = op end
+		if active then ImGui.PopStyleColor() end
+		ImGui.SameLine()
 	end
+	opBtn("Translate", gizmo.TRANSLATE)
+	opBtn("Rotate",    gizmo.ROTATE)
+
+	ImGui.Text("|")
+	ImGui.SameLine()
+
+	-- Gizmo mode toggle.
+	local modeLocal = gizmo.mode == gizmo.LOCAL
+	local modeLabel = modeLocal and "Local" or "World"
+	if ImGui.Button(modeLabel) then
+		gizmo.mode = modeLocal and gizmo.WORLD or gizmo.LOCAL
+	end
+	ImGui.SameLine()
+
+	ImGui.Text("|")
+	ImGui.SameLine()
+
+	-- Snap toggles.
+	local vs, vc = ImGui.Checkbox("Snap T", gizmo.snapTrans)
+	if vc then gizmo.snapTrans = vs end
+	ImGui.SameLine()
+	if gizmo.snapTrans then
+		ImGui.SetNextItemWidth(60)
+		local sv, sc = ImGui.DragFloat("##snaptval", gizmo.stepTrans, 0.1, 0.01, 100, "%.2f")
+		if sc then gizmo.stepTrans = sv end
+		ImGui.SameLine()
+	end
+
+	local rs, rc = ImGui.Checkbox("Snap R", gizmo.snapRot)
+	if rc then gizmo.snapRot = rs end
+	ImGui.SameLine()
+	if gizmo.snapRot then
+		ImGui.SetNextItemWidth(60)
+		local rv, rc2 = ImGui.DragFloat("##snaprval", gizmo.stepRot, 0.5, 0.1, 90, "%.1f")
+		if rc2 then gizmo.stepRot = rv end
+		ImGui.SameLine()
+	end
+
+	ImGui.Text("|")
+	ImGui.SameLine()
+
+	-- Window toggle buttons.
+	local function winBtn(label, flag)
+		if flag then ImGui.PushStyleColor(ImGuiCol.Button, 0.3, 0.6, 0.9, 1.0) end
+		local clicked = ImGui.Button(label)
+		if flag then ImGui.PopStyleColor() end
+		ImGui.SameLine()
+		return clicked
+	end
+	if winBtn("Hierarchy", showHierarchyWin) then showHierarchyWin = not showHierarchyWin end
+	if winBtn("Textures",  showTxdWin)       then showTxdWin = not showTxdWin end
+	if winBtn("Car Cols",  showCarColWin)    then showCarColWin = not showCarColWin end
+
 	ImGui.End()
 end
 
@@ -681,7 +899,7 @@ function Draw(timestep)
 	gui()
 	gizmo.Process()
 
-	gta.renderAxesWidget(activeCam.target, xaxis, yaxis, zaxis)
+--	gta.renderAxesWidget(activeCam.target, xaxis, yaxis, zaxis)
 
 	if clump then
 		renderClump(clump)

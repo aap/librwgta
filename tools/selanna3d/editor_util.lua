@@ -247,7 +247,10 @@ function gizmo.Process()
 	else
 		step = gizmo.snapTrans and gizmo.stepTrans or 0
 	end
-	gizmo.Use(gizmo.op, gizmo.mode, step)
+	local mt = selection and getmetatable(selection)
+	if mt and mt.gizmo then
+		gizmo.Use(gizmo.op, gizmo.mode, step)
+	end
 
 	local using = gizmo.IsUsing()
 	if selection and (using or gizmo.wasUsing) then

@@ -763,10 +763,10 @@ buildingRenderCB(Atomic *atomic, gl3::InstanceDataHeader *header)
 	Geometry *geo = atomic->geometry;
 
 	RawMatrix::setIdentity(&ident);
+	uint32 flags = geo->flags;
 	setWorldMatrix(atomic->getFrame()->getLTM());
 	int32 vsBits = lightingCB(atomic);
-	uint32 flags = geo->flags;
-	lightingCB(atomic);
+
 	setupVertexInput(header);
 
 	InstanceData *inst = header->inst;

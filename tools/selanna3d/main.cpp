@@ -167,6 +167,7 @@ InitRW(void)
 
 	colourCodePipe = gta::makeColourCodePipeline();
 	gta::makeCustomBuildingPipelines();
+	gta::makeCustomCarPipeline();
 
 	lua["gWidth"] = sk::globals.width;
 	lua["gHeight"] = sk::globals.height;

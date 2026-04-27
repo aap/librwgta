@@ -118,6 +118,7 @@ attachPlugins(void)
 	rw::gl3::registerUniform("u_envmat");
 	rw::gl3::registerUniform("u_envXform");
 	rw::gl3::registerUniform("u_shininess");
+	rw::gl3::registerUniform("u_specularity");
 	rw::gl3::registerUniform("u_colorscale");
 
 	// Leeds pipe
@@ -635,8 +636,7 @@ readSpecMat(rw::Stream *stream, int32, void *object, int32 offset, int32)
 	*PLUGINOFFSET(SpecMat*, object, offset) = spec;
 	stream->read8(&buf, sizeof(buf));
 	spec->specularity = buf.specularity;
-	spec->texture = rw::Texture::create(nil);
-	strncpy(spec->texture->name, buf.texname, 24);
+	spec->texture = rw::Texture::read(buf.texname, nil);
 	return stream;
 }
 

@@ -469,6 +469,17 @@ bool isBuildingPipeAttached(rw::Atomic *atm);
 void setupBuildingPipe(rw::Atomic *atm);
 
 //
+// SA Custom car pipe
+//
+
+extern rw::ObjPipeline *carPipe;
+
+void makeCustomCarPipeline(void);
+bool isCarPipeAttached(rw::Atomic *atm);
+void setupPS2CarPipe(rw::Atomic *atm);
+void setupPCCarPipe(rw::Atomic *atm);
+
+//
 // Leeds building pipe
 //
 
