@@ -88,8 +88,22 @@ registerRW(sol::state &lua)
 	);
 
 	lua.new_usertype<rw::Matrix>("Matrix",
-		sol::no_constructor
+		sol::no_constructor,
+		"right", &rw::Matrix::right,
+		"up",    &rw::Matrix::up,
+		"at",    &rw::Matrix::at,
+		"pos",   &rw::Matrix::pos,
+		sol::meta_function::multiplication, [](rw::Matrix *a, rw::Matrix *b) -> rw::Matrix {
+			rw::Matrix dst;
+			rw::Matrix::mult(&dst, a, b);
+			return dst;
+		}
 	);
+	rwtab.set_function("matInvert", [](rw::Matrix *src) -> rw::Matrix {
+		rw::Matrix dst;
+		rw::Matrix::invert(&dst, src);
+		return dst;
+	});
 	rwtab.set("COMBINEREPLACE", rw::COMBINEREPLACE);
 	rwtab.set("COMBINEPRECONCAT", rw::COMBINEPRECONCAT);
 	rwtab.set("COMBINEPOSTCONCAT", rw::COMBINEPOSTCONCAT);
@@ -193,6 +207,9 @@ registerRW(sol::state &lua)
 		"addChild", &rw::Frame::addChild,
 		"count", &rw::Frame::count,
 		"getLTM", &rw::Frame::getLTM,
+		// Returns a copy of the local matrix. Safe to modify; pass back via frame:transform(m, rw.COMBINEREPLACE).
+		"copyMatrix", [](rw::Frame *f) -> rw::Matrix { return f->matrix; },
+		"transform", &rw::Frame::transform,
 		"rotate", [](rw::Frame *f, const rw::V3d *axis, rw::float32 angle, rw::CombineOp op) {
 			f->rotate(axis, angle, op);
 		},
@@ -203,12 +220,25 @@ registerRW(sol::state &lua)
 		"scale", &rw::Frame::scale,
 		"getName", [](rw::Frame *f) -> std::string {
 			return getFrameName(f);
+		},
+		"atomics", [](rw::Frame *frame) {
+			rw::LLLink *lnk = frame->objectList.link.next;
+			return sol::as_function([frame,lnk]() mutable -> rw::Atomic* {
+				for(;;) {
+				if(lnk == frame->objectList.end()) return nil;
+				rw::Atomic *a = (rw::Atomic*)rw::ObjectWithFrame::fromFrame(lnk);
+				lnk = lnk->next;
+				if(a->object.object.type == rw::Atomic::ID)
+					return a;
+				}
+			});
 		}
 	);
 	rwtab.set_function("FrameCreate", rw::Frame::create);
 
 	lua.new_usertype<rw::Atomic>("rwAtomic",
 		sol::no_constructor,
+		"ptr", [](rw::Atomic *a) -> uintptr_t { return (uintptr_t)a; },
 		"destroy", &rw::Atomic::destroy,
 		"clone", &rw::Atomic::clone,
 		"getFrame", &rw::Atomic::getFrame,
@@ -246,15 +276,33 @@ registerRW(sol::state &lua)
 					return g->matList.materials[i++];
 				return nil;
 			});
-		}
+		},
+		"setFlags", [](rw::Geometry *g, uint32 f) { g->flags = f; }
 	);
+	// Geometry::Flags
+	rwtab.set("GEO_TRISTRIP",        (int)rw::Geometry::TRISTRIP);
+	rwtab.set("GEO_POSITIONS",       (int)rw::Geometry::POSITIONS);
+	rwtab.set("GEO_TEXTURED",        (int)rw::Geometry::TEXTURED);
+	rwtab.set("GEO_PRELIT",          (int)rw::Geometry::PRELIT);
+	rwtab.set("GEO_NORMALS",         (int)rw::Geometry::NORMALS);
+	rwtab.set("GEO_LIGHT",           (int)rw::Geometry::LIGHT);
+	rwtab.set("GEO_MODULATE",        (int)rw::Geometry::MODULATE);
+	rwtab.set("GEO_TEXTURED2",       (int)rw::Geometry::TEXTURED2);
+	rwtab.set("GEO_NATIVE",          (int)rw::Geometry::NATIVE);
+	rwtab.set("GEO_NATIVEINSTANCE",  (int)rw::Geometry::NATIVEINSTANCE);
+	// Atomic flags
+	rwtab.set("ATOMIC_COLLISIONTEST",(int)rw::Atomic::COLLISIONTEST);
+	rwtab.set("ATOMIC_RENDER",       (int)rw::Atomic::RENDER);
 
 	lua.new_usertype<rw::Material>("rwMaterial",
 		sol::no_constructor,
 		"getColor", [](rw::Material *m) -> rw::RGBA { return m->color; },
+		"setColor", [](rw::Material *m, rw::RGBA c) { m->color = c; },
 		"getSurfaceProps", [](rw::Material *m) -> rw::SurfaceProperties* { return &m->surfaceProps; },
 		"getTexture", [](rw::Material *m) -> rw::Texture* { return m->texture; },
-		"getMatFX", [](rw::Material *m) -> rw::MatFX* { return MatFX::get(m); }
+		"setTexture", &rw::Material::setTexture,
+		"getMatFX", [](rw::Material *m) -> rw::MatFX* { return MatFX::get(m); },
+		"setMatFXEffect", [](rw::Material *m, int type) { MatFX::setEffects(m, (uint32)type); }
 	);
 
 	lua.new_usertype<rw::SurfaceProperties>("rwSurfaceProperties",
@@ -269,21 +317,108 @@ registerRW(sol::state &lua)
 		}
 	);
 
+	lua.new_usertype<rw::Raster>("rwRaster",
+		sol::no_constructor,
+		"width",  [](rw::Raster *r) { return r->width; },
+		"height", [](rw::Raster *r) { return r->height; },
+		"depth",  [](rw::Raster *r) { return r->depth; },
+		"format", [](rw::Raster *r) { return r->format & 0xFF00; },
+		"type",   [](rw::Raster *r) { return r->format & 0x07; }
+	);
+	// Raster::Format
+	rwtab.set("RASTER_DEFAULT",   (int)rw::Raster::DEFAULT);
+	rwtab.set("RASTER_C1555",     (int)rw::Raster::C1555);
+	rwtab.set("RASTER_C565",      (int)rw::Raster::C565);
+	rwtab.set("RASTER_C4444",     (int)rw::Raster::C4444);
+	rwtab.set("RASTER_LUM8",      (int)rw::Raster::LUM8);
+	rwtab.set("RASTER_C8888",     (int)rw::Raster::C8888);
+	rwtab.set("RASTER_C888",      (int)rw::Raster::C888);
+	rwtab.set("RASTER_D16",       (int)rw::Raster::D16);
+	rwtab.set("RASTER_D24",       (int)rw::Raster::D24);
+	rwtab.set("RASTER_D32",       (int)rw::Raster::D32);
+	rwtab.set("RASTER_C555",      (int)rw::Raster::C555);
+	rwtab.set("RASTER_AUTOMIPMAP",(int)rw::Raster::AUTOMIPMAP);
+	rwtab.set("RASTER_PAL8",      (int)rw::Raster::PAL8);
+	rwtab.set("RASTER_PAL4",      (int)rw::Raster::PAL4);
+	rwtab.set("RASTER_MIPMAP",    (int)rw::Raster::MIPMAP);
+	// Raster::Type
+	rwtab.set("RASTER_NORMAL",        (int)rw::Raster::NORMAL);
+	rwtab.set("RASTER_ZBUFFER",       (int)rw::Raster::ZBUFFER);
+	rwtab.set("RASTER_CAMERA",        (int)rw::Raster::CAMERA);
+	rwtab.set("RASTER_TEXTURE",       (int)rw::Raster::TEXTURE);
+	rwtab.set("RASTER_CAMERATEXTURE", (int)rw::Raster::CAMERATEXTURE);
+
 	lua.new_usertype<rw::Texture>("rwTexture",
 		sol::no_constructor,
 		"getName", [](rw::Texture *t) -> std::string { return std::string(t->name); },
 		"getMaskName", [](rw::Texture *t) -> std::string { return std::string(t->mask); },
+		"raster", sol::property([](rw::Texture *t) -> rw::Raster* { return t->raster; }),
+		"getFilter",   [](rw::Texture *t) { return (int)t->getFilter(); },
+		"setFilter",   [](rw::Texture *t, int f) { t->setFilter((rw::Texture::FilterMode)f); },
+		"getAddressU", [](rw::Texture *t) { return (int)t->getAddressU(); },
+		"setAddressU", [](rw::Texture *t, int a) { t->setAddressU((rw::Texture::Addressing)a); },
+		"getAddressV", [](rw::Texture *t) { return (int)t->getAddressV(); },
+		"setAddressV", [](rw::Texture *t, int a) { t->setAddressV((rw::Texture::Addressing)a); },
 		sol::meta_function::to_string, [](const rw::Texture *t) {
 			return "Texture(" + std::string(t->name) + ", " + std::string(t->mask) + ")";
 		}
 	);
+	// Texture::FilterMode
+	rwtab.set("FILTER_NEAREST",          (int)rw::Texture::NEAREST);
+	rwtab.set("FILTER_LINEAR",           (int)rw::Texture::LINEAR);
+	rwtab.set("FILTER_MIPNEAREST",       (int)rw::Texture::MIPNEAREST);
+	rwtab.set("FILTER_MIPLINEAR",        (int)rw::Texture::MIPLINEAR);
+	rwtab.set("FILTER_LINEARMIPNEAREST", (int)rw::Texture::LINEARMIPNEAREST);
+	rwtab.set("FILTER_LINEARMIPLINEAR",  (int)rw::Texture::LINEARMIPLINEAR);
+	// Texture::Addressing
+	rwtab.set("ADDRESS_WRAP",   (int)rw::Texture::WRAP);
+	rwtab.set("ADDRESS_MIRROR", (int)rw::Texture::MIRROR);
+	rwtab.set("ADDRESS_CLAMP",  (int)rw::Texture::CLAMP);
+	rwtab.set("ADDRESS_BORDER", (int)rw::Texture::BORDER);
 	rwtab.set_function("ImageSetSearchPath", &rw::Image::setSearchPath);
 
 	lua.new_usertype<rw::MatFX>("rwMatFX",
 		sol::no_constructor,
-		"getEnvCoefficient", &rw::MatFX::getEnvCoefficient,
-		"getEnvTexture",  &rw::MatFX::getEnvTexture
+		"getType",             [](rw::MatFX *fx) { return (int)fx->type; },
+		// Bump
+		"getBumpTexture",      &rw::MatFX::getBumpTexture,
+		"getBumpCoefficient",  &rw::MatFX::getBumpCoefficient,
+		"setBumpTexture",      &rw::MatFX::setBumpTexture,
+		"setBumpCoefficient",  &rw::MatFX::setBumpCoefficient,
+		// Env
+		"getEnvTexture",       &rw::MatFX::getEnvTexture,
+		"getEnvCoefficient",   &rw::MatFX::getEnvCoefficient,
+		"getEnvFBAlpha",       [](rw::MatFX *fx) { return (bool)fx->getEnvFBAlpha(); },
+		"setEnvTexture",       &rw::MatFX::setEnvTexture,
+		"setEnvCoefficient",   &rw::MatFX::setEnvCoefficient,
+		"setEnvFBAlpha",       [](rw::MatFX *fx, bool v) { fx->setEnvFBAlpha(v ? 1 : 0); },
+		// Dual
+		"getDualTexture",      &rw::MatFX::getDualTexture,
+		"getDualSrcBlend",     &rw::MatFX::getDualSrcBlend,
+		"getDualDestBlend",    &rw::MatFX::getDualDestBlend,
+		"setDualTexture",      &rw::MatFX::setDualTexture,
+		"setDualSrcBlend",     &rw::MatFX::setDualSrcBlend,
+		"setDualDestBlend",    &rw::MatFX::setDualDestBlend
 	);
+	rwtab.set("MATFX_NOTHING",         (int)rw::MatFX::NOTHING);
+	rwtab.set("MATFX_BUMPMAP",         (int)rw::MatFX::BUMPMAP);
+	rwtab.set("MATFX_ENVMAP",          (int)rw::MatFX::ENVMAP);
+	rwtab.set("MATFX_BUMPENVMAP",      (int)rw::MatFX::BUMPENVMAP);
+	rwtab.set("MATFX_DUAL",            (int)rw::MatFX::DUAL);
+	rwtab.set("MATFX_UVTRANSFORM",     (int)rw::MatFX::UVTRANSFORM);
+	rwtab.set("MATFX_DUALUVTRANSFORM", (int)rw::MatFX::DUALUVTRANSFORM);
+	// BlendFunction
+	rwtab.set("BLEND_ZERO",          (int)rw::BLENDZERO);
+	rwtab.set("BLEND_ONE",           (int)rw::BLENDONE);
+	rwtab.set("BLEND_SRCCOLOR",      (int)rw::BLENDSRCCOLOR);
+	rwtab.set("BLEND_INVSRCCOLOR",   (int)rw::BLENDINVSRCCOLOR);
+	rwtab.set("BLEND_SRCALPHA",      (int)rw::BLENDSRCALPHA);
+	rwtab.set("BLEND_INVSRCALPHA",   (int)rw::BLENDINVSRCALPHA);
+	rwtab.set("BLEND_DESTALPHA",     (int)rw::BLENDDESTALPHA);
+	rwtab.set("BLEND_INVDESTALPHA",  (int)rw::BLENDINVDESTALPHA);
+	rwtab.set("BLEND_DESTCOLOR",     (int)rw::BLENDDESTCOLOR);
+	rwtab.set("BLEND_INVDESTCOLOR",  (int)rw::BLENDINVDESTCOLOR);
+	rwtab.set("BLEND_SRCALPHASAT",   (int)rw::BLENDSRCALPHASAT);
 
 	lua.new_usertype<rw::Camera>("rwCamera",
 		sol::no_constructor,

@@ -184,6 +184,14 @@ InitRW(void)
 		rw::convMatrix(&m, &gizobj);
 		return { gizobj.pos, m.getRotation() };
 	});
+	gizmotab.set_function("InitMatrix", [](rw::Matrix *m) {
+		rw::convMatrix(&gizobj, m);
+	});
+	gizmotab.set_function("GetMatrix", []() -> rw::Matrix {
+		rw::Matrix m;
+		rw::convMatrix(&m, &gizobj);
+		return m;
+	});
 	gizmotab.set_function("IsUsing", []() { return ImGuizmo::IsUsing(); });
 	gizmotab.set("ROTATE", ImGuizmo::ROTATE);
 	gizmotab.set("TRANSLATE", ImGuizmo::TRANSLATE);
@@ -195,6 +203,11 @@ InitRW(void)
 	tmp.setIdentity();
 	convMatrix(&gizobj, &tmp);
 	gizobj.pos = rw::makeV3d(0.0f, 0.0f, 0.0f);
+
+	sol::table rwtab = lua["rw"].get_or_create<sol::table>();
+	rwtab.set_function("imageTexture", [](rw::Texture *tex, float w, float h) {
+		ImGui::Image((ImTextureID)(void*)tex, ImVec2(w, h));
+	});
 
 	ImVec4* colors = ImGui::GetStyle().Colors;
 	colors[ImGuiCol_Text]                   = ImVec4(0.90f, 0.90f, 0.90f, 1.00f);

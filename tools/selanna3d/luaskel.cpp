@@ -146,4 +146,20 @@ registerSkeleton(sol::state &lua)
 	});
 	sktab.set_function("ConvertTexDict", &ConvertTxd);
 	sktab.set_function("ConvertClump", &ConvertClump);
+
+	// Editor matrix helpers using ImGuizmo (euler angles in degrees, not pure RW).
+	sktab.set_function("matDecompose", [](rw::Matrix *m) -> std::tuple<rw::V3d,rw::V3d,rw::V3d> {
+		float t[3], r[3], s[3];
+		ImGuizmo::DecomposeMatrixToComponents((float*)m, t, r, s);
+		return { rw::makeV3d(t[0],t[1],t[2]),
+		         rw::makeV3d(r[0],r[1],r[2]),
+		         rw::makeV3d(s[0],s[1],s[2]) };
+	});
+	sktab.set_function("matRecompose", [](rw::Matrix *m, const rw::V3d &t, const rw::V3d &r, const rw::V3d &s) {
+		float tf[3] = {t.x,t.y,t.z};
+		float rf[3] = {r.x,r.y,r.z};
+		float sf[3] = {s.x,s.y,s.z};
+		ImGuizmo::RecomposeMatrixFromComponents(tf, rf, sf, (float*)m);
+		m->update();
+	});
 }
