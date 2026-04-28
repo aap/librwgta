@@ -179,10 +179,13 @@ int32
 getColourCode(int x, int y)
 {
 	rw::RGBA col;
-	int viewport[4];
-	// TODO: check format and dimensions properly
-	glGetIntegerv(GL_VIEWPORT, viewport); 
-	glReadPixels(x, viewport[3]-y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, &col);
+	// glReadPixels uses bottom-left origin; mouse coords are top-left.
+	// Walk up the framebuffer parent chain to get the full window height.
+	rw::Camera *cam = rw::engine->currentCamera;
+	rw::Raster *fb = cam ? cam->frameBuffer : nil;
+	while(fb && fb->parent && fb != fb->parent) fb = fb->parent;
+	int winH = fb ? fb->height : 0;
+	glReadPixels(x, winH - 1 - y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, &col);
 	return col.blue<<16 | col.green<<8 | col.red;
 }
 #endif

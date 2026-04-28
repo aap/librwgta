@@ -12,14 +12,16 @@ end
 
 clump = nil
 texdict = nil
-modelCam = nil
 activeCam = nil
-rwCamera = nil
--- should go into camera maybe?
-camspeed = 0
-camspeedSide = 0
+rwCamera = nil   -- full-screen camera (ImGui target + showRaster)
 
-clearCol = rw.RGBA(0xA1, 0xA1, 0xA1, 0xFF)
+-- View3D: 4-up viewport system.
+-- Each entry: { cam=Camera, rwcam=rwCamera, proj, name, rect={x,y,w,h} }
+views = {}
+activeView = nil
+
+clearCol = rw.RGBA(0x80, 0x80, 0x80, 0xFF)
+background = rw.RGBA(0xA1, 0xA1, 0xA1, 0xFF)
 --filedir = "/u/aap/gta/gta_miami/models/gta3_img"
 --filedir = "/u/aap/gta/gta3_re/models/gta3_img"
 filedir = "/u/aap/other/gta/gtasa/models/gta3_img"
@@ -39,17 +41,21 @@ function Init()
 	world:addLight(direct)
 
 	rwCamera = sk.CameraCreate(gWidth, gHeight, 1)
-	world:addCamera(rwCamera)
 
-	modelCam = Camera.new()
-	modelCam.rwCamera = rwCamera
-	modelCam.aspectRatio = gWidth/gHeight
-	modelCam.fov = 80
-	modelCam.near = 0.1
-	modelCam.far = 100
-	modelCam.position = rw.V3d(4, 4, 2)
-	modelCam.target = rw.V3d(0, 0, 0)
-	modelCam:update()
+	local origin = rw.V3d(0, 0, 0)
+	-- top-left: front (looking along +Y, Z up)
+	makeView("Front", rw.Camera_PARALLEL,    rw.V3d(0,-5, 0), origin, true,  false)
+	-- top-right: side (looking along -X, Z up)
+	makeView("Side",  rw.Camera_PARALLEL,    rw.V3d(5, 0, 0), origin, true,  false)
+	-- bottom-left: top (looking down -Z, Y forward)
+	local vTop = makeView("Top", rw.Camera_PARALLEL, rw.V3d(0, 0, 5), origin, true, false)
+	vTop.cam.up = rw.V3d(0, 1, 0)
+	-- bottom-right: perspective
+	local vPersp = makeView("Persp", rw.Camera_PERSPECTIVE, rw.V3d(4, 4, 2), origin, false, true)
+
+	activeView = vPersp
+	currentLayout = layouts.fourUp
+	layoutViews()
 
 	gizmo.stepTrans = 0.1
 	gizmo.stepRot   = 5
@@ -89,70 +95,38 @@ function LoadClump(path)
 	return c
 end
 
-function processCam(cam, timestep)
-	timestep = timestep*30
-
-	local shift = IsShiftDown()
+function processCam(view)
+	local cam = view.cam
+	local r = view.rect
+	local dx = (sk.mouse.x - sk.prevmouse.x) / r.w
+	local dy = (sk.mouse.y - sk.prevmouse.y) / r.h
 	local alt = IsAltDown()
-	local dx = (sk.mouse.x - sk.prevmouse.x)/gWidth
-	local dy = (sk.mouse.y - sk.prevmouse.y)/gHeight
+	local isOrtho = view.rwcam:getProjection() == rw.Camera_PARALLEL
 
 	local s = 4.5
-	if (sk.mouse.btn & 1) ~= 0 then
---		cam:turn(-dx*s, -dy*s)
-	elseif (sk.mouse.btn & 2) ~= 0 then
+	if (sk.mouse.btn & 2) ~= 0 then
 		if alt then
 			cam:orbit(-dx*s, dy*s)
 		else
-			local d = cam:distanceTo(cam.target)/5
-			cam:pan(-dx*s*d, dy*s*d)
+			local d = cam:distanceTo(cam.target)
+			cam:pan(-dx*d, dy*d)
 		end
 	elseif (sk.mouse.btn & 4) ~= 0 then
-		cam:zoom(-dy*s*10)
+		if alt then
+			cam:zoom(-dy*s*10)
+		end
 	end
 
 	cam:zoom(sk.mouse.dwheel*2)
-
---[[
-	s = timestep
-	if shift then s = s*2 end
-
-	if sk.keysdown[sk.KEY_W] then
-		camspeed = camspeed + 0.1
-	elseif sk.keysdown[sk.KEY_S] then
-		camspeed = camspeed - 0.1
-	else
-		camspeed = 0
-	end
-	camspeed = clamp(camspeed, -70, 70)
-	cam:dolly(camspeed*s)
-
-	if sk.keysdown[sk.KEY_A] then
-		camspeedSide = camspeedSide - 0.1
-	elseif sk.keysdown[sk.KEY_D] then
-		camspeedSide = camspeedSide + 0.1
-	else
-		camspeedSide = 0
-	end
-	camspeedSide = clamp(camspeedSide, -70, 70)
-	cam:pan(camspeedSide*s, 0)
-
-	if sk.keysdown[sk.KEY_J] then
-		if selection and selection.position then
-			activeCam:jumpTo(tV3d(selection.position))
-		end
-	end
-]]--
 end
 
 selection = nil
 hovered = nil
 drawColorCoded = false
-viewer = { drawGrid = true, drawShaded = true, drawWire = false }
 
 -- Layout constants (pixels).
-local statusH = 32   -- bottom status bar height
-local propW   = 320  -- right properties panel initial width (resizable)
+statusH = 32   -- bottom status bar height
+propW   = 320  -- right properties panel initial width (resizable)
 
 -- Frame metatable with gizmo support.
 -- gizmo.Process() calls selection:gizmo(phase, pos, rot) when the gizmo is active.
@@ -169,9 +143,6 @@ function frameMeta:gizmo(phase, pos, rot)
 		gizmo.InitMatrix(f:getLTM())
 		frameGizmoBefore = f:copyMatrix()
 	else
-		-- RW mult(A,B) means "A then B" (B is outer/parent transform),
-		-- so LTM = mult(localM, parentLTM).
-		-- Inverting: newLocalM = mult(ltmCur, inv(parentLTM)).
 		local ltmCur = gizmo.GetMatrix()
 		local parent = f:getParent()
 		local localM = parent and ltmCur * rw.matInvert(parent:getLTM()) or ltmCur
@@ -795,12 +766,27 @@ function gui()
 	ImGui.Text("|")
 	ImGui.SameLine()
 
-	viewer.drawGrid, _ = ImGui.Checkbox("Draw Grid", viewer.drawGrid)
+	activeView.drawGrid, _ = ImGui.Checkbox("Draw Grid", activeView.drawGrid)
 	ImGui.SameLine()
-	viewer.drawWire, _ = ImGui.Checkbox("Draw Wire", viewer.drawWire)
+	activeView.drawWire, _ = ImGui.Checkbox("Draw Wire", activeView.drawWire)
 	ImGui.SameLine()
-	viewer.drawShaded, _ = ImGui.Checkbox("Draw Shaded", viewer.drawShaded)
+	activeView.drawShaded, _ = ImGui.Checkbox("Draw Shaded", activeView.drawShaded)
 	ImGui.SameLine()
+
+	ImGui.Text("|")
+	ImGui.SameLine()
+
+	-- Layout buttons.
+	for _, entry in ipairs(layoutList) do
+		local active = currentLayout == entry.fn
+		if active then ImGui.PushStyleColor(ImGuiCol.Button, 0.3, 0.6, 0.9, 1.0) end
+		if ImGui.Button(entry.name) then
+			currentLayout = entry.fn
+			layoutViews()
+		end
+		if active then ImGui.PopStyleColor() end
+		ImGui.SameLine()
+	end
 
 	ImGui.Text("|")
 	ImGui.SameLine()
@@ -855,7 +841,7 @@ local function renderClumpCoded(c)
 end
 
 -- Normal render with highlight on the selected frame's atomics.
-local function renderClump(c)
+local function renderClump(view, c)
 	local selFrame = selection and selection.frame or nil
 	for a in c:atomics() do
 		local wirecol = darkblue
@@ -863,8 +849,8 @@ local function renderClump(c)
 			wirecol = white
 		end
 		if a:isVisible() then
-			if viewer.drawShaded then a:render() end
-			if viewer.drawWire then gta.renderWireAtomic(a, wirecol) end
+			if view.drawShaded then a:render() end
+			if view.drawWire then gta.renderWireAtomic(a, wirecol) end
 		end
 	end
 end
@@ -873,16 +859,14 @@ xaxis = rw.V3d(1,0,0)
 yaxis = rw.V3d(0,1,0)
 zaxis = rw.V3d(0,0,1)
 
-function Draw(timestep)
-	sk.updateMouse()
+include('view3d.lua')
 
-	activeCam = modelCam
-	processCam(activeCam, timestep)
-	activeCam:update()
-	rwCamera:beginUpdate()
+local function renderView(view)
+	local rwcam = view.rwcam
+	rwcam:beginUpdate()
 
-	if clump and sk.isMouseClicked(sk.LMB) then
-		rwCamera:clear(black, rw.Camera_CLEARIMAGE|rw.Camera_CLEARZ)
+	if clump and sk.isMouseClicked(sk.LMB) and view == activeView and not isDraggingTitle() then
+		rwcam:clear(black, rw.Camera_CLEARIMAGE|rw.Camera_CLEARZ)
 		renderClumpCoded(clump)
 		local code = gta.GetColourCode(sk.curmouse.x, sk.curmouse.y)
 		local a = idToAtomic[code]
@@ -893,28 +877,57 @@ function Draw(timestep)
 			selection = nil
 		end
 	end
+
+	rwcam:clear(background, rw.Camera_CLEARIMAGE|rw.Camera_CLEARZ)
+
+	if view.drawGrid then
+		gta.renderGrid(20, 20, 0.5)
+	end
+	if clump then
+		renderClump(view, clump)
+	end
+	gta.renderDebugLines()
+	drawViewOverlay(view)
+
+	rwcam:endUpdate()
+end
+
+function Draw(timestep)
+	sk.updateMouse()
+
+	processViewInput()
+	activeView = getActiveView()
+
+	updateViewCameras()
+	if activeView and not isDraggingTitle() then
+		processCam(activeView)
+	end
+	activeCam = activeView and activeView.cam or nil
+
 	if sk.isMouseClicked(sk.RMB) then
 		selection = nil
 	end
 
 	rwCamera:clear(clearCol, rw.Camera_CLEARIMAGE|rw.Camera_CLEARZ)
 
+	-- Render each view (views hidden by the layout have a 1x1 rect and are harmless to render).
+	for _, v in ipairs(views) do
+		renderView(v)
+	end
+
+	-- ImGui renders over the full framebuffer (panels + gizmo overlay).
+	rwCamera:beginUpdate()
+
 	sk.ImGuiBeginFrame(timestep)
 
 	hovered = nil
 	gui()
-	gizmo.Process()
-
---	gta.renderAxesWidget(activeCam.target, xaxis, yaxis, zaxis)
-	if viewer.drawGrid then
-		gta.renderGrid(20, 20, 0.5)
+	-- Only call Manipulate once (active view). Multiple Manipulate calls per
+	-- frame corrupt ImGuizmo's single-instance state machine.
+	if activeView then
+		local r = activeView.rect
+		gizmo.Process(activeView.rwcam, r.x, r.y, r.w, r.h)
 	end
-
-	if clump then
-		renderClump(clump)
-	end
-
-	gta.renderDebugLines()
 
 	sk.ImGuiEndFrame()
 
@@ -922,7 +935,32 @@ function Draw(timestep)
 	rwCamera:showRaster(1)
 end
 
+function KeyDown(k)
+	sk.keysdown[k] = true
+
+	local ctrl = IsCtrlDown()
+	if k == sk.KEY_SPACE then
+		toggleFullscreen(activeView)
+	elseif k == sk.KEY_G then
+		activeView.drawGrid = not activeView.drawGrid
+	elseif k == sk.KEY_Z then
+		activeView.drawWire = not activeView.drawWire
+	elseif k == sk.KEY_X then
+		activeView.drawShaded = not activeView.drawShaded
+	elseif k == sk.KEY_W then
+		gizmo.op = gizmo.TRANSLATE
+	elseif k == sk.KEY_R then
+		if ctrl then History:redo() else gizmo.op = gizmo.ROTATE end
+	elseif k == sk.KEY_Z then
+		if ctrl then History:undo() end
+	end
+end
+
+function KeyUp(k)
+	sk.keysdown[k] = false
+end
+
 function Resize(w, h)
 	sk.CameraSize(rwCamera, w, h)
-	modelCam.aspectRatio = w/h
+	layoutViews()
 end

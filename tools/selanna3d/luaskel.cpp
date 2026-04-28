@@ -89,6 +89,7 @@ registerSkeleton(sol::state &lua)
 		"far", &Camera::m_far,
 		"position", &Camera::m_position,
 		"target", &Camera::m_target,
+		"up", &Camera::m_up,
 		"rwCamera", &Camera::m_rwcam,
 		"setDistance", [](Camera *cam, float d) {
 			rw::V3d fwd = normalize(sub(cam->m_target, cam->m_position));
@@ -120,6 +121,7 @@ registerSkeleton(sol::state &lua)
 	sktab.set("KEY_CAPSLK", sk::KEY_CAPSLK);
 	sktab.set("KEY_LALT", sk::KEY_LALT);
 	sktab.set("KEY_RALT", sk::KEY_RALT);
+	sktab.set("KEY_SPACE", 0x20);
 	char keystr[] = "KEY_.";
 	for(int c = 'A'; c <= 'Z'; c++) {
 		keystr[4] = c;
@@ -161,5 +163,63 @@ registerSkeleton(sol::state &lua)
 		float sf[3] = {s.x,s.y,s.z};
 		ImGuizmo::RecomposeMatrixFromComponents(tf, rf, sf, (float*)m);
 		m->update();
+	});
+
+	// 2D immediate-mode drawing helpers.
+	// Must be called inside a camera beginUpdate/endUpdate block.
+	// color is rw.RGBA.
+	auto im2dSetup = []() {
+		float z = rw::im2d::GetNearZ();
+		float recipz = 1.0f / rw::engine->currentCamera->nearPlane;
+		rw::SetRenderStatePtr(rw::TEXTURERASTER, nil);
+		rw::SetRenderState(rw::VERTEXALPHA, 1);
+		rw::SetRenderState(rw::SRCBLEND, rw::BLENDSRCALPHA);
+		rw::SetRenderState(rw::DESTBLEND, rw::BLENDINVSRCALPHA);
+		rw::SetRenderState(rw::ZTESTENABLE, 0);
+		rw::SetRenderState(rw::ZWRITEENABLE, 0);
+		return std::make_pair(z, recipz);
+	};
+	auto im2dTeardown = []() {
+		rw::SetRenderState(rw::ZTESTENABLE, 1);
+		rw::SetRenderState(rw::ZWRITEENABLE, 1);
+		rw::SetRenderState(rw::VERTEXALPHA, 0);
+	};
+	auto im2dVert = [](rw::RWDEVICE::Im2DVertex &v, float x, float y, float z, float recipz, rw::RGBA col) {
+		v.setScreenX(x);
+		v.setScreenY(y);
+		v.setScreenZ(z);
+		v.setCameraZ(1.0f / recipz);
+		v.setRecipCameraZ(recipz);
+		v.setColor(col.red, col.green, col.blue, col.alpha);
+	};
+
+	sktab.set_function("DrawRect", [im2dSetup, im2dTeardown, im2dVert]
+	                   (float x1, float y1, float x2, float y2, rw::RGBA col) {
+		auto [z, recipz] = im2dSetup();
+		rw::RWDEVICE::Im2DVertex verts[4];
+		im2dVert(verts[0], x1, y1, z, recipz, col);
+		im2dVert(verts[1], x2, y1, z, recipz, col);
+		im2dVert(verts[2], x2, y2, z, recipz, col);
+		im2dVert(verts[3], x1, y2, z, recipz, col);
+		static short idx[] = { 0,1,2, 0,2,3 };
+		rw::im2d::RenderIndexedPrimitive(rw::PRIMTYPETRILIST, verts, 4, idx, 6);
+		im2dTeardown();
+	});
+
+	sktab.set_function("DrawRectLines", [im2dSetup, im2dTeardown, im2dVert]
+	                   (float x1, float y1, float x2, float y2, rw::RGBA col) {
+		auto [z, recipz] = im2dSetup();
+		rw::RWDEVICE::Im2DVertex verts[8];
+		// Four line segments: top, right, bottom, left.
+		im2dVert(verts[0], x1, y1, z, recipz, col);
+		im2dVert(verts[1], x2, y1, z, recipz, col);
+		im2dVert(verts[2], x2, y1, z, recipz, col);
+		im2dVert(verts[3], x2, y2, z, recipz, col);
+		im2dVert(verts[4], x2, y2, z, recipz, col);
+		im2dVert(verts[5], x1, y2, z, recipz, col);
+		im2dVert(verts[6], x1, y2, z, recipz, col);
+		im2dVert(verts[7], x1, y1, z, recipz, col);
+		rw::im2d::RenderPrimitive(rw::PRIMTYPELINELIST, verts, 8);
+		im2dTeardown();
 	});
 }

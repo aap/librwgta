@@ -131,27 +131,20 @@ myRenderCB(rw::Atomic *atomic)
 static rw::RawMatrix gizobj;
 
 void
-gizmoUse(ImGuizmo::OPERATION operation, ImGuizmo::MODE mode, float snap)
+gizmoUse(ImGuizmo::OPERATION operation, ImGuizmo::MODE mode, float snap,
+         rw::Camera *cam, float rx, float ry, float rw_, float rh)
 {
-	rw::Camera *cam;
 	rw::Matrix view;
-	rw::RawMatrix gizview;
 	float *fview, *fproj, *fobj;
 
-	cam = (rw::Camera*)rw::engine->currentCamera;
 	rw::Matrix::invert(&view, cam->getFrame()->getLTM());
-	rw::convMatrix(&gizview, &view);
 	fview = (float*)&cam->devView;
 	fproj = (float*)&cam->devProj;
-	fobj = (float*)&gizobj;
+	fobj  = (float*)&gizobj;
 
 	float snap3[3] = { snap, snap, snap };
-	ImGuiIO &io = ImGui::GetIO();
-	ImGuizmo::SetRect(0, 0, io.DisplaySize.x, io.DisplaySize.y);
+	ImGuizmo::SetRect(rx, ry, rw_, rh);
 	ImGuizmo::Manipulate(fview, fproj, operation, mode, fobj, nil, snap3);
-
-//	ImGuizmo::DrawCubes(fview, fproj, fobj, 1);
-//	ImGuizmo::DrawCubes((float*)&gizview, (float*)&cam->devProj, (float*)&gizobj, 1);
 }
 
 bool
@@ -172,7 +165,10 @@ InitRW(void)
 	lua["gHeight"] = sk::globals.height;
 
 	sol::table gizmotab = lua["gizmo"].get_or_create<sol::table>();
-	gizmotab.set_function("Use", &gizmoUse);
+	gizmotab.set_function("Use", [](ImGuizmo::OPERATION op, ImGuizmo::MODE mode, float snap,
+	                                    rw::Camera *cam, float rx, float ry, float rw_, float rh) {
+		gizmoUse(op, mode, snap, cam, rx, ry, rw_, rh);
+	});
 	gizmotab.set_function("Init", [](rw::V3d pos, rw::Quat rot) {
 		rw::Matrix m;
 		rw::Matrix::makeRotation(&m, rot);

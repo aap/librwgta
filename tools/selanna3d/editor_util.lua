@@ -240,7 +240,7 @@ gizmo.stepRot   = 5
 gizmo.snapTrans = true
 gizmo.snapRot   = true
 
-function gizmo.Process()
+function gizmo.Process(cam, rx, ry, rw, rh)
 	local step
 	if gizmo.op == gizmo.ROTATE then
 		step = gizmo.snapRot   and gizmo.stepRot   or 0
@@ -249,7 +249,12 @@ function gizmo.Process()
 	end
 	local mt = selection and getmetatable(selection)
 	if mt and mt.gizmo then
-		gizmo.Use(gizmo.op, gizmo.mode, step)
+		if cam then
+			gizmo.Use(gizmo.op, gizmo.mode, step, cam, rx, ry, rw, rh)
+		else
+			gizmo.Use(gizmo.op, gizmo.mode, step,
+			          activeCam.rwCamera, 0, 0, gWidth, gHeight)
+		end
 	end
 
 	local using = gizmo.IsUsing()

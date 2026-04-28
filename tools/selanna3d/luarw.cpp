@@ -326,7 +326,12 @@ registerRW(sol::state &lua)
 		"height", [](rw::Raster *r) { return r->height; },
 		"depth",  [](rw::Raster *r) { return r->depth; },
 		"format", [](rw::Raster *r) { return r->format & 0xFF00; },
-		"type",   [](rw::Raster *r) { return r->format & 0x07; }
+		"type",   [](rw::Raster *r) { return r->format & 0x07; },
+		"subRaster", [](rw::Raster *r, rw::Raster *parent, int x, int y, int w, int h) {
+			rw::Rect rect;
+			rect.x = x; rect.y = y; rect.w = w; rect.h = h;
+			r->subRaster(parent, &rect);
+		}
 	);
 	// Raster::Format
 	rwtab.set("RASTER_DEFAULT",   (int)rw::Raster::DEFAULT);
@@ -431,11 +436,23 @@ registerRW(sol::state &lua)
 		"beginUpdate", &rw::Camera::beginUpdate,
 		"clear", &rw::Camera::clear,
 		"endUpdate", &rw::Camera::endUpdate,
-		"showRaster", &rw::Camera::showRaster
+		"showRaster", &rw::Camera::showRaster,
+		"frameBuffer", [](rw::Camera *c) { return c->frameBuffer; },
+		"zBuffer",     [](rw::Camera *c) { return c->zBuffer; },
+		"setNearPlane",  &rw::Camera::setNearPlane,
+		"setFarPlane",   &rw::Camera::setFarPlane,
+		"setViewWindow", [](rw::Camera *c, float x, float y) {
+			rw::V2d vw; vw.x = x; vw.y = y;
+			c->setViewWindow(&vw);
+		},
+		"setProjection", &rw::Camera::setProjection,
+		"getProjection", [](rw::Camera *c) { return c->projection; }
 	);
 	rwtab.set("Camera_CLEARIMAGE", rw::Camera::CLEARIMAGE);
 	rwtab.set("Camera_CLEARZ", rw::Camera::CLEARZ);
 	rwtab.set("Camera_CLEARSTENCIL", rw::Camera::CLEARSTENCIL);
+	rwtab.set("Camera_PERSPECTIVE", rw::Camera::PERSPECTIVE);
+	rwtab.set("Camera_PARALLEL",    rw::Camera::PARALLEL);
 
 	lua.new_usertype<rw::Light>("rwLight",
 		sol::no_constructor,
