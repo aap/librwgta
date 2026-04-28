@@ -5,24 +5,71 @@
 
 local titleH    = 20  -- height of draggable title bar region (pixels)
 local viewBorder = 1
-local cornerSize = 16 -- top-right corner hit area for fullscreen toggle
+local cornerSize = 14 -- top-right corner hit area for fullscreen toggle
+
+-- Usable view area. Set by the host (ClumpEditor:draw) each frame before layoutViews().
+viewRect = { x=0, y=0, w=1, h=1 }
+
+-- View metatable -------------------------------------------------------------
+
+View = {}
+View.__index = View
+
+function View.make(world, name, proj, pos, target, drawWire, drawShaded)
+	local rwcam = sk.CameraCreate(0, 0, 1)
+	rwcam:setNearPlane(0.1)
+	rwcam:setFarPlane(500)
+	rwcam:setProjection(proj)
+	world:addCamera(rwcam)
+	local cam = Camera.new()
+	cam.rwCamera = rwcam
+	cam.near = 0.1
+	cam.far = 500
+	cam.fov = 70
+	cam.position = pos
+	cam.target = target
+	cam:update()
+	local v = setmetatable(
+		{ cam=cam, rwcam=rwcam, name=name, rect={x=0,y=0,w=1,h=1},
+		  drawGrid=true, drawWire=drawWire, drawShaded=drawShaded,
+		  fullscreen=false, savedRect=nil },
+		View)
+	views[#views+1] = v
+	return v
+end
+
+function View:begin(cam)
+	self.rwcam:frameBuffer():subRaster(cam:frameBuffer(), self.rect.x, self.rect.y, self.rect.w, self.rect.h)
+	self.rwcam:zBuffer():subRaster(cam:zBuffer(), self.rect.x, self.rect.y, self.rect.w, self.rect.h)
+	self.cam.aspectRatio = self.rect.w / self.rect.h
+	self.rwcam:beginUpdate()
+end
+
+function View:finish()
+	self.rwcam:endUpdate()
+end
+
+function View:toggleFullscreen()
+	if self.fullscreen then
+		self.fullscreen = false
+		self.rect = self.savedRect or self.rect
+		self.savedRect = nil
+	else
+		self.fullscreen = true
+		self.savedRect = { x=self.rect.x, y=self.rect.y, w=self.rect.w, h=self.rect.h }
+		local b = viewBorder
+		self.rect = { x=b, y=b, w=viewRect.w-b*2, h=viewRect.h-b*2 }
+	end
+end
 
 -- Layout machinery -----------------------------------------------------------
 
 layouts = {}
 currentLayout = nil
 
-local function applySubRaster(v)
-	v.rwcam:frameBuffer():subRaster(rwCamera:frameBuffer(), v.rect.x, v.rect.y, v.rect.w, v.rect.h)
-	v.rwcam:zBuffer():subRaster(rwCamera:zBuffer(), v.rect.x, v.rect.y, v.rect.w, v.rect.h)
-	v.cam.aspectRatio = v.rect.w / v.rect.h
-end
-
 local function applyLayout(rects)
-	local vw = gWidth - propW
-	local vh = gHeight - statusH
-	if vw < 2 then vw = 2 end
-	if vh < 2 then vh = 2 end
+	local vw = math.max(viewRect.w, 2)
+	local vh = math.max(viewRect.h, 2)
 	local b = viewBorder
 	for i, v in ipairs(views) do
 		if v.fullscreen then
@@ -34,24 +81,6 @@ local function applyLayout(rects)
 			if r.h < 1 then r.h = 1 end
 			v.rect = r
 		end
-		applySubRaster(v)
-	end
-end
-
-function toggleFullscreen(v)
-	if v.fullscreen then
-		v.fullscreen = false
-		v.rect = v.savedRect or v.rect
-		v.savedRect = nil
-		applySubRaster(v)
-	else
-		v.fullscreen = true
-		v.savedRect = { x=v.rect.x, y=v.rect.y, w=v.rect.w, h=v.rect.h }
-		local vw = gWidth - propW
-		local vh = gHeight - statusH
-		local b = viewBorder
-		v.rect = { x=b, y=b, w=vw-b*2, h=vh-b*2 }
-		applySubRaster(v)
 	end
 end
 
@@ -94,35 +123,16 @@ layoutList = {
 	{ name="Single",    fn=layouts.single     },
 }
 
-function layoutViews()
-	local vw = gWidth - propW
-	local vh = gHeight - statusH
-	if vw < 2 then vw = 2 end
-	if vh < 2 then vh = 2 end
+function layoutViews(resetFullscreen)
+	if resetFullscreen then
+		for _, v in ipairs(views) do
+			v.fullscreen = false
+			v.savedRect  = nil
+		end
+	end
+	local vw = math.max(viewRect.w, 2)
+	local vh = math.max(viewRect.h, 2)
 	applyLayout(currentLayout(vw, vh))
-end
-
--- View creation --------------------------------------------------------------
-
-function makeView(name, proj, pos, target, drawWire, drawShaded)
-	local rwcam = sk.CameraCreate(0, 0, 1)
-	rwcam:setNearPlane(0.1)
-	rwcam:setFarPlane(500)
-	rwcam:setProjection(proj)
-	world:addCamera(rwcam)
-	local cam = Camera.new()
-	cam.rwCamera = rwcam
-	cam.near = 0.1
-	cam.far = 500
-	cam.fov = 70
-	cam.position = pos
-	cam.target = target
-	cam:update()
-	local v = { cam=cam, rwcam=rwcam, name=name, rect={x=0,y=0,w=1,h=1},
-	            drawGrid=true, drawWire=drawWire, drawShaded=drawShaded,
-	            fullscreen=false, savedRect=nil }
-	views[#views+1] = v
-	return v
 end
 
 -- Per-frame camera update ----------------------------------------------------
@@ -186,27 +196,22 @@ function processViewInput()
 			setActiveView(v)
 		end
 	end
-	v = activeView
-	if v and sk.isMouseClicked(sk.LMB) and pointInRect(titleBarRect(v), mx, my) then
-		if pointInRect(fullscreenCornerRect(v), mx, my) then
-			toggleFullscreen(v)
-			sk.clickstate = 0  -- consume click so picking doesn't fire
-		else
-			dragView = v
-			dragOX = mx - v.rect.x
-			dragOY = my - v.rect.y
-		end
+	local v = activeView
+	if v and sk.isMouseClicked(sk.LMB) and pointInRect(fullscreenCornerRect(v), mx, my) then
+		v:toggleFullscreen()
+		sk.clickstate = 0  -- consume click so picking doesn't fire
+	end
+	if v and lmb and not prevLmb and pointInRect(titleBarRect(v), mx, my) then
+		dragView = v
+		dragOX = mx - v.rect.x
+		dragOY = my - v.rect.y
 	end
 
-	-- Drag: move view rect and update sub-raster.
+	-- Drag: move view rect (subRaster applied on next begin()).
 	if dragView and lmb then
 		local r = dragView.rect
-		local nx = mx - dragOX
-		local ny = my - dragOY
-		r.x = nx
-		r.y = ny
-		dragView.rwcam:frameBuffer():subRaster(rwCamera:frameBuffer(), r.x, r.y, r.w, r.h)
-		dragView.rwcam:zBuffer():subRaster(rwCamera:zBuffer(), r.x, r.y, r.w, r.h)
+		r.x = mx - dragOX
+		r.y = my - dragOY
 	elseif not lmb then
 		dragView = nil
 	end
@@ -230,19 +235,19 @@ function setActiveView(v)
 end
 
 -- 2D overlay for a single view (title bar, border, corner button).
--- Call inside the view's own rwcam beginUpdate/endUpdate block.
+-- Call inside view:begin()/view:finish(), after 3D rendering.
 -- Coordinates are in the sub-camera's local pixel space (0,0 = top-left of view).
 function drawViewOverlay(v)
-	local titleCol   = rw.RGBA(0xA1, 0xA1, 0xA1, 0xFF)
-	local borderCol  = rw.RGBA(0x22, 0x22, 0x22, 0xFF)
-	local borderActiv  = rw.RGBA(0xFF, 0xFF, 0xFF, 0xFF)
+	local titleCol    = rw.RGBA(0xA1, 0xA1, 0xA1, 0xFF)
+	local borderCol   = rw.RGBA(0x22, 0x22, 0x22, 0xFF)
+	local borderActiv = rw.RGBA(0xFF, 0xFF, 0xFF, 0xFF)
 
 	local w, h = v.rect.w, v.rect.h
 	sk.DrawRect(0, 0, w, titleH, titleCol)
 	sk.DrawRectLines(0, 0, w, titleH, borderCol)
-	sk.DrawRect(w-cornerSize, 0, w, titleH, titleCol)
-	sk.DrawRectLines(w-cornerSize, 0, w, titleH, borderCol)
-	col = (v == activeView) and borderActiv or borderCol
+	local vsp = math.floor((titleH - cornerSize) / 2)
+	sk.DrawRectLines(w-cornerSize-vsp, vsp, w-vsp, titleH-vsp, borderCol)
+	local col = (v == activeView) and borderActiv or borderCol
 	sk.DrawRectLines(1, 1, w, h, col)
 end
 

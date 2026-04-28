@@ -224,8 +224,9 @@ function AtomicModel:imguiDraw()
 
 	if ImGui.Button("View") then
 		game:LoadAtomics(self)
-		modelCam:jumpTo(rw.V3d(0,0,0))
-		clump = self.rwClump
+		clumpEd:openClump(self.rwClump, self.txd.rwTxd)
+		if clumpEd.cam then clumpEd.cam:jumpTo(rw.V3d(0,0,0)) end
+		mode = "clump"
 	end
 	ImGui.PopID()
 end

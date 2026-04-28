@@ -1,4 +1,7 @@
 include('editor_util.lua')
+include('alias.lua')
+include('view3d.lua')
+include('clumpedit.lua')
 include('gta.lua')
 include('gtadraw.lua')
 include('console.lua')
@@ -93,17 +96,35 @@ function hideDamagedLOD(a)
 	end
 end
 
-clump = nil
 game = nil
 sceneCam = nil
-modelCam = nil
 activeCam = nil
 rwCamera = nil
--- should go into camera maybe?
+views = {}
+activeView = nil
+viewRect = { x=0, y=0, w=1, h=1 }
 camspeed = 0
 camspeedSide = 0
 
 clearCol = rw.RGBA(0x80, 0x80, 0x80, 0xFF)
+
+red      = rw.RGBA(255, 0,   0,   255)
+blue     = rw.RGBA(0,   0,   255, 255)
+black    = rw.RGBA(0,   0,   0,   255)
+white    = rw.RGBA(255, 255, 255, 255)
+darkblue = rw.RGBA(0,   4,   96,  255)
+xaxis    = rw.V3d(1,0,0)
+yaxis    = rw.V3d(0,1,0)
+zaxis    = rw.V3d(0,0,1)
+
+-- Mode: "map" or "clump"
+mode = "map"
+
+clumpEd = ClumpEditor.new()
+clumpEd.onExit = function()
+	mode = "map"
+	activeCam = sceneCam
+end
 
 function Init()
 	world = rw.WorldCreate(nil)
@@ -112,18 +133,18 @@ function Init()
 	ambient:setColor(0.2, 0.2, 0.2)
 	world:addLight(ambient)
 
-	local xaxis = rw.V3d(1, 0, 0)
+	local xax = rw.V3d(1, 0, 0)
 	local direct = rw.LightCreate(rw.Light_DIRECTIONAL)
 	direct:setColor(0.8, 0.8, 0.8)
 	direct:setFrame(rw.FrameCreate())
-	direct:getFrame():rotate(xaxis, 180, rw.COMBINEREPLACE)
+	direct:getFrame():rotate(xax, 180, rw.COMBINEREPLACE)
 	world:addLight(direct)
 
 	rwCamera = sk.CameraCreate(gWidth, gHeight, 1)
 	world:addCamera(rwCamera)
 
 	sceneCam = Camera.new()
-	local activeCam = sceneCam
+	activeCam = sceneCam
 	sceneCam.rwCamera = rwCamera
 	sceneCam.aspectRatio = gWidth/gHeight
 	sceneCam.fov = 80
@@ -134,17 +155,9 @@ function Init()
 	sceneCam:setDistance(30)
 	sceneCam:update()
 
-	modelCam = Camera.new()
-	modelCam.rwCamera = rwCamera
-	modelCam.aspectRatio = gWidth/gHeight
-	modelCam.fov = 80
-	modelCam.near = 0.1
-	modelCam.far = 1000
-	modelCam.position = rw.V3d(20, 20, 20)
-	modelCam.target = rw.V3d(0, 0, 0)
-	modelCam:update()
-
-print("done")
+	clumpEd:initWorld()
+	setupModelviewMenus()
+	print("done")
 end
 
 function processCam(cam, timestep)
@@ -296,23 +309,23 @@ function gta:RenderMap()
 	gta.SetRenderColourCoded(0)
 end
 
-xaxis = rw.V3d(1,0,0)
-yaxis = rw.V3d(0,1,0)
-zaxis = rw.V3d(0,0,1)
-
 function Draw(timestep)
 	sk.updateMouse()
 
-	if clump then
-		activeCam = modelCam
+	if mode == "clump" then
+		drawClumpMode(timestep)
 	else
-		activeCam = sceneCam
+		drawMapMode(timestep)
 	end
+end
+
+function drawMapMode(timestep)
+	activeCam = sceneCam
 	processCam(activeCam, timestep)
 	activeCam:update()
 	rwCamera:beginUpdate()
 
-	if game and not clump and sk.isMouseClicked(sk.LMB) then
+	if game and sk.isMouseClicked(sk.LMB) then
 		rwCamera:clear(black, rw.Camera_CLEARIMAGE|rw.Camera_CLEARZ)
 		drawColorCoded = true
 		game:RenderMap()
@@ -332,14 +345,14 @@ function Draw(timestep)
 	sk.ImGuiBeginFrame(timestep)
 
 	hovered = nil
+	handleDrag()
+	markingMenu()
 	gui()
-	gizmo.Process()
+	gizmo.Process(selection)
 
 	gta.renderAxesWidget(activeCam.target, xaxis, yaxis, zaxis)
 
-	if clump then
-		clump:render()
-	elseif game then
+	if game then
 		if game.dayNightBalance then gta.SetDayNightBalance(game.dayNightBalance) end
 		if game.wetRoads then gta.SetWetRoads(game.wetRoads) end
 		game:RenderMap()
@@ -353,8 +366,23 @@ function Draw(timestep)
 	rwCamera:showRaster(1)
 end
 
+function drawClumpMode(timestep)
+	clumpEd:draw(timestep)
+end
+
+function KeyDown(k)
+	sk.keysdown[k] = true
+	if mode == "clump" then
+		clumpEd:keyDown(k)
+	end
+end
+
+function KeyUp(k)
+	sk.keysdown[k] = false
+end
+
 function Resize(w, h)
 	sk.CameraSize(rwCamera, w, h)
 	sceneCam.aspectRatio = w/h
-	modelCam.aspectRatio = w/h
+	clumpEd:resize(w, h)
 end

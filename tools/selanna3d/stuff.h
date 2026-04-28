@@ -4,6 +4,7 @@ void initLua(sol::state &lua);
 void registerRW(sol::state &lua);
 void registerGTA(sol::state &lua);
 void registerSkeleton(sol::state &lua);
+void registerAlias(sol::state &lua);
 void execLua(const char *str);
 void luaError(const char *msg);
 

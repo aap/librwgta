@@ -85,13 +85,16 @@ end
 -- ---------------------------------------------------------------------------
 
 History = {}
-History.undoStack = {}
-History.redoStack = {}
+History.__index = History
 History.maxDepth = 200
+
+function History.new()
+	return setmetatable({ undoStack = {}, redoStack = {} }, History)
+end
 
 function History:push(action)
 	table.insert(self.undoStack, action)
-	table.redoStack = {}
+	self.redoStack = {}
 	if #self.undoStack > self.maxDepth then
 		table.remove(self.undoStack, 1)
 	end
@@ -99,38 +102,48 @@ function History:push(action)
 end
 
 function History:PushSetValue(tab, field, before, after)
-	local undo = function(self) tab[field] = before; end
-	local redo = function(self) tab[field] = after; end
-	self:push({undo=undo, redo=redo})
+	self:push({ undo = function() tab[field] = before end,
+	            redo = function() tab[field] = after  end })
 end
 
 function History:PushFlagSet(flags, bit)
-	local undo = function(self) flags.bits = flags.bits & ~bit; end
-	local redo = function(self) flags.bits = flags.bits | bit; end
-	self:push({undo=undo, redo=redo})
+	self:push({ undo = function() flags.bits = flags.bits & ~bit end,
+	            redo = function() flags.bits = flags.bits |  bit end })
 end
 
 function History:PushFlagClear(flags, bit)
-	local undo = function(self) flags.bits = flags.bits | bit; end
-	local redo = function(self) flags.bits = flags.bits & ~bit; end
-	self:push({undo=undo, redo=redo})
+	self:push({ undo = function() flags.bits = flags.bits |  bit end,
+	            redo = function() flags.bits = flags.bits & ~bit end })
 end
 
 function History:undo()
 	local a = table.remove(self.undoStack)
-	if a then
-		a:undo()
-		table.insert(self.redoStack, a)
-	end
+	if a then a:undo(); table.insert(self.redoStack, a) end
 end
 
 function History:redo()
 	local a = table.remove(self.redoStack)
-	if a then
-		a:redo()
-		table.insert(self.undoStack, a)
-	end
+	if a then a:redo(); table.insert(self.undoStack, a) end
 end
+
+-- ---------------------------------------------------------------------------
+-- Editor base
+-- ---------------------------------------------------------------------------
+
+Editor = {}
+Editor.__index = Editor
+
+function Editor.new()
+	return setmetatable({ history = History.new(), selection = nil }, Editor)
+end
+
+function Editor:undo() self.history:undo() end
+function Editor:redo() self.history:redo() end
+function Editor:keyDown(k) end
+function Editor:keyUp(k) end
+function Editor:draw(timestep) end
+function Editor:gui() end
+function Editor:resize(w, h) end
 
 -- ---------------------------------------------------------------------------
 -- Mouse / keyboard input
@@ -195,21 +208,6 @@ end
 
 function KeyDown(k)
 	sk.keysdown[k] = true
-
-	local ctrl = IsCtrlDown()
-	if k == sk.KEY_G then
-		gizmo.op = gizmo.TRANSLATE
-	elseif k == sk.KEY_R then
-		if ctrl then
-			History:redo()
-		else
-			gizmo.op = gizmo.ROTATE
-		end
-	elseif k == sk.KEY_Z then
-		if ctrl then
-			History:undo()
-		end
-	end
 end
 
 sk.curmouse = { x = 0, y = 0, btn = 0, dwheel = 0 }
@@ -227,6 +225,54 @@ function MouseWheel(delta)
 	sk.curmouse.dwheel = sk.curmouse.dwheel + delta
 end
 
+drag = {
+	button   = 0,
+	active   = false,
+	starting = false,
+	stopping = false,
+	start    = { x = 0, y = 0 },
+	stop     = { x = 0, y = 0 },
+	delta    = { x = 0, y = 0 },
+}
+
+function handleDrag()
+	if drag.stopping then
+		drag.button = 0
+	end
+	drag.starting = false
+	drag.stopping = false
+
+	if drag.button == 0 then
+		-- ImGui buttons are 0-based: 0=LMB, 1=RMB, 2=MMB
+		for b = 0, 2 do
+			if ImGui.IsMouseDragging(b, 0.0) then
+				-- map ImGui 0-based to 1-based: 0→1(LMB), 1→3(RMB), 2→2(MMB)
+				local btnMap = { 1, 3, 2 }
+				drag.button   = btnMap[b + 1]
+				drag.starting = true
+				local cx, cy   = ImGui.GetMousePos()
+				local ddx, ddy = ImGui.GetMouseDragDelta(b, 0.0)
+				drag.start = { x = cx - ddx, y = cy - ddy }
+				drag.stop  = { x = cx,       y = cy       }
+				drag.delta = { x = 0,         y = 0        }
+				break
+			end
+		end
+	else
+		local cx, cy = ImGui.GetMousePos()
+		drag.delta = { x = cx - drag.stop.x, y = cy - drag.stop.y }
+		drag.stop  = { x = cx, y = cy }
+		-- ImGui 0-based index for current drag button: 1→0(LMB), 2→2(MMB), 3→1(RMB)
+		local bmap0 = { 0, 2, 1 }
+		local b0 = bmap0[drag.button]
+		if b0 and not ImGui.IsMouseDragging(b0, 0.0) then
+			drag.stopping = true
+		end
+	end
+
+	drag.active = drag.button ~= 0 and not drag.stopping
+end
+
 -- ---------------------------------------------------------------------------
 -- Gizmo (ImGuizmo) — shared state and per-frame processing
 -- ---------------------------------------------------------------------------
@@ -240,14 +286,17 @@ gizmo.stepRot   = 5
 gizmo.snapTrans = true
 gizmo.snapRot   = true
 
-function gizmo.Process(cam, rx, ry, rw, rh)
+-- gizmo.Process(sel, cam, rx, ry, rw, rh)
+-- sel  = current selection object (must have :gizmo metamethod); nil = no gizmo
+-- cam  = rwCamera for the active viewport; nil = use activeCam
+function gizmo.Process(sel, cam, rx, ry, rw, rh)
 	local step
 	if gizmo.op == gizmo.ROTATE then
 		step = gizmo.snapRot   and gizmo.stepRot   or 0
 	else
 		step = gizmo.snapTrans and gizmo.stepTrans or 0
 	end
-	local mt = selection and getmetatable(selection)
+	local mt = sel and getmetatable(sel)
 	if mt and mt.gizmo then
 		if cam then
 			gizmo.Use(gizmo.op, gizmo.mode, step, cam, rx, ry, rw, rh)
@@ -258,17 +307,17 @@ function gizmo.Process(cam, rx, ry, rw, rh)
 	end
 
 	local using = gizmo.IsUsing()
-	if selection and (using or gizmo.wasUsing) then
-		local mt = getmetatable(selection)
+	if sel and (using or gizmo.wasUsing) then
+		local mt = getmetatable(sel)
 		if mt and mt.gizmo then
 			local pos, rot = gizmo.GetXform()
 			if not gizmo.wasUsing then
-				selection:gizmo(0, pos, rot)
+				sel:gizmo(0, pos, rot)
 			end
 			if using then
-				selection:gizmo(1, pos, rot)
+				sel:gizmo(1, pos, rot)
 			else
-				selection:gizmo(2, pos, rot)
+				sel:gizmo(2, pos, rot)
 			end
 		end
 	end

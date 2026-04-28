@@ -208,17 +208,22 @@ registerSkeleton(sol::state &lua)
 
 	sktab.set_function("DrawRectLines", [im2dSetup, im2dTeardown, im2dVert]
 	                   (float x1, float y1, float x2, float y2, rw::RGBA col) {
+		int ix1 = x1+0.5f;
+		int ix2 = x2+0.5f;
+		int iy1 = y1+0.5f;
+		int iy2 = y2+0.5f;
 		auto [z, recipz] = im2dSetup();
 		rw::RWDEVICE::Im2DVertex verts[8];
 		// Four line segments: top, right, bottom, left.
-		im2dVert(verts[0], x1, y1, z, recipz, col);
-		im2dVert(verts[1], x2, y1, z, recipz, col);
-		im2dVert(verts[2], x2, y1, z, recipz, col);
-		im2dVert(verts[3], x2, y2, z, recipz, col);
-		im2dVert(verts[4], x2, y2, z, recipz, col);
-		im2dVert(verts[5], x1, y2, z, recipz, col);
-		im2dVert(verts[6], x1, y2, z, recipz, col);
-		im2dVert(verts[7], x1, y1, z, recipz, col);
+		im2dVert(verts[0], ix1, iy1, z, recipz, col);
+		im2dVert(verts[1], ix2, iy1, z, recipz, col);
+		im2dVert(verts[2], ix2, iy1, z, recipz, col);
+		im2dVert(verts[3], ix2, iy2, z, recipz, col);
+		im2dVert(verts[4], ix2, iy2, z, recipz, col);
+		im2dVert(verts[5], ix1, iy2, z, recipz, col);
+		im2dVert(verts[6], ix1, iy2, z, recipz, col);
+		// no idea why i need this extra pixel. GPU bug?
+		im2dVert(verts[7], ix1, iy1-1, z, recipz, col);
 		rw::im2d::RenderPrimitive(rw::PRIMTYPELINELIST, verts, 8);
 		im2dTeardown();
 	});

@@ -34,6 +34,7 @@ Init(void)
 	registerRW(lua);
 	registerGTA(lua);
 	registerSkeleton(lua);
+	registerAlias(lua);
 void registerDebugRender(sol::state &lua);
 	registerDebugRender(lua);
 	sol_ImGui::Init(lua);
@@ -191,6 +192,7 @@ InitRW(void)
 	gizmotab.set_function("IsUsing", []() { return ImGuizmo::IsUsing(); });
 	gizmotab.set("ROTATE", ImGuizmo::ROTATE);
 	gizmotab.set("TRANSLATE", ImGuizmo::TRANSLATE);
+	gizmotab.set("SCALE", ImGuizmo::SCALE);
 	gizmotab.set("UNIVERSAL", ImGuizmo::UNIVERSAL);
 	gizmotab.set("LOCAL", ImGuizmo::LOCAL);
 	gizmotab.set("WORLD", ImGuizmo::WORLD);
