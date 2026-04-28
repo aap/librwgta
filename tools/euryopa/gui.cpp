@@ -955,9 +955,9 @@ getCurrentCamSetting(CamSetting *cam)
 	cam->area = currentArea;
 }
 
-static int sortedTxds[NUMTEXDICTS];
+static int* sortedTxds;
 static int numTxds;
-static int sortedObjects[NUMOBJECTDEFS];
+static int* sortedObjects;
 static int numObjects;
 
 static void
@@ -967,15 +967,20 @@ initLists(void)
 	ObjectDef *obj;
 	TxdDef *txd;
 
+	sortedTxds = rwNewT(int, globalConfig.numTexDicts, 0);
+	memset(sortedTxds, 0, sizeof(int)*globalConfig.numTexDicts);
+	sortedObjects = rwNewT(int, globalConfig.numObjectDefs, 0);
+	memset(sortedObjects, 0, sizeof(int)*globalConfig.numObjectDefs);
+
 	numObjects = 0;
-	for(i = 0; i < NUMOBJECTDEFS; i++){
+	for(i = 0; i < globalConfig.numObjectDefs; i++){
 		obj = GetObjectDef(i);
 		if(obj && obj->m_numInstances > 0)
 			sortedObjects[numObjects++] = i;
 	}
 
 	numTxds = 0;
-	for(i = 0; i < NUMTEXDICTS; i++){
+	for(i = 0; i < globalConfig.numTexDicts; i++){
 		txd = GetTxdDef(i);
 		if(txd && txd->refCount > 1)
 			sortedTxds[numTxds++] = i;

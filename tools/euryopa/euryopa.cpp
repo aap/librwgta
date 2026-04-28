@@ -55,6 +55,9 @@ float gWetRoadEffect;
 // Neo stuff
 float gNeoLightMapStrength = 0.5f;
 
+// Global config
+Config globalConfig;
+
 bool
 IsHourInRange(int h1, int h2)
 {
@@ -125,6 +128,59 @@ static WeatherInfo weathersSA[] = {
 	{ "EXTRACOLOURS 2", 0 }
 };
 
+// DK 26-03-2026: Might not work if ran with insufficient permissions on Windows (?)
+bool
+FileExists(const char* filename)
+{
+	FILE *f;
+	bool r = false;
+
+	f = fopen(filename, "r");
+	if (f != nil) {
+		r = true; fclose(f);
+	}
+
+	return r;
+}
+
+char*
+readCfgLine(char* line)
+{
+	char *p, *key, *val;
+
+	/* Trim leading whitespace */
+	for (p = line; *p && isspace(*p); p++);
+	if (*p == '\0' || *p == '#')
+		return nil;
+
+	key = p;
+	p = strchr(p, '=');
+	if (p == nil)
+		return nil;
+
+	*p++ = '\0';
+
+	/* Trim trailing whitespace from key */
+	char* end = key + strlen(key) - 1;
+	while (end > key && isspace(*end))
+		*end-- = '\0';
+
+	/* Trim leading whitespace from value */
+	while (*p && isspace(*p))
+		p++;
+	val = p;
+
+	/* Trim trailing whitespace from value (including \n) */
+	end = val + strlen(val) - 1;
+	while (end >= val && isspace(*end))
+		*end-- = '\0';
+
+	if (*key)
+		return val;
+
+	return nil;
+}
+
 void
 InitParams(void)
 {
@@ -158,9 +214,9 @@ InitParams(void)
 		params.waterEnd.set(2048.0f, 2048.0f);
 		params.backfaceCull = false;
 		params.checkColModels = true;
-		params.maxNumColBoxes = 32;
-		params.maxNumColSpheres = 128;
-		params.maxNumColTriangles = 600;
+		params.maxNumColBoxes = globalConfig.gta3.maxNumColBoxes;
+		params.maxNumColSpheres = globalConfig.gta3.maxNumColSpheres;
+		params.maxNumColTriangles = globalConfig.gta3.maxNumColTriangles;
 		switch(gameplatform){
 		case PLATFORM_PS2:
 			break;
@@ -447,6 +503,8 @@ LoadGame(void)
 	case PLATFORM_XBOX: debug("assuming Xbox\n"); break;
 	default: debug("assuming PC\n"); break;
 	}
+
+	globalConfig.Load();
 	InitParams();
 
 	TheCamera.m_position = params.initcampos;
@@ -454,7 +512,11 @@ LoadGame(void)
 	TheCamera.setDistanceToTarget(50.0f);
 	gDoBackfaceCulling = params.backfaceCull;
 
-	defaultTxd = rw::TexDictionary::getCurrent();
+	AllocateCdImageList();
+
+	InitTxdStore();
+	InitColStore();
+	InitModelInfo();
 
 	int particleTxdSlot = AddTxdSlot("particle");
 	LoadTxd(particleTxdSlot, "MODELS/PARTICLE.TXD");
@@ -473,6 +535,9 @@ LoadGame(void)
 		Timecycle::InitNeoWorldTweak();
 	WaterLevel::Initialise();
 	Clouds::Init();
+
+	InitIplStore();
+	Zones::Init();
 
 	AddColSlot("generic");
 	AddIplSlot("generic");

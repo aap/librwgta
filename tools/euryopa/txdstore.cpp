@@ -1,11 +1,20 @@
 #include "euryopa.h"
 
-static TxdDef txdlist[NUMTEXDICTS];
+static TxdDef* txdlist;
 static int numTxds;
 static int32 txdStoreOffset;	// RW plugin
 static rw::TexDictionary *pushedTxd;
 
 rw::TexDictionary *defaultTxd;
+
+void
+InitTxdStore()
+{
+	defaultTxd = rw::TexDictionary::getCurrent();
+
+	txdlist = rwNewT(TxdDef, globalConfig.numTexDicts, 0);
+	memset(txdlist, 0, sizeof(TxdDef)*globalConfig.numTexDicts);
+}
 
 int
 FindTxdSlot(const char *name)

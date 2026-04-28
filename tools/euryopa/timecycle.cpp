@@ -24,7 +24,7 @@ struct Box
 	}
 };
 
-static Box boxes[NUMTCYCBOXES];
+static Box* boxes;
 static int numBoxes;
 
 Box*
@@ -77,8 +77,8 @@ FindBox(rw::V3d pos, float *amount, bool wantLod, bool wantFar, Box *exclude)
 void
 AddBox(CBox box, int farClp, int extraCol, float extraStrength, float falloff, float lodDist)
 {
-	if(numBoxes >= NUMTCYCBOXES){
-		log("warning: more than %d timecycle boxes\n", NUMTCYCBOXES);
+	if(numBoxes >= globalConfig.numTcycBoxes){
+		log("warning: more than %d timecycle boxes\n", globalConfig.numTcycBoxes);
 		return;
 	}
 	Box *tbox = &boxes[numBoxes++];
@@ -949,6 +949,9 @@ Initialize(void)
 {
 	timecycleData = rwNewT(ColourSet, params.numHours*params.numWeathers, 0);
 	memset(timecycleData, 0, sizeof(ColourSet)*params.numHours*params.numWeathers);
+
+	boxes = rwNewT(Box, globalConfig.numTcycBoxes, 0);
+	memset(boxes, 0, sizeof(Box)*globalConfig.numTcycBoxes);
 
 	switch(params.timecycle){
 	case GAME_III:	InitializeIII(); break;

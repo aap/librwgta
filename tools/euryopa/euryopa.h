@@ -9,6 +9,7 @@
 #include <ctype.h>
 #include <assert.h>
 
+#include "Rect.h"
 #include <rwgta.h>
 #define PS2
 
@@ -132,50 +133,8 @@ extern float gWetRoadEffect;
 // Neo stuff
 extern float gNeoLightMapStrength;
 
-// These don't necessarily match the game's values, roughly double of SA PC
-enum {
-	MODELNAMELEN = 30,
-	NUMOBJECTDEFS = 40000,
-	NUMTEXDICTS = 10000,
-	NUMCOLS = 510,
-	NUMSCENES = 80,
-	NUMIPLS = 512,
-	NUMCDIMAGES = 100,
-	NUMTCYCBOXES = 64,
-
-	NUMWATERVERTICES = 4000,
-	NUMWATERQUADS = 1000,
-	NUMWATERTRIS = 1000,
-	NUMZONES = 500,	// for each type
-};
-
-#define LODDISTANCE (300.0f)
-
-#include "Rect.h"
-#include "PtrNode.h"
-#include "PtrList.h"
-
-struct CRGBA
-{
-	uint8 r, g, b, a;
-};
-
-#include "timecycle.h"
-#include "Sprite.h"
-
-namespace Zones
-{
-void CreateZone(const char *name, int type, CBox box, int level, const char *text);
-void Render(void);
-void AddAttribZone(CBox box, int flags, int wantedLevelDrop);
-void AddAttribZone(rw::V3d pos, float s1x, float s1y,
-	float s2x, float s2y, float zmin, float zmax, int flags);
-void AddMirrorAttribZone(rw::V3d pos, float s1x, float s1y,
-	float s2x, float s2y, float zmin, float zmax,
-	int flags, rw::Plane mirror);
-void RenderAttribZones(void);
-void RenderCullZones(void);
-}
+// Misc
+bool FileExists(const char *filename);
 
 // Game
 
@@ -200,6 +159,332 @@ extern int gameplatform;
 inline bool isIII(void) { return gameversion == GAME_III; }
 inline bool isVC(void) { return gameversion == GAME_VC; }
 inline bool isSA(void) { return gameversion == GAME_SA; }
+
+// Config
+
+char* readCfgLine(char* line);
+ 
+// DK 26-03-2026: I've kept the fields the same as they were in the enum, with some extra additions, later we'd need to move some into their respective game structs (so for example cull zones for gta3/sa can have different settings)
+struct Config
+{
+	int numObjectDefs;
+	int numTexDicts;
+	int numCols;
+	int numScenes;
+	int numIpls;
+	int numCdImages;
+	int numTcycBoxes;
+
+	int numWaterVerts;
+	int numWaterQuads;
+	int numWaterTris;
+	int numZones; // for each type
+
+	int numCullZones;
+	int numAttribZones;
+	int numMirrorAttribZones;
+
+	struct {
+		int maxNumColBoxes;
+		int maxNumColSpheres;
+		int maxNumColTriangles;
+
+		int numSectorsX;
+		int numSectorsY;
+		CRect worldBounds;
+	} gta3;
+
+	struct {
+		int numSectorsX;
+		int numSectorsY;
+		CRect worldBounds;
+	} gtavc;
+
+	struct {
+		int numSectorsX;
+		int numSectorsY;
+		CRect worldBounds;
+	} gtasa;
+
+	struct {
+		int numSectorsX;
+		int numSectorsY;
+		CRect worldBounds;
+	} gtalcs;
+
+	struct {
+		int numSectorsX;
+		int numSectorsY;
+		CRect worldBounds;
+	} gtavcs;
+
+	// Defaults; these don't necessarily match the game's values, roughly double of SA PC
+	Config() {
+		numObjectDefs = 40000;
+		numTexDicts = 10000;
+		numCols = 510;
+		numScenes = 80;
+		numIpls = 512;
+		numCdImages = 100;
+		numTcycBoxes = 64;
+
+		numWaterVerts = 4000;
+		numWaterQuads = 1000;
+		numWaterTris = 1000;
+		numZones = 500;
+
+		//numCullZones = 800;
+		numCullZones = 1000;
+		numAttribZones = 2000;
+		numMirrorAttribZones = 200;
+
+		// game specific settings
+		gta3.maxNumColBoxes = 32;
+		gta3.maxNumColSpheres = 128;
+		gta3.maxNumColTriangles = 600;
+		gta3.numSectorsX = 100;
+		gta3.numSectorsY = 100;
+		gta3.worldBounds.left = -2000.0f;
+		gta3.worldBounds.bottom = -2000.0f;
+		gta3.worldBounds.right = 2000.0f;
+		gta3.worldBounds.top = 2000.0f;
+
+		gtavc.numSectorsX = 80;
+		gtavc.numSectorsY = 80;
+		gtavc.worldBounds.left = -2400.0f;
+		gtavc.worldBounds.bottom = -2000.0f;
+		gtavc.worldBounds.right = 1600.0f;
+		gtavc.worldBounds.top = 2000.0f;
+
+		gtasa.numSectorsX = 120;
+		gtasa.numSectorsY = 120;
+		gtasa.worldBounds.left = -3000.0f;
+		gtasa.worldBounds.bottom = -3000.0f;
+		gtasa.worldBounds.right = 3000.0f;
+		gtasa.worldBounds.top = 3000.0f;
+
+		gtalcs.numSectorsX = 100;
+		gtalcs.numSectorsY = 100;
+		gtalcs.worldBounds.left = -2000.0f;
+		gtalcs.worldBounds.bottom = -2000.0f;
+		gtalcs.worldBounds.right = 2000.0f;
+		gtalcs.worldBounds.top = 2000.0f;
+
+		gtavcs.numSectorsX = 80;
+		gtavcs.numSectorsY = 80;
+		gtavcs.worldBounds.left = -2400.0f;
+		gtavcs.worldBounds.bottom = -2000.0f;
+		gtavcs.worldBounds.right = 1600.0f;
+		gtavcs.worldBounds.top = 2000.0f;
+	}
+
+	void WriteDefaultConfig() {
+		FILE* f = fopen("euryopa.cfg", "w");
+		if(f == nil)
+		{
+			printf("Failed to generate default config file, please check folder permissions\n");
+			return;
+		}
+
+		fprintf(f, "numObjectDefs = %d\n", numObjectDefs);
+		fprintf(f, "numTexDicts = %d\n", numTexDicts);
+		fprintf(f, "numCols = %d\n", numCols);
+		fprintf(f, "numScenes = %d\n", numScenes);
+		fprintf(f, "numIpls = %d\n", numIpls);
+		fprintf(f, "numCdImages = %d\n", numCdImages);
+		fprintf(f, "numTcycBoxes = %d\n", numTcycBoxes);
+		fprintf(f, "numWaterVerts = %d\n", numWaterVerts);
+		fprintf(f, "numWaterQuads = %d\n", numWaterQuads);
+		fprintf(f, "numWaterTris = %d\n", numWaterTris);
+		fprintf(f, "numZones = %d\n", numZones);
+		fprintf(f, "numCullZones = %d\n", numCullZones);
+		fprintf(f, "numAttribZones = %d\n", numAttribZones);
+		fprintf(f, "numMirrorAttribZones = %d\n", numMirrorAttribZones);
+
+		switch(gameversion)
+		{
+		case GAME_III:
+			fprintf(f, "maxNumColBoxes = %d\n", gta3.maxNumColBoxes);
+			fprintf(f, "maxNumColSpheres = %d\n", gta3.maxNumColSpheres);
+			fprintf(f, "maxNumColTriangles = %d\n", gta3.maxNumColTriangles);
+			fprintf(f, "numSectorsX = %d\n", gta3.numSectorsX);
+			fprintf(f, "numSectorsY = %d\n", gta3.numSectorsY);
+			fprintf(f, "worldBoundsLeft = %f\n", gta3.worldBounds.left);
+			fprintf(f, "worldBoundsBottom = %f\n", gta3.worldBounds.bottom);
+			fprintf(f, "worldBoundsRight = %f\n", gta3.worldBounds.right);
+			fprintf(f, "worldBoundsTop = %f\n", gta3.worldBounds.top);
+			break;
+
+		case GAME_VC:
+			fprintf(f, "numSectorsX = %d\n", gtavc.numSectorsX);
+			fprintf(f, "numSectorsY = %d\n", gtavc.numSectorsY);
+			fprintf(f, "worldBoundsLeft = %f\n", gtavc.worldBounds.left);
+			fprintf(f, "worldBoundsBottom = %f\n", gtavc.worldBounds.bottom);
+			fprintf(f, "worldBoundsRight = %f\n", gtavc.worldBounds.right);
+			fprintf(f, "worldBoundsTop = %f\n", gtavc.worldBounds.top);
+			break;
+
+		case GAME_SA:
+			fprintf(f, "numSectorsX = %d\n", gtasa.numSectorsX);
+			fprintf(f, "numSectorsY = %d\n", gtasa.numSectorsY);
+			fprintf(f, "worldBoundsLeft = %f\n", gtasa.worldBounds.left);
+			fprintf(f, "worldBoundsBottom = %f\n", gtasa.worldBounds.bottom);
+			fprintf(f, "worldBoundsRight = %f\n", gtasa.worldBounds.right);
+			fprintf(f, "worldBoundsTop = %f\n", gtasa.worldBounds.top);
+			break;
+
+		case GAME_LCS:
+			fprintf(f, "numSectorsX = %d\n", gtalcs.numSectorsX);
+			fprintf(f, "numSectorsY = %d\n", gtalcs.numSectorsY);
+			fprintf(f, "worldBoundsLeft = %f\n", gtalcs.worldBounds.left);
+			fprintf(f, "worldBoundsBottom = %f\n", gtalcs.worldBounds.bottom);
+			fprintf(f, "worldBoundsRight = %f\n", gtalcs.worldBounds.right);
+			fprintf(f, "worldBoundsTop = %f\n", gtalcs.worldBounds.top);
+			break;
+
+		case GAME_VCS:
+			fprintf(f, "numSectorsX = %d\n", gtavcs.numSectorsX);
+			fprintf(f, "numSectorsY = %d\n", gtavcs.numSectorsY);
+			fprintf(f, "worldBoundsLeft = %f\n", gtavcs.worldBounds.left);
+			fprintf(f, "worldBoundsBottom = %f\n", gtavcs.worldBounds.bottom);
+			fprintf(f, "worldBoundsRight = %f\n", gtavcs.worldBounds.right);
+			fprintf(f, "worldBoundsTop = %f\n", gtavcs.worldBounds.top);
+			break;
+		}
+
+		fclose(f);
+	}
+
+	void Load() {
+		char line[1024];
+		FILE *f;
+
+		if (!FileExists("euryopa.cfg")) 
+		{
+			WriteDefaultConfig();
+			return;
+		}
+
+		f = fopen("euryopa.cfg", "r");
+		if (f == nil)
+		{
+			printf("Failed to open config file, please check folder permissions\n");
+			return;
+		}
+
+		while (fgets(line, sizeof(line), f))
+		{
+			char *key, *val;
+
+			val = readCfgLine(line);
+			if (val == nil)
+				continue;
+
+			/* 'line' now contains the null-terminated key */
+			key = line;
+
+			if (strcmp(key, "numObjectDefs") == 0) numObjectDefs = atoi(val);
+			else if (strcmp(key, "numTexDicts") == 0) numTexDicts = atoi(val);
+			else if (strcmp(key, "numCols") == 0) numCols = atoi(val);
+			else if (strcmp(key, "numScenes") == 0) numScenes = atoi(val);
+			else if (strcmp(key, "numIpls") == 0) numIpls = atoi(val);
+			else if (strcmp(key, "numCdImages") == 0) numCdImages = atoi(val);
+			else if (strcmp(key, "numTcycBoxes") == 0) numTcycBoxes = atoi(val);
+			else if (strcmp(key, "numWaterVerts") == 0) numWaterVerts = atoi(val);
+			else if (strcmp(key, "numWaterQuads") == 0) numWaterQuads = atoi(val);
+			else if (strcmp(key, "numWaterTris") == 0) numWaterTris = atoi(val);
+			else if (strcmp(key, "numZones") == 0) numZones = atoi(val);
+			else if (strcmp(key, "numCullZones") == 0) numCullZones = atoi(val);
+			else if (strcmp(key, "numAttribZones") == 0) numAttribZones = atoi(val);
+			else if (strcmp(key, "numMirrorAttribZones") == 0) numMirrorAttribZones = atoi(val);
+
+			/* Game specific limits */
+			else if (strcmp(key, "maxNumColBoxes") == 0 && gameversion == GAME_III) gta3.maxNumColBoxes = atoi(val);
+			else if (strcmp(key, "maxNumColSpheres") == 0 && gameversion == GAME_III) gta3.maxNumColSpheres = atoi(val);
+			else if (strcmp(key, "maxNumColTriangles") == 0 && gameversion == GAME_III) gta3.maxNumColTriangles = atoi(val);
+
+			else if (strcmp(key, "numSectorsX") == 0) {
+				if (gameversion == GAME_III) gta3.numSectorsX = atoi(val);
+				else if (gameversion == GAME_VC) gtavc.numSectorsX = atoi(val);
+				else if (gameversion == GAME_SA) gtasa.numSectorsX = atoi(val);
+				else if (gameversion == GAME_LCS) gtalcs.numSectorsX = atoi(val);
+				else if (gameversion == GAME_VCS) gtavcs.numSectorsX = atoi(val);
+			}
+			else if (strcmp(key, "numSectorsY") == 0) {
+				if (gameversion == GAME_III) gta3.numSectorsY = atoi(val);
+				else if (gameversion == GAME_VC) gtavc.numSectorsY = atoi(val);
+				else if (gameversion == GAME_SA) gtasa.numSectorsY = atoi(val);
+				else if (gameversion == GAME_LCS) gtalcs.numSectorsY = atoi(val);
+				else if (gameversion == GAME_VCS) gtavcs.numSectorsY = atoi(val);
+			}
+			else if (strcmp(key, "worldBoundsLeft") == 0) {
+				if (gameversion == GAME_III) gta3.worldBounds.left = atof(val);
+				else if (gameversion == GAME_VC) gtavc.worldBounds.left = atof(val);
+				else if (gameversion == GAME_SA) gtasa.worldBounds.left = atof(val);
+				else if (gameversion == GAME_LCS) gtalcs.worldBounds.left = atof(val);
+				else if (gameversion == GAME_VCS) gtavcs.worldBounds.left = atof(val);
+			}
+			else if (strcmp(key, "worldBoundsBottom") == 0) {
+				if (gameversion == GAME_III) gta3.worldBounds.bottom = atof(val);
+				else if (gameversion == GAME_VC) gtavc.worldBounds.bottom = atof(val);
+				else if (gameversion == GAME_SA) gtasa.worldBounds.bottom = atof(val);
+				else if (gameversion == GAME_LCS) gtalcs.worldBounds.bottom = atof(val);
+				else if (gameversion == GAME_VCS) gtavcs.worldBounds.bottom = atof(val);
+			}
+			else if (strcmp(key, "worldBoundsRight") == 0) {
+				if (gameversion == GAME_III) gta3.worldBounds.right = atof(val);
+				else if (gameversion == GAME_VC) gtavc.worldBounds.right = atof(val);
+				else if (gameversion == GAME_SA) gtasa.worldBounds.right = atof(val);
+				else if (gameversion == GAME_LCS) gtalcs.worldBounds.right = atof(val);
+				else if (gameversion == GAME_VCS) gtavcs.worldBounds.right = atof(val);
+			}
+			else if (strcmp(key, "worldBoundsTop") == 0) {
+				if (gameversion == GAME_III) gta3.worldBounds.top = atof(val);
+				else if (gameversion == GAME_VC) gtavc.worldBounds.top = atof(val);
+				else if (gameversion == GAME_SA) gtasa.worldBounds.top = atof(val);
+				else if (gameversion == GAME_LCS) gtalcs.worldBounds.top = atof(val);
+				else if (gameversion == GAME_VCS) gtavcs.worldBounds.top = atof(val);
+			}
+		}
+
+		fclose(f);
+	}
+};
+
+extern Config globalConfig;
+
+enum {
+	MODELNAMELEN = 30
+};
+
+#define LODDISTANCE (300.0f)
+
+#include "Rect.h"
+#include "PtrNode.h"
+#include "PtrList.h"
+
+struct CRGBA
+{
+	uint8 r, g, b, a;
+};
+
+#include "timecycle.h"
+#include "Sprite.h"
+
+namespace Zones
+{
+void Init();
+void CreateZone(const char *name, int type, CBox box, int level, const char *text);
+void Render(void);
+void AddAttribZone(CBox box, int flags, int wantedLevelDrop);
+void AddAttribZone(rw::V3d pos, float s1x, float s1y,
+	float s2x, float s2y, float zmin, float zmax, int flags);
+void AddMirrorAttribZone(rw::V3d pos, float s1x, float s1y,
+	float s2x, float s2y, float zmin, float zmax,
+	int flags, rw::Plane mirror);
+void RenderAttribZones(void);
+void RenderCullZones(void);
+}
 
 struct WeatherInfo;
 
@@ -293,6 +578,7 @@ void DefinedState(void);
 
 // Game Data structures
 
+void AllocateCdImageList();
 void AddCdImage(const char *path);
 void InitCdImages(void);
 uint8 *ReadFileFromImage(int i, int *size);
@@ -310,6 +596,7 @@ struct TxdDef
 	int32 refCount;	// just for information
 };
 extern rw::TexDictionary *defaultTxd;
+void InitTxdStore();
 void RegisterTexStorePlugin(void);
 TxdDef *GetTxdDef(int i);
 int FindTxdSlot(const char *name);
@@ -345,6 +632,7 @@ struct ColDef
 	char name[MODELNAMELEN];
 	int32 imageIndex;
 };
+void InitColStore();
 ColDef *GetColDef(int i);
 int AddColSlot(const char *name);
 void LoadCol(int slot);
@@ -433,6 +721,7 @@ struct ObjectDef
 	void SetupBigBuilding(int first, int last);
 	void SetFlags(int flags);
 };
+void InitModelInfo();
 ObjectDef *AddObjectDef(int id);
 ObjectDef *GetObjectDef(int id);
 ObjectDef *GetObjectDef(const char *name, int *id);
@@ -671,6 +960,7 @@ struct IplDef
 
 	int32 imageIndex;
 };
+void InitIplStore();
 int AddInstArraySlot(int n);
 ObjectInst **GetInstArray(int i);
 IplDef *GetIplDef(int i);

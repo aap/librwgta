@@ -1,6 +1,14 @@
 #include "euryopa.h"
 
-static ObjectDef *objdefs[NUMOBJECTDEFS];
+static ObjectDef **objdefs;
+
+// eh, is this name appropriate enough? 
+void
+InitModelInfo()
+{
+	objdefs = rwNewT(ObjectDef*, globalConfig.numObjectDefs, 0);
+	memset(objdefs, 0, sizeof(ObjectDef*)*globalConfig.numObjectDefs);
+}
 
 float
 ObjectDef::GetLargestDrawDist(void)
@@ -358,7 +366,7 @@ ObjectDef*
 GetObjectDef(const char *name, int *id)
 {
 	int i;
-	for(i = 0; i < nelem(objdefs); i++){
+	for(i = 0; i < globalConfig.numObjectDefs; i++){
 		if(objdefs[i] == nil)
 			continue;
 		if(rw::strncmp_ci(objdefs[i]->m_name, name, MODELNAMELEN) == 0){

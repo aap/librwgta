@@ -214,29 +214,44 @@ InitSectors(void)
 {
 	switch(params.map){
 	case GAME_III:
-		numSectorsX = 100;
-		numSectorsY = 100;
-		worldBounds.left = -2000.0f;
-		worldBounds.bottom = -2000.0f;
-		worldBounds.right = 2000.0f;
-		worldBounds.top = 2000.0f;
+		numSectorsX = globalConfig.gta3.numSectorsX;
+		numSectorsY = globalConfig.gta3.numSectorsY;
+		worldBounds.left = globalConfig.gta3.worldBounds.left;
+		worldBounds.bottom = globalConfig.gta3.worldBounds.bottom;
+		worldBounds.right = globalConfig.gta3.worldBounds.right;
+		worldBounds.top = globalConfig.gta3.worldBounds.top;
 		break;
 	case GAME_VC:
-		numSectorsX = 80;
-		numSectorsY = 80;
-		worldBounds.left = -2400.0f;
-		worldBounds.bottom = -2000.0f;
-		worldBounds.right = 1600.0f;
-		worldBounds.top = 2000.0f;
+		numSectorsX = globalConfig.gtavc.numSectorsX;
+		numSectorsY = globalConfig.gtavc.numSectorsY;
+		worldBounds.left = globalConfig.gtavc.worldBounds.left;
+		worldBounds.bottom = globalConfig.gtavc.worldBounds.bottom;
+		worldBounds.right = globalConfig.gtavc.worldBounds.right;
+		worldBounds.top = globalConfig.gtavc.worldBounds.top;
 		break;
 	case GAME_SA:
-		numSectorsX = 120;
-		numSectorsY = 120;
-		worldBounds.left = -3000.0f;
-		worldBounds.bottom = -3000.0f;
-		worldBounds.right = 3000.0f;
-		worldBounds.top = 3000.0f;
+		numSectorsX = globalConfig.gtasa.numSectorsX;
+		numSectorsY = globalConfig.gtasa.numSectorsY;
+		worldBounds.left = globalConfig.gtasa.worldBounds.left;
+		worldBounds.bottom = globalConfig.gtasa.worldBounds.bottom;
+		worldBounds.right = globalConfig.gtasa.worldBounds.right;
+		worldBounds.top = globalConfig.gtasa.worldBounds.top;
 		break;
+	case GAME_LCS:
+		numSectorsX = globalConfig.gtalcs.numSectorsX;
+		numSectorsY = globalConfig.gtalcs.numSectorsY;
+		worldBounds.left = globalConfig.gtalcs.worldBounds.left;
+		worldBounds.bottom = globalConfig.gtalcs.worldBounds.bottom;
+		worldBounds.right = globalConfig.gtalcs.worldBounds.right;
+		worldBounds.top = globalConfig.gtalcs.worldBounds.top;
+		break;
+	case GAME_VCS:
+		numSectorsX = globalConfig.gtavcs.numSectorsX;
+		numSectorsY = globalConfig.gtavcs.numSectorsY;
+		worldBounds.left = globalConfig.gtavcs.worldBounds.left;
+		worldBounds.bottom = globalConfig.gtavcs.worldBounds.bottom;
+		worldBounds.right = globalConfig.gtavcs.worldBounds.right;
+		worldBounds.top = globalConfig.gtavcs.worldBounds.top;
 	}
 	sectors = new Sector[numSectorsX*numSectorsY];
 }
