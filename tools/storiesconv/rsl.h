@@ -1,12 +1,13 @@
 enum {
-	TEX_IDENT  = 0x00746578,
-	MDL_IDENT  = 0x006D646C,
-	WRLD_IDENT = 0x57524C44,
-	GTAG_IDENT = 0x47544147,
-	COL2_IDENT = 0x636F6C32,
+	TEX_IDENT  = 0x00746578, // 'tex '
+	MDL_IDENT  = 0x006D646C, // 'mdl '
+	WRLD_IDENT = 0x57524C44, // 'WRLD'
+	GTAG_IDENT = 0x47544147, // 'GTAG'
+	COL2_IDENT = 0x636F6C32, // 'col2'
 };
 
 typedef uint16 float16;
+#define BIT(num) (1 << (num))
 
 float halfFloatToFloat(float16 half);
 
@@ -128,10 +129,21 @@ struct RslObjectHasNode {
 
 void rslObjectHasNodeSetNode(RslObjectHasNode *object, RslNode *f);
 
+#ifdef VCS
+enum eRasterAnimFlags
+{
+	FLAG_UFLOW   = BIT(0),
+	FLAG_UFLICKR = BIT(1),
+	FLAG_VFLOW   = BIT(2),
+	FLAG_VFLICKR = BIT(3),
+	// other only lighting
+};
+#endif
+
 struct RslRasterPS2 {
 #ifdef VCS
-	uint32 unk1;
-	uint32 unk2;
+	uint32 unk1; // 0xCCCCCCCC
+	uint32 animFlags; // eRasterAnimFlags, for example, barbershop spin anim + other unk flags
 #endif
 	uint8 *data;
 	uint32 flags;
@@ -229,6 +241,13 @@ void rslNodeListInitialize(rslNodeList *frameList, RslNode *root);
 struct RslElementGroup {
 	RslObject   object;
 	RslLinkList atomicList;
+#ifdef VCS // TODO: check lcs
+	// ClumpExt
+	// void* visibilityCallBack; // ClumpVisibilityCB
+	// int32 alpha;
+
+	// void* pElementGroupAnimDataPlugin; // CAnimBlendClumpData/CAnimBlendElementGroupData
+#endif
 };
 
 #define RslElementGroupGetNode(_clump)                                    \
